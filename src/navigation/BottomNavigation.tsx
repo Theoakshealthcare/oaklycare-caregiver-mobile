@@ -1,0 +1,117 @@
+import { View, Pressable } from "react-native";
+import { theme } from "../constants/theme";
+import Text from "../components/ui/text";
+import { globalStyles } from "../constants/styles";
+import Home from "../screens/home/Home";
+import { useState } from "react";
+// import Fall from "../screens/fall/Fall";
+import Booking from "../screens/booking/Booking";
+import PagerView from "react-native-pager-view";
+import Image from "../components/ui/image";
+import ScreenSize from "../hooks/screen-size";
+import Animated from "react-native-reanimated";
+import useTextAnimation from "../hooks/use-text-animation";
+// import Vitals from "../screens/vital/Vitals";
+
+const BottomNavigation = () => {
+  const tabs = [
+    {
+      id: "home",
+      icon: require("@/assets/images/tabs/home.png"),
+      icon_active: require("@/assets/images/tabs/home-active.png"),
+      label: "Home",
+    },
+    {
+      id: "booking",
+      icon: require("@/assets/images/tabs/booking.png"),
+      icon_active: require("@/assets/images/tabs/booking-active.png"),
+      label: "Booking",
+    },
+    {
+      id: "vitals",
+      icon: require("@/assets/images/tabs/vital.png"),
+      icon_active: require("@/assets/images/tabs/vital-active.png"),
+      label: "Vitals",
+    },
+    {
+      id: "fall",
+      icon: require("@/assets/images/tabs/fall.png"),
+      icon_active: require("@/assets/images/tabs/fall-active.png"),
+      label: "Fall",
+    },
+  ];
+
+  const pages = [
+    { key: 1, component: <Home /> },
+    { key: 2, component: <Booking /> },
+    // { key: 3, component: <Vitals /> },
+    // { key: 4, component: <Fall /> },
+  ];
+
+  const { width, height } = ScreenSize();
+  const { textStyle } = useTextAnimation();
+
+  const [tab, setTab] = useState(0);
+  const [key, setKey] = useState(0);
+
+  const handleTab = (index: number) => {
+    setTab(index);
+    setKey((prevKey) => prevKey + 1);
+  };
+
+  const handlePageSelected = (event: any) => {
+    const newPage = event.nativeEvent.position;
+    setTab(newPage);
+  };
+
+  return (
+    <View style={{ flex: 1, backgroundColor: theme.colors.white }}>
+      <PagerView
+        key={key}
+        style={{ flex: 1 }}
+        initialPage={tab}
+        // useNext={false}
+        onPageSelected={handlePageSelected}
+        scrollEnabled={false}
+      >
+        {pages.map((page) => (
+          <View key={page.key} style={{ flex: 1, paddingBottom: height * 0.1 }}>
+            {page.component}
+          </View>
+        ))}
+      </PagerView>
+
+      <View style={globalStyles.tabCon}>
+        {tabs.map((item, index) => (
+          <Pressable key={item.id} onPress={() => handleTab(index)}
+            style={[
+              globalStyles.row,
+              {
+                height: width * 0.1,
+                width: width * 0.1,
+                alignItems: "center",
+                justifyContent: "center",
+                borderRadius: 50,
+              },
+              tab === index && globalStyles.activeIconContainer,
+            ]}
+          >
+            <Animated.View style={[textStyle]}>
+              <Image
+                source={tab === index ? item.icon_active : item.icon}
+                style={{ height: width * 0.05, width: width * 0.05 }}
+              />
+            </Animated.View>
+            {tab === index && (
+              <Text variant="small" color={theme.colors.white}>
+                {item.label}
+              </Text>
+            )}
+          </Pressable>
+        ))}
+      </View>
+    </View>
+  );
+};
+
+export default BottomNavigation;
