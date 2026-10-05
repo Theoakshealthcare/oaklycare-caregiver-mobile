@@ -5,9 +5,8 @@ import type {
   ChatMessage,
   BookingNote,
   LocationUpdate,
-  ApiResponse,
-  PaginatedResponse,
 } from '@/src/types/booking.types'
+import type { ApiResponse, PaginatedResponse } from '@/src/types/api.types'
 
 class BookingService {
   private readonly baseURL = "/booking"

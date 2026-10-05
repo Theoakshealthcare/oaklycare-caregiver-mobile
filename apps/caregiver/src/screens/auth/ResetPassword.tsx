@@ -69,7 +69,7 @@ const ResetPassword: React.FC<ResetPasswordProps> = ({ route }) => {
     setIsLoading(true);
 
     try {
-      await authService.resetPassword(token, newPassword);
+      await authService.resetPassword({ token, new_password: newPassword });
       
       setIsSuccess(true);
 

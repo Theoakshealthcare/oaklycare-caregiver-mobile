@@ -13,7 +13,7 @@ const ProfileCompleted: React.FC<ProfileCompletedProps> = ({ route }) => {
   const { navigation } = Navigation()
 
   const handleGoToHomepage = () => {
-    navigation.navigate("CaregiverDashboard")
+    navigation.navigate("BottomNavigation")
   }
 
   return (

@@ -17,9 +17,13 @@ export const theme = {
     border: "#E0E0E0",
     background: "#F5F5F5",
     success: "#4CAF50",
+    successLight: "#E8F5E9",
     error: "#F44336",
     warning: "#FFC107",
     info: "#2196F3",
+    errorText: "#721C24",
+    warningText: "#856404",
+    infoText: "#0C5460",
     primaryLight: "#F2FDFD",
     soft: "#F8F8FC"
   },

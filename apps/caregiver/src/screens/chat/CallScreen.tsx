@@ -23,7 +23,7 @@ const CallScreen: React.FC<CallScreenProps> = ({ route }) => {
 
   useEffect(() => {
     // Start call timer when call becomes active
-    let interval: NodeJS.Timeout
+    let interval: ReturnType<typeof setInterval> | undefined
     if (isCallActive) {
       interval = setInterval(() => {
         setCallDuration((prev) => prev + 1)

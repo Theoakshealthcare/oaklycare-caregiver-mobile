@@ -1,3 +1,5 @@
+import type { BookingRequest } from '../types/booking.types'
+
 export type ScreenParamLists = {
   Onboarding: undefined;
   Login: undefined;
@@ -16,4 +18,8 @@ export type ScreenParamLists = {
   ConsentScreen: undefined
   ProfileCompleted: undefined
   DocumentScan: {applicant_id: string, sdk_token: any}
+  FaceScan: {applicant_id: string, sdk_token: any}
+  ChatScreen: { booking?: BookingRequest }
+  CallScreen: { booking?: BookingRequest; isVideo?: boolean }
+  AINoteTaker: { booking?: BookingRequest }
 };

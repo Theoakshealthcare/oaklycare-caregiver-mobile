@@ -27,7 +27,7 @@ const ErrorDialog: React.FC<ErrorDialogProps> = ({ visible, title = 'Error', mes
             {message}
           </Text>
           <TouchableOpacity style={styles.button} onPress={onClose} activeOpacity={0.8}>
-            <Text variant="button" style={styles.buttonText}>OK</Text>
+            <Text variant="body" weight="bold" style={styles.buttonText}>OK</Text>
           </TouchableOpacity>
         </View>
       </View>

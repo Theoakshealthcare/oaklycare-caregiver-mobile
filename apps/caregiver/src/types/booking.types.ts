@@ -106,6 +106,7 @@ export interface CallScreenProps {
   route?: {
     params?: {
       booking?: BookingRequest
+      isVideo?: boolean
     }
   }
 }

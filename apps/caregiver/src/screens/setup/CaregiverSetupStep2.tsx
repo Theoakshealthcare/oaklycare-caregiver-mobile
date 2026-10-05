@@ -41,10 +41,6 @@ const CaregiverSetupStep2: React.FC<CaregiverSetupStep2Props> = ({ route }) => {
   const [isUploading, setIsUploading] = useState(false)
   const [errors, setErrors] = useState<Record<string, string>>({})
 
-  useEffect(() => {
-    loadFormOptions()
-  }, [])
-
   const loadFormOptions = async () => {
     try {
       const options: any = await caregiverService.getFormOptions()
@@ -53,6 +49,10 @@ const CaregiverSetupStep2: React.FC<CaregiverSetupStep2Props> = ({ route }) => {
       console.error("Failed to load form options:", error)
     }
   }
+
+  useEffect(() => {
+    loadFormOptions()
+  }, [])
 
   const updateFormData = (field: keyof typeof formData, value: any) => {
     setFormData((prev) => ({ ...prev, [field]: value }))

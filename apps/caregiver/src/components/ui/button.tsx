@@ -1,4 +1,5 @@
 import type React from "react"
+import type { ReactNode } from "react"
 import {
   TouchableOpacity,
   Text,
@@ -12,7 +13,7 @@ import {
 } from "react-native"
 import { theme } from "../../constants/theme"
 
-export type ButtonVariant = "primary" | "secondary" | "neutral" | "ghost"
+export type ButtonVariant = "primary" | "secondary" | "neutral" | "ghost" | "outline"
 
 interface ButtonProps extends TouchableOpacityProps {
   title: string
@@ -22,6 +23,7 @@ interface ButtonProps extends TouchableOpacityProps {
   style?: StyleProp<ViewStyle>
   textStyle?: StyleProp<TextStyle>
   fullWidth?: boolean
+  leftIcon?: ReactNode
 }
 
 const Button: React.FC<ButtonProps> = ({
@@ -32,6 +34,7 @@ const Button: React.FC<ButtonProps> = ({
   style,
   textStyle,
   fullWidth = false,
+  leftIcon,
   ...rest
 }) => {
   const getButtonStyles = () => {
@@ -53,6 +56,9 @@ const Button: React.FC<ButtonProps> = ({
         break
       case "ghost":
         baseStyle.push(styles.ghostButton)
+        break
+      case "outline":
+        baseStyle.push(styles.outlineButton)
         break
     }
 
@@ -77,6 +83,7 @@ const Button: React.FC<ButtonProps> = ({
         baseStyle.push(styles.neutralText)
         break
       case "ghost":
+      case "outline":
         baseStyle.push(styles.ghostText)
         break
     }
@@ -89,11 +96,14 @@ const Button: React.FC<ButtonProps> = ({
   }
 
   return (
-    <Pressable style={[getButtonStyles(), style]} disabled={disabled || loading} activeOpacity={0.7} {...rest}>
+    <Pressable style={[getButtonStyles(), style]} disabled={disabled || loading} {...rest}>
       {loading ? (
         <ActivityIndicator color={variant === "primary" ? theme.colors.white : theme.colors.primary} size="small" />
       ) : (
-        <Text style={[getTextStyles(), textStyle]}>{title}</Text>
+        <>
+          {leftIcon}
+          <Text style={[getTextStyles(), textStyle]}>{title}</Text>
+        </>
       )}
     </Pressable>
   )
@@ -104,6 +114,8 @@ const styles = StyleSheet.create({
     paddingVertical: theme.sizes.large,
     paddingHorizontal: theme.sizes.extraLarge,
     borderRadius: theme.borderRadius.xxl,
+    flexDirection: "row",
+    gap: 8,
     alignItems: "center",
     justifyContent: "center",
   },
@@ -121,6 +133,11 @@ const styles = StyleSheet.create({
   },
   ghostButton: {
     backgroundColor: "transparent",
+  },
+  outlineButton: {
+    backgroundColor: "transparent",
+    borderWidth: 1,
+    borderColor: theme.colors.primary,
   },
   disabledButton: {
     opacity: 0.5,

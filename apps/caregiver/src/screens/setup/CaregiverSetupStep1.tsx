@@ -37,10 +37,6 @@ const CaregiverSetupStep1 = () => {
   const [isLoading, setIsLoading] = useState(false)
   const [errors, setErrors] = useState<Record<string, string>>({})
 
-  useEffect(() => {
-    loadFormOptions()
-  }, [])
-
   const loadFormOptions = async () => {
     try {
       const options:any = await caregiverService.getFormOptions()
@@ -49,6 +45,10 @@ const CaregiverSetupStep1 = () => {
       console.error("Failed to load form options:", error)
     }
   }
+
+  useEffect(() => {
+    loadFormOptions()
+  }, [])
 
   const updateFormData = (field: keyof typeof formData, value: string) => {
     setFormData((prev) => ({ ...prev, [field]: value }))
