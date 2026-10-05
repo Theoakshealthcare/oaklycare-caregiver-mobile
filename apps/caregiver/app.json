@@ -34,7 +34,12 @@
       ]
     },
     "plugins": [
-      "expo-secure-store",
+      [
+        "expo-secure-store",
+        {
+          "faceIDPermission": "Oakly uses Face ID to unlock your saved sign-in."
+        }
+      ],
       [
         "expo-splash-screen",
         {
