@@ -33,3 +33,6 @@ npm-debug.*
 yarn-debug.*
 yarn-error.*
 .turbo/
+
+# Local agent worktrees / tooling
+.claude/
