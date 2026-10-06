@@ -1,25 +1,24 @@
-import type { BookingRequest } from '../types/booking.types'
+import type { Offer } from "../services/booking.service";
 
 export type ScreenParamLists = {
+  // Signed out
   Onboarding: undefined;
   Login: undefined;
-  VerifyEmail: { email: string };
   CreateAccount: undefined;
+  VerifyEmail: { email: string };
   AccountCreated: undefined;
-  ForgotPassword: undefined;
   RecoverPassword: undefined;
-  ResetPassword: { token: string };
+  ResetPassword: { email?: string } | undefined;
+  // Signed in, profile not approved yet
+  CaregiverSetupStep1: undefined;
+  CaregiverSetupStep2: undefined;
+  ConsentScreen: undefined;
+  VerificationStatus: undefined;
+  // Signed in and approved
   BottomNavigation: undefined;
-  Notifications: undefined;
-  BookingDetails: {booking: any}
-  CaregiverSetupStep1: undefined
-  CaregiverSetupStep2: undefined
-  IdentityVerification: undefined
-  ConsentScreen: undefined
-  ProfileCompleted: undefined
-  DocumentScan: {applicant_id: string, sdk_token: any}
-  FaceScan: {applicant_id: string, sdk_token: any}
-  ChatScreen: { booking?: BookingRequest }
-  CallScreen: { booking?: BookingRequest; isVideo?: boolean }
-  AINoteTaker: { booking?: BookingRequest }
+  /** With `offer` it is an un-accepted job (offer view, nothing is fetched); without it, an assigned booking. */
+  BookingDetails: { bookingId: string; offer?: Offer };
+  ChatScreen: { bookingId: string; patientName?: string };
+  CallScreen: { bookingId: string; patientName?: string; isVideo?: boolean };
+  AINoteTaker: { bookingId: string };
 };

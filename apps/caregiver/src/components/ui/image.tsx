@@ -33,7 +33,7 @@ const Image: React.FC<ImageProps> = ({
 }) => {
   const [isLoading, setIsLoading] = useState(true)
 
-  const handleLoad = (event: any) => {
+  const handleLoad: NonNullable<ImageProps["onLoad"]> = (event) => {
     setIsLoading(false)
     onLoad && onLoad(event)
   }

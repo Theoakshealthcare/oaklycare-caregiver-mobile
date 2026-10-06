@@ -15,14 +15,15 @@ const AccountCreated = () => {
   const { navigation } = Navigation();
   const { width } = ScreenSize();
 
-  const handleStartJourney = () => {
-    navigation.navigate("BottomNavigation");
+  // Registered and verified: sign in to continue with onboarding.
+  const handleContinue = () => {
+    navigation.navigate("Login");
   };
 
   return (
     <View style={[globalStyles.container, {flex: 1}]}>
       <Pressable
-        onPress={() => navigation.navigate("BottomNavigation")}
+        onPress={handleContinue}
         style={globalStyles.row}
       >
         <Icon name="close-circle-outline" size={24} />
@@ -39,7 +40,7 @@ const AccountCreated = () => {
           center
           style={styles.title}
         >
-          Congratulations! Your account setup is complete!
+          Your email is verified!
         </Text>
 
         <Text
@@ -48,13 +49,12 @@ const AccountCreated = () => {
           center
           style={styles.subtitle}
         >
-          Account successfully created! Welcome aboard! Let the nursing journey
-          begin!
+          Welcome to Oakly. Log in to finish setting up your caregiver profile so we can review it.
         </Text>
 
         <Button
-          title="Start Booking Journey"
-          onPress={handleStartJourney}
+          title="Log in to continue"
+          onPress={handleContinue}
           style={styles.button}
         />
       </Box>

@@ -2,6 +2,8 @@ import React from "react";
 import MainApp from "./MainApp";
 import { useFonts } from "expo-font";
 import { NavigationContainer } from "@react-navigation/native";
+import { QueryClientProvider } from "@tanstack/react-query";
+import { queryClient } from "./src/api/queryClient";
 import { ThemeProvider } from "./src/constants/ThemeContext";
 
 
@@ -18,11 +20,13 @@ const App = () => {
   }
 
   return (
-    <ThemeProvider>
-      <NavigationContainer>
-        <MainApp />
-      </NavigationContainer>
-    </ThemeProvider>
+    <QueryClientProvider client={queryClient}>
+      <ThemeProvider>
+        <NavigationContainer>
+          <MainApp />
+        </NavigationContainer>
+      </ThemeProvider>
+    </QueryClientProvider>
   );
 };
 

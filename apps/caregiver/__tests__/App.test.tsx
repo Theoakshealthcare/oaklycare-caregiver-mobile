@@ -1,4 +1,6 @@
-import { act, render, screen } from "@testing-library/react-native";
+import { render, screen } from "@testing-library/react-native";
+
+import { queryClient } from "../src/api/queryClient";
 
 import App from "../App";
 
@@ -8,14 +10,14 @@ jest.mock("expo-font", () => ({
 }));
 
 describe("App", () => {
-  beforeEach(() => jest.useFakeTimers());
-  afterEach(() => jest.useRealTimers());
+  afterAll(() => {
+    // React Query keeps gc timers per cache entry; clear them so the worker can exit.
+    queryClient.clear();
+  });
 
-  it("shows the onboarding screen after the splash", async () => {
-    await render(<App />);
-    await act(async () => {
-      jest.advanceTimersByTime(2500);
-    });
-    expect(screen.getByText("AI-Powered Personalized Care")).toBeTruthy();
+  it("restores the (empty) session and shows the onboarding screen when signed out", async () => {
+    const view = await render(<App />);
+    expect(await screen.findByText("AI-Powered Personalized Care")).toBeTruthy();
+    view.unmount();
   });
 });

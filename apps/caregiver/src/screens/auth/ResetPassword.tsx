@@ -1,131 +1,100 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState } from 'react';
 import { View, Alert } from 'react-native';
 import { Feather } from '@expo/vector-icons';
+import type { StackScreenProps } from '@react-navigation/stack';
+import { useMutation } from '@tanstack/react-query';
 
 import { theme } from '@/src/constants/theme';
-import Box from '@/src/components/ui/box';
 import Text from '@/src/components/ui/text';
 import Button from '@/src/components/ui/button';
 import Input from '@/src/components/ui/input';
-import Icon from '@/src/components/ui/icon';
 import HeaderBack from '@/src/components/back/HeaderBack';
 import { globalStyles } from '@/src/constants/styles';
 import Navigation from '@/src/hooks/use-navigation';
-import authService from '@/src/services/auth.service';
-import { ResetPasswordProps } from '@/src/types/api.types';
+import { authService } from '@/src/services/auth.service';
+import { messageForError } from '@/src/api/errors';
+import type { ScreenParamLists } from '@/src/navigation/Navigations';
 
-const ResetPassword: React.FC<ResetPasswordProps> = ({ route }) => {
-  const token = route?.params?.token;
+const ResetPassword: React.FC<StackScreenProps<ScreenParamLists, 'ResetPassword'>> = ({ route }) => {
+  const email = route.params?.email;
   const { navigation } = Navigation();
 
+  // The reset token arrives in the recovery email; the caregiver pastes it here.
+  const [token, setToken] = useState<string>('');
   const [newPassword, setNewPassword] = useState<string>('');
   const [confirmPassword, setConfirmPassword] = useState<string>('');
-  const [isLoading, setIsLoading] = useState<boolean>(false);
-  const [isSuccess, setIsSuccess] = useState<boolean>(false);
-  const [passwordError, setPasswordError] = useState<string>('');
-  const [confirmError, setConfirmError] = useState<string>('');
+  const [errors, setErrors] = useState<Record<string, string>>({});
 
-  // Clear errors when inputs change
-  useEffect(() => {
-    if (passwordError) setPasswordError('');
-  }, [newPassword]);
-
-  useEffect(() => {
-    if (confirmError) setConfirmError('');
-  }, [confirmPassword]);
+  const reset = useMutation({
+    mutationFn: () => authService.resetPassword(token.trim(), newPassword),
+    onSuccess: () => {
+      Alert.alert('Password reset', 'Your password has been reset. Log in with the new password.', [
+        { text: 'OK', onPress: () => navigation.navigate('Login') },
+      ]);
+    },
+    onError: (error) => Alert.alert('Error', messageForError(error)),
+  });
 
   const validateInputs = (): boolean => {
-    let isValid = true;
+    const next: Record<string, string> = {};
+
+    if (!token.trim()) next.token = 'Enter the reset code from your email';
 
     if (!newPassword) {
-      setPasswordError('Password is required');
-      isValid = false;
+      next.password = 'Password is required';
     } else if (newPassword.length < 8) {
-      setPasswordError('Password must be at least 8 characters');
-      isValid = false;
+      next.password = 'Password must be at least 8 characters';
     }
 
     if (!confirmPassword) {
-      setConfirmError('Please confirm your password');
-      isValid = false;
+      next.confirm = 'Please confirm your password';
     } else if (newPassword !== confirmPassword) {
-      setConfirmError('Passwords do not match');
-      isValid = false;
+      next.confirm = 'Passwords do not match';
     }
 
-    return isValid;
+    setErrors(next);
+    return Object.keys(next).length === 0;
   };
 
-  const handleResetPassword = async (): Promise<void> => {
-    if (!validateInputs()) {
-      return;
-    }
-
-    if (!token) {
-      Alert.alert('Error', 'Reset token is missing. Please try again.');
-      return;
-    }
-
-    setIsLoading(true);
-
-    try {
-      await authService.resetPassword({ token, new_password: newPassword });
-      
-      setIsSuccess(true);
-
-      // Navigate back to login after showing success message
-      setTimeout(() => {
-        navigation.navigate('Login');
-      }, 2000);
-    } catch (error: any) {
-      Alert.alert(
-        'Error',
-        error.detail || 'Failed to reset password. Please try again.'
-      );
-    } finally {
-      setIsLoading(false);
-    }
+  const handleResetPassword = (): void => {
+    if (validateInputs()) reset.mutate();
   };
 
   return (
     <View style={globalStyles.container}>
-      {isSuccess && (
-        <Box
-          style={{
-            backgroundColor: theme.colors.success,
-            paddingVertical: 10,
-            paddingHorizontal: 16,
-            borderRadius: 8,
-            marginBottom: 16,
-            gap: 8,
-          }}
-          row
-          alignItems="center"
-        >
-          <Icon name="checkbox-outline" size={20} color={theme.colors.white} />
-          <Text variant="small" color={theme.colors.white}>
-            Password has been Reset Successfully
-          </Text>
-        </Box>
-      )}
-
       <HeaderBack />
 
       <View style={{ marginVertical: '10%' }}>
         <Text variant="h2">Reset Password</Text>
         <Text variant="body" color={theme.colors.textLight}>
-          Reset your Password
+          {email ? `Enter the code we sent to ${email} and choose a new password` : 'Enter the code from your email and choose a new password'}
         </Text>
       </View>
 
       <View style={globalStyles.column}>
         <Input
+          label="Reset Code"
+          placeholder="Paste the code from your email"
+          value={token}
+          onChangeText={(t: string) => {
+            setToken(t);
+            setErrors((prev) => ({ ...prev, token: '' }));
+          }}
+          autoCapitalize="none"
+          autoCorrect={false}
+          error={errors.token}
+        />
+
+        <Input
           label="Create New Password"
           placeholder="Enter New Password"
           value={newPassword}
-          onChangeText={setNewPassword}
+          onChangeText={(t: string) => {
+            setNewPassword(t);
+            setErrors((prev) => ({ ...prev, password: '' }));
+          }}
           secureTextEntry
-          error={passwordError}
+          error={errors.password}
           rightIcon={
             <Feather name="eye" size={20} color={theme.colors.textLight} />
           }
@@ -135,9 +104,12 @@ const ResetPassword: React.FC<ResetPasswordProps> = ({ route }) => {
           label="Confirm New Password"
           placeholder="Enter New Password"
           value={confirmPassword}
-          onChangeText={setConfirmPassword}
+          onChangeText={(t: string) => {
+            setConfirmPassword(t);
+            setErrors((prev) => ({ ...prev, confirm: '' }));
+          }}
           secureTextEntry
-          error={confirmError}
+          error={errors.confirm}
           rightIcon={
             <Feather name="eye" size={20} color={theme.colors.textLight} />
           }
@@ -146,8 +118,7 @@ const ResetPassword: React.FC<ResetPasswordProps> = ({ route }) => {
         <Button
           title="Reset Password"
           onPress={handleResetPassword}
-          loading={isLoading}
-          disabled={isSuccess}
+          loading={reset.isPending}
         />
       </View>
     </View>

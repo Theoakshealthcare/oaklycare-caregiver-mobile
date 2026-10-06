@@ -1,43 +1,120 @@
 import { createStackNavigator } from "@react-navigation/stack";
-import BottomNavigation from "./BottomNavigation";
+
+import { useSession } from "../auth";
+import { useMe, useVerificationStatus } from "../hooks/queries";
 import AccountCreated from "../screens/auth/AccountCreated";
 import CreateAccount from "../screens/auth/CreateAccount";
 import Login from "../screens/auth/Login";
 import RecoverPassword from "../screens/auth/RecoverPassword";
 import ResetPassword from "../screens/auth/ResetPassword";
 import VerifyEmail from "../screens/auth/VerifyEmail";
+import AINoteTaker from "../screens/chat/AINoteTaker";
+import CallScreen from "../screens/chat/CallScreen";
+import ChatScreen from "../screens/chat/ChatScreen";
+import BookingDetails from "../screens/booking/BookingDetails";
+import GateMessage from "../screens/GateMessage";
 import OnboardingScreen from "../screens/onboarding-screen";
 import CaregiverSetupStep1 from "../screens/setup/CaregiverSetupStep1";
 import CaregiverSetupStep2 from "../screens/setup/CaregiverSetupStep2";
-import IdentityVerification from "../screens/setup/IdentityVerification";
 import ConsentScreen from "../screens/setup/ConsentScreen";
-import ProfileCompleted from "../screens/setup/ProfileCompleted";
-import DocumentScan from "../screens/setup/DocumentScan";
+import VerificationStatusScreen from "../screens/setup/VerificationStatus";
+import SplashScreen from "../screens/splash-screen";
+import { authService } from "../services/auth.service";
+import BottomNavigation from "./BottomNavigation";
+import { resolveGate, type Gate } from "./gate";
+import type { ScreenParamLists } from "./Navigations";
 
-const Stack = createStackNavigator();
+const Stack = createStackNavigator<ScreenParamLists>();
+
+function useGate(): { gate: Gate; retry: () => void } {
+  const sessionStatus = useSession((s) => s.status);
+  const me = useMe();
+  const verified = me.data?.user_type === "caregiver" && me.data.is_verified;
+  const status = useVerificationStatus(verified);
+  const gate = resolveGate({
+    session: sessionStatus,
+    me: { data: me.data, isError: me.isError },
+    status: { data: status.data, isError: status.isError },
+  });
+  return {
+    gate,
+    retry: () => {
+      void me.refetch();
+      void status.refetch();
+    },
+  };
+}
 
 const StackNavigator = () => {
-  return (
-    <Stack.Navigator screenOptions={{ headerShown: false }} initialRouteName="Onboarding">
-      {/* Auth */}
-      <Stack.Screen name="Onboarding" component={OnboardingScreen} />
-      <Stack.Screen name="Login" component={Login} />
-      <Stack.Screen name="VerifyEmail" component={VerifyEmail} />
-      <Stack.Screen name="CreateAccount" component={CreateAccount} />
-      <Stack.Screen name="AccountCreated" component={AccountCreated} />
-      <Stack.Screen name="RecoverPassword" component={RecoverPassword} />
-      <Stack.Screen name="ResetPassword" component={ResetPassword} />
-      <Stack.Screen name="CaregiverSetupStep1" component={CaregiverSetupStep1} />
-      <Stack.Screen name="CaregiverSetupStep2" component={CaregiverSetupStep2} />
-      <Stack.Screen name="IdentityVerification" component={IdentityVerification} />
-      <Stack.Screen name="ConsentScreen" component={ConsentScreen} />
-      <Stack.Screen name="ProfileCompleted" component={ProfileCompleted} />
-      <Stack.Screen name="DocumentScan" component={DocumentScan} />
-      
-      <Stack.Screen name="BottomNavigation" component={BottomNavigation} />
+  const { gate, retry } = useGate();
 
-    </Stack.Navigator>
-  );
+  switch (gate.kind) {
+    case "loading":
+      return <SplashScreen />;
+    case "error":
+      return (
+        <GateMessage
+          title="We couldn't load your account"
+          message="Check your internet connection and try again."
+          actionLabel="Try again"
+          onAction={retry}
+          onSignOut={() => void authService.logout()}
+        />
+      );
+    case "wrongAccount":
+      return (
+        <GateMessage
+          title="This app is for caregivers"
+          message="You're signed in with a different type of account. Please use the correct Oakly app, or sign in with a caregiver account."
+          onSignOut={() => void authService.logout()}
+        />
+      );
+    case "signedOut":
+      return (
+        <Stack.Navigator key="signedOut" screenOptions={{ headerShown: false }} initialRouteName="Onboarding">
+          <Stack.Screen name="Onboarding" component={OnboardingScreen} />
+          <Stack.Screen name="Login" component={Login} />
+          <Stack.Screen name="CreateAccount" component={CreateAccount} />
+          <Stack.Screen name="VerifyEmail" component={VerifyEmail} />
+          <Stack.Screen name="AccountCreated" component={AccountCreated} />
+          <Stack.Screen name="RecoverPassword" component={RecoverPassword} />
+          <Stack.Screen name="ResetPassword" component={ResetPassword} />
+        </Stack.Navigator>
+      );
+    case "verifyEmail":
+      return (
+        <Stack.Navigator key="verifyEmail" screenOptions={{ headerShown: false }}>
+          <Stack.Screen name="VerifyEmail" component={VerifyEmail} initialParams={{ email: gate.email }} />
+        </Stack.Navigator>
+      );
+    case "setup":
+      return (
+        <Stack.Navigator key="setup" screenOptions={{ headerShown: false }} initialRouteName={gate.initialRoute}>
+          <Stack.Screen name="CaregiverSetupStep1" component={CaregiverSetupStep1} />
+          <Stack.Screen name="CaregiverSetupStep2" component={CaregiverSetupStep2} />
+          <Stack.Screen name="ConsentScreen" component={ConsentScreen} />
+        </Stack.Navigator>
+      );
+    case "status":
+      return (
+        <Stack.Navigator key="status" screenOptions={{ headerShown: false }}>
+          <Stack.Screen name="VerificationStatus" component={VerificationStatusScreen} />
+          {/* When an admin asks for changes the caregiver edits their details, then resubmits consent. */}
+          <Stack.Screen name="CaregiverSetupStep1" component={CaregiverSetupStep1} />
+          <Stack.Screen name="CaregiverSetupStep2" component={CaregiverSetupStep2} />
+        </Stack.Navigator>
+      );
+    case "app":
+      return (
+        <Stack.Navigator key="app" screenOptions={{ headerShown: false }}>
+          <Stack.Screen name="BottomNavigation" component={BottomNavigation} />
+          <Stack.Screen name="BookingDetails" component={BookingDetails} />
+          <Stack.Screen name="ChatScreen" component={ChatScreen} />
+          <Stack.Screen name="CallScreen" component={CallScreen} />
+          <Stack.Screen name="AINoteTaker" component={AINoteTaker} />
+        </Stack.Navigator>
+      );
+  }
 };
 
 export default StackNavigator;

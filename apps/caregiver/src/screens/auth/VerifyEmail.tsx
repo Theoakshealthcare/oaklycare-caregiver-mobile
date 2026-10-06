@@ -8,6 +8,9 @@ import {
   Alert,
 } from 'react-native';
 
+import type { StackScreenProps } from '@react-navigation/stack';
+import { useMutation, useQueryClient } from '@tanstack/react-query';
+
 import { theme } from '@/src/constants/theme';
 import Box from '@/src/components/ui/box';
 import Text from '@/src/components/ui/text';
@@ -15,17 +18,21 @@ import Icon from '@/src/components/ui/icon';
 import HeaderBack from '@/src/components/back/HeaderBack';
 import { globalStyles } from '@/src/constants/styles';
 import Navigation from '@/src/hooks/use-navigation';
-import authService from '@/src/services/auth.service';
-import { VerifyEmailProps } from '@/src/types/api.types';
+import { authService } from '@/src/services/auth.service';
+import { messageForError } from '@/src/api/errors';
+import { queryKeys } from '@/src/api/keys';
+import { useSession } from '@/src/auth';
+import type { ScreenParamLists } from '@/src/navigation/Navigations';
 
-const VerifyEmail: React.FC<VerifyEmailProps> = ({ route }) => {
+const VerifyEmail: React.FC<StackScreenProps<ScreenParamLists, 'VerifyEmail'>> = ({ route }) => {
   const { navigation } = Navigation();
-  const { email } = route?.params || { email: 'example@gmail.com' };
+  const { email } = route.params;
+  const signedIn = useSession((s) => s.status === 'signedIn');
+  const queryClient = useQueryClient();
 
   const [otp, setOtp] = useState<string[]>(['', '', '', '', '']);
   const [timer, setTimer] = useState<number>(30);
   const [showKeypad, setShowKeypad] = useState<boolean>(true);
-  const [isVerifying, setIsVerifying] = useState<boolean>(false);
 
   const inputRefs = useRef<(TextInput | null)[]>([]);
 
@@ -37,6 +44,37 @@ const VerifyEmail: React.FC<VerifyEmailProps> = ({ route }) => {
     return () => clearInterval(interval);
   }, []);
 
+  const verify = useMutation({
+    mutationFn: (code: string) => authService.verifyEmail(email, code),
+    onSuccess: async () => {
+      if (signedIn) {
+        // Logged in before verifying: re-read /auth/me and the auth gate moves on to onboarding.
+        await queryClient.invalidateQueries({ queryKey: queryKeys.me });
+      } else {
+        navigation.navigate('AccountCreated');
+      }
+    },
+    onError: (error) => {
+      Alert.alert('Verification Failed', messageForError(error));
+      setOtp(['', '', '', '', '']);
+    },
+  });
+  const isVerifying = verify.isPending;
+
+  const resend = useMutation({
+    mutationFn: () => authService.resendVerification(email),
+    onSuccess: () => {
+      setOtp(['', '', '', '', '']);
+      setTimer(30);
+      Alert.alert('Success', 'A new verification code has been sent to your email.');
+    },
+    onError: (error) => Alert.alert('Error', messageForError(error)),
+  });
+
+  const verifyCode = (code: string): void => {
+    if (!isVerifying) verify.mutate(code);
+  };
+
   const handleOtpChange = (value: string, index: number): void => {
     const newOtp = [...otp];
     newOtp[index] = value;
@@ -46,7 +84,6 @@ const VerifyEmail: React.FC<VerifyEmailProps> = ({ route }) => {
       inputRefs.current[index + 1]?.focus();
     }
 
-    // Check if complete using newOtp
     if (newOtp.every((digit) => digit !== '')) {
       verifyCode(newOtp.join(''));
     }
@@ -69,53 +106,15 @@ const VerifyEmail: React.FC<VerifyEmailProps> = ({ route }) => {
       newOtp[emptyIndex] = key;
       setOtp(newOtp);
 
-      // Check completion using newOtp
       if (newOtp.every((digit) => digit !== '')) {
         verifyCode(newOtp.join(''));
       }
     }
   };
 
-  const verifyCode = async (code: string): Promise<void> => {
-    if (isVerifying) return;
-    
-    setIsVerifying(true);
-    
-    try {
-      await authService.verifyEmail({ email: email || '', code });
-      
-      // Navigate to account created screen
-      setTimeout(() => {
-        navigation.navigate('AccountCreated');
-      }, 500);
-    } catch (error: any) {
-      Alert.alert(
-        'Verification Failed',
-        error.detail || 'Invalid verification code. Please try again.'
-      );
-      // Reset OTP fields
-      setOtp(['', '', '', '', '']);
-    } finally {
-      setIsVerifying(false);
-    }
-  };
-
-  const handleResendCode = async (): Promise<void> => {
-    if (timer > 0) return;
-    
-    try {
-      await authService.resendVerification({ email: email || '' });
-      
-      setOtp(['', '', '', '', '']);
-      setTimer(30);
-      
-      Alert.alert('Success', 'A new verification code has been sent to your email.');
-    } catch (error: any) {
-      Alert.alert(
-        'Error',
-        error.detail || 'Failed to resend verification code. Please try again.'
-      );
-    }
+  const handleResendCode = (): void => {
+    if (timer > 0 || resend.isPending) return;
+    resend.mutate();
   };
 
   return (
@@ -277,13 +276,8 @@ const VerifyEmail: React.FC<VerifyEmailProps> = ({ route }) => {
             </Box>
 
             <Box row style={{ justifyContent: 'space-between' }}>
-              <TouchableOpacity
-                style={styles.keypadKey}
-                onPress={() => handleKeyPress('+')}
-                disabled={isVerifying}
-              >
-                <Text variant="h3">+</Text>
-              </TouchableOpacity>
+              {/* The code is digits only: this slot stays empty to keep the keypad layout. */}
+              <View style={[styles.keypadKey, { borderWidth: 0 }]} />
               <TouchableOpacity
                 style={styles.keypadKey}
                 onPress={() => handleKeyPress('0')}

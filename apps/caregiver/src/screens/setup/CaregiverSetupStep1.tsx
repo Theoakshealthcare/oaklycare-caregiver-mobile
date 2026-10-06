@@ -1,7 +1,7 @@
 "use client"
 
-import type React from "react"
-import { useState, useEffect } from "react"
+import { useState } from "react"
+import { useMutation, useQueryClient } from "@tanstack/react-query"
 import { View, ScrollView, Alert, TouchableOpacity } from "react-native"
 import DateTimePicker from "@react-native-community/datetimepicker"
 
@@ -13,42 +13,43 @@ import Select from "@/src/components/ui/select"
 import HeaderBack from "@/src/components/back/HeaderBack"
 import { globalStyles } from "@/src/constants/styles"
 import Navigation from "@/src/hooks/use-navigation"
-import caregiverService from "@/src/services/caregiver.service"
-import type { FormOptions } from "@/src/types/caregiver.types"
+import { caregiverService, type CaregiverProfileStep1 } from "@/src/services/caregiver.service"
+import { useFormOptions } from "@/src/hooks/queries"
+import { messageForError } from "@/src/api/errors"
+import { queryKeys } from "@/src/api/keys"
 
+type Gender = CaregiverProfileStep1["gender"]
+
+// Fallback only until GET /caregiver/form-options answers.
 const NIGERIAN_STATES = [
-  "Abia", "Adamawa", "Akwa Ibom", "Anambra", "Bauchi", "Bayelsa", "Benue", "Borno", "Cross River", "Delta", "Ebonyi", "Edo", "Ekiti", "Enugu", "FCT - Abuja", "Gombe", "Imo", "Jigawa", "Kaduna", "Kano", "Katsina", "Kebbi", "Kogi", "Kwara", "Lagos", "Nasarawa", "Niger", "Ogun", "Ondo", "Osun", "Oyo", "Plateau", "Rivers", "Sokoto", "Taraba", "Yobe", "Zamfara"
+  "Abia", "Adamawa", "Akwa Ibom", "Anambra", "Bauchi", "Bayelsa", "Benue", "Borno", "Cross River", "Delta", "Ebonyi", "Edo", "Ekiti", "Enugu", "Federal Capital Territory", "Gombe", "Imo", "Jigawa", "Kaduna", "Kano", "Katsina", "Kebbi", "Kogi", "Kwara", "Lagos", "Nasarawa", "Niger", "Ogun", "Ondo", "Osun", "Oyo", "Plateau", "Rivers", "Sokoto", "Taraba", "Yobe", "Zamfara"
 ]
 
 const CaregiverSetupStep1 = () => {
   const { navigation } = Navigation()
+  const queryClient = useQueryClient()
+  const { data: formOptions } = useFormOptions()
 
   const [formData, setFormData] = useState({
     date_of_birth: "",
-    gender: "",
+    gender: "" as Gender | "",
     state: "",
-    house_address: "",
+    address: "",
     emergency_contact_phone: "",
   })
 
   const [showDatePicker, setShowDatePicker] = useState(false)
   const [selectedDate, setSelectedDate] = useState(new Date())
-  const [formOptions, setFormOptions] = useState<FormOptions | null>(null)
-  const [isLoading, setIsLoading] = useState(false)
   const [errors, setErrors] = useState<Record<string, string>>({})
 
-  const loadFormOptions = async () => {
-    try {
-      const options:any = await caregiverService.getFormOptions()
-      setFormOptions(options)
-    } catch (error) {
-      console.error("Failed to load form options:", error)
-    }
-  }
-
-  useEffect(() => {
-    loadFormOptions()
-  }, [])
+  const save = useMutation({
+    mutationFn: (payload: CaregiverProfileStep1) => caregiverService.updateProfileStep1(payload),
+    onSuccess: async () => {
+      await queryClient.invalidateQueries({ queryKey: queryKeys.verificationStatus })
+      navigation.navigate("CaregiverSetupStep2")
+    },
+    onError: (error) => Alert.alert("Error", messageForError(error)),
+  })
 
   const updateFormData = (field: keyof typeof formData, value: string) => {
     setFormData((prev) => ({ ...prev, [field]: value }))
@@ -57,56 +58,31 @@ const CaregiverSetupStep1 = () => {
     }
   }
 
-  const handleDateChange = (event: any, date?: Date) => {
+  const handleDateChange = (_event: unknown, date?: Date) => {
     setShowDatePicker(false)
     if (date) {
       setSelectedDate(date)
-      const formattedDate = date.toISOString().split("T")[0]
-      updateFormData("date_of_birth", formattedDate)
+      updateFormData("date_of_birth", date.toISOString().split("T")[0])
     }
   }
 
-  const validateForm = (): boolean => {
+  const handleSaveAndContinue = () => {
     const newErrors: Record<string, string> = {}
-
-    if (!formData.date_of_birth) {
-      newErrors.date_of_birth = "Date of birth is required"
-    }
-
-    if (!formData.gender) {
-      newErrors.gender = "Gender is required"
-    }
-
-    if (!formData.state) {
-      newErrors.state = "State is required"
-    }
-
-    if (!formData.house_address.trim()) {
-      newErrors.house_address = "House address is required"
-    }
-
-    if (!formData.emergency_contact_phone.trim()) {
-      newErrors.emergency_contact_phone = "Emergency contact is required"
-    }
-
+    if (!formData.date_of_birth) newErrors.date_of_birth = "Date of birth is required"
+    if (!formData.gender) newErrors.gender = "Gender is required"
+    if (!formData.state) newErrors.state = "State is required"
+    if (!formData.address.trim()) newErrors.address = "House address is required"
+    if (!formData.emergency_contact_phone.trim()) newErrors.emergency_contact_phone = "Emergency contact is required"
     setErrors(newErrors)
-    return Object.keys(newErrors).length === 0
-  }
+    if (Object.keys(newErrors).length > 0 || !formData.gender) return
 
-  const handleSaveAndContinue = async () => {
-    if (!validateForm()) {
-      return
-    }
-
-    setIsLoading(true)
-    try {
-      await caregiverService.updateProfileStep1(formData as any)
-      navigation.navigate("CaregiverSetupStep2")
-    } catch (error: any) {
-      Alert.alert("Error", error.detail || "Failed to save profile information")
-    } finally {
-      setIsLoading(false)
-    }
+    save.mutate({
+      date_of_birth: formData.date_of_birth,
+      gender: formData.gender,
+      state: formData.state,
+      address: formData.address.trim(),
+      emergency_contact_phone: formData.emergency_contact_phone.trim(),
+    })
   }
 
   return (
@@ -184,7 +160,7 @@ const CaregiverSetupStep1 = () => {
               label="Gender"
               placeholder="Select your Gender"
               value={formData.gender}
-              onValueChange={(value: any) => updateFormData("gender", value)}
+              onValueChange={(value) => updateFormData("gender", String(value))}
               options={[
                 { label: "Male", value: "male" },
                 { label: "Female", value: "female" },
@@ -197,7 +173,7 @@ const CaregiverSetupStep1 = () => {
               label="State"
               placeholder="Select State"
               value={formData.state}
-              onValueChange={(value: any) => updateFormData("state", value)}
+              onValueChange={(value) => updateFormData("state", String(value))}
               options={
                 (formOptions?.states && formOptions.states.length > 0
                   ? formOptions.states
@@ -210,11 +186,11 @@ const CaregiverSetupStep1 = () => {
             <Input
               label="House Address"
               placeholder="Enter your House Address"
-              value={formData.house_address}
-              onChangeText={(text) => updateFormData("house_address", text)}
+              value={formData.address}
+              onChangeText={(text) => updateFormData("address", text)}
               multiline
               numberOfLines={3}
-              error={errors.house_address}
+              error={errors.address}
             />
 
             <Input
@@ -229,7 +205,7 @@ const CaregiverSetupStep1 = () => {
             <Button
               title="Save & Continue"
               onPress={handleSaveAndContinue}
-              loading={isLoading}
+              loading={save.isPending}
               style={{ marginTop: 20 }}
             />
           </View>

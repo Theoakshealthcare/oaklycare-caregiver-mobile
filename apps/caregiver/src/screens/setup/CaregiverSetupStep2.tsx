@@ -1,7 +1,7 @@
 "use client"
 
-import type React from "react"
-import { useState, useEffect } from "react"
+import { useState } from "react"
+import { useMutation, useQueryClient } from "@tanstack/react-query"
 import { View, ScrollView, Alert, TouchableOpacity } from "react-native"
 import * as DocumentPicker from "expo-document-picker"
 
@@ -12,21 +12,20 @@ import Select from "@/src/components/ui/select"
 import HeaderBack from "@/src/components/back/HeaderBack"
 import { globalStyles } from "@/src/constants/styles"
 import Navigation from "@/src/hooks/use-navigation"
-import caregiverService from "@/src/services/caregiver.service"
-import type { CaregiverSetupStep2Props, FormOptions } from "@/src/types/caregiver.types"
+import {
+  caregiverService,
+  type CaregiverProfileStep2,
+  type DocumentUploadResponse,
+  type PickedFile,
+} from "@/src/services/caregiver.service"
+import { useFormOptions } from "@/src/hooks/queries"
+import { messageForError } from "@/src/api/errors"
+import { queryKeys } from "@/src/api/keys"
 
-const DEFAULT_SPECIALIZATIONS = [
-  "General Caregiving", "Elderly Care", "Child Care", "Disability Support", "Nursing", "Companionship"
-]
-const DEFAULT_WORK_HOURS = [
-  "Full-time", "Part-time", "Day shift", "Night shift", "Live-in", "Live-out"
-]
-const DEFAULT_SERVICE_AREAS = [
-  "Lagos", "Abuja", "Port Harcourt", "Kano", "Ibadan", "Kaduna", "Benin City"
-]
-
-const CaregiverSetupStep2: React.FC<CaregiverSetupStep2Props> = ({ route }) => {
+const CaregiverSetupStep2 = () => {
   const { navigation } = Navigation()
+  const queryClient = useQueryClient()
+  const { data: formOptions } = useFormOptions()
 
   const [formData, setFormData] = useState({
     specialization: "",
@@ -35,26 +34,32 @@ const CaregiverSetupStep2: React.FC<CaregiverSetupStep2Props> = ({ route }) => {
     service_areas: [] as string[],
   })
 
-  const [formOptions, setFormOptions] = useState<FormOptions | null>(null)
-  const [uploadedFiles, setUploadedFiles] = useState<any[]>([])
-  const [isLoading, setIsLoading] = useState(false)
-  const [isUploading, setIsUploading] = useState(false)
+  const [uploadedFiles, setUploadedFiles] = useState<DocumentUploadResponse[]>([])
   const [errors, setErrors] = useState<Record<string, string>>({})
 
-  const loadFormOptions = async () => {
-    try {
-      const options: any = await caregiverService.getFormOptions()
-      setFormOptions(options)
-    } catch (error) {
-      console.error("Failed to load form options:", error)
-    }
-  }
+  const save = useMutation({
+    mutationFn: (payload: CaregiverProfileStep2) => caregiverService.updateProfileStep2(payload),
+    onSuccess: async () => {
+      await queryClient.invalidateQueries({ queryKey: queryKeys.verificationStatus })
+      // Onboarding goes on to consent; when an admin asked for changes there is no consent step in
+      // this stack, the caregiver returns to the status screen to resubmit.
+      const hasConsent = navigation.getState()?.routeNames.includes("ConsentScreen")
+      navigation.navigate(hasConsent ? "ConsentScreen" : "VerificationStatus")
+    },
+    onError: (error) => Alert.alert("Error", messageForError(error)),
+  })
 
-  useEffect(() => {
-    loadFormOptions()
-  }, [])
+  const upload = useMutation({
+    mutationFn: (file: PickedFile) => caregiverService.uploadDocument(file, "license"),
+    onSuccess: (doc) => {
+      setUploadedFiles((prev) => [...prev, doc])
+      Alert.alert("Uploaded", "Your document was uploaded. An admin will review it.")
+    },
+    onError: (error) => Alert.alert("Upload failed", messageForError(error)),
+  })
+  const isUploading = upload.isPending
 
-  const updateFormData = (field: keyof typeof formData, value: any) => {
+  const updateFormData = <K extends keyof typeof formData>(field: K, value: (typeof formData)[K]) => {
     setFormData((prev) => ({ ...prev, [field]: value }))
     if (errors[field]) {
       setErrors((prev) => ({ ...prev, [field]: "" }))
@@ -62,63 +67,24 @@ const CaregiverSetupStep2: React.FC<CaregiverSetupStep2Props> = ({ route }) => {
   }
 
   const handleFileUpload = async () => {
-    try {
-      setIsUploading(true)
-      const result = await DocumentPicker.getDocumentAsync({
-        type: ["application/pdf", "image/*"],
-        copyToCacheDirectory: true,
-      })
-
-      if (!result.canceled && result.assets[0]) {
-        const file = result.assets[0]
-        const uploadResult = await caregiverService.uploadDocument(file, "license")
-        setUploadedFiles((prev) => [...prev, uploadResult])
-        Alert.alert("Success", "Document uploaded successfully")
-      }
-    } catch (error: any) {
-      Alert.alert("Error", error.detail || "Failed to upload document")
-    } finally {
-      setIsUploading(false)
-    }
+    const result = await DocumentPicker.getDocumentAsync({
+      type: ["application/pdf", "image/*"],
+      copyToCacheDirectory: true,
+    })
+    const file = result.canceled ? undefined : result.assets[0]
+    if (file) upload.mutate({ uri: file.uri, name: file.name, mimeType: file.mimeType })
   }
 
-  const validateForm = (): boolean => {
+  const handleSaveAndContinue = () => {
     const newErrors: Record<string, string> = {}
-
-    if (!formData.specialization) {
-      newErrors.specialization = "Specialization is required"
-    }
-
+    if (!formData.specialization) newErrors.specialization = "Specialization is required"
     if (!formData.years_of_experience || formData.years_of_experience < 1) {
       newErrors.years_of_experience = "Years of experience is required"
     }
-
-    if (!formData.preferred_work_hours) {
-      newErrors.preferred_work_hours = "Preferred work hours is required"
-    }
-
-    if (formData.service_areas.length === 0) {
-      newErrors.service_areas = "At least one service area is required"
-    }
-
+    if (!formData.preferred_work_hours) newErrors.preferred_work_hours = "Preferred work hours is required"
+    if (formData.service_areas.length === 0) newErrors.service_areas = "At least one service area is required"
     setErrors(newErrors)
-    return Object.keys(newErrors).length === 0
-  }
-
-  const handleSaveAndContinue = async () => {
-    if (!validateForm()) {
-      return
-    }
-
-    setIsLoading(true)
-    try {
-      await caregiverService.updateProfileStep2(formData)
-      navigation.navigate("IdentityVerification")
-    } catch (error: any) {
-      Alert.alert("Error", error.detail || "Failed to save profile information")
-    } finally {
-      setIsLoading(false)
-    }
+    if (Object.keys(newErrors).length === 0) save.mutate(formData)
   }
 
   const experienceOptions = Array.from({ length: 20 }, (_, i) => ({
@@ -170,13 +136,8 @@ const CaregiverSetupStep2: React.FC<CaregiverSetupStep2Props> = ({ route }) => {
               label="Select Specialization"
               placeholder="Select your Specialization"
               value={formData.specialization}
-              onValueChange={(value) => updateFormData("specialization", value)}
-              options={
-                (formOptions?.specializations && formOptions.specializations.length > 0
-                  ? formOptions.specializations
-                  : DEFAULT_SPECIALIZATIONS
-                ).map((spec) => ({ label: spec, value: spec }))
-              }
+              onValueChange={(value) => updateFormData("specialization", String(value))}
+              options={(formOptions?.specializations ?? []).map((spec) => ({ label: spec, value: spec }))}
               error={errors.specialization}
             />
 
@@ -184,7 +145,7 @@ const CaregiverSetupStep2: React.FC<CaregiverSetupStep2Props> = ({ route }) => {
               label="Select years of Experience"
               placeholder="Select Experience"
               value={formData.years_of_experience.toString()}
-              onValueChange={(value: any) => updateFormData("years_of_experience", Number.parseInt(value))}
+              onValueChange={(value) => updateFormData("years_of_experience", Number.parseInt(String(value), 10))}
               options={experienceOptions}
               error={errors.years_of_experience}
             />
@@ -227,13 +188,8 @@ const CaregiverSetupStep2: React.FC<CaregiverSetupStep2Props> = ({ route }) => {
               label="Select preferred work hours"
               placeholder="Select Work Hours"
               value={formData.preferred_work_hours}
-              onValueChange={(value) => updateFormData("preferred_work_hours", value)}
-              options={
-                (formOptions?.work_hours && formOptions.work_hours.length > 0
-                  ? formOptions.work_hours
-                  : DEFAULT_WORK_HOURS
-                ).map((hour) => ({ label: hour, value: hour }))
-              }
+              onValueChange={(value) => updateFormData("preferred_work_hours", String(value))}
+              options={(formOptions?.work_hours ?? []).map((hour) => ({ label: hour, value: hour }))}
               error={errors.preferred_work_hours}
             />
 
@@ -241,26 +197,26 @@ const CaregiverSetupStep2: React.FC<CaregiverSetupStep2Props> = ({ route }) => {
               label="Choose Service areas"
               placeholder="Select Service Areas"
               value={formData.service_areas.join(", ")}
-              onValueChange={(value: any) => {
-                const areas = formData.service_areas.includes(value)
-                  ? formData.service_areas.filter((area) => area !== value)
-                  : [...formData.service_areas, value]
+              onValueChange={(value) => {
+                const area = String(value)
+                const areas = formData.service_areas.includes(area)
+                  ? formData.service_areas.filter((a) => a !== area)
+                  : [...formData.service_areas, area]
                 updateFormData("service_areas", areas)
               }}
-              options={
-                (formOptions?.service_areas && formOptions.service_areas.length > 0
-                  ? formOptions.service_areas
-                  : DEFAULT_SERVICE_AREAS
-                ).map((area) => ({ label: area, value: area }))
-              }
-              // multiple
+              options={(formOptions?.service_areas ?? []).map((area) => ({ label: area, value: area }))}
               error={errors.service_areas}
             />
+            {formData.service_areas.length > 0 && (
+              <Text variant="small" color={theme.colors.primary}>
+                Selected: {formData.service_areas.join(", ")} (tap an area again to remove it)
+              </Text>
+            )}
 
             <Button
               title="Save & Continue"
               onPress={handleSaveAndContinue}
-              loading={isLoading}
+              loading={save.isPending}
               style={{ marginTop: 20 }}
             />
           </View>

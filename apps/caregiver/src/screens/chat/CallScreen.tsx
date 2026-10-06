@@ -9,11 +9,12 @@ import { theme } from "@/src/constants/theme"
 import Text from "@/src/components/ui/text"
 import { globalStyles } from "@/src/constants/styles"
 import Navigation from "@/src/hooks/use-navigation"
-import type { CallScreenProps } from "@/src/types/booking.types"
+import type { StackScreenProps } from "@react-navigation/stack"
+import type { ScreenParamLists } from "@/src/navigation/Navigations"
 
-const CallScreen: React.FC<CallScreenProps> = ({ route }) => {
+const CallScreen: React.FC<StackScreenProps<ScreenParamLists, "CallScreen">> = ({ route }) => {
   const { navigation } = Navigation()
-  const { booking, isVideo = false } = route?.params || {}
+  const { bookingId, patientName, isVideo = false } = route.params
 
   const [isCallActive, setIsCallActive] = useState(false)
   const [callDuration, setCallDuration] = useState(0)
@@ -76,15 +77,7 @@ const CallScreen: React.FC<CallScreenProps> = ({ route }) => {
   }
 
   const handleOpenNotes = () => {
-    navigation.navigate("AINoteTaker", { booking })
-  }
-
-  if (!booking) {
-    return (
-      <View style={[globalStyles.container, { justifyContent: "center" }]}>
-        <Text variant="body">Booking not found</Text>
-      </View>
-    )
+    navigation.navigate("AINoteTaker", { bookingId })
   }
 
   return (
@@ -114,7 +107,7 @@ const CallScreen: React.FC<CallScreenProps> = ({ route }) => {
         </View>
 
         <Text variant="h2" weight="bold" color={theme.colors.white} style={{ marginBottom: 8 }}>
-          {booking.patient?.full_name || "Patient"}
+          {patientName ?? "Patient"}
         </Text>
 
         <Text variant="body" color={theme.colors.white + "80"} style={{ marginBottom: 16 }}>

@@ -38,7 +38,7 @@ const Button: React.FC<ButtonProps> = ({
   ...rest
 }) => {
   const getButtonStyles = () => {
-    const baseStyle:any = [styles.button]
+    const baseStyle: StyleProp<ViewStyle>[] = [styles.button]
 
     if (fullWidth) {
       baseStyle.push(styles.fullWidth)
@@ -70,7 +70,7 @@ const Button: React.FC<ButtonProps> = ({
   }
 
   const getTextStyles = () => {
-    const baseStyle: any = [styles.text]
+    const baseStyle: StyleProp<TextStyle>[] = [styles.text]
 
     switch (variant) {
       case "primary":

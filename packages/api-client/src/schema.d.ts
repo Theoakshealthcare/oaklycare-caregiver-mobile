@@ -485,6 +485,77 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/v1/caregiver/availability": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Update Availability
+         * @description Go available (receive new visit offers) or unavailable (stop receiving them).
+         *
+         *     Accepted bookings and offers already sent are unaffected. Going available needs a location on
+         *     file (409 otherwise); the position must also stay fresh (see LOCATION_FRESHNESS_MINUTES) for
+         *     offers to arrive. Every location ping carries its own `is_available` (default true), so the app
+         *     must send the current value on each ping or a ping will switch the caregiver back on.
+         */
+        post: operations["update_availability_api_v1_caregiver_availability_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/caregiver/home": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Get Home
+         * @description Everything the home screen shows, in one call.
+         */
+        get: operations["get_home_api_v1_caregiver_home_get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/devices/push-token": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Register Push Token
+         * @description Register this device's Expo push token, or refresh it (call after every login and whenever
+         *     the token changes). A token already registered to another account moves to the caller.
+         */
+        post: operations["register_push_token_api_v1_devices_push_token_post"];
+        /**
+         * Delete Push Token
+         * @description Forget this device's token (call on logout). Idempotent, and only ever removes the caller's
+         *     own token: someone else's token gets the same 204 and is left alone.
+         */
+        delete: operations["delete_push_token_api_v1_devices_push_token_delete"];
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/v1/booking/preview": {
         parameters: {
             query?: never;
@@ -1670,6 +1741,16 @@ export interface paths {
 export type webhooks = Record<string, never>;
 export interface components {
     schemas: {
+        /** AvailabilityRequest */
+        AvailabilityRequest: {
+            /** Is Available */
+            is_available: boolean;
+        };
+        /** AvailabilityResponse */
+        AvailabilityResponse: {
+            /** Is Available */
+            is_available: boolean;
+        };
         /** BackgroundCheckDecision */
         BackgroundCheckDecision: {
             /**
@@ -1736,9 +1817,11 @@ export interface components {
              * Action
              * @enum {string}
              */
-            action: "accept" | "decline" | "start" | "complete" | "cancel";
+            action: "accept" | "decline" | "on_my_way" | "start" | "complete" | "cancel";
             /** Reason */
             reason?: string | null;
+            /** Visit Code */
+            visit_code?: string | null;
         };
         /** BookingCreate */
         BookingCreate: {
@@ -2095,6 +2178,17 @@ export interface components {
              */
             updated_at: string;
             /**
+             * Dispatch State
+             * @description dispatching | matched | unmatched; null before payment or for legacy bookings
+             */
+            dispatch_state?: string | null;
+            /**
+             * Visit Code
+             * @description 4-digit code the patient gives the caregiver to start the visit. Only returned to the booking's own patient from GET /booking/booking/{id}, while the booking is accepted or en_route; null for everyone else and in every other response.
+             * @example 4821
+             */
+            visit_code?: string | null;
+            /**
              * Payment Url
              * @description Paystack payment URL to complete the booking payment
              * @example https://checkout.paystack.com/abcd1234
@@ -2246,7 +2340,7 @@ export interface components {
          * BookingStatus
          * @enum {string}
          */
-        BookingStatus: "pending" | "accepted" | "in_progress" | "completed" | "cancelled" | "declined";
+        BookingStatus: "pending" | "accepted" | "en_route" | "in_progress" | "completed" | "cancelled" | "declined";
         /** Caregiver */
         Caregiver: {
             /**
@@ -2379,6 +2473,31 @@ export interface components {
              */
             is_online?: boolean | null;
         };
+        /** CaregiverHome */
+        CaregiverHome: {
+            /** Profile Status */
+            profile_status: string;
+            /** Is Available */
+            is_available: boolean;
+            /**
+             * Location Updated At
+             * @description When the caregiver's position was last reported; null if never.
+             */
+            location_updated_at?: string | null;
+            /** Today Visits */
+            today_visits: components["schemas"]["HomeVisit"][];
+            /** Upcoming Visits */
+            upcoming_visits: components["schemas"]["HomeVisit"][];
+            /** Open Offers */
+            open_offers: components["schemas"]["HomeOffer"][];
+            /**
+             * Wallet Balance Naira
+             * @description Wallet balance in NAIRA (the /caregiver/wallet endpoint is kobo).
+             */
+            wallet_balance_naira: number;
+            /** Currency */
+            currency: string;
+        };
         /** CaregiverLocationResponse */
         CaregiverLocationResponse: {
             /**
@@ -2441,11 +2560,9 @@ export interface components {
             speed?: number | null;
             /**
              * Is Available
-             * @description Whether caregiver is available for new bookings
-             * @default true
-             * @example true
+             * @description Set availability for new bookings. Omit to leave it unchanged (a first ping without it creates the record as unavailable). Prefer POST /caregiver/availability.
              */
-            is_available: boolean;
+            is_available?: boolean | null;
         };
         /** CaregiverProfile */
         CaregiverProfile: {
@@ -2824,6 +2941,78 @@ export interface components {
         HTTPValidationError: {
             /** Detail */
             detail?: components["schemas"]["ValidationError"][];
+        };
+        /**
+         * HomeOffer
+         * @description A visit request not yet accepted. Deliberately carries no patient details.
+         */
+        HomeOffer: {
+            /**
+             * Booking Id
+             * Format: uuid
+             */
+            booking_id: string;
+            /** Service Type */
+            service_type: string;
+            /**
+             * Scheduled Date
+             * Format: date-time
+             */
+            scheduled_date: string;
+            /**
+             * Scheduled End Date
+             * Format: date-time
+             */
+            scheduled_end_date: string;
+            /** Duration Hours */
+            duration_hours: number;
+            /** Area */
+            area: string;
+            /** State */
+            state: string;
+            /**
+             * Offered At
+             * Format: date-time
+             */
+            offered_at: string;
+        };
+        /**
+         * HomeVisit
+         * @description A visit assigned to the caregiver (accepted, en_route or in_progress).
+         */
+        HomeVisit: {
+            /**
+             * Id
+             * Format: uuid
+             */
+            id: string;
+            /** Booking Code */
+            booking_code: string;
+            /** Service Type */
+            service_type: string;
+            status: components["schemas"]["BookingStatus"];
+            /** Dispatch State */
+            dispatch_state?: string | null;
+            /**
+             * Scheduled Date
+             * Format: date-time
+             */
+            scheduled_date: string;
+            /**
+             * Scheduled End Date
+             * Format: date-time
+             */
+            scheduled_end_date: string;
+            /** Duration Hours */
+            duration_hours: number;
+            /** Patient Name */
+            patient_name?: string | null;
+            /** Patient Address */
+            patient_address: string;
+            /** Patient City */
+            patient_city: string;
+            /** Patient State */
+            patient_state: string;
         };
         /** IdentityDecision */
         IdentityDecision: {
@@ -3480,6 +3669,28 @@ export interface components {
             status?: string | null;
             /** Doctor Note Path */
             doctor_note_path?: string | null;
+        };
+        /** PushTokenDelete */
+        PushTokenDelete: {
+            /** Token */
+            token: string;
+        };
+        /** PushTokenRegister */
+        PushTokenRegister: {
+            /** Token */
+            token: string;
+            /**
+             * Platform
+             * @enum {string}
+             */
+            platform: "ios" | "android";
+        };
+        /** PushTokenResponse */
+        PushTokenResponse: {
+            /** Token */
+            token: string;
+            /** Platform */
+            platform: string;
         };
         /** ReasonIn */
         ReasonIn: {
@@ -4533,6 +4744,123 @@ export interface operations {
                 content: {
                     "application/json": components["schemas"]["CaregiverWithdrawalResponse"];
                 };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    update_availability_api_v1_caregiver_availability_post: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["AvailabilityRequest"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["AvailabilityResponse"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    get_home_api_v1_caregiver_home_get: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["CaregiverHome"];
+                };
+            };
+        };
+    };
+    register_push_token_api_v1_devices_push_token_post: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["PushTokenRegister"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["PushTokenResponse"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    delete_push_token_api_v1_devices_push_token_delete: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["PushTokenDelete"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            204: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
             };
             /** @description Validation Error */
             422: {
