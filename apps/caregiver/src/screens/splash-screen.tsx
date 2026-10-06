@@ -37,8 +37,8 @@ const SplashScreen = () => {
         style={[
           styles.logoContainer,
           {
-            opacity: fadeAnim.value,
-            transform: [{ scale: scaleAnim.value }, { rotate: spin }],
+            opacity: fadeAnim.node,
+            transform: [{ scale: scaleAnim.node }, { rotate: spin }],
           },
         ]}
       >
@@ -53,7 +53,7 @@ const SplashScreen = () => {
         style={[
           styles.textContainer,
           {
-            opacity: fadeAnim.value,
+            opacity: fadeAnim.node,
             transform: [
               {
                 translateY: fadeAnim.interpolate({

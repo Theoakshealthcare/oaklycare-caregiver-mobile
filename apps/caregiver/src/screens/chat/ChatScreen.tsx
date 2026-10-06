@@ -24,17 +24,6 @@ const ChatScreen: React.FC<ChatScreenProps> = ({ route }) => {
   const scrollViewRef = useRef<ScrollView>(null)
 
   useEffect(() => {
-    if (booking?.id) {
-      loadChatMessages()
-      joinBooking(booking.id)
-
-      return () => {
-        leaveBooking(booking.id)
-      }
-    }
-  }, [booking?.id])
-
-  useEffect(() => {
     // Handle real-time messages
     const chatMessages = wsMessages.filter((msg) => msg.type === "chat_message" && msg.booking_id === booking?.id)
 
@@ -68,13 +57,24 @@ const ChatScreen: React.FC<ChatScreenProps> = ({ route }) => {
     try {
       setIsLoading(true)
       const data = await bookingService.getChatMessages(booking.id)
-      setMessages(data)
+      setMessages(data.data ?? [])
     } catch (error) {
       console.error("Failed to load chat messages:", error)
     } finally {
       setIsLoading(false)
     }
   }
+
+  useEffect(() => {
+    if (booking?.id) {
+      loadChatMessages()
+      joinBooking(booking.id)
+
+      return () => {
+        leaveBooking(booking.id)
+      }
+    }
+  }, [booking?.id])
 
   const handleSendMessage = async () => {
     if (!newMessage.trim() || !booking?.id) return

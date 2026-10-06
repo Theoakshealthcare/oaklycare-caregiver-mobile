@@ -30,7 +30,7 @@ export const useAnimation = (initialValue = 0) => {
   }
 
   return {
-    value: animatedValue,
+    node: animatedValue,
     animate,
     interpolate,
   }

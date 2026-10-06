@@ -24,13 +24,6 @@ const CaregiverBookings: React.FC<CaregiverBookingsProps> = ({ route }) => {
   const [showDeclineModal, setShowDeclineModal] = useState(false)
   const [declineBookingId, setDeclineBookingId] = useState<string | null>(null)
 
-  useEffect(() => {
-    loadBookings()
-    if (activeTab === "new_requests") {
-      loadNotifications()
-    }
-  }, [activeTab])
-
   const loadBookings = async () => {
     try {
       setIsLoading(true)
@@ -49,7 +42,7 @@ const CaregiverBookings: React.FC<CaregiverBookingsProps> = ({ route }) => {
       }
 
       const data = await bookingService.getCaregiverBookings(status)
-      setBookings(data)
+      setBookings(data.data ?? [])
     } catch (error) {
       console.error("Failed to load bookings:", error)
     } finally {
@@ -60,11 +53,18 @@ const CaregiverBookings: React.FC<CaregiverBookingsProps> = ({ route }) => {
   const loadNotifications = async () => {
     try {
       const data = await bookingService.getCaregiverNotifications(true)
-      setNotifications(data)
+      setNotifications(data.data ?? [])
     } catch (error) {
       console.error("Failed to load notifications:", error)
     }
   }
+
+  useEffect(() => {
+    loadBookings()
+    if (activeTab === "new_requests") {
+      loadNotifications()
+    }
+  }, [activeTab])
 
   const onRefresh = async () => {
     setRefreshing(true)

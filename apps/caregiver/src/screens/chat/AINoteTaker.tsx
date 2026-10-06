@@ -4,7 +4,12 @@ import type React from "react"
 import { useState, useEffect } from "react"
 import { View, ScrollView, TouchableOpacity, Alert, TextInput } from "react-native"
 import { Feather } from "@expo/vector-icons"
-import { Audio } from "expo-av"
+import {
+  useAudioRecorder,
+  RecordingPresets,
+  requestRecordingPermissionsAsync,
+  setAudioModeAsync,
+} from "expo-audio"
 
 import { theme } from "@/src/constants/theme"
 import Text from "@/src/components/ui/text"
@@ -20,7 +25,7 @@ const AINoteTaker: React.FC<AINoteTakerProps> = ({ route }) => {
   const { booking } = route?.params || {}
 
   const [isRecording, setIsRecording] = useState(false)
-  const [recording, setRecording] = useState<Audio.Recording | null>(null)
+  const recorder = useAudioRecorder(RecordingPresets.HIGH_QUALITY)
   const [notes, setNotes] = useState<BookingNote[]>([])
   const [currentNote, setCurrentNote] = useState("")
   const [noteTitle, setNoteTitle] = useState("")
@@ -28,12 +33,7 @@ const AINoteTaker: React.FC<AINoteTakerProps> = ({ route }) => {
   const [recordingDuration, setRecordingDuration] = useState(0)
 
   useEffect(() => {
-    loadNotes()
-    setupAudio()
-  }, [])
-
-  useEffect(() => {
-    let interval: NodeJS.Timeout
+    let interval: ReturnType<typeof setInterval> | undefined
     if (isRecording) {
       interval = setInterval(() => {
         setRecordingDuration((prev) => prev + 1)
@@ -49,10 +49,10 @@ const AINoteTaker: React.FC<AINoteTakerProps> = ({ route }) => {
 
   const setupAudio = async () => {
     try {
-      await Audio.requestPermissionsAsync()
-      await Audio.setAudioModeAsync({
-        allowsRecordingIOS: true,
-        playsInSilentModeIOS: true,
+      await requestRecordingPermissionsAsync()
+      await setAudioModeAsync({
+        allowsRecording: true,
+        playsInSilentMode: true,
       })
     } catch (error) {
       console.error("Failed to setup audio:", error)
@@ -64,16 +64,21 @@ const AINoteTaker: React.FC<AINoteTakerProps> = ({ route }) => {
 
     try {
       const data = await bookingService.getBookingNotes(booking.id)
-      setNotes(data)
+      setNotes(data.data ?? [])
     } catch (error) {
       console.error("Failed to load notes:", error)
     }
   }
 
+  useEffect(() => {
+    loadNotes()
+    setupAudio()
+  }, [])
+
   const startRecording = async () => {
     try {
-      const { recording } = await Audio.Recording.createAsync(Audio.RecordingOptionsPresets.HIGH_QUALITY)
-      setRecording(recording)
+      await recorder.prepareToRecordAsync()
+      recorder.record()
       setIsRecording(true)
     } catch (error) {
       console.error("Failed to start recording:", error)
@@ -82,13 +87,13 @@ const AINoteTaker: React.FC<AINoteTakerProps> = ({ route }) => {
   }
 
   const stopRecording = async () => {
-    if (!recording) return
+    if (!isRecording) return
 
     try {
       setIsRecording(false)
-      await recording.stopAndUnloadAsync()
+      await recorder.stop()
 
-      const uri = recording.getURI()
+      const uri = recorder.uri
       if (uri) {
         // Here you would typically upload the audio file and get transcription
         // For now, we'll simulate with a placeholder
@@ -96,8 +101,6 @@ const AINoteTaker: React.FC<AINoteTakerProps> = ({ route }) => {
           "Patient showed improvement in mobility. Vital signs stable. Medication taken as prescribed."
         await saveNoteWithTranscript(simulatedTranscript)
       }
-
-      setRecording(null)
     } catch (error) {
       console.error("Failed to stop recording:", error)
       Alert.alert("Error", "Failed to stop recording")

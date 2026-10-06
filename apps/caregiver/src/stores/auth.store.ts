@@ -1,25 +1,18 @@
 import { create } from 'zustand';
 import { createJSONStorage, persist } from 'zustand/middleware';
-import { MMKV } from 'react-native-mmkv';
+import * as SecureStore from 'expo-secure-store';
 import { User, TokenResponse, ApiError } from '@/src/types/api.types';
 
-// MMKV storage for Zustand
-const storage = new MMKV({
-  id: 'auth-storage',
-  encryptionKey: 'oaklycare-auth-key-2024',
-});
+// Tokens and the user profile live in the platform keychain/keystore (expo-secure-store).
+// Nothing here is encrypted by an app-held key.
+const SECURE_STORE_OPTIONS: SecureStore.SecureStoreOptions = {
+  keychainAccessible: SecureStore.AFTER_FIRST_UNLOCK_THIS_DEVICE_ONLY,
+};
 
-const zustandStorage = {
-  setItem: (name: string, value: string) => {
-    return storage.set(name, value);
-  },
-  getItem: (name: string) => {
-    const value = storage.getString(name);
-    return value ?? null;
-  },
-  removeItem: (name: string) => {
-    return storage.delete(name);
-  },
+const secureStorage = {
+  setItem: (name: string, value: string) => SecureStore.setItemAsync(name, value, SECURE_STORE_OPTIONS),
+  getItem: (name: string) => SecureStore.getItemAsync(name, SECURE_STORE_OPTIONS),
+  removeItem: (name: string) => SecureStore.deleteItemAsync(name, SECURE_STORE_OPTIONS),
 };
 
 interface AuthState {
@@ -107,7 +100,7 @@ export const useAuthStore = create<AuthState>()(
     }),
     {
       name: 'auth-storage',
-      storage: createJSONStorage(() => zustandStorage),
+      storage: createJSONStorage(() => secureStorage),
       partialize: (state) => ({
         user: state.user,
         token: state.token,

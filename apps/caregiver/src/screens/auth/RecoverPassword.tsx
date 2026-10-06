@@ -38,7 +38,7 @@ const RecoverPassword: React.FC<RecoverPasswordProps> = ({ route }) => {
     setIsLoading(true);
 
     try {
-      await authService.requestPasswordReset(email);
+      await authService.requestPasswordReset({ email });
       
       // Show success message
       Alert.alert(

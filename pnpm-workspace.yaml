@@ -1,3 +1,14 @@
 packages:
   - "apps/*"
   - "packages/*"
+
+# Install scripts are denied by default. Nothing in the workspace needs one to build;
+# unrs-resolver (eslint) and @parcel/watcher (jest-expo) ship prebuilt binaries.
+onlyBuiltDependencies: []
+ignoredBuiltDependencies:
+  - unrs-resolver
+  - "@parcel/watcher"
+
+# Do not auto-install optional peers (expo lists react-dom / react-native-web / react-native-webview;
+# they would pull a second, mismatched react-dom into the graph).
+autoInstallPeers: false

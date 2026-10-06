@@ -1,69 +1,53 @@
 "use client"
 
 import type React from "react"
-import { useState, useEffect } from "react"
+import { useRef, useState } from "react"
 import { View, StyleSheet, Alert } from "react-native"
-import { Camera } from "expo-camera"
+import { CameraView, useCameraPermissions } from "expo-camera"
 import { Feather } from "@expo/vector-icons"
 import Text from "@/src/components/ui/text"
 import Button from "@/src/components/ui/button"
 import { globalStyles } from "@/src/constants/styles"
 import Navigation from "@/src/hooks/use-navigation"
-import type { DocumentScanProps } from "@/src/types/caregiver.types"
 
-const DocumentScan = () => {
+const DocumentScan: React.FC = () => {
   const { navigation } = Navigation()
-  // const { applicant_id, sdk_token } = route?.params || {}
 
-  const [hasPermission, setHasPermission] = useState<boolean | null>(null)
-  const [cameraRef, setCameraRef] = useState<Camera | null>(null)
+  const [permission, requestPermission] = useCameraPermissions()
+  const cameraRef = useRef<CameraView>(null)
   const [isCapturing, setIsCapturing] = useState(false)
 
-  useEffect(() => {
-    ;(async () => {
-      const { status } = await Camera.requestCameraPermissionsAsync()
-      setHasPermission(status === "granted")
-    })()
-  }, [])
-
+  // The photo is not uploaded or reported as verified here: identity is decided by an
+  // admin review of the submitted documents, so a capture alone never claims success.
   const takePicture = async () => {
-    if (cameraRef && !isCapturing) {
-      try {
-        setIsCapturing(true)
-        const photo = await Camera.takePictureAsync({
-          quality: 0.8,
-          base64: false,
-        })
-
-        // Here you would integrate with Onfido SDK to upload the document
-        // For now, we'll simulate success and navigate back
-        Alert.alert("Document Captured", "Document has been captured successfully", [
-          {
-            text: "OK",
-            onPress: () => navigation.goBack(),
-          },
-        ])
-      } catch (error) {
-        Alert.alert("Error", "Failed to capture document")
-      } finally {
-        setIsCapturing(false)
-      }
+    if (!cameraRef.current || isCapturing) return
+    try {
+      setIsCapturing(true)
+      await cameraRef.current.takePictureAsync({ quality: 0.8, base64: false })
+      navigation.goBack()
+    } catch {
+      Alert.alert("Error", "Failed to capture document")
+    } finally {
+      setIsCapturing(false)
     }
   }
 
-  if (hasPermission === null) {
+  if (!permission) {
     return (
       <View style={[globalStyles.container, { justifyContent: "center" }]}>
-        <Text>Requesting camera permission...</Text>
+        <Text>Checking camera permission...</Text>
       </View>
     )
   }
 
-  if (hasPermission === false) {
+  if (!permission.granted) {
     return (
       <View style={[globalStyles.container, { justifyContent: "center" }]}>
-        <Text>No access to camera</Text>
-        <Button title="Go Back" onPress={() => navigation.goBack()} style={{ marginTop: 20 }} />
+        <Text>Oakly needs camera access to capture your documents.</Text>
+        {permission.canAskAgain && (
+          <Button title="Allow camera" onPress={requestPermission} style={{ marginTop: 20 }} />
+        )}
+        <Button title="Go Back" onPress={() => navigation.goBack()} variant="ghost" style={{ marginTop: 20 }} />
       </View>
     )
   }
@@ -84,11 +68,10 @@ const DocumentScan = () => {
       </View>
 
       <View style={styles.cameraContainer}>
-        <Camera style={styles.camera} type={Camera.Constants.Type.back} ref={(ref) => setCameraRef(ref)}>
-          <View style={styles.overlay}>
-            <View style={styles.scanFrame} />
-          </View>
-        </Camera>
+        <CameraView style={styles.camera} facing="back" ref={cameraRef} />
+        <View style={styles.overlay} pointerEvents="none">
+          <View style={styles.scanFrame} />
+        </View>
       </View>
 
       <View style={styles.controls}>
@@ -124,7 +107,7 @@ const styles = StyleSheet.create({
     flex: 1,
   },
   overlay: {
-    flex: 1,
+    ...StyleSheet.absoluteFill,
     justifyContent: "center",
     alignItems: "center",
   },

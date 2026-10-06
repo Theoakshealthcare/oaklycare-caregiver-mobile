@@ -4,33 +4,42 @@
     "slug": "oaklycare-caregiver",
     "version": "1.0.0",
     "orientation": "portrait",
-    "icon": "./assets/images/pngs/logo.png",
+    "icon": "./assets/images/icon.png",
     "scheme": "oaklycarecaregivermobile",
     "userInterfaceStyle": "automatic",
-    "newArchEnabled": true,
     "ios": {
       "supportsTablet": true,
-      "bundleIdentifier": "com.oakly.oaklycaregiver"
+      "bundleIdentifier": "com.oakly.oaklycaregiver",
+      "infoPlist": {
+        "NSPhotoLibraryUsageDescription": "Oakly uses your photo library so you can attach your credentials and ID documents to your caregiver application.",
+        "ITSAppUsesNonExemptEncryption": false
+      }
     },
     "android": {
+      "package": "com.oakly.oaklycaregiver",
       "adaptiveIcon": {
-        "foregroundImage": "./assets/images/pngs/logo.png",
+        "foregroundImage": "./assets/images/adaptive-icon.png",
         "backgroundColor": "#ffffff"
       },
       "permissions": [
         "android.permission.ACCESS_COARSE_LOCATION",
-        "android.permission.ACCESS_FINE_LOCATION"
-      ],
-      "edgeToEdgeEnabled": true,
-      "package": "com.oakly.oaklycaregiver"
-    },
-    "web": {
-      "bundler": "metro",
-      "output": "static",
-      "favicon": "./assets/images/pngs/logo.png"
+        "android.permission.ACCESS_FINE_LOCATION",
+        "android.permission.ACCESS_BACKGROUND_LOCATION",
+        "android.permission.FOREGROUND_SERVICE",
+        "android.permission.FOREGROUND_SERVICE_LOCATION",
+        "android.permission.CAMERA",
+        "android.permission.RECORD_AUDIO",
+        "android.permission.POST_NOTIFICATIONS",
+        "android.permission.VIBRATE"
+      ]
     },
     "plugins": [
-      "expo-router",
+      [
+        "expo-secure-store",
+        {
+          "faceIDPermission": "Oakly uses Face ID to unlock your saved sign-in."
+        }
+      ],
       [
         "expo-splash-screen",
         {
@@ -43,7 +52,26 @@
       [
         "expo-location",
         {
-          "locationAlwaysAndWhenInUsePermission": "Allow $(PRODUCT_NAME) to use your location."
+          "locationAlwaysAndWhenInUsePermission": "Oakly uses your location in the background during an active visit so patients and our team can see you are on your way and have arrived.",
+          "locationWhenInUsePermission": "Oakly uses your location while you are available for work so we can offer you visits near you.",
+          "locationAlwaysPermission": "Oakly uses your location in the background during an active visit so patients and our team can see you are on your way and have arrived.",
+          "isAndroidBackgroundLocationEnabled": true,
+          "isAndroidForegroundServiceEnabled": true,
+          "isIosBackgroundLocationEnabled": true
+        }
+      ],
+      [
+        "expo-camera",
+        {
+          "cameraPermission": "Oakly uses your camera to capture your identity and credential documents.",
+          "microphonePermission": "Oakly uses your microphone to record visit notes.",
+          "recordAudioAndroid": true
+        }
+      ],
+      [
+        "expo-audio",
+        {
+          "microphonePermission": "Oakly uses your microphone to record visit notes."
         }
       ],
       [
@@ -55,17 +83,10 @@
           "sounds": [
             "./assets/sound/notification_sound.wav",
             "./assets/sound/notification_sound_other.wav"
-          ],
-          "foregroundPresentationOptions": [
-            "alert",
-            "badge",
-            "sound"
           ]
         }
-      ]
-    ],
-    "experiments": {
-      "typedRoutes": true
-    }
+      ],
+      "expo-asset"
+    ]
   }
 }

@@ -82,7 +82,7 @@ const VerifyEmail: React.FC<VerifyEmailProps> = ({ route }) => {
     setIsVerifying(true);
     
     try {
-      await authService.verifyEmail(email || '', code);
+      await authService.verifyEmail({ email: email || '', code });
       
       // Navigate to account created screen
       setTimeout(() => {
@@ -104,7 +104,7 @@ const VerifyEmail: React.FC<VerifyEmailProps> = ({ route }) => {
     if (timer > 0) return;
     
     try {
-      await authService.resendVerification(email || '');
+      await authService.resendVerification({ email: email || '' });
       
       setOtp(['', '', '', '', '']);
       setTimer(30);
@@ -160,7 +160,7 @@ const VerifyEmail: React.FC<VerifyEmailProps> = ({ route }) => {
                   timer > 0 ? theme.colors.textLight : theme.colors.primary
                 }
               >
-                Didn't receive a code?
+                Didn&apos;t receive a code?
               </Text>
             </Pressable>
 
