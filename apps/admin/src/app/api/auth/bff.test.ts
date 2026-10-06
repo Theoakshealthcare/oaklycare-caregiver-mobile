@@ -135,6 +135,24 @@ describe("POST /api/auth/refresh serialisation (reuse detection revokes every se
     expect(late.headers.get("set-cookie")).toContain("oakly_admin_rt=R-new");
   });
 
+  it("stops serving the old cookie from the cached result after the 2 s grace window", async () => {
+    vi.useFakeTimers();
+    try {
+      cookieValue = "R-old";
+      upstream.mockResolvedValue(new Response(JSON.stringify(tokens), { status: 200 }));
+      await refresh(post("/api/auth/refresh"));
+      await vi.advanceTimersByTimeAsync(1_900);
+      await refresh(post("/api/auth/refresh"));
+      expect(upstream).toHaveBeenCalledTimes(1);
+      await vi.advanceTimersByTimeAsync(200);
+      upstream.mockResolvedValue(new Response(JSON.stringify(tokens), { status: 200 }));
+      await refresh(post("/api/auth/refresh"));
+      expect(upstream).toHaveBeenCalledTimes(2);
+    } finally {
+      vi.useRealTimers();
+    }
+  });
+
   it("does not serialise different sessions against each other", async () => {
     upstream.mockImplementation(async () => new Response(JSON.stringify(tokens), { status: 200 }));
     cookieValue = "R-one";
@@ -209,6 +227,80 @@ describe("/api/v1 proxy", () => {
     const res = await proxyPost(post(`/api/v1/${path.join("/")}`, {}), ctx(path));
     expect(res.status).toBe(404);
     expect(upstream).not.toHaveBeenCalled();
+  });
+
+  it.each([
+    [["admin", "auth", "refresh?x"]],
+    [["admin", "auth", "refresh#x"]],
+    [["admin", "me?x=1"]],
+    [["admin", "..", "auth", "refresh"]],
+    [["admin", ".", "me"]],
+    [["admin", "auth/refresh"]],
+    [["admin/auth/refresh"]],
+    [["admin\\auth"]],
+    [["admin", "", "me"]],
+    [["ADMIN", "AUTH", "REFRESH"]],
+    [["auth", "login"]],
+    [["patient", "me"]],
+    [[]],
+  ])("rejects the bypass or off-allowlist path %j without calling the backend", async (path) => {
+    const res = await proxyPost(post(`/api/v1/${path.join("/")}`, {}), ctx(path));
+    expect([400, 404]).toContain(res.status);
+    expect(upstream).not.toHaveBeenCalled();
+  });
+
+  it("encodes each segment so a decoded character cannot change the upstream path", async () => {
+    upstream.mockResolvedValue(new Response("{}", { status: 200 }));
+    await proxyGet(new Request("http://console.test/api/v1/admin/caregivers/a%20b"), ctx(["admin", "caregivers", "a b"]));
+    expect(String(upstream.mock.calls[0]?.[0])).toBe("http://api.test/api/v1/admin/caregivers/a%20b");
+  });
+
+  it("forwards the caregiver document file path", async () => {
+    upstream.mockResolvedValue(new Response("pdf", { status: 200 }));
+    const res = await proxyGet(
+      new Request("http://console.test/api/v1/caregiver/documents/d1/file"),
+      ctx(["caregiver", "documents", "d1", "file"]),
+    );
+    expect(res.status).toBe(200);
+  });
+
+  it("rejects a body whose Content-Length is over 1 MB with 413", async () => {
+    const res = await proxyPost(
+      new Request("http://console.test/api/v1/admin/admins", {
+        method: "POST",
+        headers: { host: "console.test", "content-length": String(1024 * 1024 + 1) },
+        body: "x",
+      }),
+      ctx(["admin", "admins"]),
+    );
+    expect(res.status).toBe(413);
+    expect(upstream).not.toHaveBeenCalled();
+  });
+
+  it("rejects an over-1 MB body while reading even without a Content-Length", async () => {
+    const big = new ReadableStream<Uint8Array>({
+      pull(controller) {
+        controller.enqueue(new Uint8Array(256 * 1024));
+      },
+    });
+    const res = await proxyPost(
+      new Request("http://console.test/api/v1/admin/admins", {
+        method: "POST",
+        headers: { host: "console.test" },
+        body: big,
+        duplex: "half",
+      } as RequestInit),
+      ctx(["admin", "admins"]),
+    );
+    expect(res.status).toBe(413);
+    expect(upstream).not.toHaveBeenCalled();
+  });
+
+  it("forwards a normal-sized body", async () => {
+    upstream.mockResolvedValue(new Response("{}", { status: 200 }));
+    const res = await proxyPost(post("/api/v1/admin/admins", { email: "a@example.test" }), ctx(["admin", "admins"]));
+    expect(res.status).toBe(200);
+    expect(upstream).toHaveBeenCalledTimes(1);
   });
 
   it("returns 502 when the backend is unreachable", async () => {

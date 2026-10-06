@@ -6,10 +6,12 @@ import { REFRESH_COOKIE, backendPost, refreshCookieOptions, sameOrigin } from "@
 import { flightKey, singleFlight } from "@/lib/server/single-flight";
 
 /**
- * How long a finished refresh stays available to a request that still carries the old cookie
- * (a second tab, or a request sent before the browser applied the rotated cookie).
+ * How long a finished refresh stays available to a request that still carries the old cookie.
+ * It exists for concurrent refreshes (a second tab, or a request sent before the browser applied the
+ * rotated cookie). Refresh tokens are single-use and reuse is theft evidence, so the window is kept
+ * as short as that race allows: a replay after 2 s reaches the backend and trips its reuse detection.
  */
-const LATE_CALLER_GRACE_MS = 10_000;
+const LATE_CALLER_GRACE_MS = 2_000;
 
 type Outcome =
   | { kind: "ok"; session: RefreshedSession; refreshToken: string }
