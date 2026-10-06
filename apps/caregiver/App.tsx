@@ -5,6 +5,7 @@ import { NavigationContainer } from "@react-navigation/native";
 import { QueryClientProvider } from "@tanstack/react-query";
 import { queryClient } from "./src/api/queryClient";
 import { ThemeProvider } from "./src/constants/ThemeContext";
+import { navigationRef } from "./src/navigation/navigationRef";
 
 
 const App = () => {
@@ -22,7 +23,7 @@ const App = () => {
   return (
     <QueryClientProvider client={queryClient}>
       <ThemeProvider>
-        <NavigationContainer>
+        <NavigationContainer ref={navigationRef}>
           <MainApp />
         </NavigationContainer>
       </ThemeProvider>

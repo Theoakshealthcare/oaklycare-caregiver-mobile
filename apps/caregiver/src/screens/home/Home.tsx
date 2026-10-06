@@ -1,178 +1,288 @@
-import React, { useState } from 'react';
-import { Alert, View, ScrollView, TouchableOpacity, Image, Switch } from 'react-native';
-import { Feather } from '@expo/vector-icons';
-import Text from '@/src/components/ui/text';
-import Button from '@/src/components/ui/button';
-import { theme } from '@/src/constants/theme';
-import { globalStyles } from '@/src/constants/styles';
-import { authService } from '@/src/services/auth.service';
+import React, { useCallback, useMemo } from "react";
+import { ActivityIndicator, Alert, RefreshControl, ScrollView, Switch, TouchableOpacity, View } from "react-native";
+import { useFocusEffect } from "@react-navigation/native";
+import { Feather } from "@expo/vector-icons";
 
-const mockAppointments = [
-  {
-    id: '1',
-    name: 'Julius A',
-    role: 'Physical Therapist',
-    time: 'Today, 2:00 PM',
-    duration: '1 hour',
-    avatar: require('@/assets/images/pngs/avatar1.png'),
-  },
-];
+import { messageForError } from "@/src/api/errors";
+import OfferCard from "@/src/components/booking/OfferCard";
+import Button from "@/src/components/ui/button";
+import Text from "@/src/components/ui/text";
+import { theme } from "@/src/constants/theme";
+import { greeting, mapHome, type HomeView, type VisitView } from "@/src/home/homeModel";
+import { useAvailability } from "@/src/hooks/useAvailability";
+import { useCaregiverHome, useMe } from "@/src/hooks/queries";
+import useNavigation from "@/src/hooks/use-navigation";
+import { useOfferActions } from "@/src/hooks/useOfferActions";
+import { authService } from "@/src/services/auth.service";
+import { ensureBackgroundLocation } from "@/src/supply/permissions";
+import { useLocationPermissions } from "@/src/supply/permissionState";
+import { hasActiveVisit } from "@/src/supply/tracking";
 
-const mockJobRequests = [
-  {
-    id: '2',
-    name: 'Mrs Thompson',
-    role: 'Wound Dressing',
-    time: 'Today, 2:00 PM',
-    duration: '1 hour',
-    avatar: require('@/assets/images/pngs/avatar2.png'),
-  },
-];
+const Section: React.FC<{ title: string; children: React.ReactNode }> = ({ title, children }) => (
+  <View style={{ paddingHorizontal: 20, marginBottom: 16 }}>
+    <Text variant="body" weight="bold" style={{ marginBottom: 8 }}>
+      {title}
+    </Text>
+    {children}
+  </View>
+);
+
+const Empty: React.FC<{ icon: React.ComponentProps<typeof Feather>["name"]; title: string; hint: string }> = ({
+  icon,
+  title,
+  hint,
+}) => (
+  <View style={{ alignItems: "center", padding: 24, backgroundColor: theme.colors.white, borderRadius: 16 }}>
+    <Feather name={icon} size={40} color={theme.colors.primary} style={{ marginBottom: 8 }} />
+    <Text variant="body" weight="bold" style={{ marginBottom: 4 }}>
+      {title}
+    </Text>
+    <Text variant="small" color={theme.colors.textLight} style={{ textAlign: "center" }}>
+      {hint}
+    </Text>
+  </View>
+);
+
+const VisitRow: React.FC<{ visit: VisitView; onOpen: () => void }> = ({ visit, onOpen }) => (
+  <View
+    style={{
+      backgroundColor: theme.colors.white,
+      borderRadius: 16,
+      padding: 12,
+      marginBottom: 8,
+      flexDirection: "row",
+      alignItems: "center",
+      gap: 12,
+    }}
+  >
+    <View style={{ flex: 1 }}>
+      <Text variant="body" weight="bold" style={{ textTransform: "capitalize" }}>
+        {visit.title}
+      </Text>
+      <Text variant="small" color={theme.colors.textLight}>
+        {visit.patientName}
+      </Text>
+      <Text variant="small" color={theme.colors.textLight}>
+        {visit.when} {"•"} {visit.duration}
+      </Text>
+      <Text variant="small" color={theme.colors.primary} weight="medium">
+        {visit.statusLabel}
+      </Text>
+    </View>
+    <Button title={visit.inFlight ? "Continue" : "Open"} onPress={onOpen} />
+  </View>
+);
+
+const Header: React.FC<{ name: string | undefined; onAvatar: () => void }> = ({ name, onAvatar }) => (
+  <View
+    style={{
+      paddingTop: 50,
+      paddingBottom: 20,
+      paddingHorizontal: 20,
+      flexDirection: "row",
+      justifyContent: "space-between",
+      alignItems: "center",
+    }}
+  >
+    <View>
+      <Text variant="h2" weight="bold" color={theme.colors.white}>
+        {greeting(name)}
+      </Text>
+      <Text variant="body" color={theme.colors.white} style={{ marginTop: 4 }}>
+        What would you like to do today?
+      </Text>
+    </View>
+    <TouchableOpacity
+      accessibilityRole="button"
+      accessibilityLabel="Account"
+      onPress={onAvatar}
+      style={{
+        width: 44,
+        height: 44,
+        borderRadius: 22,
+        borderWidth: 2,
+        borderColor: theme.colors.white,
+        alignItems: "center",
+        justifyContent: "center",
+      }}
+    >
+      <Text variant="body" weight="bold" color={theme.colors.white}>
+        {name?.trim().charAt(0).toUpperCase() ?? "?"}
+      </Text>
+    </TouchableOpacity>
+  </View>
+);
+
+const AvailabilityCard: React.FC<{
+  view: HomeView;
+  pending: boolean;
+  onToggle: (next: boolean) => void;
+}> = ({ view, pending, onToggle }) => (
+  <View style={{ paddingHorizontal: 20, paddingTop: 20, marginBottom: 16 }}>
+    <View style={{ backgroundColor: theme.colors.white, borderRadius: 16, padding: 16, gap: 8 }}>
+      <View style={{ flexDirection: "row", alignItems: "center", justifyContent: "space-between" }}>
+        <View style={{ flex: 1, paddingRight: 12 }}>
+          <Text variant="body" weight="bold">
+            {view.isAvailable ? "You're available" : "You're unavailable"}
+          </Text>
+          <Text variant="small" color={theme.colors.textLight}>
+            {view.isAvailable ? "You can receive new visit requests." : "Switch on to receive new visit requests."}
+          </Text>
+        </View>
+        <Switch
+          accessibilityLabel="Available for visits"
+          value={view.isAvailable}
+          disabled={!view.approved || pending}
+          onValueChange={onToggle}
+          thumbColor={view.isAvailable ? theme.colors.primary : theme.colors.border}
+          trackColor={{ true: theme.colors.primary, false: theme.colors.border }}
+        />
+      </View>
+      {!view.approved ? (
+        <Text variant="small" color={theme.colors.warningText}>
+          Your profile is {view.profileStatus.replace("_", " ")}. You can go available once an admin approves it.
+        </Text>
+      ) : null}
+      {view.locationStale ? (
+        <Text variant="small" color={theme.colors.warningText}>
+          You are not receiving offers: your location is out of date. Open the app with location on to refresh it.
+        </Text>
+      ) : null}
+    </View>
+  </View>
+);
 
 const Home: React.FC = () => {
-  const [available, setAvailable] = useState(true);
-  const [profileCompletion] = useState(80); // percent
+  const { navigation } = useNavigation();
+  const me = useMe();
+  const home = useCaregiverHome();
+  const availability = useAvailability();
+  const permissions = useLocationPermissions();
+
+  // Back on this screen from a visit or an offer: show the latest right away.
+  const { refetch } = home;
+  useFocusEffect(
+    useCallback(() => {
+      void refetch();
+    }, [refetch]),
+  );
+
+  const { accept, decline, busyId } = useOfferActions({
+    onAccepted: (bookingId) => navigation.navigate("BookingDetails", { bookingId }),
+  });
+
+  // Staleness is judged as of the moment the data was fetched (home is polled at least every 60 s).
+  const { data, dataUpdatedAt } = home;
+  const view = useMemo(() => (data ? mapHome(data, dataUpdatedAt) : null), [data, dataUpdatedAt]);
+
+  const signOut = () =>
+    Alert.alert("Sign out", "Do you want to sign out of Oakly?", [
+      { text: "Cancel", style: "cancel" },
+      { text: "Sign out", style: "destructive", onPress: () => void authService.logout() },
+    ]);
+
+  const confirmDecline = (bookingId: string) =>
+    Alert.alert("Decline this job?", "It will be offered to other caregivers.", [
+      { text: "Cancel", style: "cancel" },
+      { text: "Decline", style: "destructive", onPress: () => decline(bookingId) },
+    ]);
+
+  const openVisit = (bookingId: string) => navigation.navigate("VisitFlow", { bookingId });
+
+  const body = () => {
+    if (!view) {
+      if (home.isError) {
+        return (
+          <View style={{ padding: 20, gap: 12 }}>
+            <Text variant="body" color={theme.colors.textLight}>
+              {messageForError(home.error)}
+            </Text>
+            <Button title="Try again" onPress={() => void home.refetch()} />
+          </View>
+        );
+      }
+      return <ActivityIndicator style={{ marginTop: 40 }} size="large" color={theme.colors.primary} />;
+    }
+
+    const onAVisit = hasActiveVisit(view.todayVisits.map((v) => v.status));
+    return (
+      <>
+        <AvailabilityCard view={view} pending={availability.pending} onToggle={availability.setAvailable} />
+
+        {onAVisit && !permissions.background ? (
+          <View style={{ paddingHorizontal: 20, marginBottom: 16 }}>
+            <View style={{ backgroundColor: theme.colors.secondaryLight, borderRadius: 16, padding: 16, gap: 8 }}>
+              <Text variant="small">
+                Share your location during visits, even with the app closed, so the patient can follow your arrival.
+              </Text>
+              <Button title="Allow location during visits" variant="outline" onPress={() => void ensureBackgroundLocation()} />
+            </View>
+          </View>
+        ) : null}
+
+        <Section title="Today's visits">
+          {view.todayVisits.length === 0 ? (
+            <Empty icon="calendar" title="No visits today" hint="Accepted visits due today appear here." />
+          ) : (
+            view.todayVisits.map((visit) => <VisitRow key={visit.id} visit={visit} onOpen={() => openVisit(visit.id)} />)
+          )}
+        </Section>
+
+        {view.upcomingVisits.length > 0 ? (
+          <Section title="Upcoming visits">
+            {view.upcomingVisits.map((visit) => (
+              <VisitRow key={visit.id} visit={visit} onOpen={() => navigation.navigate("BookingDetails", { bookingId: visit.id })} />
+            ))}
+          </Section>
+        ) : null}
+
+        <Section title="New job requests">
+          {view.offers.length === 0 ? (
+            <Empty
+              icon="inbox"
+              title="No open requests"
+              hint={view.approved ? "New requests appear here when patients near you book." : "Requests start once your profile is approved."}
+            />
+          ) : (
+            view.offers.map((offer) => (
+              <OfferCard
+                key={offer.id}
+                offer={offer}
+                busy={busyId === offer.id}
+                onView={() => navigation.navigate("BookingDetails", { bookingId: offer.id, offer })}
+                onAccept={() => accept(offer.id)}
+                onDecline={() => confirmDecline(offer.id)}
+              />
+            ))
+          )}
+        </Section>
+
+        <Section title="Wallet">
+          <View style={{ backgroundColor: theme.colors.white, borderRadius: 16, padding: 16 }}>
+            <Text variant="small" color={theme.colors.textLight}>
+              Balance
+            </Text>
+            <Text variant="h2" weight="bold" color={theme.colors.primary} testID="wallet-balance">
+              {view.walletBalance}
+            </Text>
+          </View>
+        </Section>
+      </>
+    );
+  };
 
   return (
     <View style={{ flex: 1, backgroundColor: theme.colors.primary }}>
-      {/* Header */}
-      <View style={{ paddingTop: 50, paddingBottom: 20, paddingHorizontal: 20, flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center' }}>
-        <View>
-          <Text variant="h2" weight="bold" color={theme.colors.white}>Hello Julius, 👋</Text>
-          <Text variant="body" color={theme.colors.white} style={{ marginTop: 4 }}>What do you like to do today ?</Text>
-        </View>
-        <TouchableOpacity
-          onPress={() =>
-            Alert.alert('Sign out', 'Do you want to sign out of Oakly?', [
-              { text: 'Cancel', style: 'cancel' },
-              { text: 'Sign out', style: 'destructive', onPress: () => void authService.logout() },
-            ])
-          }
-        >
-          <Image source={require('@/assets/images/pngs/avatar1.png')} style={{ width: 44, height: 44, borderRadius: 22, borderWidth: 2, borderColor: theme.colors.white }} />
-        </TouchableOpacity>
-      </View>
-      <ScrollView style={{ flex: 1, backgroundColor: theme.colors.background, borderTopLeftRadius: 24, borderTopRightRadius: 24 }} contentContainerStyle={{ paddingBottom: 32 }}>
-        {/* Weekly Availability & Calendar */}
-        <View style={{ padding: 20, paddingBottom: 0 }}>
-          <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', marginBottom: 12 }}>
-            <Text variant="body" weight="bold">Weekly Availability</Text>
-            <Switch value={available} onValueChange={setAvailable} thumbColor={available ? theme.colors.primary : theme.colors.border} trackColor={{ true: theme.colors.primary, false: theme.colors.border }} />
-          </View>
-          <Text variant="body" color={theme.colors.textLight} style={{ marginBottom: 8 }}>March 2025</Text>
-          <View style={{ flexDirection: 'row', justifyContent: 'space-between', marginBottom: 16 }}>
-            {['Mon', 'Tue', 'Wed', 'Thu', 'Fri'].map((day, idx) => (
-              <View key={day} style={{ alignItems: 'center' }}>
-                <Text variant="small" color={theme.colors.textLight}>{day}</Text>
-                <View style={{
-                  marginTop: 4,
-                  backgroundColor: idx === 2 ? theme.colors.primary : theme.colors.white,
-                  borderRadius: 12,
-                  width: 32,
-                  height: 32,
-                  justifyContent: 'center',
-                  alignItems: 'center',
-                  borderWidth: 1,
-                  borderColor: theme.colors.border,
-                }}>
-                  <Text variant="body" color={idx === 2 ? theme.colors.white : theme.colors.text}>{29 + idx}</Text>
-                </View>
-              </View>
-            ))}
-          </View>
-        </View>
-        {/* CarePlan Section */}
-        <View style={{ paddingHorizontal: 20, marginBottom: 16 }}>
-          <View style={{ backgroundColor: theme.colors.primaryLight, borderRadius: 16, padding: 16, flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between' }}>
-            <View style={{ flex: 1 }}>
-              <Text variant="body" weight="bold">CarePlan</Text>
-              <Text variant="small" color={theme.colors.textLight}>Lets help you put health care for your loved one</Text>
-            </View>
-            <Button title="Create Care Plan" style={{ marginLeft: 12 }} />
-          </View>
-        </View>
-        {/* Profile Completion (optional) */}
-        <View style={{ paddingHorizontal: 20, marginBottom: 16 }}>
-          <Text variant="body" weight="bold" style={{ marginBottom: 4 }}>Profile Completion</Text>
-          <View style={{ backgroundColor: theme.colors.primaryLight, borderRadius: 12, height: 12, overflow: 'hidden', marginBottom: 4 }}>
-            <View style={{ width: `${profileCompletion}%`, backgroundColor: theme.colors.primary, height: '100%' }} />
-          </View>
-          <Text variant="small" color={theme.colors.primary}>In Progress</Text>
-        </View>
-        {/* Upcoming Appointments */}
-        <View style={{ paddingHorizontal: 20, marginBottom: 16 }}>
-          <Text variant="body" weight="bold" style={{ marginBottom: 8 }}>Upcoming Appointments</Text>
-          {mockAppointments.length === 0 ? (
-            <View style={{ alignItems: 'center', padding: 24, backgroundColor: theme.colors.white, borderRadius: 16 }}>
-              <Feather name="calendar" size={48} color={theme.colors.primary} style={{ marginBottom: 8 }} />
-              <Text variant="body" weight="bold" style={{ marginBottom: 4 }}>You do not have any appointments</Text>
-              <Text variant="small" color={theme.colors.textLight} style={{ textAlign: 'center' }}>Click on start booking to book appointments for your loved ones</Text>
-            </View>
-          ) : (
-            mockAppointments.map((appt) => (
-              <View key={appt.id} style={{ flexDirection: 'row', alignItems: 'center', backgroundColor: theme.colors.white, borderRadius: 16, padding: 12, marginBottom: 8 }}>
-                <Image source={appt.avatar} style={{ width: 48, height: 48, borderRadius: 24, marginRight: 12 }} />
-                <View style={{ flex: 1 }}>
-                  <Text variant="body" weight="bold">{appt.name}</Text>
-                  <Text variant="small" color={theme.colors.textLight}>{appt.role}</Text>
-                  <Text variant="small" color={theme.colors.textLight}>{appt.time} • {appt.duration}</Text>
-                </View>
-                <Button title="Check In" style={{ marginRight: 8 }} />
-                <Button title="Check Out" variant="neutral" textStyle={{ color: theme.colors.primary }} />
-              </View>
-            ))
-          )}
-        </View>
-        {/* New Job Request */}
-        <View style={{ paddingHorizontal: 20, marginBottom: 16 }}>
-          <Text variant="body" weight="bold" style={{ marginBottom: 8 }}>New Job Request</Text>
-          {mockJobRequests.map((job) => (
-            <View key={job.id} style={{ flexDirection: 'row', alignItems: 'center', backgroundColor: theme.colors.white, borderRadius: 16, padding: 12, marginBottom: 8 }}>
-              <Image source={job.avatar} style={{ width: 48, height: 48, borderRadius: 24, marginRight: 12 }} />
-              <View style={{ flex: 1 }}>
-                <Text variant="body" weight="bold">{job.name}</Text>
-                <Text variant="small" color={theme.colors.textLight}>{job.role}</Text>
-                <Text variant="small" color={theme.colors.textLight}>{job.time} • {job.duration}</Text>
-              </View>
-              <Button title="Accept" style={{ marginRight: 8 }} />
-              <Button title="Decline" variant="neutral" textStyle={{ color: theme.colors.primary }} />
-            </View>
-          ))}
-        </View>
-        {/* Earning Summary */}
-        <View style={{ paddingHorizontal: 20, marginBottom: 16 }}>
-          <Text variant="body" weight="bold" style={{ marginBottom: 8 }}>Earning Summary</Text>
-          <View style={{ flexDirection: 'row', backgroundColor: theme.colors.white, borderRadius: 16, padding: 16, justifyContent: 'space-between' }}>
-            <View>
-              <Text variant="small" color={theme.colors.textLight}>Weekly Earning</Text>
-              <Text variant="body" weight="bold" color={theme.colors.primary}>₦500,000</Text>
-            </View>
-            <View>
-              <Text variant="small" color={theme.colors.textLight}>Pending Payment</Text>
-              <Text variant="body" weight="bold" color={theme.colors.primary}>₦500,000</Text>
-            </View>
-          </View>
-        </View>
-        {/* Notifications */}
-        <View style={{ paddingHorizontal: 20, marginBottom: 16 }}>
-          <Text variant="body" weight="bold" style={{ marginBottom: 8 }}>Notification</Text>
-          <View style={{ flexDirection: 'row', alignItems: 'center', backgroundColor: theme.colors.white, borderRadius: 16, padding: 12, marginBottom: 8 }}>
-            <Feather name="message-square" size={24} color={theme.colors.primary} style={{ marginRight: 12 }} />
-            <Text variant="body" style={{ flex: 1 }}>Mrs Thompson sent you a Message</Text>
-            <Text variant="small" color={theme.colors.textLight}>10 Min Ago</Text>
-          </View>
-        </View>
-        {/* Client Care Access */}
-        <View style={{ paddingHorizontal: 20, marginBottom: 32 }}>
-          <Text variant="body" weight="bold" style={{ marginBottom: 8 }}>Client Care Access</Text>
-          <View style={{ flexDirection: 'row', gap: 12 }}>
-            <Button title="Clients Profiles" style={{ flex: 1 }} />
-            <Button title="vitals & Fall Guard" style={{ flex: 1 }} />
-          </View>
-        </View>
+      <Header name={me.data?.full_name} onAvatar={signOut} />
+      <ScrollView
+        style={{ flex: 1, backgroundColor: theme.colors.background, borderTopLeftRadius: 24, borderTopRightRadius: 24 }}
+        contentContainerStyle={{ paddingBottom: 32 }}
+        refreshControl={<RefreshControl refreshing={home.isRefetching} onRefresh={() => void home.refetch()} />}
+      >
+        {body()}
       </ScrollView>
     </View>
   );
 };
 
-export default Home; 
+export default Home;

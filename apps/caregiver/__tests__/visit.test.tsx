@@ -1,0 +1,224 @@
+import { act, fireEvent, render, screen } from "@testing-library/react-native";
+import React from "react";
+
+import { ApiError, formatCountdown, isSuspendedStop, messageForError, visitCodeFailure } from "../src/api/errors";
+import { VisitCodeStep } from "../src/screens/visit/VisitSteps";
+import {
+  createCodeLocks,
+  isCompleteCode,
+  sanitizeCode,
+  secondsLeft,
+  stepForStatus,
+  submitVisitCode,
+} from "../src/visit/visitFlow";
+
+const wrong1 = new ApiError(400, { detail: "Incorrect visit code. 2 attempts left before the code is locked" }, "x");
+const wrong2 = new ApiError(400, { detail: "Incorrect visit code. 1 attempt left before the code is locked" }, "x");
+const locked = new ApiError(
+  423,
+  { detail: "Too many incorrect attempts. The visit code is locked for 15 minutes" },
+  "x",
+  900,
+);
+
+describe("stepForStatus", () => {
+  it.each([
+    ["accepted", "on_my_way"],
+    ["en_route", "enter_code"],
+    ["in_progress", "in_progress"],
+    ["completed", "done"],
+    ["cancelled", "closed"],
+    ["pending", "closed"],
+  ])("%s -> %s", (status, step) => expect(stepForStatus(status)).toBe(step));
+});
+
+describe("code input", () => {
+  it("keeps four digits only", () => {
+    expect(sanitizeCode("12a3 4-5")).toBe("1234");
+    expect(isCompleteCode("1234")).toBe(true);
+    expect(isCompleteCode("123")).toBe(false);
+    expect(isCompleteCode("12ab")).toBe(false);
+  });
+});
+
+describe("visit error mapping (exact backend strings)", () => {
+  const map = (status: number, detail: string, retry: number | null = null) =>
+    messageForError(new ApiError(status, { detail }, "x", retry), "visit");
+
+  it("wrong code with attempts left", () => {
+    expect(map(400, "Incorrect visit code. 2 attempts left before the code is locked")).toBe(
+      "That code isn't right. 2 tries left before the code is locked. Ask the patient to check the code in their Oakly app.",
+    );
+    expect(map(400, "Incorrect visit code. 1 attempt left before the code is locked")).toContain("1 try left");
+  });
+
+  it("423 lock shows the Retry-After countdown, 15:00 when the header is missing", () => {
+    expect(map(423, "Too many incorrect attempts. The visit code is locked for 15 minutes", 900)).toContain("15:00");
+    expect(map(423, "Too many incorrect attempts. The visit code is locked for 15 minutes", 90)).toContain("1:30");
+    expect(map(423, "Too many incorrect attempts. The visit code is locked for 15 minutes")).toContain("15:00");
+  });
+
+  it("suspension 403 keeps the backend wording and sends them to support", () => {
+    const error = new ApiError(403, { detail: "Your account is not approved to start visits" }, "x");
+    expect(messageForError(error, "visit")).toBe("Your account is not approved to start visits. Contact Oakly support.");
+    expect(isSuspendedStop(error)).toBe(true);
+    expect(isSuspendedStop(new ApiError(403, { detail: "This booking is not assigned to you" }, "x"))).toBe(false);
+  });
+
+  it.each([
+    [403, "This booking is not assigned to you", "This visit isn't assigned to you."],
+    [409, "Only an accepted booking can be marked on the way", "This visit has already moved past this step. We've refreshed it."],
+    [409, "Only an accepted booking can be started", "This visit can't be started right now. We've refreshed it."],
+    [409, "Only a booking in progress can be completed", "This visit isn't in progress, so it can't be completed yet."],
+    [409, "This booking has no visit code. Contact support", "This visit has no visit code. Please contact Oakly support."],
+    [400, "A visit code is required to start the visit", "Enter the 4-digit visit code."],
+  ])("%i %s", (status, detail, expected) => expect(map(status, detail)).toBe(expected));
+
+  it("parses failures", () => {
+    expect(visitCodeFailure(wrong1)).toEqual({ kind: "incorrect", attemptsLeft: 2 });
+    expect(visitCodeFailure(wrong2)).toEqual({ kind: "incorrect", attemptsLeft: 1 });
+    expect(visitCodeFailure(locked)).toEqual({ kind: "locked", retryAfterSeconds: 900 });
+    expect(visitCodeFailure(new Error("x"))).toBeNull();
+    expect(visitCodeFailure(new ApiError(409, { detail: "Only an accepted booking can be started" }, "x"))).toBeNull();
+  });
+
+  it("formats the countdown", () => {
+    expect(formatCountdown(900)).toBe("15:00");
+    expect(formatCountdown(61)).toBe("1:01");
+    expect(formatCountdown(0.2)).toBe("0:01");
+    expect(formatCountdown(-5)).toBe("0:00");
+  });
+});
+
+describe("submitVisitCode: 3-attempt lock with countdown", () => {
+  const BOOKING = "d4055373-bee6-431e-977a-11b01af19a96";
+
+  it("walks the captured sequence: wrong, wrong, lock, then refuses locally until the lock ends", async () => {
+    let clock = 1_000_000;
+    const locks = createCodeLocks(() => clock);
+    const start = jest
+      .fn<Promise<unknown>, [string, string]>()
+      .mockRejectedValueOnce(wrong1)
+      .mockRejectedValueOnce(wrong2)
+      .mockRejectedValueOnce(locked);
+
+    const first = await submitVisitCode(BOOKING, "0000", { start, locks });
+    expect(first).toMatchObject({ kind: "incorrect", attemptsLeft: 2 });
+
+    const second = await submitVisitCode(BOOKING, "1111", { start, locks });
+    expect(second).toMatchObject({ kind: "incorrect", attemptsLeft: 1 });
+
+    const third = await submitVisitCode(BOOKING, "2222", { start, locks });
+    expect(third).toMatchObject({ kind: "locked", lockedUntil: 1_000_000 + 900_000 });
+    expect(third.kind === "locked" && secondsLeft(third.lockedUntil, clock)).toBe(900);
+
+    // While locked even the right code is not sent: the backend would answer 423 anyway.
+    clock += 60_000;
+    const refused = await submitVisitCode(BOOKING, "1092", { start, locks });
+    expect(refused.kind).toBe("locked");
+    expect(start).toHaveBeenCalledTimes(3);
+    expect(refused.kind === "locked" && secondsLeft(refused.lockedUntil, clock)).toBe(840);
+
+    // After the lock ends the caregiver gets fresh tries and a correct code starts the visit.
+    clock += 840_000;
+    start.mockResolvedValueOnce({ status: "in_progress" });
+    await expect(submitVisitCode(BOOKING, "1092", { start, locks })).resolves.toEqual({ kind: "started" });
+    expect(start).toHaveBeenLastCalledWith(BOOKING, "1092");
+    expect(locks.get(BOOKING)).toBeNull();
+  });
+
+  it("falls back to the 15 minute lock when the 423 carries no Retry-After", async () => {
+    const locks = createCodeLocks(() => 0);
+    const noHeader = new ApiError(423, { detail: "Too many incorrect attempts. The visit code is locked for 15 minutes" }, "x");
+    const result = await submitVisitCode("b", "1234", { start: async () => Promise.reject(noHeader), locks });
+    expect(result).toMatchObject({ kind: "locked", lockedUntil: 900_000 });
+  });
+
+  it("does not send a malformed code (the backend would 422)", async () => {
+    const start = jest.fn();
+    await expect(submitVisitCode("b", "12", { start, locks: createCodeLocks() })).resolves.toMatchObject({ kind: "error" });
+    expect(start).not.toHaveBeenCalled();
+  });
+
+  it("maps the suspension 403 to a stop, and other errors to messages", async () => {
+    const locks = createCodeLocks();
+    const suspended = new ApiError(403, { detail: "Your account is not approved to start visits" }, "x");
+    await expect(submitVisitCode("b", "1234", { start: () => Promise.reject(suspended), locks })).resolves.toEqual({
+      kind: "suspended",
+      message: "Your account is not approved to start visits. Contact Oakly support.",
+    });
+    const stale = new ApiError(409, { detail: "Only an accepted booking can be started" }, "x");
+    await expect(submitVisitCode("b", "1234", { start: () => Promise.reject(stale), locks })).resolves.toEqual({
+      kind: "error",
+      message: "This visit can't be started right now. We've refreshed it.",
+    });
+    const offline = new ApiError(0, null, "x");
+    await expect(submitVisitCode("b", "1234", { start: () => Promise.reject(offline), locks })).resolves.toMatchObject({
+      kind: "error",
+      message: "Can't reach Oakly. Check your internet connection and try again.",
+    });
+  });
+});
+
+describe("VisitCodeStep", () => {
+  const visit = { patientName: "Placeholder Patient", address: "12 Placeholder Street, Lekki", when: "Tue 6 Oct" };
+
+  beforeEach(() => jest.useFakeTimers());
+  afterEach(() => jest.useRealTimers());
+
+  it("enables Start only for four digits and submits them", async () => {
+    const onSubmit = jest.fn();
+    await render(
+      <VisitCodeStep visit={visit} busy={false} lockedUntil={null} attemptsLeft={null} error={null} onSubmit={onSubmit} />,
+    );
+    const input = screen.getByTestId("visit-code-input");
+    await fireEvent.changeText(input, "12ab34567");
+    expect(input.props.value).toBe("1234");
+    await fireEvent.press(screen.getByText("Start visit"));
+    expect(onSubmit).toHaveBeenCalledWith("1234");
+  });
+
+  it("shows attempts left and the exact error after a wrong code", async () => {
+    await render(
+      <VisitCodeStep
+        visit={visit}
+        busy={false}
+        lockedUntil={null}
+        attemptsLeft={1}
+        error="That code isn't right. 1 try left before the code is locked. Ask the patient to check the code in their Oakly app."
+        onSubmit={jest.fn()}
+      />,
+    );
+    expect(screen.getByText(/1 try left before the code is locked for 15 minutes/)).toBeTruthy();
+    expect(screen.getByText(/That code isn't right/)).toBeTruthy();
+  });
+
+  it("replaces the input with a ticking countdown while locked, then offers the input again", async () => {
+    const now = () => Date.now();
+    const lockedUntil = Date.now() + 3_000;
+    await render(
+      <VisitCodeStep
+        visit={visit}
+        busy={false}
+        lockedUntil={lockedUntil}
+        attemptsLeft={null}
+        error={null}
+        onSubmit={jest.fn()}
+        now={now}
+      />,
+    );
+    expect(screen.getByTestId("lock-countdown").props.children).toBe("0:03");
+    expect(screen.queryByTestId("visit-code-input")).toBeNull();
+
+    await act(async () => {
+      jest.advanceTimersByTime(1000);
+    });
+    expect(screen.getByTestId("lock-countdown").props.children).toBe("0:02");
+
+    await act(async () => {
+      jest.advanceTimersByTime(2000);
+    });
+    expect(screen.queryByTestId("lock-countdown")).toBeNull();
+    expect(screen.getByTestId("visit-code-input")).toBeTruthy();
+  });
+});

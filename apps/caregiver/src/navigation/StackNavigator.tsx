@@ -12,6 +12,7 @@ import AINoteTaker from "../screens/chat/AINoteTaker";
 import CallScreen from "../screens/chat/CallScreen";
 import ChatScreen from "../screens/chat/ChatScreen";
 import BookingDetails from "../screens/booking/BookingDetails";
+import VisitFlow from "../screens/visit/VisitFlow";
 import GateMessage from "../screens/GateMessage";
 import OnboardingScreen from "../screens/onboarding-screen";
 import CaregiverSetupStep1 from "../screens/setup/CaregiverSetupStep1";
@@ -20,6 +21,7 @@ import ConsentScreen from "../screens/setup/ConsentScreen";
 import VerificationStatusScreen from "../screens/setup/VerificationStatus";
 import SplashScreen from "../screens/splash-screen";
 import { authService } from "../services/auth.service";
+import AppRuntime from "./AppRuntime";
 import BottomNavigation from "./BottomNavigation";
 import { resolveGate, type Gate } from "./gate";
 import type { ScreenParamLists } from "./Navigations";
@@ -106,13 +108,18 @@ const StackNavigator = () => {
       );
     case "app":
       return (
-        <Stack.Navigator key="app" screenOptions={{ headerShown: false }}>
-          <Stack.Screen name="BottomNavigation" component={BottomNavigation} />
-          <Stack.Screen name="BookingDetails" component={BookingDetails} />
-          <Stack.Screen name="ChatScreen" component={ChatScreen} />
-          <Stack.Screen name="CallScreen" component={CallScreen} />
-          <Stack.Screen name="AINoteTaker" component={AINoteTaker} />
-        </Stack.Navigator>
+        <>
+          <Stack.Navigator key="app" screenOptions={{ headerShown: false }}>
+            <Stack.Screen name="BottomNavigation" component={BottomNavigation} />
+            <Stack.Screen name="BookingDetails" component={BookingDetails} />
+            <Stack.Screen name="VisitFlow" component={VisitFlow} />
+            <Stack.Screen name="ChatScreen" component={ChatScreen} />
+            <Stack.Screen name="CallScreen" component={CallScreen} />
+            <Stack.Screen name="AINoteTaker" component={AINoteTaker} />
+          </Stack.Navigator>
+          {/* Location tracking, push-tap routing and the in-app banner: approved caregivers only. */}
+          <AppRuntime />
+        </>
       );
   }
 };

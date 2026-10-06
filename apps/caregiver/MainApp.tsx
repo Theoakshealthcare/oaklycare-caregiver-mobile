@@ -2,12 +2,18 @@ import React, { useEffect } from "react";
 import { SafeAreaView } from "react-native-safe-area-context";
 
 import { session } from "./src/auth";
+import { installNotificationHandler, usePushRegistration } from "./src/push/native";
 import FocusedStatusBar from "./src/components/StatusBar/FocusedStatusBar";
 import { globalStyles } from "./src/constants/styles";
 import { theme } from "./src/constants/theme";
 import StackNavigator from "./src/navigation/StackNavigator";
 
+installNotificationHandler();
+
 const MainApp = () => {
+  // Register the Expo push token after sign-in and whenever it changes (skips cleanly without an EAS project).
+  usePushRegistration();
+
   // Restore the stored session once on launch; the navigator shows the splash until it is known.
   useEffect(() => {
     void session.restore();

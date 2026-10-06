@@ -21,4 +21,6 @@ export type ScreenParamLists = {
   ChatScreen: { bookingId: string; patientName?: string };
   CallScreen: { bookingId: string; patientName?: string; isVideo?: boolean };
   AINoteTaker: { bookingId: string };
+  /** accepted -> on my way -> visit code -> in progress -> complete, driven by the booking status. */
+  VisitFlow: { bookingId: string };
 };
