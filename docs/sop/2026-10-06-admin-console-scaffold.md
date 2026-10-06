@@ -62,13 +62,13 @@ Approval needs a human surface. The backend approval API (E5) and admin identity
 | Reinstate | Sent with no reason | The backend route takes no body; the dialog states the side effects but can't collect a reason |
 
 ## Verification
-- **Unit and component tests (Vitest + Testing Library), 46 passing:**
+- **Unit and component tests (Vitest + Testing Library), 65 passing:**
   - auth flow: login then MFA, first-time enrollment (QR and secret), wrong code, 423 lockout with `Retry-After`, session restore on load, refresh rejected on load, BFF unreachable on load, a 401 that can't be refreshed signs out with a notice, a 401 retried once with the new token, idle warning then sign-out;
   - permission-gated nav (Verification vs Super Admin vs no permissions, unbuilt modules hidden, PRD group order);
   - approve with the 409 `unmet` list, success clearing it, a plain error; reject, suspend and request changes need a non-blank reason; the dialog stays open on failure; actions follow the backend state machine and permissions; reinstate shows `unmet`;
   - BFF handlers: cookie is httpOnly, `SameSite=Strict`, path `/api/auth`; refresh token never in the body; rotation; cookie cleared on 401 but kept on 502; cross-origin POST refused; the proxy forwards the bearer token, drops cookies and refuses the three BFF-owned routes;
-  - formatters (WAT, ₦), `safeNext` (open-redirect guard), contract helpers.
-- **Root CI checks, all green:** `pnpm install --frozen-lockfile`; `pnpm api:generate` with no diff in `schema.d.ts`; `pnpm typecheck`; `pnpm lint`; `pnpm test` (api-client 6, admin 46, caregiver 168); `pnpm --filter admin build`; `npx expo-doctor` in `apps/caregiver` (21/21).
+  - formatters (WAT, ₦), `safeNext` (open-redirect guard, including tab/newline tricks), contract helpers.
+- **Root CI checks, all green:** `pnpm install --frozen-lockfile`; `pnpm api:generate` with no diff in `schema.d.ts`; `pnpm typecheck`; `pnpm lint`; `pnpm test` (api-client 6, admin 65, caregiver 168); `pnpm --filter admin build`; `npx expo-doctor` in `apps/caregiver` (21/21).
 - **Manual:** `pnpm --filter admin dev`, `curl /login` returns 200 with the form. A throwaway stand-in server (not committed) implemented the A0 auth contract; with it, curl confirmed login, MFA verify (cookie set, no refresh token in the body), refresh rotation, the proxy refusing `/admin/auth/refresh`, logout clearing the cookie and the next refresh being 401. In the browser pane: login, code, land on Overview, hard reload keeps the session. The TOTP helper used by the e2e matches the RFC 6238 test vector.
 - **Not verified:** anything against the real backend (A0 not merged); the queue, detail page and admin-users page against live data (only their component logic is tested); the Playwright e2e has never run.
 
