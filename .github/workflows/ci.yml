@@ -34,3 +34,8 @@ jobs:
 
       - name: Test
         run: pnpm test
+
+      - name: Admin console builds
+        run: pnpm --filter admin build
+        env:
+          OAKLY_API_ORIGIN: http://127.0.0.1:8000

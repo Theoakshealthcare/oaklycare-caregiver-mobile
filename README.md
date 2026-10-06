@@ -6,7 +6,7 @@ apps talk to it through `@oakly/api-client`, which is generated from the backend
 | Path | What | Status |
 |---|---|---|
 | `apps/caregiver` | Expo app for nurses and caregivers: onboarding, job offers, visits, earnings | Active |
-| `apps/admin` | Next.js admin console (caregiver approval, bookings, refunds, payouts) | Planned |
+| `apps/admin` | Next.js admin console (caregiver approval, bookings, refunds, payouts) | Active |
 | `apps/companion` | Patient web companion opened from WhatsApp links (tracking, vitals, video) | Planned |
 | `packages/api-client` | Typed backend client (`openapi-fetch` + generated types) | Active |
 
@@ -20,6 +20,9 @@ corepack enable          # uses the pnpm version pinned in package.json
 pnpm install
 cp apps/caregiver/.env.example apps/caregiver/.env
 pnpm caregiver           # expo start
+
+cp apps/admin/.env.example apps/admin/.env.local
+pnpm --filter admin dev  # admin console on http://localhost:3000 (needs the backend at OAKLY_API_ORIGIN)
 ```
 
 ## Keeping the API client in sync with the backend
@@ -39,7 +42,9 @@ A backend change that renames or removes a field then breaks every app's typeche
 pnpm install --frozen-lockfile
 pnpm api:generate && git diff --exit-code -- packages/api-client/src/schema.d.ts
 pnpm typecheck
+pnpm lint
 pnpm test
+pnpm --filter admin build
 ```
 
 ## Rules
