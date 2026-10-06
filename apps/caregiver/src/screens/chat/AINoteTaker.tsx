@@ -4,6 +4,7 @@ import type React from "react"
 import { useState, useEffect } from "react"
 import { View, ScrollView, TouchableOpacity, Alert, TextInput } from "react-native"
 import { Feather } from "@expo/vector-icons"
+import type { StackScreenProps } from "@react-navigation/stack"
 import {
   useAudioRecorder,
   RecordingPresets,
@@ -16,20 +17,20 @@ import Text from "@/src/components/ui/text"
 import Button from "@/src/components/ui/button"
 import HeaderBack from "@/src/components/back/HeaderBack"
 import { globalStyles } from "@/src/constants/styles"
-import Navigation from "@/src/hooks/use-navigation"
-import bookingService from "@/src/services/booking.service"
-import type { AINoteTakerProps, BookingNote } from "@/src/types/booking.types"
+import { messageForError } from "@/src/api/errors"
+import { useCreateNote, useNotes } from "@/src/hooks/queries"
+import type { BookingNote } from "@/src/services/booking.service"
+import type { ScreenParamLists } from "@/src/navigation/Navigations"
 
-const AINoteTaker: React.FC<AINoteTakerProps> = ({ route }) => {
-  const { navigation } = Navigation()
-  const { booking } = route?.params || {}
+const AINoteTaker: React.FC<StackScreenProps<ScreenParamLists, "AINoteTaker">> = ({ route }) => {
+  const { bookingId } = route.params
 
   const [isRecording, setIsRecording] = useState(false)
   const recorder = useAudioRecorder(RecordingPresets.HIGH_QUALITY)
-  const [notes, setNotes] = useState<BookingNote[]>([])
+  const { data: notes = [] } = useNotes(bookingId)
+  const createNote = useCreateNote(bookingId)
   const [currentNote, setCurrentNote] = useState("")
   const [noteTitle, setNoteTitle] = useState("")
-  const [isLoading, setIsLoading] = useState(false)
   const [recordingDuration, setRecordingDuration] = useState(0)
 
   useEffect(() => {
@@ -59,20 +60,8 @@ const AINoteTaker: React.FC<AINoteTakerProps> = ({ route }) => {
     }
   }
 
-  const loadNotes = async () => {
-    if (!booking?.id) return
-
-    try {
-      const data = await bookingService.getBookingNotes(booking.id)
-      setNotes(data.data ?? [])
-    } catch (error) {
-      console.error("Failed to load notes:", error)
-    }
-  }
-
   useEffect(() => {
-    loadNotes()
-    setupAudio()
+    void setupAudio()
   }, [])
 
   const startRecording = async () => {
@@ -93,62 +82,31 @@ const AINoteTaker: React.FC<AINoteTakerProps> = ({ route }) => {
       setIsRecording(false)
       await recorder.stop()
 
-      const uri = recorder.uri
-      if (uri) {
-        // Here you would typically upload the audio file and get transcription
-        // For now, we'll simulate with a placeholder
-        const simulatedTranscript =
-          "Patient showed improvement in mobility. Vital signs stable. Medication taken as prescribed."
-        await saveNoteWithTranscript(simulatedTranscript)
-      }
+      // There is no audio upload or transcription endpoint yet, so a recording is not saved and no
+      // transcript is invented. The caregiver writes the note by hand.
+      Alert.alert("Recording stopped", "Voice transcription isn't available yet. Please type your note below.")
     } catch (error) {
       console.error("Failed to stop recording:", error)
       Alert.alert("Error", "Failed to stop recording")
     }
   }
 
-  const saveNoteWithTranscript = async (transcript: string) => {
-    if (!booking?.id || !noteTitle.trim()) {
-      Alert.alert("Error", "Please enter a note title")
-      return
-    }
-
-    try {
-      setIsLoading(true)
-      await bookingService.createBookingNote(booking.id, noteTitle.trim(), currentNote, transcript)
-
-      setNoteTitle("")
-      setCurrentNote("")
-      loadNotes()
-
-      Alert.alert("Success", "Note saved with AI analysis!")
-    } catch (error: any) {
-      Alert.alert("Error", error.detail || "Failed to save note")
-    } finally {
-      setIsLoading(false)
-    }
-  }
-
-  const saveTextNote = async () => {
-    if (!booking?.id || !noteTitle.trim() || !currentNote.trim()) {
+  const saveTextNote = () => {
+    if (!noteTitle.trim() || !currentNote.trim()) {
       Alert.alert("Error", "Please enter both title and note content")
       return
     }
-
-    try {
-      setIsLoading(true)
-      await bookingService.createBookingNote(booking.id, noteTitle.trim(), currentNote.trim())
-
-      setNoteTitle("")
-      setCurrentNote("")
-      loadNotes()
-
-      Alert.alert("Success", "Note saved!")
-    } catch (error: any) {
-      Alert.alert("Error", error.detail || "Failed to save note")
-    } finally {
-      setIsLoading(false)
-    }
+    createNote.mutate(
+      { title: noteTitle.trim(), content: currentNote.trim() },
+      {
+        onSuccess: () => {
+          setNoteTitle("")
+          setCurrentNote("")
+          Alert.alert("Success", "Note saved!")
+        },
+        onError: (error) => Alert.alert("Error", messageForError(error)),
+      },
+    )
   }
 
   const formatDuration = (seconds: number) => {
@@ -251,14 +209,6 @@ const AINoteTaker: React.FC<AINoteTakerProps> = ({ route }) => {
     </View>
   )
 
-  if (!booking) {
-    return (
-      <View style={[globalStyles.container, { justifyContent: "center" }]}>
-        <Text variant="body">Booking not found</Text>
-      </View>
-    )
-  }
-
   return (
     <View style={{ flex: 1, backgroundColor: theme.colors.background }}>
       <ScrollView>
@@ -338,7 +288,7 @@ const AINoteTaker: React.FC<AINoteTakerProps> = ({ route }) => {
               )}
             </View>
 
-            <Button title="Save Note" onPress={saveTextNote} loading={isLoading} />
+            <Button title="Save Note" onPress={saveTextNote} loading={createNote.isPending} />
           </View>
 
           {/* Previous Notes */}

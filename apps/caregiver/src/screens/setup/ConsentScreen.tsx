@@ -1,7 +1,6 @@
 "use client"
 
-import type React from "react"
-import { useState } from "react"
+import { useMutation, useQueryClient } from "@tanstack/react-query"
 import { View, ScrollView, TouchableOpacity, Alert } from "react-native"
 
 import { theme } from "@/src/constants/theme"
@@ -9,32 +8,20 @@ import Text from "@/src/components/ui/text"
 import Button from "@/src/components/ui/button"
 import HeaderBack from "@/src/components/back/HeaderBack"
 import { globalStyles } from "@/src/constants/styles"
-import Navigation from "@/src/hooks/use-navigation"
-import caregiverService from "@/src/services/caregiver.service"
-import type { ConsentScreenProps } from "@/src/types/caregiver.types"
+import { caregiverService } from "@/src/services/caregiver.service"
+import { messageForError } from "@/src/api/errors"
+import { queryKeys } from "@/src/api/keys"
 
-const ConsentScreen: React.FC<ConsentScreenProps> = ({ route }) => {
-  const { navigation } = Navigation()
-  const [isLoading, setIsLoading] = useState(false)
+const ConsentScreen = () => {
+  const queryClient = useQueryClient()
 
-  const handleGiveConsent = async () => {
-    try {
-      setIsLoading(true)
-
-      const consentData = {
-        terms_accepted: true,
-        privacy_policy_accepted: true,
-        background_check_consent: true,
-      }
-
-      await caregiverService.updateConsent(consentData)
-      navigation.navigate("ProfileCompleted")
-    } catch (error: any) {
-      Alert.alert("Error", error.detail || "Failed to save consent")
-    } finally {
-      setIsLoading(false)
-    }
-  }
+  // Consent submits the profile for review. The status then becomes `under_review` and the auth
+  // gate replaces this stack with the verification status screen.
+  const consent = useMutation({
+    mutationFn: () => caregiverService.updateConsent(),
+    onSuccess: () => queryClient.invalidateQueries({ queryKey: queryKeys.verificationStatus }),
+    onError: (error) => Alert.alert("Error", messageForError(error)),
+  })
 
   return (
     <View style={{ flex: 1, backgroundColor: theme.colors.white }}>
@@ -84,7 +71,7 @@ const ConsentScreen: React.FC<ConsentScreenProps> = ({ route }) => {
               </View>
             </View>
 
-            <Button title="Give Consent" onPress={handleGiveConsent} loading={isLoading} style={{ marginTop: 40 }} />
+            <Button title="Give Consent and Submit" onPress={() => consent.mutate()} loading={consent.isPending} style={{ marginTop: 40 }} />
           </View>
         </View>
       </ScrollView>

@@ -9,7 +9,7 @@ interface IconProps {
   name: IconName
   size?: number
   color?: string
-  style?: any
+  style?: StyleProp<ViewStyle>
   backgroundColor?: string
   circle?: boolean
   circleSize?: number

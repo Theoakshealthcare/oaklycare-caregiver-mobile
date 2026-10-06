@@ -1,5 +1,6 @@
 import React, { useState } from 'react';
 import { View, Pressable, ScrollView } from 'react-native';
+import { useMutation } from '@tanstack/react-query';
 import { Feather } from '@expo/vector-icons';
 
 import { theme } from '@/src/constants/theme';
@@ -12,22 +13,36 @@ import { globalStyles } from '@/src/constants/styles';
 import HeaderBack from '@/src/components/back/HeaderBack';
 import ScreenSize from '@/src/hooks/screen-size';
 import Icon from '@/src/components/ui/icon';
-import useAuth from '@/src/hooks/useAuth';
-import { CreateAccountProps, ValidationErrors } from '@/src/types/api.types';
-import { checkAndRedirect } from '@/src/hooks/useProfileRedirect';
+import ErrorDialog from '@/src/components/ui/ErrorDialog';
+import { messageForError } from '@/src/api/errors';
+import { authService } from '@/src/services/auth.service';
 
-const CreateAccount: React.FC<CreateAccountProps> = ({ route }) => {
+const CreateAccount: React.FC = () => {
   const { navigation } = Navigation();
   const { width } = ScreenSize();
-  const { register, isLoading } = useAuth();
 
   const [formData, setFormData] = useState({
     fullName: '',
-    emailPhone: '',
+    email: '',
+    phone: '',
     password: '',
   });
   const [isChecked, setIsChecked] = useState<boolean>(false);
-  const [errors, setErrors] = useState<ValidationErrors>({});
+  const [errors, setErrors] = useState<Record<string, string>>({});
+  const [dialog, setDialog] = useState<string | null>(null);
+
+  const register = useMutation({
+    mutationFn: () =>
+      authService.register({
+        fullName: formData.fullName.trim(),
+        email: formData.email.trim(),
+        phoneNumber: formData.phone.trim() || undefined,
+        password: formData.password,
+      }),
+    // The email OTP was just sent: go and enter it.
+    onSuccess: () => navigation.navigate('VerifyEmail', { email: formData.email.trim() }),
+    onError: (error) => setDialog(messageForError(error)),
+  });
 
   const updateFormData = (field: keyof typeof formData, value: string): void => {
     setFormData(prev => ({ ...prev, [field]: value }));
@@ -38,55 +53,38 @@ const CreateAccount: React.FC<CreateAccountProps> = ({ route }) => {
   };
 
   const validateInputs = (): boolean => {
-    const newErrors: ValidationErrors = {};
-    
+    const newErrors: Record<string, string> = {};
+
     if (!formData.fullName.trim()) {
       newErrors.fullName = 'Full name is required';
     }
-    
-    if (!formData.emailPhone.trim()) {
-      newErrors.emailPhone = 'Email or phone number is required';
-    } else if (formData.emailPhone.includes('@') && !formData.emailPhone.match(/^\S+@\S+\.\S+$/)) {
-      newErrors.emailPhone = 'Please enter a valid email address';
+
+    if (!formData.email.trim()) {
+      newErrors.email = 'Email address is required';
+    } else if (!/^\S+@\S+\.\S+$/.test(formData.email.trim())) {
+      newErrors.email = 'Please enter a valid email address';
     }
-    
+
+    if (formData.phone.trim() && !/^\+?[0-9\s-]{7,15}$/.test(formData.phone.trim())) {
+      newErrors.phone = 'Please enter a valid phone number';
+    }
+
     if (!formData.password) {
       newErrors.password = 'Password is required';
     } else if (formData.password.length < 8) {
       newErrors.password = 'Password must be at least 8 characters';
     }
-    
+
     if (!isChecked) {
       newErrors.terms = 'You must agree to the terms';
     }
-    
+
     setErrors(newErrors);
     return Object.keys(newErrors).length === 0;
   };
 
-  const handleCreateAccount = async (): Promise<void> => {
-    if (!validateInputs()) {
-      return;
-    }
-
-    try {
-      const isEmail = formData.emailPhone.includes('@');
-      
-      const userData = {
-        full_name: formData.fullName,
-        password: formData.password,
-        email: isEmail ? formData.emailPhone : '',
-        phone_number: !isEmail ? formData.emailPhone : undefined,
-      };
-      
-      const success = await register(userData);
-      
-      if (success) {
-        await checkAndRedirect(navigation);
-      }
-    } catch (error) {
-      console.error('Registration error:', error);
-    }
+  const handleCreateAccount = (): void => {
+    if (validateInputs()) register.mutate();
   };
 
   return (
@@ -114,13 +112,22 @@ const CreateAccount: React.FC<CreateAccountProps> = ({ route }) => {
             />
 
             <Input
-              label="Email Address/Phone Number"
-              placeholder="Provide your Email/Phone Number"
-              value={formData.emailPhone}
-              onChangeText={(text: string) => updateFormData('emailPhone', text)}
+              label="Email Address"
+              placeholder="Provide your Email Address"
+              value={formData.email}
+              onChangeText={(text: string) => updateFormData('email', text)}
               keyboardType="email-address"
               autoCapitalize="none"
-              error={errors.emailPhone}
+              error={errors.email}
+            />
+
+            <Input
+              label="Phone Number (optional)"
+              placeholder="+234"
+              value={formData.phone}
+              onChangeText={(text: string) => updateFormData('phone', text)}
+              keyboardType="phone-pad"
+              error={errors.phone}
             />
 
             <Input
@@ -195,11 +202,17 @@ const CreateAccount: React.FC<CreateAccountProps> = ({ route }) => {
               title="Create Account"
               onPress={handleCreateAccount}
               style={{ width: '100%' }}
-              loading={isLoading}
+              loading={register.isPending}
             />
           </View>
         </View>
       </ScrollView>
+      <ErrorDialog
+        visible={dialog !== null}
+        title="Couldn't create your account"
+        message={dialog ?? ''}
+        onClose={() => setDialog(null)}
+      />
     </View>
   );
 };

@@ -1,37 +1,21 @@
-import React, { useEffect, useState } from "react";
-import SplashScreen from "./src/screens/splash-screen";
-import FocusedStatusBar from "./src/components/StatusBar/FocusedStatusBar";
-import { theme } from "./src/constants/theme";
-import { globalStyles } from "./src/constants/styles";
-import StackNavigator from "./src/navigation/StackNavigator";
+import React, { useEffect } from "react";
 import { SafeAreaView } from "react-native-safe-area-context";
 
+import { session } from "./src/auth";
+import FocusedStatusBar from "./src/components/StatusBar/FocusedStatusBar";
+import { globalStyles } from "./src/constants/styles";
+import { theme } from "./src/constants/theme";
+import StackNavigator from "./src/navigation/StackNavigator";
+
 const MainApp = () => {
-  const [isLoading, setIsLoading] = useState(true);
-
+  // Restore the stored session once on launch; the navigator shows the splash until it is known.
   useEffect(() => {
-    // Simulate loading time
-    setTimeout(() => {
-      setIsLoading(false);
-    }, 2000);
+    void session.restore();
   }, []);
-
-  if (isLoading) {
-    return (
-      <SafeAreaView style={globalStyles.safearea}>
-        <FocusedStatusBar />
-        <SplashScreen />
-      </SafeAreaView>
-    );
-  }
 
   return (
     <SafeAreaView style={globalStyles.safearea}>
-      <FocusedStatusBar
-        backgroundColor={theme.colors.primary}
-        barStyle="light-content"
-      />
-      {/* <AuthNavigator /> */}
+      <FocusedStatusBar backgroundColor={theme.colors.primary} barStyle="light-content" />
       <StackNavigator />
     </SafeAreaView>
   );

@@ -1,10 +1,11 @@
 import React, { useState } from 'react';
-import { View, ScrollView, TouchableOpacity, Image, Switch } from 'react-native';
+import { Alert, View, ScrollView, TouchableOpacity, Image, Switch } from 'react-native';
 import { Feather } from '@expo/vector-icons';
 import Text from '@/src/components/ui/text';
 import Button from '@/src/components/ui/button';
 import { theme } from '@/src/constants/theme';
 import { globalStyles } from '@/src/constants/styles';
+import { authService } from '@/src/services/auth.service';
 
 const mockAppointments = [
   {
@@ -40,7 +41,14 @@ const Home: React.FC = () => {
           <Text variant="h2" weight="bold" color={theme.colors.white}>Hello Julius, 👋</Text>
           <Text variant="body" color={theme.colors.white} style={{ marginTop: 4 }}>What do you like to do today ?</Text>
         </View>
-        <TouchableOpacity>
+        <TouchableOpacity
+          onPress={() =>
+            Alert.alert('Sign out', 'Do you want to sign out of Oakly?', [
+              { text: 'Cancel', style: 'cancel' },
+              { text: 'Sign out', style: 'destructive', onPress: () => void authService.logout() },
+            ])
+          }
+        >
           <Image source={require('@/assets/images/pngs/avatar1.png')} style={{ width: 44, height: 44, borderRadius: 22, borderWidth: 2, borderColor: theme.colors.white }} />
         </TouchableOpacity>
       </View>

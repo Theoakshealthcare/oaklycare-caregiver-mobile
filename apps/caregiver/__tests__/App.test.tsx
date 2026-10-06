@@ -1,4 +1,4 @@
-import { act, render, screen } from "@testing-library/react-native";
+import { render, screen } from "@testing-library/react-native";
 
 import App from "../App";
 
@@ -8,14 +8,8 @@ jest.mock("expo-font", () => ({
 }));
 
 describe("App", () => {
-  beforeEach(() => jest.useFakeTimers());
-  afterEach(() => jest.useRealTimers());
-
-  it("shows the onboarding screen after the splash", async () => {
+  it("restores the (empty) session and shows the onboarding screen when signed out", async () => {
     await render(<App />);
-    await act(async () => {
-      jest.advanceTimersByTime(2500);
-    });
-    expect(screen.getByText("AI-Powered Personalized Care")).toBeTruthy();
+    expect(await screen.findByText("AI-Powered Personalized Care")).toBeTruthy();
   });
 });

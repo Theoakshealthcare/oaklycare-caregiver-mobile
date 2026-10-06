@@ -6,7 +6,7 @@ import Home from "../screens/home/Home";
 import { useState } from "react";
 // import Fall from "../screens/fall/Fall";
 import Booking from "../screens/booking/Booking";
-import PagerView from "react-native-pager-view";
+import PagerView, { type PagerViewOnPageSelectedEvent } from "react-native-pager-view";
 import Image from "../components/ui/image";
 import ScreenSize from "../hooks/screen-size";
 import Animated from "react-native-reanimated";
@@ -59,7 +59,7 @@ const BottomNavigation = () => {
     setKey((prevKey) => prevKey + 1);
   };
 
-  const handlePageSelected = (event: any) => {
+  const handlePageSelected = (event: PagerViewOnPageSelectedEvent) => {
     const newPage = event.nativeEvent.position;
     setTab(newPage);
   };

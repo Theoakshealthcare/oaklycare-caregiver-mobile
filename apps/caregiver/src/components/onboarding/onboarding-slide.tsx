@@ -1,5 +1,5 @@
 import type React from "react"
-import { View, Animated } from "react-native"
+import { View, Animated, type ImageSourcePropType } from "react-native"
 import { theme } from "../../constants/theme"
 import Box from "../ui/box"
 import Text from "../ui/text"
@@ -11,7 +11,7 @@ export interface OnboardingSlideProps {
   title: string
   subtitle: string
   description: string
-  image: any
+  image: ImageSourcePropType
   backgroundColor: string
   textColor?: string
   isLast?: boolean

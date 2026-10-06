@@ -1,128 +1,46 @@
-import React, { useState, useEffect } from 'react';
-import { View, Pressable } from 'react-native';
-import { Feather } from '@expo/vector-icons';
+import React, { useState } from "react";
+import { View, Pressable } from "react-native";
+import { Feather } from "@expo/vector-icons";
+import { useMutation } from "@tanstack/react-query";
 
-import { theme } from '@/src/constants/theme';
-import Text from '@/src/components/ui/text';
-import Button from '@/src/components/ui/button';
-import Input from '@/src/components/ui/input';
-import ErrorMessage from '@/src/components/ui/ErrorMessage';
-import ErrorDialog from '@/src/components/ui/ErrorDialog';
-import HeaderBack from '@/src/components/back/HeaderBack';
-import { globalStyles } from '@/src/constants/styles';
-import Navigation from '@/src/hooks/use-navigation';
-import useAuth from '@/src/hooks/useAuth';
-import { useAuthError, useAuthUser, useAuthStore } from '@/src/stores/auth.store';
-import { LoginProps, ValidationErrors } from '@/src/types/api.types';
-import { checkAndRedirect } from '@/src/hooks/useProfileRedirect';
+import { messageForError } from "@/src/api/errors";
+import { theme } from "@/src/constants/theme";
+import Text from "@/src/components/ui/text";
+import Button from "@/src/components/ui/button";
+import Input from "@/src/components/ui/input";
+import ErrorDialog from "@/src/components/ui/ErrorDialog";
+import HeaderBack from "@/src/components/back/HeaderBack";
+import { globalStyles } from "@/src/constants/styles";
+import Navigation from "@/src/hooks/use-navigation";
+import { authService } from "@/src/services/auth.service";
 
-const Login: React.FC<LoginProps> = ({ route }) => {
+const Login: React.FC = () => {
   const { navigation } = Navigation();
-  const { login, isLoading, clearError, logout } = useAuth();
-  const authError = useAuthError();
-  const user = useAuthUser();
-  const [formData, setFormData] = useState({
-    emailPhone: '',
-    password: '',
+  const [emailPhone, setEmailPhone] = useState("");
+  const [password, setPassword] = useState("");
+  const [errors, setErrors] = useState<{ emailPhone?: string; password?: string }>({});
+  const [dialog, setDialog] = useState<{ title: string; message: string } | null>(null);
+
+  // On success the session flips to signed in and the auth gate swaps this stack for the right
+  // screen (verify email, onboarding step, status or home). There is nothing to navigate to here.
+  const login = useMutation({
+    mutationFn: () => authService.login(emailPhone.trim(), password),
+    onError: (error) => setDialog({ title: "Login failed", message: messageForError(error, "login") }),
   });
-  const [errors, setErrors] = useState<ValidationErrors>({});
-  const [errorDialog, setErrorDialog] = useState<{ visible: boolean; title: string; message: string }>({ visible: false, title: '', message: '' });
 
-  // Clear auth errors when component mounts
-  useEffect(() => {
-    clearError();
-  }, [clearError]);
-
-  // Show auth errors in the dialog
-  useEffect(() => {
-    if (authError) {
-      let title = 'Error';
-      let message = authError.detail || 'An unexpected error occurred';
-      if (authError.status_code === 0) {
-        title = 'Connection Error';
-        message = 'Unable to connect to the server. Please check your internet connection and try again.';
-      } else if (authError.status_code === 401) {
-        title = 'Login Failed';
-        message = 'Invalid email/phone or password. Please check your credentials and try again.';
-      } else if (authError.status_code === 422) {
-        title = 'Invalid Input';
-        message = 'Please check your email/phone format and try again.';
-      } else if (authError.status_code === 429) {
-        title = 'Too Many Attempts';
-        message = 'Too many login attempts. Please wait a moment and try again.';
-      } else if (authError.status_code && authError.status_code >= 500) {
-        title = 'Server Error';
-        message = 'Server error. Please try again later.';
-      }
-      setErrorDialog({ visible: true, title, message });
-    }
-  }, [authError]);
-
-  // User type check after login
-  useEffect(() => {
-    if (user && user.user_type && user.user_type !== 'caregiver') {
-      setErrorDialog({
-        visible: true,
-        title: 'Account Type Error',
-        message: 'You do not have a caregiver account. Please use the correct app for your account type.',
-      });
-      // Log out the user
-      logout();
-    }
-  }, [user, logout]);
-
-  const updateFormData = (field: keyof typeof formData, value: string): void => {
-    setFormData(prev => ({ ...prev, [field]: value }));
-    // Clear error when user starts typing
-    if (errors[field]) {
-      setErrors(prev => ({ ...prev, [field]: '' }));
-    }
-    // Clear auth error when user starts typing
-    if (authError) {
-      clearError();
-    }
-  };
-
-  const validateInputs = (): boolean => {
-    const newErrors: ValidationErrors = {};
-    
-    if (!formData.emailPhone.trim()) {
-      newErrors.emailPhone = 'Email or phone number is required';
-    }
-    
-    if (!formData.password) {
-      newErrors.password = 'Password is required';
-    }
-    
-    setErrors(newErrors);
-    return Object.keys(newErrors).length === 0;
-  };
-
-  const handleLogin = async (): Promise<void> => {
-    if (!validateInputs()) {
-      return;
-    }
-
-    const success = await login({
-      email_or_phone: formData.emailPhone,
-      password: formData.password,
-    });
-    console.log(success)
-    
-    if (success && user && user.user_type === 'caregiver') {
-      await checkAndRedirect(navigation);
-    }
-  };
-
-  const handleForgotPassword = (): void => {
-    navigation.navigate('ForgotPassword');
+  const handleLogin = () => {
+    const next: typeof errors = {};
+    if (!emailPhone.trim()) next.emailPhone = "Email or phone number is required";
+    if (!password) next.password = "Password is required";
+    setErrors(next);
+    if (Object.keys(next).length === 0) login.mutate();
   };
 
   return (
     <View style={globalStyles.container}>
       <HeaderBack />
 
-      <View style={{ marginVertical: '10%' }}>
+      <View style={{ marginVertical: "10%" }}>
         <Text variant="h2" weight="bold">
           Login
         </Text>
@@ -135,8 +53,11 @@ const Login: React.FC<LoginProps> = ({ route }) => {
         <Input
           label="Email Address/Phone Number"
           placeholder="Provide your Email Address"
-          value={formData.emailPhone}
-          onChangeText={(text: string) => updateFormData('emailPhone', text)}
+          value={emailPhone}
+          onChangeText={(text: string) => {
+            setEmailPhone(text);
+            setErrors((prev) => ({ ...prev, emailPhone: undefined }));
+          }}
           keyboardType="email-address"
           autoCapitalize="none"
           error={errors.emailPhone}
@@ -145,48 +66,30 @@ const Login: React.FC<LoginProps> = ({ route }) => {
         <Input
           label="Input Password"
           placeholder="Input password"
-          value={formData.password}
-          onChangeText={(text: string) => updateFormData('password', text)}
+          value={password}
+          onChangeText={(text: string) => {
+            setPassword(text);
+            setErrors((prev) => ({ ...prev, password: undefined }));
+          }}
           secureTextEntry
           error={errors.password}
-          rightIcon={
-            <Feather name="eye" size={20} color={theme.colors.textLight} />
-          }
+          rightIcon={<Feather name="eye" size={20} color={theme.colors.textLight} />}
         />
 
-        {/* Show auth error message visually as well */}
-        <ErrorMessage 
-          message={authError?.detail}
-          visible={!!authError}
-          type="error"
-        />
-
-        <Pressable
-          style={{ alignSelf: 'flex-end' }}
-          onPress={handleForgotPassword}
-        >
+        <Pressable style={{ alignSelf: "flex-end" }} onPress={() => navigation.navigate("RecoverPassword")}>
           <Text variant="small" color={theme.colors.primary}>
             Forgot Password
           </Text>
         </Pressable>
 
-        <Button
-          title="Login"
-          onPress={handleLogin}
-          style={{ marginTop: '5%' }}
-          loading={isLoading}
-        />
+        <Button title="Login" onPress={handleLogin} style={{ marginTop: "5%" }} loading={login.isPending} />
       </View>
 
-      {/* Modern error dialog */}
       <ErrorDialog
-        visible={errorDialog.visible}
-        title={errorDialog.title}
-        message={errorDialog.message}
-        onClose={() => {
-          setErrorDialog({ ...errorDialog, visible: false });
-          clearError();
-        }}
+        visible={dialog !== null}
+        title={dialog?.title}
+        message={dialog?.message ?? ""}
+        onClose={() => setDialog(null)}
       />
     </View>
   );

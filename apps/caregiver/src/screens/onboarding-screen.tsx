@@ -1,6 +1,6 @@
 
 import { useState, useRef } from "react"
-import { StyleSheet, FlatList, View, Animated, SafeAreaView } from "react-native"
+import { StyleSheet, FlatList, View, Animated, type ViewToken } from "react-native"
 import { theme } from "../constants/theme"
 import OnboardingSlide from "../components/onboarding/onboarding-slide"
 import { useAnimation } from "../hooks/use-animation"
@@ -73,9 +73,10 @@ const OnboardingScreen = () => {
 
   const handleScroll = Animated.event([{ nativeEvent: { contentOffset: { x: scrollX } } }], { useNativeDriver: false })
 
-  const handleViewableItemsChanged = ({ viewableItems }: any) => {
-    if (viewableItems.length > 0) {
-      setCurrentIndex(viewableItems[0].index)
+  const handleViewableItemsChanged = ({ viewableItems }: { viewableItems: ViewToken[] }) => {
+    const index = viewableItems[0]?.index
+    if (index != null) {
+      setCurrentIndex(index)
     }
   }
 
