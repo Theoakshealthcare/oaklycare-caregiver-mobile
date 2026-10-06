@@ -65,3 +65,11 @@ Jest (49 tests in `apps/caregiver`, plus the 5 api-client tests):
 - AI voice notes: no audio upload or transcription endpoint; recording is disabled in effect.
 - Still warnings, not errors: `react-hooks/refs` in `onboarding-screen`, `set-state-in-effect` in `AINoteTaker`, unused imports in old UI components.
 - C4: availability, location, push registration (then write `pushTokenStorage`), home summary, visit flow (on my way, visit code, complete).
+
+## Addendum: review fixes (2026-10-06)
+An Opus review returned approve-with-fixes. Fixed:
+- **`@oakly/api-client` retried a 401 request by rebuilding it from the request that had already been sent.** `fetch` consumes the body, so any request with a body threw "Already read" once a token expired: accept, decline, profile saves, consent, upload and the push-token delete. Fix: an unread clone is kept for each authenticated request and the retry is built from it. Test: a POST with a body is retried after a refresh, against a `fetch` that consumes the body.
+- **A refresh that finished after a sign-out, or after a different user signed in, could overwrite or sign out the new session.** Fix: the result is applied only if the session still holds the tokens that started that refresh. Tests: two race cases.
+- **Sign-out on refresh failure is now 401-only.** A 429, a 422 or an outage keeps the session.
+
+**Known:** Jest sometimes reports that a worker "failed to exit gracefully" during a full parallel run. No single test file leaks (each was checked on its own), so it is worker teardown noise. Revisit if a test starts hanging.
