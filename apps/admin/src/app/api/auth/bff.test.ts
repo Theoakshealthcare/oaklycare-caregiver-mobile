@@ -264,6 +264,19 @@ describe("/api/v1 proxy", () => {
     expect(res.status).toBe(200);
   });
 
+  it.each([204, 205, 304])("passes a %i through without a body instead of failing", async (status) => {
+    upstream.mockResolvedValue(new Response(null, { status }));
+    const res = await proxyGet(new Request("http://console.test/api/v1/admin/me"), ctx(["admin", "me"]));
+    expect(res.status).toBe(status);
+    expect(res.body).toBeNull();
+  });
+
+  it("does not forward the upstream content-length (fetch may have decompressed the body)", async () => {
+    upstream.mockResolvedValue(new Response("{}", { status: 200, headers: { "content-length": "999" } }));
+    const res = await proxyGet(new Request("http://console.test/api/v1/admin/me"), ctx(["admin", "me"]));
+    expect(res.headers.get("content-length")).not.toBe("999");
+  });
+
   it("rejects a body whose Content-Length is over 1 MB with 413", async () => {
     const res = await proxyPost(
       new Request("http://console.test/api/v1/admin/admins", {

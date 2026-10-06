@@ -11,8 +11,10 @@ const BLOCKED = new Set(["admin/auth/mfa/verify", "admin/auth/refresh", "admin/a
 const ALLOWED_PREFIXES = ["admin/", "caregiver/documents/"];
 /** Request bodies above this are refused with 413 (the console sends small JSON only). */
 const MAX_BODY_BYTES = 1024 * 1024;
+/** Statuses that must not carry a body; `new Response(body)` throws for them. */
+const NULL_BODY_STATUSES = new Set([101, 103, 204, 205, 304]);
 const FORWARD_REQUEST_HEADERS = ["authorization", "content-type", "accept", "accept-language"];
-const FORWARD_RESPONSE_HEADERS = ["content-type", "content-disposition", "content-length", "retry-after", "cache-control"];
+const FORWARD_RESPONSE_HEADERS = ["content-type", "content-disposition", "retry-after", "cache-control"];
 
 type Ctx = { params: Promise<{ path: string[] }> };
 
@@ -97,7 +99,7 @@ async function proxy(request: Request, { params }: Ctx): Promise<Response> {
     if (value) out.set(name, value);
   }
   out.set("cache-control", "no-store");
-  return new Response(upstream.status === 204 ? null : upstream.body, { status: upstream.status, headers: out });
+  return new Response(NULL_BODY_STATUSES.has(upstream.status) ? null : upstream.body, { status: upstream.status, headers: out });
 }
 
 export { proxy as GET, proxy as POST, proxy as PUT, proxy as PATCH, proxy as DELETE };
