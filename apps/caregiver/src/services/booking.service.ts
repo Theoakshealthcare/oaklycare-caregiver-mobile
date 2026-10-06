@@ -1,92 +1,109 @@
-import { get, post } from './api'
-import type {
-  BookingRequest,
-  BookingNotification,
-  ChatMessage,
-  BookingNote,
-  LocationUpdate,
-} from '@/src/types/booking.types'
-import type { ApiResponse, PaginatedResponse } from '@/src/types/api.types'
+import type { Schemas } from "@oakly/api-client";
 
-class BookingService {
-  private readonly baseURL = "/booking"
+import { api } from "@/src/api/client";
+import { unwrap } from "@/src/api/unwrap";
 
-  // Caregiver Booking Management
-  async getCaregiverBookings(status?: string): Promise<ApiResponse<BookingRequest[]>> {
-    const params = status ? { status } : undefined
-    return await get<BookingRequest[]>(`${this.baseURL}/caregiver/bookings`, params)
-  }
+export type Booking = Schemas["BookingResponse"];
+export type BookingStatus = Schemas["BookingStatus"];
+export type ChatMessage = Schemas["ChatMessageResponse"];
+export type BookingNote = Schemas["BookingNoteResponse"];
 
-  async getCaregiverNotifications(unreadOnly = false): Promise<ApiResponse<BookingNotification[]>> {
-    const params = unreadOnly ? { unread_only: true } : undefined
-    return await get<BookingNotification[]>(`${this.baseURL}/caregiver/notifications`, params)
-  }
+/** Values GET /booking/caregiver/bookings?status= accepts (backend guide, section 7). */
+export type BookingListFilter = "new_requests" | BookingStatus;
 
-  async handleBookingAction(bookingId: string, action: string, reason?: string): Promise<ApiResponse<any>> {
-    const body = reason ? { action, reason } : { action }
-    return await post<any>(`${this.baseURL}/caregiver/action/${bookingId}`, body)
-  }
-
-  async getBookingDetails(bookingId: string): Promise<ApiResponse<BookingRequest>> {
-    return await get<BookingRequest>(`${this.baseURL}/booking/${bookingId}`)
-  }
-
-  // Location Services
-  async updateLocation(locationData: LocationUpdate): Promise<ApiResponse<any>> {
-    return await post<any>(`${this.baseURL}/caregiver/location`, locationData)
-  }
-
-  async getCurrentLocation(): Promise<ApiResponse<any>> {
-    return await get<any>(`${this.baseURL}/caregiver/location`)
-  }
-
-  // Chat Services
-  async sendChatMessage(bookingId: string, message: string): Promise<ApiResponse<ChatMessage>> {
-    return await post<ChatMessage>(`${this.baseURL}/chat/${bookingId}/send`, {
-      message,
-      message_type: "text",
-    })
-  }
-
-  async getChatMessages(bookingId: string): Promise<ApiResponse<ChatMessage[]>> {
-    return await get<ChatMessage[]>(`${this.baseURL}/chat/${bookingId}/messages`)
-  }
-
-  // Notes Services
-  async createBookingNote(
-    bookingId: string,
-    title: string,
-    content?: string,
-    audioTranscript?: string,
-  ): Promise<ApiResponse<BookingNote>> {
-    return await post<BookingNote>(`${this.baseURL}/notes/${bookingId}/create`, {
-      title,
-      content,
-      audio_transcript: audioTranscript,
-    })
-  }
-
-  async getBookingNotes(bookingId: string): Promise<ApiResponse<BookingNote[]>> {
-    return await get<BookingNote[]>(`${this.baseURL}/notes/${bookingId}`)
-  }
-
-  // Accept/Decline Actions
-  async acceptBooking(bookingId: string): Promise<ApiResponse<any>> {
-    return this.handleBookingAction(bookingId, "accept")
-  }
-
-  async declineBooking(bookingId: string, reason?: string): Promise<ApiResponse<any>> {
-    return this.handleBookingAction(bookingId, "decline", reason)
-  }
-
-  async startService(bookingId: string): Promise<ApiResponse<any>> {
-    return this.handleBookingAction(bookingId, "start")
-  }
-
-  async completeService(bookingId: string): Promise<ApiResponse<any>> {
-    return this.handleBookingAction(bookingId, "complete")
-  }
+/**
+ * What the caregiver may see about a job they have NOT accepted yet.
+ *
+ * The backend already strips patient identity from offers (patient_details, condition and
+ * special_instructions are null, the address is the area only), but the app does not rely on that:
+ * the offer UI is built from this narrow type, so a patient field can never reach the screen even
+ * if the server's offer view were to carry one by mistake.
+ */
+export interface Offer {
+  id: string;
+  serviceType: string;
+  assistanceType: string;
+  durationHours: number;
+  scheduledDate: string;
+  scheduledEndDate: string;
+  /** "<city>, <state>", the only location shown before accepting. */
+  area: string;
 }
 
-export const bookingService = new BookingService()
-export default bookingService
+export function toOffer(booking: Booking): Offer {
+  return {
+    id: booking.id,
+    serviceType: booking.service_type,
+    assistanceType: booking.assistance_type,
+    durationHours: booking.duration_hours,
+    scheduledDate: booking.scheduled_date,
+    scheduledEndDate: booking.scheduled_end_date,
+    area: [booking.patient_city, booking.patient_state].filter(Boolean).join(", "),
+  };
+}
+
+export type BookingAction = "accept" | "decline";
+
+function byScheduledDate(a: Booking, b: Booking): number {
+  return a.scheduled_date.localeCompare(b.scheduled_date);
+}
+
+export const bookingService = {
+  listCaregiverBookings(filter: BookingListFilter) {
+    return unwrap(api.GET("/api/v1/booking/caregiver/bookings", { params: { query: { status: filter } } }));
+  },
+
+  /** Jobs the caregiver has accepted and not finished: one call per status, merged soonest first. */
+  async listActive(): Promise<Booking[]> {
+    const statuses: BookingStatus[] = ["accepted", "en_route", "in_progress"];
+    const lists = await Promise.all(statuses.map((s) => bookingService.listCaregiverBookings(s)));
+    return lists.flat().sort(byScheduledDate);
+  },
+
+  /** Only for a booking assigned to this caregiver; an un-accepted offer answers 403 "Access denied". */
+  getBooking(bookingId: string) {
+    return unwrap(api.GET("/api/v1/booking/booking/{booking_id}", { params: { path: { booking_id: bookingId } } }));
+  },
+
+  /**
+   * accept / decline. The response is an untyped raw booking dict in the schema; the app only
+   * reads the new `status` from it and refetches the typed booking for everything else.
+   */
+  async act(bookingId: string, action: BookingAction): Promise<{ status: string | null }> {
+    const raw: unknown = await unwrap(
+      api.POST("/api/v1/booking/caregiver/action/{booking_id}", {
+        params: { path: { booking_id: bookingId } },
+        body: { action },
+      }),
+    );
+    const booking = raw && typeof raw === "object" ? (raw as { booking?: unknown }).booking : undefined;
+    const status = booking && typeof booking === "object" ? (booking as { status?: unknown }).status : undefined;
+    return { status: typeof status === "string" ? status : null };
+  },
+
+  listChatMessages(bookingId: string) {
+    return unwrap(api.GET("/api/v1/booking/chat/{booking_id}/messages", { params: { path: { booking_id: bookingId } } }));
+  },
+
+  sendChatMessage(bookingId: string, message: string) {
+    return unwrap(
+      api.POST("/api/v1/booking/chat/{booking_id}/send", {
+        params: { path: { booking_id: bookingId } },
+        body: { message, message_type: "text" },
+      }),
+    );
+  },
+
+  listNotes(bookingId: string) {
+    return unwrap(api.GET("/api/v1/booking/notes/{booking_id}", { params: { path: { booking_id: bookingId } } }));
+  },
+
+  createNote(bookingId: string, title: string, content: string) {
+    return unwrap(
+      api.POST("/api/v1/booking/notes/{booking_id}/create", {
+        params: { path: { booking_id: bookingId } },
+        body: { title, content },
+      }),
+    );
+  },
+};
