@@ -6,6 +6,7 @@ vi.mock("next/headers", () => ({
   cookies: async () => ({ get: (name: string) => (name === "oakly_admin_rt" && cookieValue ? { value: cookieValue } : undefined) }),
 }));
 
+import { _resetSingleFlight } from "@/lib/server/single-flight";
 import { GET as proxyGet, POST as proxyPost } from "../v1/[...path]/route";
 import { POST as logout } from "./logout/route";
 import { POST as verify } from "./mfa/verify/route";
@@ -23,6 +24,7 @@ let upstream: ReturnType<typeof vi.fn>;
 beforeEach(() => {
   process.env.OAKLY_API_ORIGIN = "http://api.test";
   cookieValue = undefined;
+  _resetSingleFlight();
   upstream = vi.fn();
   vi.stubGlobal("fetch", upstream);
 });
@@ -55,6 +57,16 @@ describe("POST /api/auth/mfa/verify", () => {
     expect(res.headers.get("set-cookie")).toBeNull();
   });
 
+  it.each([[423, "86400"], [429, "30"]])("passes a %s and its Retry-After through", async (status, retryAfter) => {
+    upstream.mockResolvedValue(
+      new Response(JSON.stringify({ detail: "Account temporarily locked. Try again later." }), { status, headers: { "retry-after": retryAfter } }),
+    );
+    const res = await verify(post("/api/auth/mfa/verify", { mfa_token: "m", code: "123456" }));
+    expect(res.status).toBe(status);
+    expect(res.headers.get("retry-after")).toBe(retryAfter);
+    expect(res.headers.get("set-cookie")).toBeNull();
+  });
+
   it("refuses a cross-origin request", async () => {
     const res = await verify(post("/api/auth/mfa/verify", {}, { origin: "https://evil.test" }));
     expect(res.status).toBe(403);
@@ -71,7 +83,7 @@ describe("POST /api/auth/refresh", () => {
 
   it("rotates the cookie with the new refresh token", async () => {
     cookieValue = "R-old";
-    upstream.mockResolvedValue(new Response(JSON.stringify({ access_token: "A2", refresh_token: "R-new", expires_in: 900 }), { status: 200 }));
+    upstream.mockResolvedValue(new Response(JSON.stringify({ access_token: "A2", refresh_token: "R-new", token_type: "bearer", expires_in: 900 }), { status: 200 }));
     const res = await refresh(post("/api/auth/refresh"));
     expect(await res.json()).toEqual({ access_token: "A2", expires_in: 900 });
     expect(res.headers.get("set-cookie")).toContain("oakly_admin_rt=R-new");
@@ -80,7 +92,7 @@ describe("POST /api/auth/refresh", () => {
 
   it("clears the cookie when the backend rejects the token (expired, revoked or reused)", async () => {
     cookieValue = "R-old";
-    upstream.mockResolvedValue(new Response(JSON.stringify({ detail: "Invalid refresh token" }), { status: 401 }));
+    upstream.mockResolvedValue(new Response(JSON.stringify({ detail: "Invalid or expired refresh token" }), { status: 401 }));
     const res = await refresh(post("/api/auth/refresh"));
     expect(res.status).toBe(401);
     expect(res.headers.get("set-cookie")).toMatch(/oakly_admin_rt=;/);
@@ -92,6 +104,67 @@ describe("POST /api/auth/refresh", () => {
     const res = await refresh(post("/api/auth/refresh"));
     expect(res.status).toBe(502);
     expect(res.headers.get("set-cookie")).toBeNull();
+  });
+});
+
+describe("POST /api/auth/refresh serialisation (reuse detection revokes every session)", () => {
+  const tokens = { access_token: "A2", refresh_token: "R-new", token_type: "bearer", expires_in: 900 };
+
+  it("sends exactly one upstream refresh for concurrent requests carrying the same cookie", async () => {
+    cookieValue = "R-old";
+    upstream.mockImplementation(async () => {
+      await new Promise((r) => setTimeout(r, 25));
+      return new Response(JSON.stringify(tokens), { status: 200 });
+    });
+    const responses = await Promise.all(Array.from({ length: 6 }, () => refresh(post("/api/auth/refresh"))));
+    expect(upstream).toHaveBeenCalledTimes(1);
+    for (const res of responses) {
+      expect(res.status).toBe(200);
+      expect(await res.json()).toEqual({ access_token: "A2", expires_in: 900 });
+      expect(res.headers.get("set-cookie")).toContain("oakly_admin_rt=R-new");
+    }
+  });
+
+  it("serves a request that still carries the old cookie just after the rotation from the same result", async () => {
+    cookieValue = "R-old";
+    upstream.mockResolvedValue(new Response(JSON.stringify(tokens), { status: 200 }));
+    await refresh(post("/api/auth/refresh"));
+    const late = await refresh(post("/api/auth/refresh"));
+    expect(upstream).toHaveBeenCalledTimes(1);
+    expect(late.status).toBe(200);
+    expect(late.headers.get("set-cookie")).toContain("oakly_admin_rt=R-new");
+  });
+
+  it("does not serialise different sessions against each other", async () => {
+    upstream.mockImplementation(async () => new Response(JSON.stringify(tokens), { status: 200 }));
+    cookieValue = "R-one";
+    await refresh(post("/api/auth/refresh"));
+    cookieValue = "R-two";
+    await refresh(post("/api/auth/refresh"));
+    expect(upstream).toHaveBeenCalledTimes(2);
+  });
+
+  it("shares a rejection too, and the cookie is cleared for every waiter", async () => {
+    cookieValue = "R-old";
+    upstream.mockImplementation(async () => {
+      await new Promise((r) => setTimeout(r, 10));
+      return new Response(JSON.stringify({ detail: "Invalid or expired refresh token" }), { status: 401 });
+    });
+    const responses = await Promise.all([refresh(post("/api/auth/refresh")), refresh(post("/api/auth/refresh"))]);
+    expect(upstream).toHaveBeenCalledTimes(1);
+    for (const res of responses) {
+      expect(res.status).toBe(401);
+      expect(res.headers.get("set-cookie")).toMatch(/oakly_admin_rt=;/);
+    }
+  });
+
+  it("never retries after a network error, and does not remember the failure", async () => {
+    cookieValue = "R-old";
+    upstream.mockRejectedValue(new Error("ECONNRESET"));
+    const first = await refresh(post("/api/auth/refresh"));
+    expect(first.status).toBe(502);
+    expect(upstream).toHaveBeenCalledTimes(1);
+    expect(first.headers.get("set-cookie")).toBeNull();
   });
 });
 

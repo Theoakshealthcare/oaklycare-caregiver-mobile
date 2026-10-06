@@ -3,8 +3,11 @@
 export const REFRESH_COOKIE = "oakly_admin_rt";
 /** The refresh cookie is only sent to our BFF auth routes, never to the proxy or pages. */
 export const REFRESH_COOKIE_PATH = "/api/auth";
-/** GUESS: the plan does not state the admin refresh TTL. The backend is the authority; this only bounds the cookie. */
-const REFRESH_COOKIE_MAX_AGE = 7 * 24 * 60 * 60;
+/**
+ * A session ends 12 hours after sign-in whatever the activity, and a refresh token idle for 30
+ * minutes dies (guide 4.3). The backend enforces both; the cookie only needs to outlive them.
+ */
+const REFRESH_COOKIE_MAX_AGE = 12 * 60 * 60;
 
 export function apiOrigin(): string {
   const origin = process.env.OAKLY_API_ORIGIN;

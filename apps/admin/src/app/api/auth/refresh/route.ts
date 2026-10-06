@@ -1,13 +1,54 @@
 import { cookies } from "next/headers";
 import { NextResponse } from "next/server";
 
-import { ADMIN_AUTH_PATHS, type RefreshResponse, type SessionResponse } from "@/lib/admin-auth-contract";
+import { ADMIN_AUTH_PATHS, type RefreshResponse, type RefreshedSession } from "@/lib/admin-auth-contract";
 import { REFRESH_COOKIE, backendPost, refreshCookieOptions, sameOrigin } from "@/lib/server/backend";
+import { flightKey, singleFlight } from "@/lib/server/single-flight";
+
+/**
+ * How long a finished refresh stays available to a request that still carries the old cookie
+ * (a second tab, or a request sent before the browser applied the rotated cookie).
+ */
+const LATE_CALLER_GRACE_MS = 10_000;
+
+type Outcome =
+  | { kind: "ok"; session: RefreshedSession; refreshToken: string }
+  | { kind: "rejected"; status: number; body: unknown; clearCookie: boolean; retryAfter: string | null }
+  | { kind: "unreachable" };
+
+async function rotate(refreshToken: string): Promise<Outcome> {
+  let upstream;
+  try {
+    upstream = await backendPost(ADMIN_AUTH_PATHS.refresh, { refresh_token: refreshToken });
+  } catch {
+    // Never retried: if the first attempt reached the server and only the answer was lost, a retry
+    // would look like token theft and revoke every session (guide 4.2).
+    return { kind: "unreachable" };
+  }
+  if (upstream.status !== 200 || !upstream.body) {
+    return {
+      kind: "rejected",
+      status: upstream.status,
+      body: upstream.body ?? { detail: "Session expired" },
+      clearCookie: upstream.status === 401 || upstream.status === 403,
+      retryAfter: upstream.headers.get("retry-after"),
+    };
+  }
+  const tokens = upstream.body as RefreshResponse;
+  return {
+    kind: "ok",
+    session: { access_token: tokens.access_token, expires_in: tokens.expires_in },
+    refreshToken: tokens.refresh_token,
+  };
+}
 
 /**
  * BFF for `POST /admin/auth/refresh`. The refresh token comes from the cookie and the rotated one is
- * written back. A 401 from the backend (expired, revoked, reused) clears the cookie; an unreachable
- * backend does not, so a network blip doesn't sign the admin out.
+ * written back. Refresh tokens are single-use and a repeat is treated as theft (every session of the
+ * admin is revoked), so calls are SERIALISED per refresh token: concurrent requests with the same
+ * cookie share one upstream call and all receive its result. A 401 from the backend (expired,
+ * revoked, reused) clears the cookie; an unreachable backend does not, so a network blip doesn't
+ * sign the admin out.
  */
 export async function POST(request: Request) {
   if (!sameOrigin(request)) return NextResponse.json({ detail: "Forbidden" }, { status: 403 });
@@ -15,28 +56,21 @@ export async function POST(request: Request) {
   const refreshToken = jar.get(REFRESH_COOKIE)?.value;
   if (!refreshToken) return NextResponse.json({ detail: "No session" }, { status: 401 });
 
-  let upstream;
-  try {
-    upstream = await backendPost(ADMIN_AUTH_PATHS.refresh, { refresh_token: refreshToken });
-  } catch {
+  const outcome = await singleFlight(flightKey(refreshToken), () => rotate(refreshToken), {
+    graceMs: LATE_CALLER_GRACE_MS,
+    reusable: (o) => o.kind !== "unreachable",
+  });
+
+  if (outcome.kind === "unreachable") {
     return NextResponse.json({ detail: "Oakly API is unreachable" }, { status: 502 });
   }
-
-  if (upstream.status !== 200 || !upstream.body) {
-    const failed = NextResponse.json(upstream.body ?? { detail: "Session expired" }, { status: upstream.status });
-    if (upstream.status === 401 || upstream.status === 403) {
-      failed.cookies.set(REFRESH_COOKIE, "", refreshCookieOptions(0));
-    }
+  if (outcome.kind === "rejected") {
+    const failed = NextResponse.json(outcome.body, { status: outcome.status });
+    if (outcome.retryAfter) failed.headers.set("retry-after", outcome.retryAfter);
+    if (outcome.clearCookie) failed.cookies.set(REFRESH_COOKIE, "", refreshCookieOptions(0));
     return failed;
   }
-
-  const tokens = upstream.body as RefreshResponse;
-  const session: SessionResponse = {
-    access_token: tokens.access_token,
-    expires_in: tokens.expires_in,
-    admin: tokens.admin,
-  };
-  const response = NextResponse.json(session, { headers: { "cache-control": "no-store" } });
-  response.cookies.set(REFRESH_COOKIE, tokens.refresh_token, refreshCookieOptions());
+  const response = NextResponse.json(outcome.session, { headers: { "cache-control": "no-store" } });
+  response.cookies.set(REFRESH_COOKIE, outcome.refreshToken, refreshCookieOptions());
   return response;
 }

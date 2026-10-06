@@ -1,6 +1,6 @@
 import { NextResponse } from "next/server";
 
-import { ADMIN_AUTH_PATHS, type MfaVerifyResponse, type SessionResponse } from "@/lib/admin-auth-contract";
+import { ADMIN_AUTH_PATHS, type MfaVerifyResponse, type SignInSession } from "@/lib/admin-auth-contract";
 import { REFRESH_COOKIE, backendPost, refreshCookieOptions, sameOrigin } from "@/lib/server/backend";
 
 /**
@@ -23,11 +23,15 @@ export async function POST(request: Request) {
     return NextResponse.json({ detail: "Oakly API is unreachable" }, { status: 502 });
   }
   if (upstream.status !== 200 || !upstream.body) {
-    return NextResponse.json(upstream.body ?? { detail: "Verification failed" }, { status: upstream.status });
+    const failed = NextResponse.json(upstream.body ?? { detail: "Verification failed" }, { status: upstream.status });
+    // 423 (lockout, up to 86400 s) and 429 carry Retry-After; the console shows it.
+    const retryAfter = upstream.headers.get("retry-after");
+    if (retryAfter) failed.headers.set("retry-after", retryAfter);
+    return failed;
   }
 
   const tokens = upstream.body as MfaVerifyResponse;
-  const session: SessionResponse = {
+  const session: SignInSession = {
     access_token: tokens.access_token,
     expires_in: tokens.expires_in,
     admin: tokens.admin,
