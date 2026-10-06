@@ -33,12 +33,18 @@ const RETRIED = "x-oakly-retried";
 
 export function createOaklyClient(options: OaklyClientOptions) {
   const client = createClient<paths>({ baseUrl: options.baseUrl, fetch: options.fetch });
+  // Unread clones of authenticated requests, keyed by the request openapi-fetch sends.
+  const unread = new WeakMap<Request, Request>();
 
   const auth: Middleware = {
     async onRequest({ request }) {
       const token = await options.getAccessToken();
       if (token && !request.headers.has("Authorization")) {
         request.headers.set("Authorization", `Bearer ${token}`);
+      }
+      // fetch consumes the request body, so keep an unread copy in case a 401 needs a retry.
+      if (options.onUnauthorized && request.headers.has("Authorization")) {
+        unread.set(request, request.clone());
       }
       return request;
     },
@@ -51,9 +57,12 @@ export function createOaklyClient(options: OaklyClientOptions) {
       ) {
         return response;
       }
+      const original = unread.get(request);
+      unread.delete(request);
+      if (!original) return response;
       const fresh = await options.onUnauthorized();
       if (!fresh) return response;
-      const retry = new Request(request, { headers: new Headers(request.headers) });
+      const retry = new Request(original, { headers: new Headers(original.headers) });
       retry.headers.set("Authorization", `Bearer ${fresh}`);
       retry.headers.set(RETRIED, "1");
       return (options.fetch ?? globalThis.fetch)(retry);

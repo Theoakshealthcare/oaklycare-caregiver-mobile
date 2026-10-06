@@ -68,3 +68,23 @@ test("errorMessage reads every FastAPI detail shape", () => {
   assert.equal(errorMessage({ detail: { message: "Cannot approve", unmet: [] } }), "Cannot approve");
   assert.equal(errorMessage(undefined, "fallback"), "fallback");
 });
+
+test("retries a request WITH a body after refresh (body is consumed by the first fetch)", async () => {
+  const seen: string[] = [];
+  const consumingFetch = (async (input: Request | string | URL, init?: RequestInit) => {
+    const req = input instanceof Request ? input : new Request(input, init);
+    seen.push(await req.text()); // consumes the body, as real fetch implementations do
+    return req.headers.get("Authorization") === "Bearer new"
+      ? Response.json({ ok: true })
+      : Response.json({ detail: "expired" }, { status: 401 });
+  }) as typeof fetch;
+  const api = createOaklyClient({
+    baseUrl: "http://x",
+    getAccessToken: () => "old",
+    onUnauthorized: async () => "new",
+    fetch: consumingFetch,
+  });
+  const { response } = await api.POST("/api/v1/caregiver/availability", { body: { is_available: true } });
+  assert.equal(response.status, 200);
+  assert.deepEqual(seen, ['{"is_available":true}', '{"is_available":true}']);
+});
