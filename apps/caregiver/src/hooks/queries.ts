@@ -3,8 +3,10 @@ import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { queryKeys } from "@/src/api/keys";
 import { useSession } from "@/src/auth";
 import { authService } from "@/src/services/auth.service";
-import { bookingService, type BookingAction } from "@/src/services/booking.service";
+import { homePollInterval } from "@/src/home/homeModel";
+import { bookingService, type BookingAction, type VisitAction } from "@/src/services/booking.service";
 import { caregiverService } from "@/src/services/caregiver.service";
+import { locationService } from "@/src/supply/locationService";
 
 function useSignedIn(): boolean {
   return useSession((s) => s.status === "signedIn");
@@ -42,22 +44,44 @@ export function useBookingsTab(tab: BookingsTab) {
   });
 }
 
-export function useBooking(bookingId: string, enabled = true) {
+export function useBooking(bookingId: string, enabled = true, refetchInterval?: number) {
   return useQuery({
     queryKey: queryKeys.booking(bookingId),
     queryFn: () => bookingService.getBooking(bookingId),
     enabled,
+    refetchInterval,
   });
 }
 
-/** accept / decline. Always refetches the lists afterwards, also on failure (a 409 means the list is stale). */
+/**
+ * GET /caregiver/home: the whole home screen in one call. Polled per the guide (section 13):
+ * every 20 s while available or on a visit, every 60 s otherwise; also refetched when the app comes
+ * to the foreground (`src/api/focus.ts`) and when the screen regains focus.
+ */
+export function useCaregiverHome() {
+  const enabled = useSignedIn();
+  return useQuery({
+    queryKey: queryKeys.home,
+    queryFn: locationService.getHome,
+    enabled,
+    refetchInterval: (query) => homePollInterval(query.state.data),
+    staleTime: 10_000,
+  });
+}
+
+/**
+ * accept / decline / on_my_way / start / complete. Always refetches the lists and home afterwards,
+ * also on failure (a 409 means what is on screen is stale).
+ */
 export function useBookingAction() {
   const client = useQueryClient();
   return useMutation({
-    mutationFn: (vars: { bookingId: string; action: BookingAction }) => bookingService.act(vars.bookingId, vars.action),
+    mutationFn: (vars: { bookingId: string; action: BookingAction | VisitAction; visitCode?: string }) =>
+      bookingService.act(vars.bookingId, vars.action, vars.visitCode),
     onSettled: (_data, _error, vars) => {
       void client.invalidateQueries({ queryKey: queryKeys.allBookings });
       void client.invalidateQueries({ queryKey: queryKeys.booking(vars.bookingId) });
+      void client.invalidateQueries({ queryKey: queryKeys.home });
     },
   });
 }

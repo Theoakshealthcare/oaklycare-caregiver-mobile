@@ -16,6 +16,9 @@ import { formatDuration, formatVisitTime } from "@/src/utils/dates";
 
 type Props = StackScreenProps<ScreenParamLists, "BookingDetails">;
 
+/** Statuses where the caregiver holds a live visit and the step-by-step flow applies. */
+const ACTIVE_STATUSES: string[] = ["accepted", "en_route", "in_progress"];
+
 const Row: React.FC<{ label: string; value: string }> = ({ label, value }) => (
   <View style={[globalStyles.row, { justifyContent: "space-between", marginBottom: 16 }]}>
     <Text variant="body" color={theme.colors.textLight}>
@@ -38,7 +41,7 @@ const OfferDetails: React.FC<{ offer: Offer; busy: boolean; onAccept: () => void
     <Text variant="h3" weight="bold" style={{ marginBottom: 16 }}>
       Service Information
     </Text>
-    <Row label="Service" value={offer.assistanceType} />
+    <Row label="Service" value={offer.assistanceType ?? `${offer.serviceType} visit`} />
     <Row label="When" value={formatVisitTime(offer.scheduledDate)} />
     <Row label="Duration" value={formatDuration(offer.durationHours)} />
     <Row label="Area" value={offer.area} />
@@ -64,7 +67,8 @@ const AssignedDetails: React.FC<{
   booking: Booking;
   onChat: () => void;
   onNotes: () => void;
-}> = ({ booking, onChat, onNotes }) => (
+  onVisit: () => void;
+}> = ({ booking, onChat, onNotes, onVisit }) => (
   <>
     <Text variant="h3" weight="bold" style={{ marginBottom: 16 }}>
       Service Information
@@ -94,6 +98,7 @@ const AssignedDetails: React.FC<{
     ) : null}
 
     <View style={{ gap: 12 }}>
+      {ACTIVE_STATUSES.includes(booking.status) ? <Button title="Open visit steps" onPress={onVisit} /> : null}
       <Button
         title="Get Directions"
         variant="outline"
@@ -154,6 +159,7 @@ const BookingDetails: React.FC<Props> = ({ route, navigation }) => {
           navigation.navigate("ChatScreen", { bookingId, patientName: booking.patient_details?.full_name })
         }
         onNotes={() => navigation.navigate("AINoteTaker", { bookingId })}
+        onVisit={() => navigation.navigate("VisitFlow", { bookingId })}
       />
     );
   };
