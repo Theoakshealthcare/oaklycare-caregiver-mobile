@@ -87,12 +87,13 @@ export function createSession(deps: SessionDeps): Session {
       // Offline or server down: keep the session, let the caller's 401 surface.
       return null;
     }
+    // A sign-out, or a different user signing in, while the refresh was in flight wins: this
+    // result belongs to tokens that are no longer the session's.
+    if (store.getState().tokens !== current) return null;
     if (!next) {
       await signOut();
       return null;
     }
-    // A sign-out while the refresh was in flight wins.
-    if (store.getState().status !== "signedIn") return null;
     store.setState({ tokens: next });
     await persist(next);
     return next.accessToken;

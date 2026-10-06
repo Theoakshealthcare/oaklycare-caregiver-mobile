@@ -191,3 +191,40 @@ describe("session state machine", () => {
     });
   });
 });
+
+describe("refresh racing a change of user", () => {
+  const OTHER: SessionTokens = { accessToken: "access-other", refreshToken: "refresh-other" };
+
+  it("does not overwrite a different user's tokens with an earlier user's refresh result", async () => {
+    let resolveRefresh: (t: SessionTokens | null) => void = () => {};
+    const storage = memoryStorage(OLD);
+    const session = createSession({
+      storage,
+      refreshRequest: jest.fn(() => new Promise<SessionTokens | null>((r) => (resolveRefresh = r))),
+    });
+    await session.restore();
+    const pending = session.refresh();
+    await session.signOut();
+    await session.signIn(OTHER); // someone else signs in while the old refresh is in flight
+    resolveRefresh(NEW);
+    expect(await pending).toBeNull();
+    expect(session.getAccessToken()).toBe("access-other");
+    expect(storage.current()).toEqual(OTHER);
+  });
+
+  it("does not sign out a different user when an earlier user's refresh is rejected", async () => {
+    let resolveRefresh: (t: SessionTokens | null) => void = () => {};
+    const session = createSession({
+      storage: memoryStorage(OLD),
+      refreshRequest: jest.fn(() => new Promise<SessionTokens | null>((r) => (resolveRefresh = r))),
+    });
+    await session.restore();
+    const pending = session.refresh();
+    await session.signOut();
+    await session.signIn(OTHER);
+    resolveRefresh(null); // the old refresh token was rejected
+    await pending;
+    expect(session.store.getState().status).toBe("signedIn");
+    expect(session.getAccessToken()).toBe("access-other");
+  });
+});

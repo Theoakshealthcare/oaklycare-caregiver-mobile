@@ -16,9 +16,9 @@ async function refreshRequest(refreshToken: string): Promise<SessionTokens | nul
     body: { refresh_token: refreshToken },
   });
   if (data) return { accessToken: data.access_token, refreshToken: data.refresh_token };
-  // 401 "Invalid refresh token" (or any other 4xx): the server rejected it. A 5xx is an outage,
-  // not a verdict on the token, so it throws and the session is kept.
-  if (response.status >= 400 && response.status < 500) return null;
+  // Only 401 ("Invalid refresh token") is a verdict on the token: sign out. Anything else (429,
+  // 422, a 5xx outage) throws, so the session is kept and the caller sees the original 401.
+  if (response.status === 401) return null;
   throw new Error(`refresh failed with ${response.status}`);
 }
 
