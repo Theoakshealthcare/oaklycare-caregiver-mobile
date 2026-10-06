@@ -1105,6 +1105,165 @@
         ]
       }
     },
+    "/api/v1/caregiver/availability": {
+      "post": {
+        "tags": [
+          "caregiver-app"
+        ],
+        "summary": "Update Availability",
+        "description": "Go available (receive new visit offers) or unavailable (stop receiving them).\n\nAccepted bookings and offers already sent are unaffected. Going available needs a location on\nfile (409 otherwise); the position must also stay fresh (see LOCATION_FRESHNESS_MINUTES) for\noffers to arrive. Every location ping carries its own `is_available` (default true), so the app\nmust send the current value on each ping or a ping will switch the caregiver back on.",
+        "operationId": "update_availability_api_v1_caregiver_availability_post",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/AvailabilityRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/AvailabilityResponse"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "OAuth2PasswordBearer": []
+          }
+        ]
+      }
+    },
+    "/api/v1/caregiver/home": {
+      "get": {
+        "tags": [
+          "caregiver-app"
+        ],
+        "summary": "Get Home",
+        "description": "Everything the home screen shows, in one call.",
+        "operationId": "get_home_api_v1_caregiver_home_get",
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/CaregiverHome"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "OAuth2PasswordBearer": []
+          }
+        ]
+      }
+    },
+    "/api/v1/devices/push-token": {
+      "post": {
+        "tags": [
+          "devices"
+        ],
+        "summary": "Register Push Token",
+        "description": "Register this device's Expo push token, or refresh it (call after every login and whenever\nthe token changes). A token already registered to another account moves to the caller.",
+        "operationId": "register_push_token_api_v1_devices_push_token_post",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/PushTokenRegister"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/PushTokenResponse"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "OAuth2PasswordBearer": []
+          }
+        ]
+      },
+      "delete": {
+        "tags": [
+          "devices"
+        ],
+        "summary": "Delete Push Token",
+        "description": "Forget this device's token (call on logout). Idempotent, and only ever removes the caller's\nown token: someone else's token gets the same 204 and is left alone.",
+        "operationId": "delete_push_token_api_v1_devices_push_token_delete",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/PushTokenDelete"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "204": {
+            "description": "Successful Response"
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "OAuth2PasswordBearer": []
+          }
+        ]
+      }
+    },
     "/api/v1/booking/preview": {
       "post": {
         "tags": [
@@ -4696,6 +4855,32 @@
   },
   "components": {
     "schemas": {
+      "AvailabilityRequest": {
+        "properties": {
+          "is_available": {
+            "type": "boolean",
+            "title": "Is Available"
+          }
+        },
+        "type": "object",
+        "required": [
+          "is_available"
+        ],
+        "title": "AvailabilityRequest"
+      },
+      "AvailabilityResponse": {
+        "properties": {
+          "is_available": {
+            "type": "boolean",
+            "title": "Is Available"
+          }
+        },
+        "type": "object",
+        "required": [
+          "is_available"
+        ],
+        "title": "AvailabilityResponse"
+      },
       "BackgroundCheckDecision": {
         "properties": {
           "decision": {
@@ -4870,6 +5055,7 @@
             "enum": [
               "accept",
               "decline",
+              "on_my_way",
               "start",
               "complete",
               "cancel"
@@ -4886,6 +5072,18 @@
               }
             ],
             "title": "Reason"
+          },
+          "visit_code": {
+            "anyOf": [
+              {
+                "type": "string",
+                "pattern": "^[0-9]{4}$"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Visit Code"
           }
         },
         "type": "object",
@@ -5562,6 +5760,31 @@
             "format": "date-time",
             "title": "Updated At"
           },
+          "dispatch_state": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Dispatch State",
+            "description": "dispatching | matched | unmatched; null before payment or for legacy bookings"
+          },
+          "visit_code": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Visit Code",
+            "description": "4-digit code the patient gives the caregiver to start the visit. Only returned to the booking's own patient from GET /booking/booking/{id}, while the booking is accepted or en_route; null for everyone else and in every other response.",
+            "example": "4821"
+          },
           "payment_url": {
             "anyOf": [
               {
@@ -5873,6 +6096,7 @@
         "enum": [
           "pending",
           "accepted",
+          "en_route",
           "in_progress",
           "completed",
           "cancelled",
@@ -6147,6 +6371,72 @@
           "full_name"
         ],
         "title": "CaregiverDetails"
+      },
+      "CaregiverHome": {
+        "properties": {
+          "profile_status": {
+            "type": "string",
+            "title": "Profile Status"
+          },
+          "is_available": {
+            "type": "boolean",
+            "title": "Is Available"
+          },
+          "location_updated_at": {
+            "anyOf": [
+              {
+                "type": "string",
+                "format": "date-time"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Location Updated At",
+            "description": "When the caregiver's position was last reported; null if never."
+          },
+          "today_visits": {
+            "items": {
+              "$ref": "#/components/schemas/HomeVisit"
+            },
+            "type": "array",
+            "title": "Today Visits"
+          },
+          "upcoming_visits": {
+            "items": {
+              "$ref": "#/components/schemas/HomeVisit"
+            },
+            "type": "array",
+            "title": "Upcoming Visits"
+          },
+          "open_offers": {
+            "items": {
+              "$ref": "#/components/schemas/HomeOffer"
+            },
+            "type": "array",
+            "title": "Open Offers"
+          },
+          "wallet_balance_naira": {
+            "type": "number",
+            "title": "Wallet Balance Naira",
+            "description": "Wallet balance in NAIRA (the /caregiver/wallet endpoint is kobo)."
+          },
+          "currency": {
+            "type": "string",
+            "title": "Currency"
+          }
+        },
+        "type": "object",
+        "required": [
+          "profile_status",
+          "is_available",
+          "today_visits",
+          "upcoming_visits",
+          "open_offers",
+          "wallet_balance_naira",
+          "currency"
+        ],
+        "title": "CaregiverHome"
       },
       "CaregiverLocationResponse": {
         "properties": {
@@ -7217,6 +7507,142 @@
         },
         "type": "object",
         "title": "HTTPValidationError"
+      },
+      "HomeOffer": {
+        "properties": {
+          "booking_id": {
+            "type": "string",
+            "format": "uuid",
+            "title": "Booking Id"
+          },
+          "service_type": {
+            "type": "string",
+            "title": "Service Type"
+          },
+          "scheduled_date": {
+            "type": "string",
+            "format": "date-time",
+            "title": "Scheduled Date"
+          },
+          "scheduled_end_date": {
+            "type": "string",
+            "format": "date-time",
+            "title": "Scheduled End Date"
+          },
+          "duration_hours": {
+            "type": "integer",
+            "title": "Duration Hours"
+          },
+          "area": {
+            "type": "string",
+            "title": "Area"
+          },
+          "state": {
+            "type": "string",
+            "title": "State"
+          },
+          "offered_at": {
+            "type": "string",
+            "format": "date-time",
+            "title": "Offered At"
+          }
+        },
+        "type": "object",
+        "required": [
+          "booking_id",
+          "service_type",
+          "scheduled_date",
+          "scheduled_end_date",
+          "duration_hours",
+          "area",
+          "state",
+          "offered_at"
+        ],
+        "title": "HomeOffer",
+        "description": "A visit request not yet accepted. Deliberately carries no patient details."
+      },
+      "HomeVisit": {
+        "properties": {
+          "id": {
+            "type": "string",
+            "format": "uuid",
+            "title": "Id"
+          },
+          "booking_code": {
+            "type": "string",
+            "title": "Booking Code"
+          },
+          "service_type": {
+            "type": "string",
+            "title": "Service Type"
+          },
+          "status": {
+            "$ref": "#/components/schemas/BookingStatus"
+          },
+          "dispatch_state": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Dispatch State"
+          },
+          "scheduled_date": {
+            "type": "string",
+            "format": "date-time",
+            "title": "Scheduled Date"
+          },
+          "scheduled_end_date": {
+            "type": "string",
+            "format": "date-time",
+            "title": "Scheduled End Date"
+          },
+          "duration_hours": {
+            "type": "integer",
+            "title": "Duration Hours"
+          },
+          "patient_name": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Patient Name"
+          },
+          "patient_address": {
+            "type": "string",
+            "title": "Patient Address"
+          },
+          "patient_city": {
+            "type": "string",
+            "title": "Patient City"
+          },
+          "patient_state": {
+            "type": "string",
+            "title": "Patient State"
+          }
+        },
+        "type": "object",
+        "required": [
+          "id",
+          "booking_code",
+          "service_type",
+          "status",
+          "scheduled_date",
+          "scheduled_end_date",
+          "duration_hours",
+          "patient_address",
+          "patient_city",
+          "patient_state"
+        ],
+        "title": "HomeVisit",
+        "description": "A visit assigned to the caregiver (accepted, en_route or in_progress)."
       },
       "IdentityDecision": {
         "properties": {
@@ -8920,6 +9346,63 @@
         "additionalProperties": false,
         "type": "object",
         "title": "PrescriptionUpdate"
+      },
+      "PushTokenDelete": {
+        "properties": {
+          "token": {
+            "type": "string",
+            "maxLength": 255,
+            "minLength": 1,
+            "title": "Token"
+          }
+        },
+        "type": "object",
+        "required": [
+          "token"
+        ],
+        "title": "PushTokenDelete"
+      },
+      "PushTokenRegister": {
+        "properties": {
+          "token": {
+            "type": "string",
+            "maxLength": 255,
+            "pattern": "^Expo(nent)?PushToken\\[[^\\[\\]\\s]{1,200}\\]$",
+            "title": "Token"
+          },
+          "platform": {
+            "type": "string",
+            "enum": [
+              "ios",
+              "android"
+            ],
+            "title": "Platform"
+          }
+        },
+        "type": "object",
+        "required": [
+          "token",
+          "platform"
+        ],
+        "title": "PushTokenRegister"
+      },
+      "PushTokenResponse": {
+        "properties": {
+          "token": {
+            "type": "string",
+            "title": "Token"
+          },
+          "platform": {
+            "type": "string",
+            "title": "Platform"
+          }
+        },
+        "type": "object",
+        "required": [
+          "token",
+          "platform"
+        ],
+        "title": "PushTokenResponse"
       },
       "ReasonIn": {
         "properties": {
