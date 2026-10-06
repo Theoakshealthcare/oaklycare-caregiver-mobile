@@ -38,4 +38,15 @@ describe("safeNext (open redirect guard)", () => {
       expect(out).toBe("/");
     }
   });
+
+  it.each([["/.//evil.com"], ["/a/..//evil.com"], ["/./\\evil.com"], ["/x/../\\/evil.com"], ["/%2e//evil.com"]])(
+    "dot segments that normalise to a protocol-relative path never escape: %j",
+    (input) => {
+      const out = safeNext(input);
+      expect(out.startsWith("//")).toBe(false);
+      expect(out.startsWith("/\\")).toBe(false);
+      expect(new URL(out, "https://admin.example.com").origin).toBe("https://admin.example.com");
+    },
+  );
 });
+
