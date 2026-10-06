@@ -16,6 +16,7 @@ import { locationPermissionStore, useLocationPermissions } from "@/src/supply/pe
 import { decideTracking } from "@/src/supply/tracking";
 
 import { navigationRef } from "./navigationRef";
+import { createTrackingController } from "@/src/supply/trackingController";
 
 /** Opens the offer detail for a booking id, from a push tap or the in-app banner. */
 async function openOffer(bookingId: string): Promise<void> {
@@ -59,30 +60,27 @@ const AppRuntime: React.FC = () => {
       })
     : "off";
 
+  // Mode changes are serialised and the controller is disposed on unmount (sign-out), so no
+  // watcher can start after cleanup (see trackingController.ts).
+  const [tracking] = useState(() =>
+    createTrackingController({
+      foreground: foregroundTracker,
+      startVisit: startVisitUpdates,
+      stopVisit: stopVisitUpdates,
+    }),
+  );
+
   useEffect(() => {
-    const apply = async () => {
-      if (mode === "background") {
-        foregroundTracker.stop();
-        await startVisitUpdates();
-      } else if (mode === "foreground") {
-        await stopVisitUpdates();
-        await foregroundTracker.start();
-      } else {
-        foregroundTracker.stop();
-        await stopVisitUpdates();
-      }
-    };
-    apply().catch((error: unknown) => {
+    tracking.apply(mode).catch((error: unknown) => {
       if (__DEV__) console.warn("[tracking] could not apply mode", mode, error);
     });
-  }, [mode, foregroundTracker]);
+  }, [mode, tracking]);
 
   useEffect(
     () => () => {
-      foregroundTracker.stop();
-      void stopVisitUpdates().catch(() => undefined);
+      void tracking.dispose().catch(() => undefined);
     },
-    [foregroundTracker],
+    [tracking],
   );
 
   const handleResponse = useCallback((response: Notifications.NotificationResponse) => {

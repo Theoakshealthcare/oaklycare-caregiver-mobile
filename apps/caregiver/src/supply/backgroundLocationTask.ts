@@ -12,7 +12,7 @@ import { session } from "@/src/auth";
 
 import { coordsFromLocation } from "./coords";
 import { locationService } from "./locationService";
-import { VISIT_INTERVAL_MS } from "./tracking";
+import { shouldKeepVisitTracking, VISIT_INTERVAL_MS, VISIT_RECHECK_MS } from "./tracking";
 
 export const VISIT_LOCATION_TASK = "oakly-visit-location";
 
@@ -41,6 +41,9 @@ export async function startVisitUpdates(): Promise<void> {
   });
 }
 
+// In-memory only: a fresh (headless) process re-checks on its first batch.
+let lastVisitCheck = 0;
+
 TaskManager.defineTask<LocationTaskData>(VISIT_LOCATION_TASK, async ({ data, error }) => {
   if (error || !data) return;
   const latest = data.locations[data.locations.length - 1];
@@ -57,5 +60,16 @@ TaskManager.defineTask<LocationTaskData>(VISIT_LOCATION_TASK, async ({ data, err
     await locationService.ping(coordsFromLocation(latest));
   } catch {
     // A dropped ping is fine: the next batch carries a newer position.
+  }
+  // The visit may have been completed or cancelled while the app was closed: re-check now and then
+  // and stop instead of waking forever.
+  if (Date.now() - lastVisitCheck >= VISIT_RECHECK_MS) {
+    lastVisitCheck = Date.now();
+    try {
+      const home = await locationService.getHome();
+      if (!shouldKeepVisitTracking(home)) await stopVisitUpdates();
+    } catch {
+      // Offline: keep going and try again at the next re-check.
+    }
   }
 });

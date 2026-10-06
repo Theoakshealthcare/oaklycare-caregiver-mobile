@@ -91,3 +91,12 @@ Jest: 159 tests in `apps/caregiver` (12 suites) plus the 5 api-client tests.
 - A failed background ping is dropped silently; there is no in-app indicator that sharing is paused (for example when the OS revokes "Always").
 - The lock countdown is held in memory; after an app restart the backend's 423 re-establishes it on the next attempt.
 - Jest still reports a worker that "failed to exit gracefully" (same teardown noise as C2; no single file leaks).
+
+## Addendum: review fixes (2026-10-06)
+An Opus review returned approve-with-fixes. Fixed:
+- **Race: a location watcher could outlive sign-out.** `AppRuntime` applied tracking modes from an un-cancellable async effect. A sign-out, or a quick foreground → background switch, landing during a native `await` could start the foreground watcher *after* cleanup ran, leaving GPS running with nothing able to stop it, and sending pings with the next user's token.
+  - **Fix:** `src/supply/trackingController.ts` applies mode changes one at a time and re-checks after every `await` that it's still the latest request. `dispose()` on unmount stops everything.
+  - **Tests:** `__tests__/trackingController.test.ts` covers sign-out mid-call, a quick mode switch, and apply after dispose.
+- **Background tracking started at `accepted`,** possibly hours before the caregiver left. It now runs only from **On my way (`en_route`) until complete (`in_progress` ends)**, which matches the store-review justification below. An accepted visit is tracked in the foreground only if the caregiver is also available.
+- **The background task now stops itself.** Every 5 minutes it re-checks `/caregiver/home` and stops when no visit is en route or in progress, or when the caregiver was suspended. That covers a visit cancelled while the app was closed.
+- **Suspension message:** the 403 "Your account is not approved to start visits" is documented in the backend guide ("Suspension during a job"). Its source is the backend tests; the live capture run doesn't cover it.

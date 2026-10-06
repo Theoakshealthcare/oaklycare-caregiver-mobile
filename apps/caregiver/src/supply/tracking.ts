@@ -23,21 +23,30 @@ export interface TrackingInput {
 
 /** accepted / en_route / in_progress: the statuses where a caregiver holds a live visit. */
 const ACTIVE_VISIT: readonly string[] = ["accepted", "en_route", "in_progress"];
+/** The background-tracking window: from "On my way" until the visit is completed. */
+const MOVING_VISIT: readonly string[] = ["en_route", "in_progress"];
 
+/** Any visit the caregiver holds today (used for Home's "on a visit" UI). */
 export function hasActiveVisit(statuses: readonly string[]): boolean {
   return statuses.some((s) => ACTIVE_VISIT.includes(s));
 }
 
+/** A visit the caregiver has set out for or started: the only time location runs in the background. */
+export function hasMovingVisit(statuses: readonly string[]): boolean {
+  return statuses.some((s) => MOVING_VISIT.includes(s));
+}
+
 /**
  * - Not approved: off.
- * - Active visit: background when "Always" is granted, else foreground (the app is open on the visit).
+ * - On my way / in progress: background when "Always" is granted, else foreground. An accepted
+ *   visit that hasn't started moving is NOT tracked on its own (it may be hours away).
  * - Available with no visit: foreground only. Going available never asks for background access.
  * - Otherwise off. Going unavailable, or completing the last visit, stops tracking.
  * Without foreground permission nothing can run.
  */
 export function decideTracking(input: TrackingInput): TrackingMode {
   if (input.profileStatus !== "approved" || !input.foregroundGranted) return "off";
-  if (hasActiveVisit(input.todayVisitStatuses)) {
+  if (hasMovingVisit(input.todayVisitStatuses)) {
     return input.backgroundGranted ? "background" : "foreground";
   }
   return input.isAvailable ? "foreground" : "off";
@@ -78,4 +87,19 @@ export function shouldSendForeground(last: Fix | null, next: Fix): boolean {
   if (!last) return true;
   if (next.timestamp - last.timestamp >= FOREGROUND_MIN_INTERVAL_MS) return true;
   return distanceMeters(last, next) > FOREGROUND_MIN_DISTANCE_M;
+}
+
+/** How often the background task re-checks, via /caregiver/home, that it should still run. */
+export const VISIT_RECHECK_MS = 5 * 60_000;
+
+/**
+ * Whether background visit tracking should keep running, judged from a fresh home summary. Stops
+ * it when the visit was completed or cancelled (or the caregiver was suspended) while the app was
+ * closed, so the OS doesn't keep waking the task.
+ */
+export function shouldKeepVisitTracking(home: {
+  profile_status: string;
+  today_visits: readonly { status: string }[];
+}): boolean {
+  return home.profile_status === "approved" && hasMovingVisit(home.today_visits.map((v) => v.status));
 }

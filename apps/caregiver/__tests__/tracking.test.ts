@@ -1,4 +1,6 @@
 import {
+  hasMovingVisit,
+  shouldKeepVisitTracking,
   decideTracking,
   distanceMeters,
   hasActiveVisit,
@@ -20,7 +22,8 @@ describe("decideTracking", () => {
     ["unavailable, no visit", {}, "off"],
     ["available, no visit: foreground only", { isAvailable: true }, "foreground"],
     ["available, no visit, Always granted: still foreground (background is for visits)", { isAvailable: true, backgroundGranted: true }, "foreground"],
-    ["accepted visit today", { todayVisitStatuses: ["accepted"] }, "background"],
+    ["accepted visit today, unavailable: not tracked until on my way", { todayVisitStatuses: ["accepted"] }, "off"],
+    ["accepted visit today while available: foreground only", { isAvailable: true, todayVisitStatuses: ["accepted"] }, "foreground"],
     ["en route", { todayVisitStatuses: ["en_route"] }, "background"],
     ["in progress", { todayVisitStatuses: ["in_progress"] }, "background"],
     ["visit while available", { isAvailable: true, todayVisitStatuses: ["in_progress"] }, "background"],
@@ -75,5 +78,32 @@ describe("shouldSendForeground (60 s or 100 m)", () => {
     const d = distanceMeters(origin, { latitude: farLat, longitude: 3.4723 });
     expect(d).toBeGreaterThan(105);
     expect(d).toBeLessThan(115);
+  });
+});
+
+describe("hasMovingVisit (background tracking window: on my way until complete)", () => {
+  it("counts en_route and in_progress only", () => {
+    expect(hasMovingVisit(["accepted"])).toBe(false);
+    expect(hasMovingVisit(["accepted", "en_route"])).toBe(true);
+    expect(hasMovingVisit(["in_progress"])).toBe(true);
+    expect(hasMovingVisit(["completed", "cancelled"])).toBe(false);
+  });
+});
+
+describe("shouldKeepVisitTracking (background task self-check)", () => {
+  const home = (profile_status: string, ...statuses: string[]) => ({
+    profile_status,
+    today_visits: statuses.map((status) => ({ status })),
+  });
+  it("keeps tracking while a visit is en route or in progress", () => {
+    expect(shouldKeepVisitTracking(home("approved", "en_route"))).toBe(true);
+    expect(shouldKeepVisitTracking(home("approved", "in_progress"))).toBe(true);
+  });
+  it("stops once the visit is completed or cancelled (no longer listed) or only accepted", () => {
+    expect(shouldKeepVisitTracking(home("approved"))).toBe(false);
+    expect(shouldKeepVisitTracking(home("approved", "accepted"))).toBe(false);
+  });
+  it("stops when the caregiver was suspended", () => {
+    expect(shouldKeepVisitTracking(home("suspended", "en_route"))).toBe(false);
   });
 });
