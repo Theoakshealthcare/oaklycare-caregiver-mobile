@@ -2560,11 +2560,9 @@ export interface components {
             speed?: number | null;
             /**
              * Is Available
-             * @description Whether caregiver is available for new bookings
-             * @default true
-             * @example true
+             * @description Set availability for new bookings. Omit to leave it unchanged (a first ping without it creates the record as unavailable). Prefer POST /caregiver/availability.
              */
-            is_available: boolean;
+            is_available?: boolean | null;
         };
         /** CaregiverProfile */
         CaregiverProfile: {

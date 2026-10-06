@@ -6557,11 +6557,16 @@
             "example": 2.5
           },
           "is_available": {
-            "type": "boolean",
+            "anyOf": [
+              {
+                "type": "boolean"
+              },
+              {
+                "type": "null"
+              }
+            ],
             "title": "Is Available",
-            "description": "Whether caregiver is available for new bookings",
-            "default": true,
-            "example": true
+            "description": "Set availability for new bookings. Omit to leave it unchanged (a first ping without it creates the record as unavailable). Prefer POST /caregiver/availability."
           }
         },
         "type": "object",
