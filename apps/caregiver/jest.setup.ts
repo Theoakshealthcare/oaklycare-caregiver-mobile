@@ -30,3 +30,32 @@ jest.mock("expo-audio", () => ({
   requestRecordingPermissionsAsync: async () => ({ granted: true }),
   setAudioModeAsync: async () => {},
 }));
+
+// Native modules the supply features touch. Tests that care override these with their own jest.mock.
+jest.mock("expo-device", () => ({ isDevice: true }));
+
+jest.mock("expo-task-manager", () => ({ defineTask: jest.fn(), isTaskDefined: jest.fn(() => true) }));
+
+jest.mock("expo-location", () => ({
+  Accuracy: { Balanced: 3 },
+  getForegroundPermissionsAsync: jest.fn(async () => ({ granted: false, canAskAgain: true })),
+  getBackgroundPermissionsAsync: jest.fn(async () => ({ granted: false, canAskAgain: true })),
+  requestForegroundPermissionsAsync: jest.fn(async () => ({ granted: false, canAskAgain: true })),
+  requestBackgroundPermissionsAsync: jest.fn(async () => ({ granted: false, canAskAgain: true })),
+  getCurrentPositionAsync: jest.fn(),
+  watchPositionAsync: jest.fn(async () => ({ remove: jest.fn() })),
+  hasStartedLocationUpdatesAsync: jest.fn(async () => false),
+  startLocationUpdatesAsync: jest.fn(async () => undefined),
+  stopLocationUpdatesAsync: jest.fn(async () => undefined),
+}));
+
+jest.mock("expo-notifications", () => ({
+  setNotificationHandler: jest.fn(),
+  getPermissionsAsync: jest.fn(async () => ({ granted: false, canAskAgain: true })),
+  requestPermissionsAsync: jest.fn(async () => ({ granted: false, canAskAgain: true })),
+  getExpoPushTokenAsync: jest.fn(),
+  addPushTokenListener: jest.fn(() => ({ remove: jest.fn() })),
+  addNotificationReceivedListener: jest.fn(() => ({ remove: jest.fn() })),
+  addNotificationResponseReceivedListener: jest.fn(() => ({ remove: jest.fn() })),
+  useLastNotificationResponse: jest.fn(() => null),
+}));

@@ -33,9 +33,11 @@ const OfferCard: React.FC<Props> = ({ offer, busy = false, onView, onAccept, onD
     <Text variant="h3" weight="bold" style={{ textTransform: "capitalize" }}>
       {offer.serviceType} visit
     </Text>
-    <Text variant="body" color={theme.colors.primary} weight="medium" style={{ marginTop: 4 }}>
-      {offer.assistanceType}
-    </Text>
+    {offer.assistanceType ? (
+      <Text variant="body" color={theme.colors.primary} weight="medium" style={{ marginTop: 4 }}>
+        {offer.assistanceType}
+      </Text>
+    ) : null}
 
     <View style={{ marginVertical: 12, gap: 4 }}>
       <Text variant="body" color={theme.colors.textLight}>

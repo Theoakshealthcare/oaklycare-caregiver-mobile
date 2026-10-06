@@ -22,7 +22,8 @@ export type BookingListFilter = "new_requests" | BookingStatus;
 export interface Offer {
   id: string;
   serviceType: string;
-  assistanceType: string;
+  /** Null for an offer built from the home summary, which carries only `service_type`. */
+  assistanceType: string | null;
   durationHours: number;
   scheduledDate: string;
   scheduledEndDate: string;
@@ -42,7 +43,21 @@ export function toOffer(booking: Booking): Offer {
   };
 }
 
+/** An offer from `open_offers` in GET /caregiver/home. It never had patient data to begin with. */
+export function homeOfferToOffer(offer: Schemas["HomeOffer"]): Offer {
+  return {
+    id: offer.booking_id,
+    serviceType: offer.service_type,
+    assistanceType: null,
+    durationHours: offer.duration_hours,
+    scheduledDate: offer.scheduled_date,
+    scheduledEndDate: offer.scheduled_end_date,
+    area: [offer.area, offer.state].filter(Boolean).join(", "),
+  };
+}
+
 export type BookingAction = "accept" | "decline";
+export type VisitAction = "on_my_way" | "start" | "complete";
 
 function byScheduledDate(a: Booking, b: Booking): number {
   return a.scheduled_date.localeCompare(b.scheduled_date);
@@ -69,11 +84,16 @@ export const bookingService = {
    * accept / decline. The response is an untyped raw booking dict in the schema; the app only
    * reads the new `status` from it and refetches the typed booking for everything else.
    */
-  async act(bookingId: string, action: BookingAction): Promise<{ status: string | null }> {
+  async act(
+    bookingId: string,
+    action: BookingAction | VisitAction,
+    visitCode?: string,
+  ): Promise<{ status: string | null }> {
     const raw: unknown = await unwrap(
       api.POST("/api/v1/booking/caregiver/action/{booking_id}", {
         params: { path: { booking_id: bookingId } },
-        body: { action },
+        // visit_code only travels with `start`; the caregiver types it, the patient reads it out.
+        body: action === "start" ? { action, visit_code: visitCode } : { action },
       }),
     );
     const booking = raw && typeof raw === "object" ? (raw as { booking?: unknown }).booking : undefined;
