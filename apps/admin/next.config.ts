@@ -16,6 +16,10 @@ const config: NextConfig = {
           { key: "X-Frame-Options", value: "DENY" },
           { key: "X-Content-Type-Options", value: "nosniff" },
           { key: "Referrer-Policy", value: "same-origin" },
+          // Production only: HSTS on plain-http localhost would be ignored anyway, but keep dev clean.
+          ...(process.env.NODE_ENV === "production"
+            ? [{ key: "Strict-Transport-Security", value: "max-age=63072000; includeSubDomains" }]
+            : []),
         ],
       },
     ];

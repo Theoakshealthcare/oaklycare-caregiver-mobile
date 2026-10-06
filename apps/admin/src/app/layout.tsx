@@ -1,4 +1,5 @@
 import type { Metadata } from "next";
+import { connection } from "next/server";
 
 import { Providers } from "@/components/providers";
 
@@ -9,7 +10,9 @@ export const metadata: Metadata = {
   robots: { index: false, follow: false },
 };
 
-export default function RootLayout({ children }: { children: React.ReactNode }) {
+export default async function RootLayout({ children }: { children: React.ReactNode }) {
+  // Render per request: the CSP nonce (src/proxy.ts) can only be stamped on dynamically rendered pages.
+  await connection();
   return (
     <html lang="en">
       <body className="min-h-screen antialiased">
