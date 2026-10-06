@@ -216,7 +216,7 @@ export function AuthProvider({ children, idleLimitMs = IDLE_LIMIT_MS, idleWarnAf
       retryBoot,
       reloadProfile,
     }),
-    [status, admin, notice, idleSecondsLeft, signIn, completeMfa, signOut, staySignedIn, retryBoot],
+    [status, admin, notice, idleSecondsLeft, signIn, completeMfa, signOut, staySignedIn, retryBoot, reloadProfile],
   );
 
   return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>;
