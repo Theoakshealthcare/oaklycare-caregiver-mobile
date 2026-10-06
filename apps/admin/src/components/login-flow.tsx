@@ -9,6 +9,7 @@ import { useAuth } from "@/components/auth-provider";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
+import { AUTH_DETAIL } from "@/lib/admin-auth-contract";
 import { AuthError } from "@/lib/session";
 
 type Step =
@@ -16,37 +17,95 @@ type Step =
   | { kind: "mfa"; mfaToken: string }
   | { kind: "enroll"; mfaToken: string; otpauthUri: string; secret: string };
 
-export function lockoutMessage(retryAfter?: number): string {
-  if (!retryAfter) return "Too many failed attempts. Try again later.";
-  const minutes = Math.ceil(retryAfter / 60);
-  return `Too many failed attempts. Try again in ${minutes} minute${minutes === 1 ? "" : "s"}.`;
+/** A wait imposed by the server: 429 = throttled (wrong passwords, or the per-IP limit), 423 = locked after wrong codes. */
+interface Wait {
+  kind: "throttled" | "locked";
+  /** `Date.now()` value when the wait ends. */
+  until: number;
 }
+
+/** "45 seconds", "15 minutes", "24 hours": rounded up so the admin never retries too early. */
+export function formatWait(seconds: number): string {
+  const plural = (n: number, unit: string) => `${n} ${unit}${n === 1 ? "" : "s"}`;
+  if (seconds < 60) return plural(Math.max(1, Math.ceil(seconds)), "second");
+  if (seconds < 3600) return plural(Math.ceil(seconds / 60), "minute");
+  return plural(Math.ceil(seconds / 3600), "hour");
+}
+
+/**
+ * The same text for every email: the backend answers identically for unknown, invited, disabled and
+ * active accounts, and the console must not hint at which it is (guide 3.4).
+ */
+export function waitMessage(kind: Wait["kind"], seconds: number): string {
+  const when = formatWait(seconds);
+  return kind === "locked"
+    ? `This account is locked after too many wrong codes. Try again in ${when}, or ask a Super Admin to reset your MFA.`
+    : `Too many attempts. Try again in ${when}.`;
+}
+
+const DEFAULT_WAIT_SECONDS = 30;
 
 export function LoginFlow({ onSignedIn }: { onSignedIn: () => void }) {
   const { signIn, completeMfa, notice } = useAuth();
   const [step, setStep] = React.useState<Step>({ kind: "credentials" });
   const [error, setError] = React.useState<string | null>(null);
+  const [wait, setWait] = React.useState<Wait | null>(null);
+  const [now, setNow] = React.useState(() => Date.now());
   const [busy, setBusy] = React.useState(false);
   const [email, setEmail] = React.useState("");
   const [password, setPassword] = React.useState("");
   const [code, setCode] = React.useState("");
 
+  // Tick once a second while a wait is active; clear it when it ends.
+  React.useEffect(() => {
+    if (!wait) return;
+    const id = window.setInterval(() => {
+      const t = Date.now();
+      setNow(t);
+      if (t >= wait.until) setWait(null);
+    }, 250);
+    return () => window.clearInterval(id);
+  }, [wait]);
+
+  const waiting = wait !== null && now < wait.until;
+  const waitSeconds = wait ? Math.max(0, Math.ceil((wait.until - now) / 1000)) : 0;
+  const shownError = waiting && wait ? waitMessage(wait.kind, waitSeconds) : error;
+
+  /** Returns true when the error was a server-imposed wait and has been handled. */
+  function startWait(err: unknown): boolean {
+    if (!(err instanceof AuthError) || (err.status !== 429 && err.status !== 423)) return false;
+    const t = Date.now();
+    setNow(t);
+    setWait({ kind: err.status === 423 ? "locked" : "throttled", until: t + (err.retryAfter ?? DEFAULT_WAIT_SECONDS) * 1000 });
+    setError(null);
+    return true;
+  }
+
   async function submitCredentials(e: React.FormEvent) {
     e.preventDefault();
+    if (waiting) return;
     setError(null);
     setBusy(true);
     try {
       const res = await signIn(email.trim(), password);
       setPassword("");
       setCode("");
-      if ("mfa_enrollment_required" in res) {
-        setStep({ kind: "enroll", mfaToken: res.mfa_token, otpauthUri: res.otpauth_uri, secret: res.secret });
+      setWait(null);
+      if (res.kind === "enroll") {
+        setStep({ kind: "enroll", mfaToken: res.mfaToken, otpauthUri: res.otpauthUri, secret: res.secret });
       } else {
-        setStep({ kind: "mfa", mfaToken: res.mfa_token });
+        setStep({ kind: "mfa", mfaToken: res.mfaToken });
       }
     } catch (err) {
-      if (err instanceof AuthError && err.status === 423) setError(lockoutMessage(err.retryAfter));
-      else setError(err instanceof Error ? err.message : "Sign-in failed. Try again.");
+      if (!startWait(err)) {
+        setError(
+          err instanceof AuthError && err.status === 401
+            ? "That email and password don't match. Check them and try again."
+            : err instanceof Error
+              ? err.message
+              : "Sign-in failed. Try again.",
+        );
+      }
     } finally {
       setBusy(false);
     }
@@ -54,17 +113,24 @@ export function LoginFlow({ onSignedIn }: { onSignedIn: () => void }) {
 
   async function submitCode(e: React.FormEvent) {
     e.preventDefault();
-    if (step.kind === "credentials") return;
+    if (step.kind === "credentials" || waiting) return;
     setError(null);
     setBusy(true);
     try {
       await completeMfa(step.mfaToken, code.trim());
       onSignedIn();
     } catch (err) {
-      if (err instanceof AuthError && err.status === 401) {
-        setError("That code didn't work. Check your authenticator app and try again, or start over if it has been a few minutes.");
-      } else if (err instanceof AuthError && err.status === 423) {
-        setError(lockoutMessage(err.retryAfter));
+      if (err instanceof AuthError && err.status === 401 && err.message === AUTH_DETAIL.mfaTokenInvalid) {
+        // The token is spent, expired or the account changed: another code can't help. Back to the password.
+        setStep({ kind: "credentials" });
+        setPassword("");
+        setError("Your sign-in timed out or was already used. Enter your password again to get a new code prompt.");
+      } else if (startWait(err)) {
+        // handled
+      } else if (err instanceof AuthError && err.status === 401) {
+        setError(
+          "That code didn't work. If you just signed in, wait for the next code to appear in your authenticator app and try again.",
+        );
       } else {
         setError(err instanceof Error ? err.message : "Verification failed. Try again.");
       }
@@ -103,8 +169,8 @@ export function LoginFlow({ onSignedIn }: { onSignedIn: () => void }) {
             <Label htmlFor="password">Password</Label>
             <Input id="password" type="password" autoComplete="current-password" required value={password} onChange={(e) => setPassword(e.target.value)} />
           </div>
-          {error ? <FormError message={error} /> : null}
-          <Button type="submit" disabled={busy || !email || !password}>
+          {shownError ? <FormError message={shownError} /> : null}
+          <Button type="submit" disabled={busy || waiting || !email || !password}>
             {busy ? <Loader2 className="animate-spin" aria-hidden /> : null}
             Continue
           </Button>
@@ -131,8 +197,8 @@ export function LoginFlow({ onSignedIn }: { onSignedIn: () => void }) {
               onChange={(e) => setCode(e.target.value.replace(/\D/g, ""))}
             />
           </div>
-          {error ? <FormError message={error} /> : null}
-          <Button type="submit" disabled={busy || code.length !== 6}>
+          {shownError ? <FormError message={shownError} /> : null}
+          <Button type="submit" disabled={busy || waiting || code.length !== 6}>
             {busy ? <Loader2 className="animate-spin" aria-hidden /> : null}
             {step.kind === "enroll" ? "Verify and finish setup" : "Verify"}
           </Button>

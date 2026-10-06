@@ -20,25 +20,23 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { EmptyState, ErrorState, Skeleton } from "@/components/ui/states";
 import {
-  ADMIN_AUTH_PATHS,
   ADMIN_ROLES,
   type AdminUserRow,
   type InviteAdminRequest,
+  type InviteAdminResponse,
   type PatchAdminRequest,
-  extractInviteToken,
-  parseAdminList,
 } from "@/lib/admin-auth-contract";
-import { adminRequest, errorMessage } from "@/lib/api";
+import { errorMessage, getApi, unwrap } from "@/lib/api";
 import { formatWat, humanize } from "@/lib/format";
 
 const roleLabel = (slug: string) => ADMIN_ROLES.find((r) => r.slug === slug)?.label ?? humanize(slug);
 
 export function AdminUsers() {
-  const { admin: me } = useAuth();
+  const { admin: me, reloadProfile } = useAuth();
   const queryClient = useQueryClient();
   const list = useQuery({
     queryKey: ["admin-users"],
-    queryFn: async () => parseAdminList(await adminRequest<unknown>("GET", ADMIN_AUTH_PATHS.admins)),
+    queryFn: async () => unwrap(await getApi().GET("/api/v1/admin/admins")),
   });
   const [inviteOpen, setInviteOpen] = React.useState(false);
   const [inviteLink, setInviteLink] = React.useState<string | null>(null);
@@ -48,8 +46,12 @@ export function AdminUsers() {
   const [notice, setNotice] = React.useState<string | null>(null);
 
   const refresh = () => void queryClient.invalidateQueries({ queryKey: ["admin-users"] });
-  const patch = (id: string, body: PatchAdminRequest) =>
-    adminRequest<unknown>("PATCH", `${ADMIN_AUTH_PATHS.admins}/${id}`, body);
+  const patch = async (id: string, body: PatchAdminRequest) =>
+    unwrap(await getApi().PATCH("/api/v1/admin/admins/{admin_id}", { params: { path: { admin_id: id } }, body }));
+  // The server refuses to remove the last active Super Admin; don't offer the button.
+  const activeSuperAdmins = (list.data ?? []).filter((r) => r.status === "active" && r.roles.includes("super_admin"));
+  const isLastSuperAdmin = (row: AdminUserRow) =>
+    row.status === "active" && row.roles.includes("super_admin") && activeSuperAdmins.length <= 1;
 
   return (
     <div className="grid gap-4">
@@ -128,7 +130,13 @@ export function AdminUsers() {
                                 Enable<span className="sr-only"> {row.full_name}</span>
                               </Button>
                             ) : (
-                              <Button size="sm" variant="outline" onClick={() => setDisabling(row)}>
+                              <Button
+                                size="sm"
+                                variant="outline"
+                                disabled={isLastSuperAdmin(row)}
+                                title={isLastSuperAdmin(row) ? "The last active Super Admin can't be disabled" : undefined}
+                                onClick={() => setDisabling(row)}
+                              >
                                 Disable<span className="sr-only"> {row.full_name}</span>
                               </Button>
                             )}
@@ -147,8 +155,9 @@ export function AdminUsers() {
       <InviteDialog
         open={inviteOpen}
         onOpenChange={setInviteOpen}
-        onInvited={(token) => {
-          setInviteLink(`${window.location.origin}/accept-invite?token=${encodeURIComponent(token)}`);
+        onInvited={(invite) => {
+          // The backend returns the token once and does not email it: the console builds the link.
+          setInviteLink(`${window.location.origin}/accept-invite?token=${encodeURIComponent(invite.invite_token)}`);
           refresh();
         }}
       />
@@ -159,6 +168,8 @@ export function AdminUsers() {
         onClose={() => setEditing(null)}
         onSave={async (row, roles) => {
           await patch(row.id, { roles });
+          // Permissions are read per request on the server; our copy goes stale after our own edit.
+          if (row.id === me?.id) await reloadProfile();
           setNotice(`${row.full_name}'s roles were updated.`);
           refresh();
         }}
@@ -188,7 +199,11 @@ export function AdminUsers() {
         destructive
         onConfirm={async () => {
           if (!resetting) return;
-          await adminRequest<unknown>("POST", `${ADMIN_AUTH_PATHS.admins}/${resetting.id}/reset-mfa`);
+          unwrap(
+            await getApi().POST("/api/v1/admin/admins/{admin_id}/reset-mfa", {
+              params: { path: { admin_id: resetting.id } },
+            }),
+          );
           setNotice(`${resetting.full_name} must set up MFA again at next sign-in.`);
           refresh();
         }}
@@ -223,7 +238,7 @@ function InviteDialog({
 }: {
   open: boolean;
   onOpenChange: (o: boolean) => void;
-  onInvited: (token: string) => void;
+  onInvited: (invite: InviteAdminResponse) => void;
 }) {
   const [email, setEmail] = React.useState("");
   const [fullName, setFullName] = React.useState("");
@@ -231,20 +246,15 @@ function InviteDialog({
   const [error, setError] = React.useState<string | null>(null);
 
   const invite = useMutation({
-    mutationFn: (body: InviteAdminRequest) => adminRequest<unknown>("POST", ADMIN_AUTH_PATHS.admins, body),
+    mutationFn: async (body: InviteAdminRequest) => unwrap(await getApi().POST("/api/v1/admin/admins", { body })),
     onSuccess: (res) => {
-      const token = extractInviteToken(res);
-      if (!token) {
-        setError("The admin was created but the server didn't return an invite link. Check the admin list.");
-        return;
-      }
       setEmail("");
       setFullName("");
       setRoles([]);
       onOpenChange(false);
-      onInvited(token);
+      onInvited(res);
     },
-    onError: (e) => setError(errorMessage({ detail: e.message }, "We couldn't send that invite.")),
+    onError: (e) => setError(e.message || "We couldn't create that invite."),
   });
 
   return (
@@ -348,7 +358,7 @@ function EditRolesForm({
       open
       onOpenChange={(o) => !o && onClose()}
       title={`Roles for ${row.full_name}`}
-      sideEffects="Changes take effect for them once their session refreshes (access tokens last 15 minutes)."
+      sideEffects="Changes apply on their next request. The last active Super Admin can't lose the role."
       confirmLabel="Save roles"
       extraValid={roles.length > 0}
       onConfirm={() => onSave(row, roles)}

@@ -15,6 +15,8 @@ export function getApi() {
       baseUrl: window.location.origin,
       getAccessToken,
       onUnauthorized: recoverFromUnauthorized,
+      // Resolve fetch per call (not once at creation) so tests can stub it.
+      fetch: (input, init) => globalThis.fetch(input, init),
     });
   }
   return client;
@@ -39,38 +41,9 @@ export function unwrap<T>(result: { data?: T; error?: unknown; response: Respons
   return result.data as T;
 }
 
-/**
- * For routes that are not in the generated schema yet (the A0 admin-users routes). Same token and
- * refresh behaviour as the typed client. TODO(A0): delete once these routes are generated.
- */
-export async function adminRequest<T>(method: string, path: string, body?: unknown): Promise<T> {
-  const send = (token: string | null) =>
-    fetch(path, {
-      method,
-      headers: {
-        ...(body !== undefined ? { "content-type": "application/json" } : {}),
-        ...(token ? { authorization: `Bearer ${token}` } : {}),
-      },
-      body: body !== undefined ? JSON.stringify(body) : undefined,
-      cache: "no-store",
-    });
-
-  let res = await send(getAccessToken());
-  if (res.status === 401) {
-    const fresh = await recoverFromUnauthorized();
-    if (fresh) res = await send(fresh);
-  }
-  const text = await res.text();
-  let parsed: unknown = null;
-  if (text) {
-    try {
-      parsed = JSON.parse(text);
-    } catch {
-      parsed = null;
-    }
-  }
-  if (!res.ok) throw new ApiError(errorMessage(parsed), res.status, parsed);
-  return parsed as T;
+/** The signed-in admin and their permissions. The refresh response has no `admin`, so this fills it in. */
+export async function fetchMe() {
+  return unwrap(await getApi().GET("/api/v1/admin/me"));
 }
 
 export { errorMessage };

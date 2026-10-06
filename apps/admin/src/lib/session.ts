@@ -1,8 +1,14 @@
+import type { Schemas } from "@oakly/api-client";
+
 import {
   ADMIN_AUTH_PATHS,
   type AdminProfile,
+  type LoginRequest,
   type LoginResponse,
-  type SessionResponse,
+  type MfaVerifyRequest,
+  type RefreshedSession,
+  type SignInSession,
+  classifyLogin,
 } from "./admin-auth-contract";
 
 /**
@@ -15,7 +21,7 @@ let accessToken: string | null = null;
 let inFlight: Promise<RefreshResult> | null = null;
 
 export type RefreshResult =
-  | { ok: true; session: SessionResponse }
+  | { ok: true; session: RefreshedSession }
   /** The session is over (no cookie, expired, revoked, reused): sign the admin out. */
   | { ok: false; reason: "expired" }
   /** The BFF or backend could not be reached: keep the admin signed in and let the caller retry. */
@@ -44,7 +50,7 @@ export class AuthError extends Error {
   constructor(
     message: string,
     readonly status: number,
-    /** Seconds from `Retry-After` on a 423 lockout. */
+    /** Seconds from `Retry-After` on a 429 (throttle) or 423 (lockout, up to 86400). */
     readonly retryAfter?: number,
   ) {
     super(message);
@@ -73,6 +79,7 @@ function detailOf(body: unknown, fallback: string): string {
 /**
  * Get a new access token via the BFF. Concurrent callers share one request: the refresh token
  * rotates on use and reuse revokes every session, so two parallel refreshes would sign the admin out.
+ * (The BFF serialises too, for the case of several tabs; this one covers a single tab.)
  */
 export function refreshSession(): Promise<RefreshResult> {
   if (!inFlight) {
@@ -91,7 +98,7 @@ async function doRefresh(): Promise<RefreshResult> {
     return { ok: false, reason: "unreachable" };
   }
   if (res.ok) {
-    const session = (await readJson(res)) as SessionResponse | null;
+    const session = (await readJson(res)) as RefreshedSession | null;
     if (session?.access_token) {
       accessToken = session.access_token;
       return { ok: true, session };
@@ -113,54 +120,52 @@ export async function recoverFromUnauthorized(): Promise<string | null> {
   return null;
 }
 
-/** Step 1 of sign-in. Throws `AuthError` with the backend's message on 401, 423 (lockout) or 422. */
+function retryAfterOf(res: Response): number | undefined {
+  const retry = Number(res.headers.get("retry-after"));
+  return Number.isFinite(retry) && retry > 0 ? retry : undefined;
+}
+
+/**
+ * Step 1 of sign-in. Throws `AuthError` with the backend's message on 401, 422, 423 (locked after
+ * wrong codes) or 429 (throttled after wrong passwords); the last two carry `retryAfter`.
+ */
 export async function login(email: string, password: string): Promise<LoginResponse> {
+  const payload: LoginRequest = { email, password };
   let res: Response;
   try {
     res = await fetch(ADMIN_AUTH_PATHS.login, {
       method: "POST",
       headers: { "content-type": "application/json" },
-      body: JSON.stringify({ email, password }),
+      body: JSON.stringify(payload),
       cache: "no-store",
     });
   } catch {
     throw new AuthError("We couldn't reach Oakly. Check your connection and try again.", 0);
   }
   const body = await readJson(res);
-  if (!res.ok) {
-    const retry = Number(res.headers.get("retry-after"));
-    throw new AuthError(
-      detailOf(body, "Sign-in failed. Try again."),
-      res.status,
-      Number.isFinite(retry) && retry > 0 ? retry : undefined,
-    );
-  }
-  return body as LoginResponse;
+  if (!res.ok) throw new AuthError(detailOf(body, "Sign-in failed. Try again."), res.status, retryAfterOf(res));
+  const parsed = body ? classifyLogin(body as Schemas["LoginOut"]) : null;
+  if (!parsed) throw new AuthError("Sign-in failed. Try again.", res.status);
+  return parsed;
 }
 
 /** Step 2 of sign-in (also completes MFA enrollment). The BFF stores the refresh token in the cookie. */
-export async function verifyMfa(mfaToken: string, code: string): Promise<SessionResponse> {
+export async function verifyMfa(mfaToken: string, code: string): Promise<SignInSession> {
+  const payload: MfaVerifyRequest = { mfa_token: mfaToken, code };
   let res: Response;
   try {
     res = await fetch("/api/auth/mfa/verify", {
       method: "POST",
       headers: { "content-type": "application/json" },
-      body: JSON.stringify({ mfa_token: mfaToken, code }),
+      body: JSON.stringify(payload),
       cache: "no-store",
     });
   } catch {
     throw new AuthError("We couldn't reach Oakly. Check your connection and try again.", 0);
   }
   const body = await readJson(res);
-  if (!res.ok) {
-    const retry = Number(res.headers.get("retry-after"));
-    throw new AuthError(
-      detailOf(body, "That code didn't work."),
-      res.status,
-      Number.isFinite(retry) && retry > 0 ? retry : undefined,
-    );
-  }
-  const session = body as SessionResponse;
+  if (!res.ok) throw new AuthError(detailOf(body, "That code didn't work."), res.status, retryAfterOf(res));
+  const session = body as SignInSession;
   accessToken = session.access_token;
   return session;
 }

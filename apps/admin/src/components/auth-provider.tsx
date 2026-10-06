@@ -3,8 +3,8 @@
 import { useQueryClient } from "@tanstack/react-query";
 import * as React from "react";
 
-import { ADMIN_AUTH_PATHS, type AdminProfile, type LoginResponse } from "@/lib/admin-auth-contract";
-import { adminRequest } from "@/lib/api";
+import type { AdminProfile, LoginResponse } from "@/lib/admin-auth-contract";
+import { fetchMe } from "@/lib/api";
 import {
   login as loginRequest,
   logoutSession,
@@ -31,6 +31,8 @@ export interface AuthContextValue {
   signOut: () => Promise<void>;
   staySignedIn: () => Promise<void>;
   retryBoot: () => void;
+  /** Re-read `/admin/me` (after the admin's own roles change, or after a 403). */
+  reloadProfile: () => Promise<void>;
 }
 
 export const AuthContext = React.createContext<AuthContextValue | null>(null);
@@ -89,8 +91,8 @@ export function AuthProvider({ children, idleLimitMs = IDLE_LIMIT_MS, idleWarnAf
         return;
       }
       try {
-        const profile =
-          result.session.admin ?? (await adminRequest<AdminProfile>("GET", ADMIN_AUTH_PATHS.me));
+        // The refresh response carries no `admin` object (guide 4.1), so read it from /admin/me.
+        const profile = await fetchMe();
         if (cancelled) return;
         setAdmin(profile);
         setExpiresIn(result.session.expires_in);
@@ -164,8 +166,7 @@ export function AuthProvider({ children, idleLimitMs = IDLE_LIMIT_MS, idleWarnAf
 
   const completeMfa = React.useCallback(async (mfaToken: string, code: string) => {
     const session = await verifyMfa(mfaToken, code);
-    const profile = session.admin ?? (await adminRequest<AdminProfile>("GET", ADMIN_AUTH_PATHS.me));
-    setAdmin(profile);
+    setAdmin(session.admin);
     setExpiresIn(session.expires_in);
     lastActivity.current = Date.now();
     activeSinceRefresh.current = true;
@@ -197,6 +198,10 @@ export function AuthProvider({ children, idleLimitMs = IDLE_LIMIT_MS, idleWarnAf
     setBootAttempt((n) => n + 1);
   }, []);
 
+  const reloadProfile = React.useCallback(async () => {
+    setAdmin(await fetchMe());
+  }, []);
+
   const value = React.useMemo<AuthContextValue>(
     () => ({
       status,
@@ -209,6 +214,7 @@ export function AuthProvider({ children, idleLimitMs = IDLE_LIMIT_MS, idleWarnAf
       signOut,
       staySignedIn,
       retryBoot,
+      reloadProfile,
     }),
     [status, admin, notice, idleSecondsLeft, signIn, completeMfa, signOut, staySignedIn, retryBoot],
   );

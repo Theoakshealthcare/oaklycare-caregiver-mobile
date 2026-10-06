@@ -31,6 +31,7 @@ export function withAuth(permissions: string[], ui: React.ReactNode, overrides: 
     signOut: async () => {},
     staySignedIn: async () => {},
     retryBoot: () => {},
+    reloadProfile: async () => {},
     ...overrides,
   };
   const client = new QueryClient({ defaultOptions: { queries: { retry: false }, mutations: { retry: false } } });

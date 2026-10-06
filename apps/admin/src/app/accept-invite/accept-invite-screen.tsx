@@ -8,7 +8,7 @@ import * as React from "react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { ADMIN_AUTH_PATHS } from "@/lib/admin-auth-contract";
+import { ADMIN_AUTH_PATHS, type InviteAcceptRequest } from "@/lib/admin-auth-contract";
 import { errorMessage } from "@/lib/api";
 
 /** Set a password from an invite link. MFA enrollment is forced on the first login that follows. */
@@ -29,16 +29,18 @@ export function AcceptInviteScreen() {
     }
     setBusy(true);
     try {
+      const payload: InviteAcceptRequest = { invite_token: token, password };
       const res = await fetch(ADMIN_AUTH_PATHS.inviteAccept, {
         method: "POST",
         headers: { "content-type": "application/json" },
-        body: JSON.stringify({ invite_token: token, password }),
+        body: JSON.stringify(payload),
       });
       if (!res.ok) {
         const body: unknown = await res.json().catch(() => null);
         setError(
-          res.status === 404 || res.status === 410
-            ? "This invite link has expired or was already used. Ask a Super Admin for a new one."
+          // 400 "Invite link is invalid or has expired": unknown, used, expired and disabled all look alike.
+          res.status === 400
+            ? "This invite link is invalid, has expired, or was already used. Ask a Super Admin for a new one (re-issuing needs a developer for now)."
             : errorMessage(body, "We couldn't set your password. Try again."),
         );
         return;
@@ -70,7 +72,10 @@ export function AcceptInviteScreen() {
           <form onSubmit={submit} className="grid gap-4" noValidate>
             <div className="grid gap-1.5">
               <Label htmlFor="new-password">New password</Label>
-              <Input id="new-password" type="password" autoComplete="new-password" required value={password} onChange={(e) => setPassword(e.target.value)} />
+              <Input id="new-password" type="password" autoComplete="new-password" aria-describedby="password-rules" required value={password} onChange={(e) => setPassword(e.target.value)} />
+              <p id="password-rules" className="text-xs text-muted-foreground">
+                At least 12 characters. Don&apos;t repeat one character, and don&apos;t include the part of your email before the @.
+              </p>
             </div>
             <div className="grid gap-1.5">
               <Label htmlFor="confirm-password">Confirm password</Label>

@@ -1,6 +1,7 @@
 import { describe, expect, it } from "vitest";
 
-import { extractInviteToken, parseAdminList } from "./admin-auth-contract";
+import { ADMIN_ROLES, KNOWN_PERMISSIONS, classifyLogin } from "./admin-auth-contract";
+import { NAV } from "./nav";
 import { formatAge, formatNaira, formatWat, formatWatDate, humanize } from "./format";
 import { safeNext } from "./redirect";
 
@@ -39,18 +40,24 @@ describe("safeNext", () => {
   });
 });
 
-describe("admin contract helpers", () => {
-  it("extracts the invite token whichever way the backend names it", () => {
-    expect(extractInviteToken({ invite_token: "t1" })).toBe("t1");
-    expect(extractInviteToken({ token: "t2" })).toBe("t2");
-    expect(extractInviteToken({ invite_url: "https://console.test/accept-invite?token=t3" })).toBe("t3");
-    expect(extractInviteToken({})).toBeNull();
+describe("admin contract", () => {
+  it("narrows the loosely typed login response by which keys are present", () => {
+    expect(classifyLogin({ mfa_required: true, mfa_token: "t" })).toEqual({ kind: "mfa", mfaToken: "t" });
+    expect(
+      classifyLogin({ mfa_enrollment_required: true, mfa_token: "t", otpauth_uri: "otpauth://x", secret: "S" }),
+    ).toEqual({ kind: "enroll", mfaToken: "t", otpauthUri: "otpauth://x", secret: "S" });
+    expect(classifyLogin({ mfa_token: "t" })).toBeNull();
+    // Enrolment without its secret would show an unusable screen; refuse it.
+    expect(classifyLogin({ mfa_enrollment_required: true, mfa_token: "t" })).toBeNull();
   });
 
-  it("accepts a bare array or an items envelope for the admin list", () => {
-    const row = { id: "1", email: "a@example.test", full_name: "A", roles: [], status: "active" };
-    expect(parseAdminList([row])).toHaveLength(1);
-    expect(parseAdminList({ items: [row] })).toHaveLength(1);
-    expect(parseAdminList(null)).toEqual([]);
+  it("only asks for permissions the backend defines", () => {
+    for (const group of NAV) for (const item of group.items) for (const p of item.anyOf) expect(KNOWN_PERMISSIONS.has(p)).toBe(true);
+  });
+
+  it("covers the seven role keys from the guide", () => {
+    expect(ADMIN_ROLES.map((r) => r.slug).sort()).toEqual(
+      ["clinical_reviewer", "finance", "operations", "read_only_analyst", "super_admin", "support", "verification"],
+    );
   });
 });

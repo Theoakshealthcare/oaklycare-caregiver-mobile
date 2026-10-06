@@ -1,13 +1,12 @@
 /**
  * Admin auth contract (backend work package A0).
  *
- * TODO(A0): the backend's A0 is not merged, so these routes are not in `@oakly/api-client`'s
- * generated schema. This file mirrors the plan's contract table
- * (backend `docs/plans/2026-10-06-admin-console.md`, section A0) exactly. Where the table is silent
- * (list shapes, invite response field names, role slugs) the field is marked `GUESS` and parsed
- * leniently. Replace this file with the generated types once A0 lands and the client is synced,
- * and confirm every `GUESS` against the live captures in the backend's FE integration guide.
+ * Wire types come from the generated schema (`@oakly/api-client`, `pnpm api:sync`); nothing here
+ * restates a shape the schema already types. What remains is hand-written because the schema cannot
+ * express it, and each item says why. Shapes and strings were confirmed against the backend's
+ * live-captured guide (`docs/fe-integration-guide-admin.md`).
  */
+import type { Schemas } from "@oakly/api-client";
 
 export const ADMIN_AUTH_PATHS = {
   login: "/api/v1/admin/auth/login",
@@ -15,132 +14,61 @@ export const ADMIN_AUTH_PATHS = {
   refresh: "/api/v1/admin/auth/refresh",
   logout: "/api/v1/admin/auth/logout",
   inviteAccept: "/api/v1/admin/auth/invite/accept",
-  me: "/api/v1/admin/me",
-  admins: "/api/v1/admin/admins",
 } as const;
 
-export interface AdminProfile {
-  id: string;
-  email: string;
-  full_name: string;
-  roles: string[];
-  permissions: string[];
-}
+export type AdminProfile = Schemas["AdminOut"];
+export type LoginRequest = Schemas["LoginIn"];
+export type MfaVerifyRequest = Schemas["MfaVerifyIn"];
+/** `mfa/verify` response. Only this response carries `admin`. */
+export type MfaVerifyResponse = Schemas["MfaVerifyOut"];
+/** `refresh` response: a new pair and nothing else (no `admin`). */
+export type RefreshResponse = Schemas["TokenPairOut"];
+export type AdminUserRow = Schemas["AdminListItem"];
+export type AdminStatus = AdminUserRow["status"];
+export type InviteAdminRequest = Schemas["AdminInviteIn"];
+/** `201` of the invite call: the only response that carries `invite_token`. */
+export type InviteAdminResponse = Schemas["AdminInviteOut"];
+export type PatchAdminRequest = Schemas["AdminPatchIn"];
+export type InviteAcceptRequest = Schemas["InviteAcceptIn"];
 
-export interface LoginRequest {
-  email: string;
-  password: string;
-}
-
-/** `200` when the admin already has MFA enrolled. */
-export interface LoginMfaRequired {
-  mfa_required: true;
-  /** 5-minute token, only valid for `/auth/mfa/verify`. */
-  mfa_token: string;
-}
-
-/** `200` when MFA is not enrolled yet. Enrollment completes on the first successful verify. */
-export interface LoginMfaEnrollment {
-  mfa_enrollment_required: true;
-  mfa_token: string;
-  otpauth_uri: string;
-  secret: string;
-}
-
-export type LoginResponse = LoginMfaRequired | LoginMfaEnrollment;
-
-export interface MfaVerifyRequest {
-  mfa_token: string;
-  code: string;
-}
-
-/** `200` from `/auth/mfa/verify`. */
-export interface MfaVerifyResponse {
+/**
+ * What our own BFF routes return to the browser. HAND-WRITTEN: the BFF is this app, not the
+ * backend, so it is not in the schema. It never includes the refresh token. `admin` is present only
+ * after `mfa/verify`; after a refresh the console reads `GET /admin/me`.
+ */
+export interface RefreshedSession {
   access_token: string;
-  refresh_token: string;
-  token_type: "bearer";
-  /** Seconds. The plan says 900. */
   expires_in: number;
+}
+export interface SignInSession extends RefreshedSession {
   admin: AdminProfile;
 }
 
-/** `/auth/refresh` returns "a new token pair". GUESS: same shape as verify, `admin` may be absent. */
-export interface RefreshResponse {
-  access_token: string;
-  refresh_token: string;
-  token_type?: "bearer";
-  expires_in: number;
-  admin?: AdminProfile;
-}
-
-/** What our own BFF routes (`/api/auth/*`) return to the browser. Never includes the refresh token. */
-export interface SessionResponse {
-  access_token: string;
-  expires_in: number;
-  admin?: AdminProfile;
-}
-
-export type AdminStatus = "invited" | "active" | "disabled";
-
-/** GUESS: columns follow the `admin_users` table in the plan; the list response shape is not specified. */
-export interface AdminUserRow {
-  id: string;
-  email: string;
-  full_name: string;
-  roles: string[];
-  status: AdminStatus;
-  mfa_enabled?: boolean;
-  last_login_at?: string | null;
-}
-
-export interface InviteAdminRequest {
-  email: string;
-  full_name: string;
-  roles: string[];
-}
-
-export interface PatchAdminRequest {
-  roles?: string[];
-  status?: AdminStatus;
-}
-
 /**
- * GUESS: "returns a single-use invite link token, valid 48 h". The field name is not in the plan.
- * We accept `invite_token`, `token` or the last segment of an `invite_url`/`invite_link`.
+ * HAND-WRITTEN narrowing. The schema types `LoginOut` as one object with every field optional
+ * (the backend omits the keys of the other shape). The guide says to branch on which key is present.
  */
-export function extractInviteToken(body: unknown): string | null {
-  if (!body || typeof body !== "object") return null;
-  const b = body as Record<string, unknown>;
-  for (const key of ["invite_token", "token"]) {
-    if (typeof b[key] === "string" && b[key]) return b[key] as string;
+export type LoginResponse =
+  | { kind: "mfa"; mfaToken: string }
+  | { kind: "enroll"; mfaToken: string; otpauthUri: string; secret: string };
+
+export function classifyLogin(out: Schemas["LoginOut"]): LoginResponse | null {
+  if (out.mfa_enrollment_required && out.otpauth_uri && out.secret) {
+    return { kind: "enroll", mfaToken: out.mfa_token, otpauthUri: out.otpauth_uri, secret: out.secret };
   }
-  for (const key of ["invite_url", "invite_link", "link"]) {
-    const v = b[key];
-    if (typeof v === "string" && v) {
-      try {
-        const u = new URL(v, "http://placeholder.invalid");
-        return u.searchParams.get("token") ?? u.searchParams.get("invite_token") ?? v.split("/").pop() ?? null;
-      } catch {
-        return v;
-      }
-    }
-  }
+  if (out.mfa_required) return { kind: "mfa", mfaToken: out.mfa_token };
   return null;
 }
 
-/** GUESS: the list may be a bare array or wrapped in `{items}`. */
-export function parseAdminList(body: unknown): AdminUserRow[] {
-  const raw = Array.isArray(body)
-    ? body
-    : body && typeof body === "object" && Array.isArray((body as { items?: unknown }).items)
-      ? (body as { items: unknown[] }).items
-      : [];
-  return raw.filter((r): r is AdminUserRow => !!r && typeof r === "object" && "id" in r && "email" in r);
-}
+/** Exact `detail` strings the console branches on (guide sections 3.2, 3.4, 7.2). */
+export const AUTH_DETAIL = {
+  /** `mfa/verify` 401 for a spent, expired or malformed `mfa_token`: restart at the password step. */
+  mfaTokenInvalid: "Invalid or expired MFA token",
+} as const;
 
 /**
- * GUESS: seeded role slugs. The plan names the roles but not their identifiers, and there is no
- * "list roles" endpoint, so the console hardcodes them. Confirm against the A0 seed.
+ * HAND-WRITTEN: the schema types roles as `string[]` and there is no "list roles" endpoint, so the
+ * keys and display names are copied from the guide, section 10. Gate on `permissions`, not on these.
  */
 export const ADMIN_ROLES: ReadonlyArray<{ slug: string; label: string }> = [
   { slug: "super_admin", label: "Super Admin" },
@@ -151,3 +79,43 @@ export const ADMIN_ROLES: ReadonlyArray<{ slug: string; label: string }> = [
   { slug: "clinical_reviewer", label: "Clinical Reviewer" },
   { slug: "read_only_analyst", label: "Read-only Analyst" },
 ];
+
+/**
+ * HAND-WRITTEN: the schema types permissions as `string[]`. This is the full set from the backend's
+ * `app/core/admin_permissions.py`; a test checks that every permission the nav asks for is in it.
+ */
+export const KNOWN_PERMISSIONS: ReadonlySet<string> = new Set([
+  "dashboard.read",
+  "caregivers.read",
+  "caregivers.approve",
+  "caregivers.suspend",
+  "documents.read",
+  "bookings.read",
+  "bookings.dispatch",
+  "bookings.assign",
+  "bookings.cancel",
+  "bookings.cancel_request",
+  "bookings.address",
+  "bookings.correct_status",
+  "payments.read",
+  "payments.reconcile",
+  "refunds.request",
+  "refunds.approve",
+  "payouts.execute",
+  "ledger.adjust",
+  "ledger.adjust_request",
+  "people.read",
+  "people.pii",
+  "people.suspend",
+  "clinical.read",
+  "pricing.write",
+  "pricing.request",
+  "settings.write",
+  "support.inbox",
+  "fallguard.write",
+  "prescriptions.manage",
+  "whatsapp.read",
+  "admins.manage",
+  "audit.read",
+  "exports.pii",
+]);
