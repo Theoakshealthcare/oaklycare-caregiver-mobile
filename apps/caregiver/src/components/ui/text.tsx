@@ -1,6 +1,6 @@
 import type React from "react"
 import { Text as RNText, StyleSheet, type TextProps as RNTextProps, type StyleProp, type TextStyle, View } from "react-native"
-import { theme } from "../../constants/theme"
+import { theme, lineHeightFor, MAX_FONT_SCALE } from "../../constants/theme"
 import Animated from "react-native-reanimated"
 import useTextAnimation from "@/src/hooks/use-text-animation"
 
@@ -79,7 +79,7 @@ const Text: React.FC<TextProps> = ({
 
   return (
     <View>
-      <RNText style={[getTextStyles(), style, {}]} {...rest}>
+      <RNText style={[getTextStyles(), style]} maxFontSizeMultiplier={MAX_FONT_SCALE} {...rest}>
         {children}
       </RNText>
     </View>
@@ -88,38 +88,38 @@ const Text: React.FC<TextProps> = ({
 
 const styles = StyleSheet.create({
   h1: {
-    fontSize: theme.sizes.xxxl,
-    lineHeight: 34,
+    fontSize: theme.sizes.display,
+    lineHeight: lineHeightFor(theme.sizes.display),
     color: theme.colors.text,
     fontFamily: theme.fonts.bold,
   },
   h2: {
-    fontSize: theme.sizes.xxl,
-    lineHeight: 30,
+    fontSize: theme.sizes.heading,
+    lineHeight: lineHeightFor(theme.sizes.heading),
     color: theme.colors.text,
     fontFamily: theme.fonts.bold,
   },
   h3: {
-    fontSize: theme.sizes.extraLarge,
-    lineHeight: 26,
+    fontSize: theme.sizes.title,
+    lineHeight: lineHeightFor(theme.sizes.title),
     color: theme.colors.text,
     fontFamily: theme.fonts.medium,
   },
   body: {
-    fontSize: theme.sizes.medium,
-    lineHeight: 22,
+    fontSize: theme.sizes.body,
+    lineHeight: lineHeightFor(theme.sizes.body),
     color: theme.colors.text,
     fontFamily: theme.fonts.regular,
   },
   small: {
-    fontSize: theme.sizes.font,
-    lineHeight: 20,
+    fontSize: theme.sizes.caption,
+    lineHeight: lineHeightFor(theme.sizes.caption),
     color: theme.colors.text,
     fontFamily: theme.fonts.regular,
   },
   caption: {
-    fontSize: theme.sizes.small,
-    lineHeight: 18,
+    fontSize: theme.sizes.caption,
+    lineHeight: lineHeightFor(theme.sizes.caption),
     color: theme.colors.textLight,
   },
   regular: {

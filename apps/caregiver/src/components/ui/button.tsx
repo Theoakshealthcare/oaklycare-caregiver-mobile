@@ -11,7 +11,7 @@ import {
   type TextStyle,
   Pressable,
 } from "react-native"
-import { theme } from "../../constants/theme"
+import { theme, MAX_FONT_SCALE } from "../../constants/theme"
 
 export type ButtonVariant = "primary" | "secondary" | "neutral" | "ghost" | "outline"
 
@@ -102,7 +102,15 @@ const Button: React.FC<ButtonProps> = ({
       ) : (
         <>
           {leftIcon}
-          <Text style={[getTextStyles(), textStyle]}>{title}</Text>
+          <Text
+            style={[getTextStyles(), textStyle]}
+            numberOfLines={1}
+            adjustsFontSizeToFit
+            minimumFontScale={0.85}
+            maxFontSizeMultiplier={MAX_FONT_SCALE}
+          >
+            {title}
+          </Text>
         </>
       )}
     </Pressable>
@@ -111,8 +119,9 @@ const Button: React.FC<ButtonProps> = ({
 
 const styles = StyleSheet.create({
   button: {
-    paddingVertical: theme.sizes.large,
-    paddingHorizontal: theme.sizes.extraLarge,
+    paddingVertical: theme.spacing.md - 2,
+    paddingHorizontal: theme.spacing.md,
+    minHeight: 48,
     borderRadius: theme.borderRadius.xxl,
     flexDirection: "row",
     gap: 8,
@@ -143,7 +152,7 @@ const styles = StyleSheet.create({
     opacity: 0.5,
   },
   text: {
-    fontSize: 16,
+    fontSize: theme.sizes.body,
     fontWeight: "600",
   },
   primaryText: {

@@ -11,7 +11,7 @@ import {
 import type { StackScreenProps } from '@react-navigation/stack';
 import { useMutation, useQueryClient } from '@tanstack/react-query';
 
-import { theme } from '@/src/constants/theme';
+import { theme, MAX_FONT_SCALE } from '@/src/constants/theme';
 import Box from '@/src/components/ui/box';
 import Text from '@/src/components/ui/text';
 import Icon from '@/src/components/ui/icon';
@@ -136,6 +136,7 @@ const VerifyEmail: React.FC<StackScreenProps<ScreenParamLists, 'VerifyEmail'>> =
           >
             {otp.map((digit, index) => (
               <TextInput
+ maxFontSizeMultiplier={MAX_FONT_SCALE}
                 key={index}
                 ref={(ref) => {
                   inputRefs.current[index] = ref;
@@ -308,7 +309,7 @@ const styles = StyleSheet.create({
     borderColor: theme.colors.border,
     borderRadius: 8,
     textAlign: 'center',
-    fontSize: 20,
+    fontSize: theme.sizes.title,
     fontWeight: '600',
     color: 'black',
   },

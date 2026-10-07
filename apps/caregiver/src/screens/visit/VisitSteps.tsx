@@ -4,7 +4,7 @@ import { TextInput, View } from "react-native";
 import { formatCountdown } from "@/src/api/errors";
 import Button from "@/src/components/ui/button";
 import Text from "@/src/components/ui/text";
-import { theme } from "@/src/constants/theme";
+import { theme, MAX_FONT_SCALE } from "@/src/constants/theme";
 import { isCompleteCode, sanitizeCode, secondsLeft, VISIT_CODE_LENGTH } from "@/src/visit/visitFlow";
 
 interface StepFrameProps {
@@ -139,12 +139,13 @@ export const VisitCodeStep: React.FC<CodeStepProps> = ({
             placeholder="0000"
             textContentType="oneTimeCode"
             autoComplete="one-time-code"
+            maxFontSizeMultiplier={MAX_FONT_SCALE}
             style={{
               borderWidth: 1,
               borderColor: error ? theme.colors.error : theme.colors.border,
               borderRadius: 12,
               padding: 16,
-              fontSize: 32,
+              fontSize: theme.sizes.display,
               letterSpacing: 12,
               textAlign: "center",
             }}

@@ -1,4 +1,5 @@
 import React from "react";
+import { SafeAreaProvider } from "react-native-safe-area-context";
 import MainApp from "./MainApp";
 import { useFonts } from "expo-font";
 import { NavigationContainer } from "@react-navigation/native";
@@ -21,6 +22,7 @@ const App = () => {
   }
 
   return (
+    <SafeAreaProvider>
     <QueryClientProvider client={queryClient}>
       <ThemeProvider>
         <NavigationContainer ref={navigationRef}>
@@ -28,6 +30,7 @@ const App = () => {
         </NavigationContainer>
       </ThemeProvider>
     </QueryClientProvider>
+    </SafeAreaProvider>
   );
 };
 

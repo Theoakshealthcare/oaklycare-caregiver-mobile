@@ -15,7 +15,8 @@ export type ScreenParamLists = {
   ConsentScreen: undefined;
   VerificationStatus: undefined;
   // Signed in and approved
-  BottomNavigation: undefined;
+  /** `tab` + `at` select a tab on arrival (`at` is a changing nonce so repeating the same tab still applies). */
+  BottomNavigation: { tab?: "home" | "booking"; at?: number } | undefined;
   /** With `offer` it is an un-accepted job (offer view, nothing is fetched); without it, an assigned booking. */
   BookingDetails: { bookingId: string; offer?: Offer };
   ChatScreen: { bookingId: string; patientName?: string };

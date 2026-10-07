@@ -37,7 +37,7 @@ const VisitFlow: React.FC<Props> = ({ route, navigation }) => {
   const [lockedUntil, setLockedUntil] = useState<number | null>(() => codeLocks.get(bookingId));
   const [stopped, setStopped] = useState<string | null>(null);
 
-  const goHome = () => navigation.popTo("BottomNavigation");
+  const goHome = () => navigation.popTo("BottomNavigation", { tab: "home", at: Date.now() });
 
   const refresh = () => {
     void client.invalidateQueries({ queryKey: queryKeys.booking(bookingId) });

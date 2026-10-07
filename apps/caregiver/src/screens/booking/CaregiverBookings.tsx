@@ -14,7 +14,7 @@ import { toOffer, type Booking } from "@/src/services/booking.service";
 import { formatDuration, formatVisitTime } from "@/src/utils/dates";
 
 const TABS: { id: BookingsTab; title: string }[] = [
-  { id: "new_requests", title: "New Request" },
+  { id: "new_requests", title: "New request" },
   { id: "upcoming", title: "Upcoming" },
   { id: "completed", title: "Completed" },
 ];
@@ -156,7 +156,7 @@ const CaregiverBookings: React.FC = () => {
             style={{
               flex: 1,
               paddingVertical: 12,
-              paddingHorizontal: 16,
+              paddingHorizontal: 4,
               borderRadius: 25,
               backgroundColor: activeTab === tab.id ? theme.colors.primary : "transparent",
               alignItems: "center",
@@ -166,6 +166,9 @@ const CaregiverBookings: React.FC = () => {
             <Text
               variant="body"
               weight="medium"
+              numberOfLines={1}
+              adjustsFontSizeToFit
+              minimumFontScale={0.85}
               color={activeTab === tab.id ? theme.colors.white : theme.colors.textLight}
             >
               {tab.title}

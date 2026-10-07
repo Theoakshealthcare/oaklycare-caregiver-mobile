@@ -5,6 +5,7 @@ import Box from "../ui/box"
 import Text from "../ui/text"
 import Button from "../ui/button"
 import Image from "../ui/image"
+import { useSafeAreaInsets } from "react-native-safe-area-context"
 import ScreenSize from "@/src/hooks/screen-size"
 
 export interface OnboardingSlideProps {
@@ -14,7 +15,6 @@ export interface OnboardingSlideProps {
   image: ImageSourcePropType
   backgroundColor: string
   textColor?: string
-  isLast?: boolean
   onNext?: () => void
   onSkip?: () => void
   onLogin?: () => void
@@ -30,7 +30,6 @@ const OnboardingSlide: React.FC<OnboardingSlideProps> = ({
   image,
   backgroundColor,
   textColor = theme.colors.white,
-  isLast = false,
   onNext,
   onSkip,
   onLogin,
@@ -39,6 +38,7 @@ const OnboardingSlide: React.FC<OnboardingSlideProps> = ({
   index = 0,
 }) => {
   const { height, width } = ScreenSize()
+  const insets = useSafeAreaInsets()
 
   // Calculate animation values based on scroll position
   const inputRange = [(index - 1) * width, index * width, (index + 1) * width]
@@ -73,7 +73,7 @@ const OnboardingSlide: React.FC<OnboardingSlideProps> = ({
           variant="ghost"
           textStyle={{ color: theme.colors.primary }}
           onPress={onSkip}
-          style={{ position: "absolute", zIndex: 10, top: 5, right: 0 }}
+          style={{ position: "absolute", zIndex: 10, top: Math.max(insets.top, theme.spacing.sm), right: 0 }}
         />
 
         <Animated.View
@@ -91,7 +91,7 @@ const OnboardingSlide: React.FC<OnboardingSlideProps> = ({
         </Animated.View>
       </Box>
 
-      <Box style={{ height: height * 0.5, backgroundColor, gap: theme.sizes.font }} paddingVertical={theme.sizes.xxl}>
+      <Box style={{ height: height * 0.5, backgroundColor, gap: theme.spacing.md }} paddingVertical={theme.spacing.lg}>
         {renderDots()}
 
         <View>
@@ -111,8 +111,7 @@ const OnboardingSlide: React.FC<OnboardingSlideProps> = ({
           <Button title="Get Started" variant={"neutral"} style={{ width: "100%" }} onPress={onNext} />
         </Box>
 
-        {isLast && (
-          <Box style={{ marginTop: -20 }} row justifyContent="center">
+        <Box style={{ marginTop: -20 }} row justifyContent="center">
             <Text variant="small" color={textColor}>
               Already have an account?
             </Text>
@@ -126,7 +125,6 @@ const OnboardingSlide: React.FC<OnboardingSlideProps> = ({
               Login
             </Text>
           </Box>
-        )}
       </Box>
     </View>
   )
