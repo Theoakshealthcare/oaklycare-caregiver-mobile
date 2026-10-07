@@ -86,7 +86,14 @@
           ]
         }
       ],
-      "expo-asset"
+      "expo-asset",
+      "expo-sharing",
+      [
+        "expo-image-picker",
+        {
+          "photosPermission": "Oakly uses your photos so you can choose a profile picture."
+        }
+      ]
     ]
   }
 }

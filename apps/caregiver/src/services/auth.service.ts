@@ -80,15 +80,30 @@ export const authService = {
 
   /** Best-effort server-side cleanup, then clears the local session (always). */
   async logout(): Promise<void> {
-    try {
-      // The Expo push token is registered in C4; until then there is nothing to forget.
-      const pushToken = await pushTokenStorage.get();
-      if (pushToken) {
-        await unwrapEmpty(api.DELETE("/api/v1/devices/push-token", { body: { token: pushToken } }));
-      }
-    } catch {
-      // Never block signing out on the network.
-    }
+    await forgetPushToken();
+    await session.signOut();
+  },
+
+  /**
+   * DELETE /auth/profile: the backend deletes the user and their caregiver row for good (no undo, no
+   * password check). The push token is forgotten first, while the account still exists; the session
+   * is cleared only after the delete succeeded, so a failure leaves the caregiver signed in.
+   */
+  async deleteAccount(): Promise<void> {
+    await forgetPushToken();
+    await unwrap(api.DELETE("/api/v1/auth/profile"));
     await session.signOut();
   },
 };
+
+async function forgetPushToken(): Promise<void> {
+  try {
+    // The Expo push token is registered in C4; until then there is nothing to forget.
+    const pushToken = await pushTokenStorage.get();
+    if (pushToken) {
+      await unwrapEmpty(api.DELETE("/api/v1/devices/push-token", { body: { token: pushToken } }));
+    }
+  } catch {
+    // Never block signing out on the network.
+  }
+}

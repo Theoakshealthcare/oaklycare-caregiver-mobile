@@ -21,6 +21,14 @@ export type ScreenParamLists = {
   ChatScreen: { bookingId: string; patientName?: string };
   CallScreen: { bookingId: string; patientName?: string; isVideo?: boolean };
   AINoteTaker: { bookingId: string };
+  Notifications: undefined;
+  Profile: undefined;
+  EditProfile: undefined;
+  Wallet: undefined;
+  BankDetails: undefined;
+  About: undefined;
+  Faq: undefined;
+  Contact: undefined;
   /** accepted -> on my way -> visit code -> in progress -> complete, driven by the booking status. */
   VisitFlow: { bookingId: string };
 };

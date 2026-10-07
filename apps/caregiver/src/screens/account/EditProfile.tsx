@@ -1,0 +1,232 @@
+import React, { useState } from "react";
+import { Alert, Pressable, View } from "react-native";
+import { Feather } from "@expo/vector-icons";
+import * as ImagePicker from "expo-image-picker";
+import { useMutation, useQueryClient } from "@tanstack/react-query";
+
+import { messageForError } from "@/src/api/errors";
+import { queryKeys } from "@/src/api/keys";
+import ScreenShell from "@/src/components/account/ScreenShell";
+import { ErrorState, LoadingState } from "@/src/components/account/StateViews";
+import Button from "@/src/components/ui/button";
+import Image from "@/src/components/ui/image";
+import Input from "@/src/components/ui/input";
+import Select from "@/src/components/ui/select";
+import Text from "@/src/components/ui/text";
+import { theme } from "@/src/constants/theme";
+import { useCaregiverProfile, useFormOptions, useMe } from "@/src/hooks/queries";
+import useNavigation from "@/src/hooks/use-navigation";
+import { accountService, type ProfileUpdate } from "@/src/services/account.service";
+import { caregiverService, type CaregiverProfile } from "@/src/services/caregiver.service";
+
+type Gender = "male" | "female" | "other";
+const GENDERS: { label: string; value: Gender }[] = [
+  { label: "Female", value: "female" },
+  { label: "Male", value: "male" },
+  { label: "Other", value: "other" },
+];
+
+interface FormState {
+  fullName: string;
+  phone: string;
+  address: string;
+  gender: string;
+  dateOfBirth: string;
+  state: string;
+  emergencyPhone: string;
+}
+
+function initialState(p: CaregiverProfile): FormState {
+  return {
+    fullName: p.full_name ?? "",
+    phone: p.phone_number ?? "",
+    address: p.address ?? "",
+    gender: p.gender ?? "",
+    dateOfBirth: p.date_of_birth ?? "",
+    state: p.state ?? "",
+    emergencyPhone: p.emergency_contact_phone ?? "",
+  };
+}
+
+const isGender = (v: string): v is Gender => v === "male" || v === "female" || v === "other";
+
+const EditForm: React.FC<{ profile: CaregiverProfile }> = ({ profile }) => {
+  const { navigation } = useNavigation();
+  const client = useQueryClient();
+  const me = useMe();
+  const { data: formOptions } = useFormOptions();
+  const initial = initialState(profile);
+  const [form, setForm] = useState<FormState>(initial);
+  const [errors, setErrors] = useState<Partial<Record<keyof FormState, string>>>({});
+  const [photoUri, setPhotoUri] = useState<string | null>(null);
+  const [uploading, setUploading] = useState(false);
+
+  const set = (field: keyof FormState) => (value: string) => {
+    setForm((prev) => ({ ...prev, [field]: value }));
+    setErrors((prev) => ({ ...prev, [field]: undefined }));
+  };
+
+  const states = Array.from(new Set([...(formOptions?.states ?? []), ...(initial.state ? [initial.state] : [])]));
+
+  const save = useMutation({
+    mutationFn: async () => {
+      // PUT /auth/profile ignores empty values; send only what changed.
+      const changes: ProfileUpdate = {};
+      if (form.fullName.trim() !== initial.fullName) changes.full_name = form.fullName.trim();
+      if (form.phone.trim() !== initial.phone && form.phone.trim()) changes.phone_number = form.phone.trim();
+      if (form.address.trim() !== initial.address && form.address.trim()) changes.address = form.address.trim();
+      if (form.gender !== initial.gender && form.gender) changes.gender = form.gender;
+      if (form.dateOfBirth !== initial.dateOfBirth && form.dateOfBirth) changes.date_of_birth = form.dateOfBirth;
+      if (form.emergencyPhone.trim() !== initial.emergencyPhone && form.emergencyPhone.trim()) {
+        changes.emergency_contact_phone = form.emergencyPhone.trim();
+      }
+      if (Object.keys(changes).length > 0) await accountService.updateProfile(changes);
+      // `state` is not part of PUT /auth/profile; it lives in the step 1 profile, which takes all five fields.
+      if (form.state !== initial.state && form.state) {
+        if (!isGender(form.gender) || !form.dateOfBirth || !form.address.trim() || !form.emergencyPhone.trim()) {
+          throw new Error("Fill in your date of birth, gender, address and emergency phone to change your state.");
+        }
+        await caregiverService.updateProfileStep1({
+          date_of_birth: form.dateOfBirth,
+          gender: form.gender,
+          state: form.state,
+          address: form.address.trim(),
+          emergency_contact_phone: form.emergencyPhone.trim(),
+        });
+      }
+    },
+    onSuccess: async () => {
+      await Promise.all([
+        client.invalidateQueries({ queryKey: queryKeys.me }),
+        client.invalidateQueries({ queryKey: queryKeys.caregiverProfile }),
+      ]);
+      navigation.goBack();
+    },
+    onError: (error) => Alert.alert("Couldn't save", messageForError(error)),
+  });
+
+  const submit = () => {
+    const next: Partial<Record<keyof FormState, string>> = {};
+    if (!form.fullName.trim()) next.fullName = "Full name is required";
+    if (form.dateOfBirth && !/^\d{4}-\d{2}-\d{2}$/.test(form.dateOfBirth)) next.dateOfBirth = "Use the format YYYY-MM-DD";
+    setErrors(next);
+    if (Object.keys(next).length === 0) save.mutate();
+  };
+
+  const pickPhoto = async () => {
+    const permission = await ImagePicker.requestMediaLibraryPermissionsAsync();
+    if (!permission.granted) {
+      Alert.alert("Photos are off", "Allow photo access in your phone settings to choose a profile picture.");
+      return;
+    }
+    const result = await ImagePicker.launchImageLibraryAsync({
+      mediaTypes: ["images"],
+      allowsEditing: true,
+      aspect: [1, 1],
+      quality: 0.7,
+    });
+    const asset = result.canceled ? undefined : result.assets[0];
+    if (!asset) return;
+    setUploading(true);
+    try {
+      await accountService.uploadProfileImage({ uri: asset.uri, fileName: asset.fileName, mimeType: asset.mimeType });
+      setPhotoUri(asset.uri);
+      await client.invalidateQueries({ queryKey: queryKeys.me });
+    } catch (error) {
+      Alert.alert("Couldn't upload your photo", messageForError(error));
+    } finally {
+      setUploading(false);
+    }
+  };
+
+  const shownPhoto = photoUri ?? me.data?.profile_image_url ?? null;
+
+  return (
+    <>
+      <View style={{ alignItems: "center", marginBottom: 20 }}>
+        <View
+          style={{
+            width: 96,
+            height: 96,
+            borderRadius: 48,
+            borderWidth: 2,
+            borderColor: theme.colors.primary,
+            alignItems: "center",
+            justifyContent: "center",
+            overflow: "hidden",
+          }}
+        >
+          {shownPhoto ? (
+            <Image source={{ uri: shownPhoto }} style={{ width: 96, height: 96 }} />
+          ) : (
+            <Feather name="user" size={40} color={theme.colors.primary} />
+          )}
+        </View>
+        <Pressable accessibilityRole="button" onPress={() => void pickPhoto()} disabled={uploading} style={{ marginTop: 8 }}>
+          <Text variant="body" weight="medium" color={theme.colors.primary}>
+            {uploading ? "Uploading..." : "Upload image"}
+          </Text>
+        </Pressable>
+      </View>
+
+      <View style={{ gap: 16 }}>
+        <Input label="Full name" value={form.fullName} onChangeText={set("fullName")} error={errors.fullName} />
+        <Input
+          label="Email address"
+          value={profile.email}
+          editable={false}
+          containerStyle={{ opacity: 0.6 }}
+        />
+        <Input label="Phone number" value={form.phone} onChangeText={set("phone")} keyboardType="phone-pad" placeholder="+234" />
+        <Input label="House address" value={form.address} onChangeText={set("address")} placeholder="Enter house address" />
+        <Select
+          label="Gender"
+          placeholder="Select gender"
+          options={GENDERS}
+          value={form.gender || undefined}
+          onValueChange={(v) => set("gender")(String(v))}
+        />
+        <Input
+          label="Date of birth"
+          value={form.dateOfBirth}
+          onChangeText={set("dateOfBirth")}
+          placeholder="YYYY-MM-DD"
+          error={errors.dateOfBirth}
+          autoCapitalize="none"
+        />
+        <Select
+          label="State"
+          placeholder="Select state"
+          options={states.map((s) => ({ label: s, value: s }))}
+          value={form.state || undefined}
+          onValueChange={(v) => set("state")(String(v))}
+        />
+        <Input
+          label="Emergency contact phone number"
+          value={form.emergencyPhone}
+          onChangeText={set("emergencyPhone")}
+          keyboardType="phone-pad"
+          placeholder="+234"
+        />
+        <Button title="Update profile details" onPress={submit} loading={save.isPending} />
+      </View>
+    </>
+  );
+};
+
+const EditProfile: React.FC = () => {
+  const profile = useCaregiverProfile();
+  return (
+    <ScreenShell title="Edit profile">
+      {profile.data ? (
+        <EditForm profile={profile.data} />
+      ) : profile.isError ? (
+        <ErrorState error={profile.error} onRetry={() => void profile.refetch()} />
+      ) : (
+        <LoadingState testID="edit-profile-loading" />
+      )}
+    </ScreenShell>
+  );
+};
+
+export default EditProfile;

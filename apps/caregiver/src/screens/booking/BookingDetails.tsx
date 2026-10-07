@@ -12,6 +12,7 @@ import { useBooking } from "@/src/hooks/queries";
 import { useOfferActions } from "@/src/hooks/useOfferActions";
 import type { ScreenParamLists } from "@/src/navigation/Navigations";
 import type { Booking, Offer } from "@/src/services/booking.service";
+import { buildDirectionsUrl, directionsTarget } from "@/src/utils/maps";
 import { formatDuration, formatVisitTime } from "@/src/utils/dates";
 
 type Props = StackScreenProps<ScreenParamLists, "BookingDetails">;
@@ -68,7 +69,10 @@ const AssignedDetails: React.FC<{
   onChat: () => void;
   onNotes: () => void;
   onVisit: () => void;
-}> = ({ booking, onChat, onNotes, onVisit }) => (
+}> = ({ booking, onChat, onNotes, onVisit }) => {
+  // Only for an active assignment whose booking really carries coordinates.
+  const destination = directionsTarget(booking);
+  return (
   <>
     <Text variant="h3" weight="bold" style={{ marginBottom: 16 }}>
       Service Information
@@ -99,20 +103,19 @@ const AssignedDetails: React.FC<{
 
     <View style={{ gap: 12 }}>
       {ACTIVE_STATUSES.includes(booking.status) ? <Button title="Open visit steps" onPress={onVisit} /> : null}
-      <Button
-        title="Get Directions"
-        variant="outline"
-        onPress={() =>
-          void Linking.openURL(
-            `https://maps.google.com/?daddr=${booking.patient_latitude},${booking.patient_longitude}`,
-          )
-        }
-      />
+      {destination ? (
+        <Button
+          title="Get Directions"
+          variant="outline"
+          onPress={() => void Linking.openURL(buildDirectionsUrl(destination))}
+        />
+      ) : null}
       <Button title="Message patient" variant="outline" onPress={onChat} />
       <Button title="Visit notes" variant="outline" onPress={onNotes} />
     </View>
   </>
-);
+  );
+};
 
 const BookingDetails: React.FC<Props> = ({ route, navigation }) => {
   const { bookingId, offer } = route.params;
