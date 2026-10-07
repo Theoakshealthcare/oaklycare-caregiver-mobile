@@ -52,6 +52,12 @@ const DETAIL = {
   visitCodeRequired: "A visit code is required to start the visit",
 } as const;
 
+/**
+ * Too-early "On my way" 409. The hours follow the backend's booking policy (default "2 hours"), so the
+ * whole sentence is matched and only the span is read from it.
+ */
+const ON_MY_WAY_TOO_EARLY = /^You can mark yourself on the way from (\d+ (?:hours?|minutes?)) before the visit$/;
+
 /** The lock the backend applies after 3 wrong codes (guide, section 8). */
 export const VISIT_CODE_LOCK_SECONDS = 900;
 
@@ -97,6 +103,8 @@ function visitMessage(status: number, detail: string | null, retryAfterSeconds: 
   }
   if (status === 409) {
     if (detail === DETAIL.onlyAcceptedOnTheWay) return "This visit has already moved past this step. We've refreshed it.";
+    const early = detail ? ON_MY_WAY_TOO_EARLY.exec(detail) : null;
+    if (early) return `You can mark yourself on the way from ${early[1]} before the visit.`;
     if (detail === DETAIL.onlyAcceptedStart) return "This visit can't be started right now. We've refreshed it.";
     if (detail === DETAIL.onlyInProgressComplete) return "This visit isn't in progress, so it can't be completed yet.";
     if (detail === DETAIL.noVisitCode) return "This visit has no visit code. Please contact Oakly support.";

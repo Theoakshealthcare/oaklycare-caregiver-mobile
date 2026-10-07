@@ -5,7 +5,8 @@ import { formatCountdown } from "@/src/api/errors";
 import Button from "@/src/components/ui/button";
 import Text from "@/src/components/ui/text";
 import { theme, MAX_FONT_SCALE } from "@/src/constants/theme";
-import { isCompleteCode, sanitizeCode, secondsLeft, VISIT_CODE_LENGTH } from "@/src/visit/visitFlow";
+import { parseBackendDate } from "@/src/utils/dates";
+import { isCompleteCode, isOnMyWayOpen, onMyWayUnlocksAt, sanitizeCode, secondsLeft, VISIT_CODE_LENGTH } from "@/src/visit/visitFlow";
 
 interface StepFrameProps {
   title: string;
@@ -50,16 +51,41 @@ const Summary: React.FC<{ visit: VisitSummary }> = ({ visit }) => (
 /** Step 1 (status `accepted`): set off, or go straight to the code if already at the door. */
 export const OnMyWayStep: React.FC<{
   visit: VisitSummary;
+  /** ISO start time of the visit; On my way unlocks two hours before it. */
+  scheduledDate: string;
   busy: boolean;
   onOnMyWay: () => void;
   onArrived: () => void;
-}> = ({ visit, busy, onOnMyWay, onArrived }) => (
-  <StepFrame title="Ready to set off?" subtitle="Tell the patient you're on your way. Oakly shares your location until you complete the visit.">
-    <Summary visit={visit} />
-    <Button title="On my way" onPress={onOnMyWay} loading={busy} />
-    <Button title="I've arrived: enter visit code" variant="outline" onPress={onArrived} disabled={busy} />
-  </StepFrame>
-);
+  onCantMakeIt?: () => void;
+  /** Injected so tests can drive the clock. */
+  now?: () => number;
+}> = ({ visit, scheduledDate, busy, onOnMyWay, onArrived, onCantMakeIt, now = Date.now }) => {
+  const startMs = parseBackendDate(scheduledDate).getTime();
+  const [tick, setTick] = useState(now());
+  useEffect(() => {
+    const id = setInterval(() => setTick(now()), 15_000);
+    return () => clearInterval(id);
+  }, [now]);
+  const open = Number.isNaN(startMs) || isOnMyWayOpen(startMs, tick);
+  const unlocksAt = new Date(onMyWayUnlocksAt(startMs));
+  return (
+    <StepFrame title="Ready to set off?" subtitle="Tell the patient you're on your way. Oakly shares your location until you complete the visit.">
+      <Summary visit={visit} />
+      <Button title="On my way" onPress={onOnMyWay} loading={busy} disabled={!open || busy} />
+      {open ? null : (
+        <Text variant="small" color={theme.colors.textLight} testID="on-my-way-hint">
+          {`You can mark yourself on the way from ${formatTime(unlocksAt)}, 2 hours before the visit.`}
+        </Text>
+      )}
+      <Button title="I've arrived: enter visit code" variant="outline" onPress={onArrived} disabled={busy} />
+      {onCantMakeIt ? <Button title="I can't make this visit" variant="outline" onPress={onCantMakeIt} disabled={busy} /> : null}
+    </StepFrame>
+  );
+};
+
+function formatTime(date: Date): string {
+  return date.toLocaleString("en-NG", { weekday: "short", hour: "2-digit", minute: "2-digit" });
+}
 
 export interface CodeStepProps {
   visit: VisitSummary;

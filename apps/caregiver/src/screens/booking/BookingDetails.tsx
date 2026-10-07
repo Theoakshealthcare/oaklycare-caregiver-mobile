@@ -88,7 +88,7 @@ const AssignedDetails: React.FC<{
     <Text variant="h3" weight="bold" style={{ marginTop: 16, marginBottom: 16 }}>
       Location
     </Text>
-    <Row label="Address" value={booking.patient_address} />
+    <Row label="Address" value={booking.patient_address ?? "N/A"} />
     <Row label="City" value={`${booking.patient_city}, ${booking.patient_state}`} />
 
     {booking.condition ? <Row label="Condition" value={booking.condition} /> : null}

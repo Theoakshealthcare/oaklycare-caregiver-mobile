@@ -57,7 +57,7 @@ export function homeOfferToOffer(offer: Schemas["HomeOffer"]): Offer {
 }
 
 export type BookingAction = "accept" | "decline";
-export type VisitAction = "on_my_way" | "start" | "complete";
+export type VisitAction = "on_my_way" | "start" | "complete" | "cancel";
 
 function byScheduledDate(a: Booking, b: Booking): number {
   return a.scheduled_date.localeCompare(b.scheduled_date);

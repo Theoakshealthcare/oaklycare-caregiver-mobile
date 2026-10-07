@@ -195,7 +195,12 @@ export interface paths {
         /** Update Profile */
         put: operations["update_profile_api_v1_auth_profile_put"];
         post?: never;
-        /** Delete Account */
+        /**
+         * Delete Account
+         * @description Erase the account (anonymisation). Bookings, payments and consent records are kept for legal
+         *     retention; the person's data is wiped and the account can no longer sign in. 409 while the person
+         *     has active bookings or money owed, with a detail that says what to do.
+         */
         delete: operations["delete_account_api_v1_auth_profile_delete"];
         options?: never;
         head?: never;
@@ -1717,6 +1722,217 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/v1/admin/bookings": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** List Bookings */
+        get: operations["list_bookings_api_v1_admin_bookings_get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/admin/bookings/unmatched": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Unmatched Queue */
+        get: operations["unmatched_queue_api_v1_admin_bookings_unmatched_get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/admin/bookings/{booking_id}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Get Booking */
+        get: operations["get_booking_api_v1_admin_bookings__booking_id__get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/admin/bookings/{booking_id}/candidates": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Candidates */
+        get: operations["candidates_api_v1_admin_bookings__booking_id__candidates_get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/admin/bookings/{booking_id}/redispatch": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** Redispatch */
+        post: operations["redispatch_api_v1_admin_bookings__booking_id__redispatch_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/admin/bookings/{booking_id}/assign": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Assign
+         * @description Offer a pending booking to one caregiver (they still accept), or force it (Super Admin).
+         */
+        post: operations["assign_api_v1_admin_bookings__booking_id__assign_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/admin/bookings/{booking_id}/reassign": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Reassign
+         * @description Move an accepted visit that has not started to another approved caregiver.
+         */
+        post: operations["reassign_api_v1_admin_bookings__booking_id__reassign_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/admin/bookings/{booking_id}/cancel": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** Cancel */
+        post: operations["cancel_api_v1_admin_bookings__booking_id__cancel_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/admin/bookings/{booking_id}/confirm-address": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** Confirm Address */
+        post: operations["confirm_address_api_v1_admin_bookings__booking_id__confirm_address_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/admin/bookings/{booking_id}/no-show": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** Flag No Show */
+        post: operations["flag_no_show_api_v1_admin_bookings__booking_id__no_show_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/admin/bookings/{booking_id}/correct-status": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** Correct Status */
+        post: operations["correct_status_api_v1_admin_bookings__booking_id__correct_status_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/admin/booking-policy": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Get Policy */
+        get: operations["get_policy_api_v1_admin_booking_policy_get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        /** Update Policy */
+        patch: operations["update_policy_api_v1_admin_booking_policy_patch"];
+        trace?: never;
+    };
     "/api/v1/admin/auth/login": {
         parameters: {
             query?: never;
@@ -1912,6 +2128,23 @@ export interface paths {
 export type webhooks = Record<string, never>;
 export interface components {
     schemas: {
+        /** AddressOut */
+        AddressOut: {
+            /** City */
+            city: string;
+            /** State */
+            state: string;
+            /** Visible */
+            visible: boolean;
+            /** Line */
+            line?: string | null;
+            /** Latitude */
+            latitude?: number | null;
+            /** Longitude */
+            longitude?: number | null;
+            /** Needs Address Check */
+            needs_address_check: boolean;
+        };
         /** AdminInviteIn */
         AdminInviteIn: {
             /**
@@ -2017,6 +2250,130 @@ export interface components {
             /** Status */
             status?: ("active" | "disabled") | null;
         };
+        /** ApplicationDetail */
+        ApplicationDetail: {
+            profile: components["schemas"]["CaregiverProfile"];
+            consents: components["schemas"]["ConsentsOut"];
+            /** Documents */
+            documents: components["schemas"]["ApplicationDocument"][];
+            identity: components["schemas"]["IdentityOut"];
+            background_check: components["schemas"]["BackgroundCheckOut"];
+            decision: components["schemas"]["DecisionOut"];
+            /** Skills */
+            skills: components["schemas"]["SkillOut"][];
+            /** Audit History */
+            audit_history: components["schemas"]["AuditEntry"][];
+        };
+        /** ApplicationDocument */
+        ApplicationDocument: {
+            /**
+             * Id
+             * Format: uuid
+             */
+            id: string;
+            /** Document Type */
+            document_type: string;
+            /** Document Name */
+            document_name: string;
+            /** Mime Type */
+            mime_type?: string | null;
+            /** File Size */
+            file_size?: number | null;
+            /** Verification Status */
+            verification_status: string;
+            /** Rejection Reason */
+            rejection_reason?: string | null;
+            /** Expires On */
+            expires_on?: string | null;
+            /** Uploaded At */
+            uploaded_at?: string | null;
+            /** Verified At */
+            verified_at?: string | null;
+            /** Reviewed By */
+            reviewed_by?: string | null;
+            /** Download Url */
+            download_url: string;
+        };
+        /** ApplicationList */
+        ApplicationList: {
+            /** Items */
+            items: components["schemas"]["ApplicationListItem"][];
+            /** Total */
+            total: number;
+            /** Limit */
+            limit: number;
+            /** Offset */
+            offset: number;
+        };
+        /** ApplicationListItem */
+        ApplicationListItem: {
+            /**
+             * Id
+             * Format: uuid
+             */
+            id: string;
+            /** Full Name */
+            full_name: string;
+            /** State */
+            state?: string | null;
+            /** Specialization */
+            specialization?: string | null;
+            /** Years Of Experience */
+            years_of_experience?: number | null;
+            /** Submitted At */
+            submitted_at?: string | null;
+            /** Age In Days */
+            age_in_days?: number | null;
+            /** Document Count */
+            document_count: number;
+            /** Identity Verification Status */
+            identity_verification_status: string;
+            /** Background Check Status */
+            background_check_status: string;
+            /** Profile Status */
+            profile_status: string;
+        };
+        /** AssignIn */
+        AssignIn: {
+            /** Reason */
+            reason: string;
+            /**
+             * Caregiver Id
+             * Format: uuid
+             */
+            caregiver_id: string;
+            /**
+             * Force
+             * @default false
+             */
+            force: boolean;
+        };
+        /** AuditEntry */
+        AuditEntry: {
+            /**
+             * Id
+             * Format: uuid
+             */
+            id: string;
+            /** Action */
+            action: string;
+            /**
+             * Admin User Id
+             * Format: uuid
+             */
+            admin_user_id: string;
+            /** Entity Type */
+            entity_type: string;
+            /** Entity Id */
+            entity_id?: string | null;
+            /** Reason */
+            reason?: string | null;
+            /**
+             * Created At
+             * Format: date-time
+             */
+            created_at: string;
+        };
         /** AuditEntryOut */
         AuditEntryOut: {
             /**
@@ -2092,6 +2449,17 @@ export interface components {
             /** Document Id */
             document_id?: string | null;
         };
+        /** BackgroundCheckOut */
+        BackgroundCheckOut: {
+            /** Status */
+            status: string;
+            /** Evidence */
+            evidence?: unknown | null;
+            /** Decided By */
+            decided_by?: string | null;
+            /** Decided At */
+            decided_at?: string | null;
+        };
         /** Body_login_api_v1_auth_login_post */
         Body_login_api_v1_auth_login_post: {
             /** Grant Type */
@@ -2137,6 +2505,48 @@ export interface components {
         Body_upload_profile_image_api_v1_auth_profile_upload_image_post: {
             /** File */
             file: string;
+        };
+        /**
+         * BookingActionOut
+         * @description What changed. Fetch the detail for the rest.
+         */
+        BookingActionOut: {
+            /**
+             * Id
+             * Format: uuid
+             */
+            id: string;
+            /** Booking Code */
+            booking_code: string;
+            /**
+             * Status
+             * @enum {string}
+             */
+            status: "pending" | "accepted" | "en_route" | "in_progress" | "completed" | "cancelled" | "declined";
+            /**
+             * Payment Status
+             * @enum {string}
+             */
+            payment_status: "pending" | "paid" | "failed" | "refunded";
+            /** Dispatch State */
+            dispatch_state?: ("dispatching" | "matched" | "unmatched") | null;
+            /** Caregiver Id */
+            caregiver_id?: string | null;
+            /** Needs Address Check */
+            needs_address_check: boolean;
+            /** Refund Required */
+            refund_required: boolean;
+            /** Refund Required Reason */
+            refund_required_reason?: string | null;
+            /** Refund Amount Kobo */
+            refund_amount_kobo?: number | null;
+            /** No Show Flagged At */
+            no_show_flagged_at?: string | null;
+            /**
+             * Notified Caregivers
+             * @default 0
+             */
+            notified_caregivers: number;
         };
         /** BookingActionRequest */
         BookingActionRequest: {
@@ -2227,6 +2637,154 @@ export interface components {
              */
             booking_for: string;
         };
+        /** BookingDetail */
+        BookingDetail: {
+            /**
+             * Id
+             * Format: uuid
+             */
+            id: string;
+            /** Booking Code */
+            booking_code: string;
+            /** Service Type */
+            service_type: string;
+            /** Assistance Type */
+            assistance_type: string;
+            /** Booking For */
+            booking_for: string;
+            /** Duration Hours */
+            duration_hours: number;
+            /**
+             * Scheduled Date
+             * Format: date-time
+             */
+            scheduled_date: string;
+            /**
+             * Scheduled End Date
+             * Format: date-time
+             */
+            scheduled_end_date: string;
+            /** Actual Start Time */
+            actual_start_time?: string | null;
+            /** Actual End Time */
+            actual_end_time?: string | null;
+            /**
+             * Status
+             * @enum {string}
+             */
+            status: "pending" | "accepted" | "en_route" | "in_progress" | "completed" | "cancelled" | "declined";
+            /**
+             * Channel
+             * @enum {string}
+             */
+            channel: "app" | "whatsapp" | "admin";
+            /** Cancel Reason */
+            cancel_reason?: string | null;
+            /**
+             * Created At
+             * Format: date-time
+             */
+            created_at: string;
+            /**
+             * Updated At
+             * Format: date-time
+             */
+            updated_at: string;
+            /** Age Minutes */
+            age_minutes: number;
+            patient: components["schemas"]["PartyOut"];
+            caregiver?: components["schemas"]["PartyOut"] | null;
+            address: components["schemas"]["AddressOut"];
+            clinical: components["schemas"]["ClinicalOut"];
+            price: components["schemas"]["PriceOut"];
+            payment: components["schemas"]["PaymentOut"];
+            dispatch: components["schemas"]["DispatchOut"];
+            /** Events */
+            events: components["schemas"]["EventOut"][];
+            /** No Show Flagged At */
+            no_show_flagged_at?: string | null;
+            /** No Show Suspected */
+            no_show_suspected: boolean;
+            /** Note Count */
+            note_count: number;
+            /** Timeline */
+            timeline: components["schemas"]["TimelineEntry"][];
+            /** Available Actions */
+            available_actions: ("redispatch" | "assign" | "force_assign" | "reassign" | "cancel" | "confirm_address" | "flag_no_show" | "correct_status")[];
+        };
+        /** BookingList */
+        BookingList: {
+            /** Items */
+            items: components["schemas"]["BookingListItem"][];
+            /** Total */
+            total: number;
+            /** Limit */
+            limit: number;
+            /** Offset */
+            offset: number;
+        };
+        /** BookingListItem */
+        BookingListItem: {
+            /**
+             * Id
+             * Format: uuid
+             */
+            id: string;
+            /** Booking Code */
+            booking_code: string;
+            /** Service Type */
+            service_type: string;
+            /**
+             * Scheduled Date
+             * Format: date-time
+             */
+            scheduled_date: string;
+            /**
+             * Scheduled End Date
+             * Format: date-time
+             */
+            scheduled_end_date: string;
+            /** City */
+            city: string;
+            /** State */
+            state: string;
+            patient: components["schemas"]["PartyOut"];
+            caregiver?: components["schemas"]["PartyOut"] | null;
+            /**
+             * Status
+             * @enum {string}
+             */
+            status: "pending" | "accepted" | "en_route" | "in_progress" | "completed" | "cancelled" | "declined";
+            /**
+             * Payment Status
+             * @enum {string}
+             */
+            payment_status: "pending" | "paid" | "failed" | "refunded";
+            /** Dispatch State */
+            dispatch_state?: ("dispatching" | "matched" | "unmatched") | null;
+            /** Total Amount Kobo */
+            total_amount_kobo: number;
+            /**
+             * Channel
+             * @enum {string}
+             */
+            channel: "app" | "whatsapp" | "admin";
+            /**
+             * Created At
+             * Format: date-time
+             */
+            created_at: string;
+            /** Age Minutes */
+            age_minutes: number;
+            /** Needs Address Check */
+            needs_address_check: boolean;
+            /** Refund Required */
+            refund_required: boolean;
+            /** No Show Flagged At */
+            no_show_flagged_at?: string | null;
+            /** No Show Suspected */
+            no_show_suspected: boolean;
+        };
         /** BookingNoteCreate */
         BookingNoteCreate: {
             /** Title */
@@ -2299,6 +2857,77 @@ export interface components {
              */
             created_at: string;
             booking: components["schemas"]["BookingResponse"];
+        };
+        /** BookingPolicyOut */
+        BookingPolicyOut: {
+            /**
+             * Cancel Free Hours
+             * @description Full refund when the visit is more than this many hours away (or nobody is assigned)
+             */
+            cancel_free_hours: number;
+            /**
+             * Cancel Late Hours
+             * @description Inside this many hours of the start, or once the caregiver is on the way, the late fee applies
+             */
+            cancel_late_hours: number;
+            /**
+             * Cancel Fee Percent
+             * @description Fee, as a percent of the service fee, between the two lines above
+             */
+            cancel_fee_percent: number;
+            /**
+             * Cancel Late Fee Percent
+             * @description Fee, as a percent of the service fee, inside the late window or once on the way
+             */
+            cancel_late_fee_percent: number;
+            /**
+             * Dropout Redispatch Min Lead Minutes
+             * @description A caregiver drop-out more than this many minutes before the start is re-dispatched automatically
+             */
+            dropout_redispatch_min_lead_minutes: number;
+            /**
+             * Dropout Decision Lead Minutes
+             * @description If nobody has accepted this many minutes before the start, the family is given the choice
+             */
+            dropout_decision_lead_minutes: number;
+            /**
+             * Onmyway Compensation Window Minutes
+             * @description An on-my-way tapped no earlier than this many minutes before the start can qualify for compensation
+             */
+            onmyway_compensation_window_minutes: number;
+            /**
+             * Caregiver Late Fee Share Percent
+             * @description Caregiver's share of a late fee, in percent (stored now, paid out by the compensation work)
+             */
+            caregiver_late_fee_share_percent: number;
+            /** Updated At */
+            updated_at?: string | null;
+            /** Updated By */
+            updated_by?: string | null;
+        };
+        /**
+         * BookingPolicyPatch
+         * @description Send only the fields to change, and why. The merged policy is validated as a whole.
+         */
+        BookingPolicyPatch: {
+            /** Reason */
+            reason: string;
+            /** Cancel Free Hours */
+            cancel_free_hours?: number | null;
+            /** Cancel Late Hours */
+            cancel_late_hours?: number | null;
+            /** Cancel Fee Percent */
+            cancel_fee_percent?: number | null;
+            /** Cancel Late Fee Percent */
+            cancel_late_fee_percent?: number | null;
+            /** Dropout Redispatch Min Lead Minutes */
+            dropout_redispatch_min_lead_minutes?: number | null;
+            /** Dropout Decision Lead Minutes */
+            dropout_decision_lead_minutes?: number | null;
+            /** Onmyway Compensation Window Minutes */
+            onmyway_compensation_window_minutes?: number | null;
+            /** Caregiver Late Fee Share Percent */
+            caregiver_late_fee_share_percent?: number | null;
         };
         /** BookingPreviewRequest */
         BookingPreviewRequest: {
@@ -2473,11 +3102,11 @@ export interface components {
              */
             scheduled_end_date: string;
             /** Patient Address */
-            patient_address: string;
+            patient_address?: string | null;
             /** Patient Latitude */
-            patient_latitude: number;
+            patient_latitude?: number | null;
             /** Patient Longitude */
-            patient_longitude: number;
+            patient_longitude?: number | null;
             /** Patient City */
             patient_city: string;
             /** Patient State */
@@ -2668,6 +3297,46 @@ export interface components {
          * @enum {string}
          */
         BookingStatus: "pending" | "accepted" | "en_route" | "in_progress" | "completed" | "cancelled" | "declined";
+        /** CancelIn */
+        CancelIn: {
+            /** Reason */
+            reason: string;
+            /**
+             * Reason Code
+             * @enum {string}
+             */
+            reason_code: "patient_request" | "no_supply" | "caregiver_no_show" | "safety" | "duplicate" | "other";
+            /**
+             * Refund
+             * @enum {string}
+             */
+            refund: "full" | "partial" | "none";
+            /** Refund Amount Kobo */
+            refund_amount_kobo?: number | null;
+        };
+        /** CandidateList */
+        CandidateList: {
+            /** Items */
+            items: components["schemas"]["CandidateOut"][];
+        };
+        /** CandidateOut */
+        CandidateOut: {
+            /**
+             * Caregiver Id
+             * Format: uuid
+             */
+            caregiver_id: string;
+            /** Full Name */
+            full_name: string;
+            /** Specialization */
+            specialization?: string | null;
+            /** Distance Km */
+            distance_km: number;
+            /** Estimated Arrival Minutes */
+            estimated_arrival_minutes: number;
+            /** Match Score */
+            match_score: number;
+        };
         /** Caregiver */
         Caregiver: {
             /**
@@ -2699,6 +3368,116 @@ export interface components {
              * Format: date-time
              */
             updated_at: string;
+        };
+        /**
+         * CaregiverActionBooking
+         * @description The booking as a caregiver sees it in the action response (accept, decline, start, ...).
+         *
+         *     Describes what the endpoint has always returned; fields that are null in the offer view
+         *     (patient_details, caregiver_details, caregiver_id, condition, special_instructions) are Optional.
+         *     Money is naira as Decimal (serialised as a string such as "55000.00") next to the *_kobo integers.
+         */
+        CaregiverActionBooking: {
+            /**
+             * Id
+             * Format: uuid
+             */
+            id: string;
+            /** Booking Code */
+            booking_code: string;
+            /**
+             * Patient Id
+             * Format: uuid
+             */
+            patient_id: string;
+            patient_details?: components["schemas"]["PatientDetails"] | null;
+            /** Caregiver Id */
+            caregiver_id?: string | null;
+            caregiver_details?: components["schemas"]["CaregiverDetails"] | null;
+            /** Service Type */
+            service_type: string;
+            /** Assistance Type */
+            assistance_type: string;
+            /** Condition */
+            condition?: string | null;
+            /** Duration Hours */
+            duration_hours: number;
+            /**
+             * Scheduled Date
+             * Format: date-time
+             */
+            scheduled_date: string;
+            /**
+             * Scheduled End Date
+             * Format: date-time
+             */
+            scheduled_end_date: string;
+            /** Actual Start Time */
+            actual_start_time?: string | null;
+            /** Actual End Time */
+            actual_end_time?: string | null;
+            /** Patient Address */
+            patient_address?: string | null;
+            /** Patient Latitude */
+            patient_latitude?: number | null;
+            /** Patient Longitude */
+            patient_longitude?: number | null;
+            /** Patient City */
+            patient_city: string;
+            /** Patient State */
+            patient_state: string;
+            status: components["schemas"]["BookingStatus"];
+            payment_status: components["schemas"]["PaymentStatus"];
+            /** Paystack Reference */
+            paystack_reference?: string | null;
+            /** Payment Expires At */
+            payment_expires_at?: string | null;
+            /** Payment Failure Reason */
+            payment_failure_reason?: string | null;
+            /** Total Amount */
+            total_amount: string;
+            /** Service Fee */
+            service_fee: string;
+            /** Platform Fee */
+            platform_fee: string;
+            /** Total Amount Kobo */
+            total_amount_kobo: number;
+            /** Service Fee Kobo */
+            service_fee_kobo: number;
+            /** Platform Fee Kobo */
+            platform_fee_kobo: number;
+            /** Special Instructions */
+            special_instructions?: string | null;
+            /** Booking For */
+            booking_for: string;
+            /** Cancel Reason */
+            cancel_reason?: string | null;
+            /** Refund Required */
+            refund_required: boolean;
+            /** Refund Required Reason */
+            refund_required_reason?: string | null;
+            /** Dispatch State */
+            dispatch_state?: string | null;
+            /** Dispatch Started At */
+            dispatch_started_at?: string | null;
+            /** Visit Code */
+            visit_code?: string | null;
+            /**
+             * Created At
+             * Format: date-time
+             */
+            created_at: string;
+            /**
+             * Updated At
+             * Format: date-time
+             */
+            updated_at: string;
+        };
+        /** CaregiverActionResponse */
+        CaregiverActionResponse: {
+            /** Message */
+            message: string;
+            booking: components["schemas"]["CaregiverActionBooking"];
         };
         /** CaregiverBankAccountOut */
         CaregiverBankAccountOut: {
@@ -3089,6 +3868,85 @@ export interface components {
              */
             created_at: string;
         };
+        /**
+         * ClinicalOut
+         * @description The condition and special instructions. Present only with clinical.read; reading them is audited.
+         */
+        ClinicalOut: {
+            /** Masked */
+            masked: boolean;
+            /** Has Condition */
+            has_condition: boolean;
+            /** Has Special Instructions */
+            has_special_instructions: boolean;
+            /** Condition */
+            condition?: string | null;
+            /** Special Instructions */
+            special_instructions?: string | null;
+        };
+        /** ConfirmAddressIn */
+        ConfirmAddressIn: {
+            /** Reason */
+            reason: string;
+            /** Latitude */
+            latitude: number;
+            /** Longitude */
+            longitude: number;
+            /** Address */
+            address?: string | null;
+        };
+        /** ConsentsOut */
+        ConsentsOut: {
+            /** Terms Accepted */
+            terms_accepted: boolean;
+            /** Privacy Policy Accepted */
+            privacy_policy_accepted: boolean;
+            /** Background Check Consent */
+            background_check_consent: boolean;
+            /** Consent Date */
+            consent_date?: string | null;
+        };
+        /** CorrectStatusIn */
+        CorrectStatusIn: {
+            /** Reason */
+            reason: string;
+            /**
+             * Status
+             * @enum {string}
+             */
+            status: "en_route" | "in_progress" | "completed";
+        };
+        /** DecisionOut */
+        DecisionOut: {
+            /** Approved By */
+            approved_by?: string | null;
+            /** Approved At */
+            approved_at?: string | null;
+            /** Suspended At */
+            suspended_at?: string | null;
+            /** Suspension Reason */
+            suspension_reason?: string | null;
+            /** Rejection Reason */
+            rejection_reason?: string | null;
+            /** Changes Requested */
+            changes_requested?: unknown | null;
+        };
+        /** DetailResponse */
+        DetailResponse: {
+            /** Detail */
+            detail: string;
+        };
+        /** DispatchOut */
+        DispatchOut: {
+            /** State */
+            state?: ("dispatching" | "matched" | "unmatched") | null;
+            /** Started At */
+            started_at?: string | null;
+            /** Waves */
+            waves: components["schemas"]["WaveOut"][];
+            /** Offers */
+            offers: components["schemas"]["OfferOut"][];
+        };
         /** DocumentDecision */
         DocumentDecision: {
             /**
@@ -3139,6 +3997,22 @@ export interface components {
              * Format: email
              */
             email: string;
+        };
+        /** EventOut */
+        EventOut: {
+            /** Event */
+            event: string;
+            /**
+             * Created At
+             * Format: date-time
+             */
+            created_at: string;
+            /** Delivered At */
+            delivered_at?: string | null;
+            /** Attempts */
+            attempts: number;
+            /** Last Error */
+            last_error?: string | null;
         };
         /** FallGuardAnswerBase */
         FallGuardAnswerBase: {
@@ -3264,6 +4138,17 @@ export interface components {
              */
             is_active: boolean | null;
         };
+        /** FormOptionsOut */
+        FormOptionsOut: {
+            /** Specializations */
+            specializations: string[];
+            /** Service Areas */
+            service_areas: string[];
+            /** Work Hours */
+            work_hours: string[];
+            /** States */
+            states: string[];
+        };
         /** HTTPValidationError */
         HTTPValidationError: {
             /** Detail */
@@ -3335,7 +4220,7 @@ export interface components {
             /** Patient Name */
             patient_name?: string | null;
             /** Patient Address */
-            patient_address: string;
+            patient_address?: string | null;
             /** Patient City */
             patient_city: string;
             /** Patient State */
@@ -3350,6 +4235,17 @@ export interface components {
             decision: "verified" | "failed";
             /** Notes */
             notes: string;
+        };
+        /** IdentityOut */
+        IdentityOut: {
+            /** Status */
+            status: string;
+            /** Document Verification Result */
+            document_verification_result?: unknown | null;
+            /** Face Verification Status */
+            face_verification_status?: string | null;
+            /** Face Verification Result */
+            face_verification_result?: unknown | null;
         };
         /** InviteAcceptIn */
         InviteAcceptIn: {
@@ -3485,6 +4381,39 @@ export interface components {
             expires_in: number;
             admin: components["schemas"]["AdminOut"];
         };
+        /** OfferOut */
+        OfferOut: {
+            /**
+             * Caregiver Id
+             * Format: uuid
+             */
+            caregiver_id: string;
+            /** Caregiver Name */
+            caregiver_name: string;
+            /**
+             * Offered At
+             * Format: date-time
+             */
+            offered_at: string;
+            /** Response */
+            response?: string | null;
+            /** Response At */
+            response_at?: string | null;
+        };
+        /** PartyOut */
+        PartyOut: {
+            /**
+             * Id
+             * Format: uuid
+             */
+            id: string;
+            /** Full Name */
+            full_name: string;
+            /** Phone */
+            phone?: string | null;
+            /** Masked */
+            masked: boolean;
+        };
         /** PasswordReset */
         PasswordReset: {
             /** Token */
@@ -3502,11 +4431,8 @@ export interface components {
         };
         /** Patient */
         Patient: {
-            /**
-             * Email
-             * Format: email
-             */
-            email: string;
+            /** Email */
+            email?: string | null;
             /** Full Name */
             full_name: string;
             /** Phone Number */
@@ -3865,6 +4791,49 @@ export interface components {
              */
             currency: string;
         };
+        /** PaymentAttemptOut */
+        PaymentAttemptOut: {
+            /**
+             * Id
+             * Format: uuid
+             */
+            id: string;
+            /** Type */
+            type: string;
+            /** Status */
+            status: string;
+            /** Amount Kobo */
+            amount_kobo: number;
+            /** Paystack Reference */
+            paystack_reference?: string | null;
+            /**
+             * Created At
+             * Format: date-time
+             */
+            created_at: string;
+        };
+        /** PaymentOut */
+        PaymentOut: {
+            /**
+             * Status
+             * @enum {string}
+             */
+            status: "pending" | "paid" | "failed" | "refunded";
+            /** Paystack Reference */
+            paystack_reference?: string | null;
+            /** Failure Reason */
+            failure_reason?: string | null;
+            /** Expires At */
+            expires_at?: string | null;
+            /** Refund Required */
+            refund_required: boolean;
+            /** Refund Required Reason */
+            refund_required_reason?: string | null;
+            /** Refund Amount Kobo */
+            refund_amount_kobo?: number | null;
+            /** Attempts */
+            attempts: components["schemas"]["PaymentAttemptOut"][];
+        };
         /**
          * PaymentStatus
          * @enum {string}
@@ -4067,6 +5036,15 @@ export interface components {
             /** Doctor Note Path */
             doctor_note_path?: string | null;
         };
+        /** PriceOut */
+        PriceOut: {
+            /** Total Kobo */
+            total_kobo: number;
+            /** Service Fee Kobo */
+            service_fee_kobo: number;
+            /** Platform Fee Kobo */
+            platform_fee_kobo: number;
+        };
         /** PushTokenDelete */
         PushTokenDelete: {
             /** Token */
@@ -4093,6 +5071,28 @@ export interface components {
         ReasonIn: {
             /** Reason */
             reason: string;
+        };
+        /** ReassignIn */
+        ReassignIn: {
+            /** Reason */
+            reason: string;
+            /**
+             * Caregiver Id
+             * Format: uuid
+             */
+            caregiver_id: string;
+        };
+        /** RedispatchIn */
+        RedispatchIn: {
+            /** Reason */
+            reason: string;
+            /** Radius Km */
+            radius_km?: number | null;
+            /**
+             * Include Previously Notified
+             * @default false
+             */
+            include_previously_notified: boolean;
         };
         /** RefreshIn */
         RefreshIn: {
@@ -4121,10 +5121,36 @@ export interface components {
             /** Sub Specialty */
             sub_specialty?: string | null;
         };
+        /** SkillOut */
+        SkillOut: {
+            /** Service Type */
+            service_type: string;
+            /** Sub Specialty */
+            sub_specialty?: string | null;
+        };
         /** SkillsIn */
         SkillsIn: {
             /** Skills */
             skills: components["schemas"]["SkillIn"][];
+        };
+        /** TimelineEntry */
+        TimelineEntry: {
+            /**
+             * At
+             * Format: date-time
+             */
+            at: string;
+            /**
+             * Kind
+             * @enum {string}
+             */
+            kind: "booking_created" | "dispatch_started" | "wave_sent" | "offer_response" | "notification_queued" | "notification_delivered" | "visit_started" | "visit_completed" | "admin_action";
+            /** Title */
+            title: string;
+            /** Actor */
+            actor?: string | null;
+            /** Detail */
+            detail?: string | null;
         };
         /** Token */
         Token: {
@@ -4150,13 +5176,90 @@ export interface components {
             /** Expires In */
             expires_in: number;
         };
+        /** UnmatchedItem */
+        UnmatchedItem: {
+            /**
+             * Id
+             * Format: uuid
+             */
+            id: string;
+            /** Booking Code */
+            booking_code: string;
+            /** Service Type */
+            service_type: string;
+            /**
+             * Scheduled Date
+             * Format: date-time
+             */
+            scheduled_date: string;
+            /**
+             * Scheduled End Date
+             * Format: date-time
+             */
+            scheduled_end_date: string;
+            /** City */
+            city: string;
+            /** State */
+            state: string;
+            patient: components["schemas"]["PartyOut"];
+            caregiver?: components["schemas"]["PartyOut"] | null;
+            /**
+             * Status
+             * @enum {string}
+             */
+            status: "pending" | "accepted" | "en_route" | "in_progress" | "completed" | "cancelled" | "declined";
+            /**
+             * Payment Status
+             * @enum {string}
+             */
+            payment_status: "pending" | "paid" | "failed" | "refunded";
+            /** Dispatch State */
+            dispatch_state?: ("dispatching" | "matched" | "unmatched") | null;
+            /** Total Amount Kobo */
+            total_amount_kobo: number;
+            /**
+             * Channel
+             * @enum {string}
+             */
+            channel: "app" | "whatsapp" | "admin";
+            /**
+             * Created At
+             * Format: date-time
+             */
+            created_at: string;
+            /** Age Minutes */
+            age_minutes: number;
+            /** Needs Address Check */
+            needs_address_check: boolean;
+            /** Refund Required */
+            refund_required: boolean;
+            /** No Show Flagged At */
+            no_show_flagged_at?: string | null;
+            /** No Show Suspected */
+            no_show_suspected: boolean;
+            /**
+             * Queue Reason
+             * @enum {string}
+             */
+            queue_reason: "address_check" | "unmatched" | "sla_breached";
+            /** Waiting Minutes */
+            waiting_minutes: number;
+        };
+        /** UnmatchedList */
+        UnmatchedList: {
+            /** Items */
+            items: components["schemas"]["UnmatchedItem"][];
+            /** Total */
+            total: number;
+            /** Limit */
+            limit: number;
+            /** Offset */
+            offset: number;
+        };
         /** User */
         User: {
-            /**
-             * Email
-             * Format: email
-             */
-            email: string;
+            /** Email */
+            email?: string | null;
             /** Phone Number */
             phone_number?: string | null;
             /** Full Name */
@@ -4225,11 +5328,8 @@ export interface components {
             id: string;
             /** Full Name */
             full_name: string;
-            /**
-             * Email
-             * Format: email
-             */
-            email: string;
+            /** Email */
+            email?: string | null;
             /** Phone Number */
             phone_number: string | null;
             /** Profile Image Url */
@@ -4282,11 +5382,8 @@ export interface components {
         };
         /** UserWithTypeData */
         UserWithTypeData: {
-            /**
-             * Email
-             * Format: email
-             */
-            email: string;
+            /** Email */
+            email?: string | null;
             /** Phone Number */
             phone_number?: string | null;
             /** Full Name */
@@ -4345,11 +5442,45 @@ export interface components {
                 [key: string]: unknown;
             };
         };
+        /** VerificationStatusOut */
+        VerificationStatusOut: {
+            /** Profile Completion Step */
+            profile_completion_step?: number | null;
+            /** Identity Verification Status */
+            identity_verification_status?: string | null;
+            /** Background Check Status */
+            background_check_status?: string | null;
+            /** Profile Status */
+            profile_status?: string | null;
+            /** Rejection Reason */
+            rejection_reason?: string | null;
+            /** Changes Requested */
+            changes_requested?: {
+                [key: string]: unknown;
+            } | null;
+        };
         /**
          * VitalSource
          * @enum {string}
          */
         VitalSource: "manual" | "wearable";
+        /** WaveOut */
+        WaveOut: {
+            /** Wave No */
+            wave_no: number;
+            /**
+             * Sent At
+             * Format: date-time
+             */
+            sent_at: string;
+            /**
+             * Expires At
+             * Format: date-time
+             */
+            expires_at: string;
+            /** Notified Count */
+            notified_count: number;
+        };
     };
     responses: never;
     parameters: never;
@@ -4699,9 +5830,7 @@ export interface operations {
                     [name: string]: unknown;
                 };
                 content: {
-                    "application/json": {
-                        [key: string]: unknown;
-                    };
+                    "application/json": components["schemas"]["DetailResponse"];
                 };
             };
         };
@@ -4939,9 +6068,7 @@ export interface operations {
                     [name: string]: unknown;
                 };
                 content: {
-                    "application/json": {
-                        [key: string]: unknown;
-                    };
+                    "application/json": components["schemas"]["VerificationStatusOut"];
                 };
             };
         };
@@ -4961,9 +6088,7 @@ export interface operations {
                     [name: string]: unknown;
                 };
                 content: {
-                    "application/json": {
-                        [key: string]: unknown;
-                    };
+                    "application/json": components["schemas"]["FormOptionsOut"];
                 };
             };
         };
@@ -5540,7 +6665,7 @@ export interface operations {
                     [name: string]: unknown;
                 };
                 content: {
-                    "application/json": unknown;
+                    "application/json": components["schemas"]["CaregiverActionResponse"];
                 };
             };
             /** @description Validation Error */
@@ -7264,7 +8389,7 @@ export interface operations {
                     [name: string]: unknown;
                 };
                 content: {
-                    "application/json": unknown;
+                    "application/json": components["schemas"]["ApplicationList"];
                 };
             };
             /** @description Validation Error */
@@ -7330,7 +8455,7 @@ export interface operations {
                     [name: string]: unknown;
                 };
                 content: {
-                    "application/json": unknown;
+                    "application/json": components["schemas"]["ApplicationDetail"];
                 };
             };
             /** @description Validation Error */
@@ -7603,6 +8728,451 @@ export interface operations {
                 };
                 content: {
                     "application/json": unknown;
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    list_bookings_api_v1_admin_bookings_get: {
+        parameters: {
+            query?: {
+                /** @description booking code, patient or caregiver name, phone */
+                q?: string | null;
+                status?: ("pending" | "accepted" | "en_route" | "in_progress" | "completed" | "cancelled" | "declined") | null;
+                payment_status?: ("pending" | "paid" | "failed" | "refunded") | null;
+                dispatch_state?: ("dispatching" | "matched" | "unmatched") | null;
+                channel?: ("app" | "whatsapp" | "admin") | null;
+                city?: string | null;
+                service_type?: ("nurse" | "doctor" | "physiotherapist" | "caregiver" | "nutritionist") | null;
+                caregiver_id?: string | null;
+                scheduled_from?: string | null;
+                scheduled_to?: string | null;
+                created_from?: string | null;
+                created_to?: string | null;
+                needs_address_check?: boolean | null;
+                /** @description true: flagged or suspected no-shows only */
+                no_show?: boolean | null;
+                sort?: "scheduled_date" | "created_at" | "total_amount_kobo";
+                order?: "asc" | "desc";
+                limit?: number;
+                offset?: number;
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["BookingList"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    unmatched_queue_api_v1_admin_bookings_unmatched_get: {
+        parameters: {
+            query?: {
+                reason?: ("address_check" | "unmatched" | "sla_breached") | null;
+                limit?: number;
+                offset?: number;
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["UnmatchedList"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    get_booking_api_v1_admin_bookings__booking_id__get: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                booking_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["BookingDetail"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    candidates_api_v1_admin_bookings__booking_id__candidates_get: {
+        parameters: {
+            query?: {
+                radius_km?: number | null;
+            };
+            header?: never;
+            path: {
+                booking_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["CandidateList"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    redispatch_api_v1_admin_bookings__booking_id__redispatch_post: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                booking_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["RedispatchIn"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["BookingActionOut"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    assign_api_v1_admin_bookings__booking_id__assign_post: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                booking_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["AssignIn"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["BookingActionOut"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    reassign_api_v1_admin_bookings__booking_id__reassign_post: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                booking_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["ReassignIn"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["BookingActionOut"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    cancel_api_v1_admin_bookings__booking_id__cancel_post: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                booking_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["CancelIn"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["BookingActionOut"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    confirm_address_api_v1_admin_bookings__booking_id__confirm_address_post: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                booking_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["ConfirmAddressIn"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["BookingActionOut"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    flag_no_show_api_v1_admin_bookings__booking_id__no_show_post: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                booking_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["ReasonIn"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["BookingActionOut"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    correct_status_api_v1_admin_bookings__booking_id__correct_status_post: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                booking_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["CorrectStatusIn"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["BookingActionOut"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    get_policy_api_v1_admin_booking_policy_get: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["BookingPolicyOut"];
+                };
+            };
+        };
+    };
+    update_policy_api_v1_admin_booking_policy_patch: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["BookingPolicyPatch"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["BookingPolicyOut"];
                 };
             };
             /** @description Validation Error */

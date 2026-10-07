@@ -33,7 +33,7 @@ interface QueryLike<T> {
 
 export interface GateInput {
   session: SessionStatus;
-  me: QueryLike<{ user_type: string; is_verified: boolean; email: string }>;
+  me: QueryLike<{ user_type: string; is_verified: boolean; email?: string | null }>;
   status: QueryLike<VerificationStatus>;
 }
 
@@ -50,7 +50,7 @@ export function resolveGate({ session, me, status }: GateInput): Gate {
   // A failed background refetch keeps the data it already has; only a first load can fail the gate.
   if (!me.data) return me.isError ? { kind: "error" } : { kind: "loading" };
   if (me.data.user_type !== "caregiver") return { kind: "wrongAccount" };
-  if (!me.data.is_verified) return { kind: "verifyEmail", email: me.data.email };
+  if (!me.data.is_verified) return { kind: "verifyEmail", email: me.data.email ?? "" };
   if (!status.data) return status.isError ? { kind: "error" } : { kind: "loading" };
 
   switch (status.data.profileStatus) {
