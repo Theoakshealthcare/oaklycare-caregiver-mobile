@@ -48,6 +48,9 @@ export function createOaklyClient(options: OaklyClientOptions) {
       }
       return request;
     },
+    // Return undefined to keep the response as is. openapi-fetch rejects any returned value that is not
+    // `instanceof` the global Response, and React Native's fetch returns responses that fail that check,
+    // so handing the original back broke every call in the app (login included).
     async onResponse({ request, response }) {
       if (
         response.status !== 401 ||
@@ -55,17 +58,28 @@ export function createOaklyClient(options: OaklyClientOptions) {
         !request.headers.has("Authorization") ||
         request.headers.has(RETRIED)
       ) {
-        return response;
+        return undefined;
       }
       const original = unread.get(request);
       unread.delete(request);
-      if (!original) return response;
+      if (!original) return undefined;
       const fresh = await options.onUnauthorized();
-      if (!fresh) return response;
+      if (!fresh) return undefined;
       const retry = new Request(original, { headers: new Headers(original.headers) });
       retry.headers.set("Authorization", `Bearer ${fresh}`);
       retry.headers.set(RETRIED, "1");
-      return (options.fetch ?? globalThis.fetch)(retry);
+      // Typed structurally: on React Native this is often NOT a global Response, even though the DOM
+      // types say fetch always returns one.
+      const retried: Pick<Response, "text" | "status" | "statusText" | "headers"> = await (
+        options.fetch ?? globalThis.fetch
+      )(retry);
+      if (retried instanceof Response) return retried;
+      // Same React Native mismatch: rebuild it as a global Response so openapi-fetch accepts it.
+      return new Response(await retried.text(), {
+        status: retried.status,
+        statusText: retried.statusText,
+        headers: retried.headers,
+      });
     },
   };
   client.use(auth);

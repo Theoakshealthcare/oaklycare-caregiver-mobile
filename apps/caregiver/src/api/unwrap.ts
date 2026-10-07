@@ -11,8 +11,9 @@ async function settle<T>(call: Promise<FetchResult<T>>): Promise<FetchResult<T>>
   let result: FetchResult<T>;
   try {
     result = await call;
-  } catch {
+  } catch (error) {
     // fetch rejects (TypeError) when the request never completed: offline, DNS, refused connection.
+    if (__DEV__) console.warn("[api] request failed before a response was read:", error);
     throw new ApiError(0, null, NETWORK_MESSAGE);
   }
   if (result.error !== undefined || !result.response.ok) {
