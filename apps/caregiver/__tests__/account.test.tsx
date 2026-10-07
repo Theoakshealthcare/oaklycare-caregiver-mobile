@@ -1,7 +1,7 @@
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { act, fireEvent, render, screen, waitFor } from "@testing-library/react-native";
 import React from "react";
-import { Alert } from "react-native";
+import { Alert, Linking } from "react-native";
 
 import { api } from "../src/api/client";
 import { ApiError } from "../src/api/errors";
@@ -120,13 +120,22 @@ describe("Profile screen", () => {
   it.each([
     ["Edit personal information", "EditProfile"],
     ["Payment & earnings", "Wallet"],
-    ["About us", "About"],
-    ["FAQs", "Faq"],
     ["Contact us", "Contact"],
   ])("%s opens %s", async (row, route) => {
     await renderWith(<Profile />);
     await fireEvent.press(screen.getByText(row));
     expect(mockNavigate).toHaveBeenCalledWith(route);
+  });
+
+  it.each([
+    ["About us", "https://www.oaklycare.com/about"],
+    ["FAQs", "https://www.oaklycare.com/faq"],
+  ])("%s opens the website page %s", async (row, url) => {
+    const open = jest.spyOn(Linking, "openURL").mockResolvedValue(true);
+    await renderWith(<Profile />);
+    await fireEvent.press(screen.getByText(row));
+    expect(open).toHaveBeenCalledWith(url);
+    expect(mockNavigate).not.toHaveBeenCalled();
   });
 
   it("logout asks first, then uses the auth service logout", async () => {
@@ -145,7 +154,8 @@ describe("Profile screen", () => {
     await fireEvent.press(screen.getByText("Delete account"));
     const [title, message] = alertSpy.mock.calls.at(-1) ?? [];
     expect(title).toBe("Delete your account?");
-    expect(message).toMatch(/permanently/i);
+    expect(message).toMatch(/personal details will be removed/i);
+    expect(message).toMatch(/cannot be undone/i);
     expect(message).toMatch(/cannot be undone/i);
     expect(del).not.toHaveBeenCalled();
     await pressAlertButton("Cancel");

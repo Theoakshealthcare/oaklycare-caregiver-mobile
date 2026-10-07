@@ -11,3 +11,7 @@ export function whatsappUrl(number: string = WHATSAPP_NUMBER): string | null {
   const digits = number.replace(/\D/g, "");
   return digits ? `https://wa.me/${digits}` : null;
 }
+
+/** Public pages on the Oakly website, opened in the phone's browser. */
+export const ABOUT_URL = "https://www.oaklycare.com/about";
+export const FAQ_URL = "https://www.oaklycare.com/faq";

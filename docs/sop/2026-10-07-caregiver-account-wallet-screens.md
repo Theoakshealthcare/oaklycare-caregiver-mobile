@@ -20,7 +20,8 @@ Everything below is reachable from Home: the **bell** opens notifications, the *
 | Payment & earnings | `Wallet` | `GET /caregiver/wallet`, `GET /caregiver/wallet/transactions?month=`, `GET /caregiver/wallet/payslip?month=`, `GET /caregiver/bank-account` |
 | Payment details | `BankDetails` | `GET` and `PUT /caregiver/bank-account` |
 | Get directions | `BookingDetails` | none (coordinates from the booking already loaded) |
-| About us, FAQs, Contact us | `About`, `Faq`, `Contact` | none (static) |
+| About us, FAQs | open https://www.oaklycare.com/about and /faq in the phone's browser (`Linking`) | none |
+| Contact us | `Contact` | none (static) |
 
 ## Why
 The app had no way to see notifications, edit a profile, see earnings or leave the account, and Home's avatar signed out with no menu. These are the "quick wins" that only need endpoints that already exist.
@@ -39,10 +40,10 @@ The app had no way to see notifications, edit a profile, see earnings or leave t
 | Logout / Delete | Both behind a confirm `Alert`. Delete states it is permanent and cannot be undone. `authService.deleteAccount()` forgets the push token **first**, then `DELETE /auth/profile`, then signs out, so a failed delete leaves the caregiver signed in with an error shown. | The backend hard-deletes with no password check and no undo. |
 | Notifications | An item with no `caregiver_id` opens as an **offer** (`toOffer`), otherwise by id. | Offer-view rule: patient data is null before accept, and `GET /booking/{id}` is 403 for an un-accepted job. |
 | Directions | `directionsTarget()` returns coordinates only for `accepted`, `en_route`, `in_progress` with finite, non-0,0 coordinates; `buildDirectionsUrl()` gives an Apple Maps URL on iOS, a Google Maps directions URL elsewhere, opened with `Linking`. The old inline `maps.google.com` link was replaced. | The button now hides itself rather than opening a wrong location. |
-| Static content | FAQ questions come from the design; answers, the About copy and the WhatsApp number are placeholders marked `CONTENT: owner to supply` (`src/content/faq.ts`, `src/content/about.ts`, `src/config/contact.ts`). WhatsApp shows "Not available yet" while the number is empty. | Nothing invented that looks real. |
+| Static content | **Update 2026-10-07:** About and FAQ are the website's pages (owner decision), so the in-app About/FAQ screens and their placeholder copy were removed; the URLs are `ABOUT_URL` and `FAQ_URL` in `src/config/contact.ts`. The WhatsApp number is still a placeholder (`CONTENT: owner to supply`); Contact shows "Not available yet" while it is empty. | One source of truth for that copy; no app release needed to change it. |
 
 ## What's involved
-- New: `src/screens/account/*` (Notifications, Profile, EditProfile, Wallet, BankDetails, About, Faq, Contact), `src/components/account/*`, `src/services/{wallet,notification,account}.service.ts`, `src/wallet/{walletModel,payslip}.ts`, `src/utils/maps.ts`, `src/config/contact.ts`, `src/content/*`.
+- New: `src/screens/account/*` (Notifications, Profile, EditProfile, Wallet, BankDetails, Contact), `src/components/account/*`, `src/services/{wallet,notification,account}.service.ts`, `src/wallet/{walletModel,payslip}.ts`, `src/utils/maps.ts`, `src/config/contact.ts`.
 - Changed: `Home.tsx` (bell + avatar to Profile), `BookingDetails.tsx` (directions), `auth.service.ts` (`deleteAccount`, shared `forgetPushToken`), `hooks/queries.ts`, `api/keys.ts`, `navigation/{Navigations,StackNavigator}.tsx`.
 - Dependencies (`npx expo install`, SDK 57 aligned): `expo-file-system ~57.0.7`, `expo-sharing ~57.0.22`, `expo-image-picker ~57.0.20`; config plugins `expo-sharing` and `expo-image-picker` (photo permission text) in `app.json`. **These are native modules: a new dev build is needed before they work on a device.**
 
@@ -55,7 +56,7 @@ The app had no way to see notifications, edit a profile, see earnings or leave t
 No backend or migration change. Revert the branch; remove the three packages and the two plugin entries from `app.json` if backing out the native modules.
 
 ## Follow-ups
-- Owner: FAQ answers, About copy, WhatsApp number.
+- Owner: WhatsApp support number. The delete-account dialog now says personal details are removed and legally required records are kept, matching the backend's anonymising erasure (backend PR #29).
 - Backend: bank list + account-name resolve (then replace the free-text bank fields), type `/auth/profile/upload-image`, `DELETE /auth/profile` and the payslip response in OpenAPI, return emergency contact name/address on the caregiver profile read, and confirm `DELETE /auth/profile` for a caregiver who has bookings or transactions (foreign keys).
 - A3 (crediting earnings) so the wallet is non-zero.
 - Rows left out because the feature does not exist: Live chat, Care plan, Refer and earn, Complaints, Security, Account and data.

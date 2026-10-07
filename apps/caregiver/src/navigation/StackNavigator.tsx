@@ -2,11 +2,9 @@ import { createStackNavigator } from "@react-navigation/stack";
 
 import { useSession } from "../auth";
 import { useMe, useVerificationStatus } from "../hooks/queries";
-import About from "../screens/account/About";
 import BankDetails from "../screens/account/BankDetails";
 import Contact from "../screens/account/Contact";
 import EditProfile from "../screens/account/EditProfile";
-import Faq from "../screens/account/Faq";
 import Notifications from "../screens/account/Notifications";
 import Profile from "../screens/account/Profile";
 import Wallet from "../screens/account/Wallet";
@@ -129,8 +127,6 @@ const StackNavigator = () => {
             <Stack.Screen name="EditProfile" component={EditProfile} />
             <Stack.Screen name="Wallet" component={Wallet} />
             <Stack.Screen name="BankDetails" component={BankDetails} />
-            <Stack.Screen name="About" component={About} />
-            <Stack.Screen name="Faq" component={Faq} />
             <Stack.Screen name="Contact" component={Contact} />
           </Stack.Navigator>
           {/* Location tracking, push-tap routing and the in-app banner: approved caregivers only. */}
