@@ -13,7 +13,6 @@ import { useAvailability } from "@/src/hooks/useAvailability";
 import { useCaregiverHome, useMe } from "@/src/hooks/queries";
 import useNavigation from "@/src/hooks/use-navigation";
 import { useOfferActions } from "@/src/hooks/useOfferActions";
-import { authService } from "@/src/services/auth.service";
 import { ensureBackgroundLocation } from "@/src/supply/permissions";
 import { useLocationPermissions } from "@/src/supply/permissionState";
 import { hasActiveVisit } from "@/src/supply/tracking";
@@ -73,7 +72,11 @@ const VisitRow: React.FC<{ visit: VisitView; onOpen: () => void }> = ({ visit, o
   </View>
 );
 
-const Header: React.FC<{ name: string | undefined; onAvatar: () => void }> = ({ name, onAvatar }) => (
+const Header: React.FC<{ name: string | undefined; onAvatar: () => void; onBell: () => void }> = ({
+  name,
+  onAvatar,
+  onBell,
+}) => (
   <View
     style={{
       paddingTop: 50,
@@ -84,7 +87,7 @@ const Header: React.FC<{ name: string | undefined; onAvatar: () => void }> = ({ 
       alignItems: "center",
     }}
   >
-    <View>
+    <View style={{ flex: 1, paddingRight: 12 }}>
       <Text variant="h2" weight="bold" color={theme.colors.white}>
         {greeting(name)}
       </Text>
@@ -92,24 +95,34 @@ const Header: React.FC<{ name: string | undefined; onAvatar: () => void }> = ({ 
         What would you like to do today?
       </Text>
     </View>
-    <TouchableOpacity
-      accessibilityRole="button"
-      accessibilityLabel="Account"
-      onPress={onAvatar}
-      style={{
-        width: 44,
-        height: 44,
-        borderRadius: 22,
-        borderWidth: 2,
-        borderColor: theme.colors.white,
-        alignItems: "center",
-        justifyContent: "center",
-      }}
-    >
-      <Text variant="body" weight="bold" color={theme.colors.white}>
-        {name?.trim().charAt(0).toUpperCase() ?? "?"}
-      </Text>
-    </TouchableOpacity>
+    <View style={{ flexDirection: "row", alignItems: "center", gap: 12 }}>
+      <TouchableOpacity
+        accessibilityRole="button"
+        accessibilityLabel="Notifications"
+        onPress={onBell}
+        style={{ width: 44, height: 44, alignItems: "center", justifyContent: "center" }}
+      >
+        <Feather name="bell" size={24} color={theme.colors.white} />
+      </TouchableOpacity>
+      <TouchableOpacity
+        accessibilityRole="button"
+        accessibilityLabel="Account"
+        onPress={onAvatar}
+        style={{
+          width: 44,
+          height: 44,
+          borderRadius: 22,
+          borderWidth: 2,
+          borderColor: theme.colors.white,
+          alignItems: "center",
+          justifyContent: "center",
+        }}
+      >
+        <Text variant="body" weight="bold" color={theme.colors.white}>
+          {name?.trim().charAt(0).toUpperCase() ?? "?"}
+        </Text>
+      </TouchableOpacity>
+    </View>
   </View>
 );
 
@@ -174,12 +187,6 @@ const Home: React.FC = () => {
   // Staleness is judged as of the moment the data was fetched (home is polled at least every 60 s).
   const { data, dataUpdatedAt } = home;
   const view = useMemo(() => (data ? mapHome(data, dataUpdatedAt) : null), [data, dataUpdatedAt]);
-
-  const signOut = () =>
-    Alert.alert("Sign out", "Do you want to sign out of Oakly?", [
-      { text: "Cancel", style: "cancel" },
-      { text: "Sign out", style: "destructive", onPress: () => void authService.logout() },
-    ]);
 
   const confirmDecline = (bookingId: string) =>
     Alert.alert("Decline this job?", "It will be offered to other caregivers.", [
@@ -273,7 +280,11 @@ const Home: React.FC = () => {
 
   return (
     <View style={{ flex: 1, backgroundColor: theme.colors.primary }}>
-      <Header name={me.data?.full_name} onAvatar={signOut} />
+      <Header
+        name={me.data?.full_name}
+        onAvatar={() => navigation.navigate("Profile")}
+        onBell={() => navigation.navigate("Notifications")}
+      />
       <ScrollView
         style={{ flex: 1, backgroundColor: theme.colors.background, borderTopLeftRadius: 24, borderTopRightRadius: 24 }}
         contentContainerStyle={{ paddingBottom: 32 }}

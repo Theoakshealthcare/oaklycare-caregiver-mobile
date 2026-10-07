@@ -6,6 +6,8 @@ import { authService } from "@/src/services/auth.service";
 import { homePollInterval } from "@/src/home/homeModel";
 import { bookingService, type BookingAction, type VisitAction } from "@/src/services/booking.service";
 import { caregiverService } from "@/src/services/caregiver.service";
+import { notificationService } from "@/src/services/notification.service";
+import { walletService } from "@/src/services/wallet.service";
 import { locationService } from "@/src/supply/locationService";
 
 function useSignedIn(): boolean {
@@ -113,4 +115,34 @@ export function useCreateNote(bookingId: string) {
       bookingService.createNote(bookingId, vars.title, vars.content),
     onSuccess: () => client.invalidateQueries({ queryKey: queryKeys.notes(bookingId) }),
   });
+}
+
+export function useNotifications() {
+  const enabled = useSignedIn();
+  return useQuery({ queryKey: queryKeys.notifications, queryFn: notificationService.list, enabled });
+}
+
+export function useCaregiverProfile() {
+  const enabled = useSignedIn();
+  return useQuery({ queryKey: queryKeys.caregiverProfile, queryFn: caregiverService.getProfile, enabled });
+}
+
+export function useWallet() {
+  const enabled = useSignedIn();
+  return useQuery({ queryKey: queryKeys.wallet, queryFn: walletService.getWallet, enabled });
+}
+
+export function useWalletTransactions(month: string) {
+  const enabled = useSignedIn();
+  return useQuery({
+    queryKey: queryKeys.walletTransactions(month),
+    queryFn: () => walletService.getTransactions(month),
+    enabled,
+  });
+}
+
+/** `null` data means no account is saved yet (404), not an error. */
+export function useBankAccount() {
+  const enabled = useSignedIn();
+  return useQuery({ queryKey: queryKeys.bankAccount, queryFn: walletService.getBankAccount, enabled });
 }

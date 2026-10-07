@@ -19,9 +19,10 @@ import { authService } from "../src/services/auth.service";
 import { session } from "../src/auth";
 import { locationService, type CaregiverHome } from "../src/supply/locationService";
 
+const mockNavigate = jest.fn();
 jest.mock("../src/hooks/use-navigation", () => ({
   __esModule: true,
-  default: () => ({ navigation: { navigate: jest.fn() } }),
+  default: () => ({ navigation: { navigate: mockNavigate } }),
 }));
 jest.mock("@react-navigation/native", () => ({
   ...jest.requireActual("@react-navigation/native"),
@@ -295,6 +296,15 @@ describe("Home screen", () => {
     await waitFor(() => expect(alertSpy).toHaveBeenCalled());
     expect(locationService.ping).not.toHaveBeenCalled();
     expect(locationService.setAvailability).not.toHaveBeenCalled();
+  });
+
+  it("the bell opens notifications and the avatar opens the profile menu", async () => {
+    jest.spyOn(locationService, "getHome").mockResolvedValue(emptyHome);
+    await renderHome();
+    await fireEvent.press(await screen.findByLabelText("Notifications"));
+    expect(mockNavigate).toHaveBeenCalledWith("Notifications");
+    await fireEvent.press(screen.getByLabelText("Account"));
+    expect(mockNavigate).toHaveBeenCalledWith("Profile");
   });
 
   it("going unavailable only calls the switch", async () => {
