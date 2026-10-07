@@ -1,4 +1,5 @@
 import { Pressable } from "react-native";
+import { theme } from "@/src/constants/theme";
 import React from "react";
 import { useNavigation } from "@react-navigation/native";
 import Icon from "../ui/icon";
@@ -14,7 +15,7 @@ const HeaderBack = () => {
   return (
     <Pressable onPress={() => navigation.goBack()} style={globalStyles.row}>
       <Icon name="chevron-back" size={24} />
-      <Text style={{ fontSize: 16 }}>Back</Text>
+      <Text style={{ fontSize: theme.sizes.body }}>Back</Text>
     </Pressable>
   );
 };

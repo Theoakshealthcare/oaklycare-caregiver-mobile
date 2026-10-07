@@ -1,9 +1,24 @@
-import { PixelRatio, Dimensions } from "react-native"
-
-const fontScale = PixelRatio.getFontScale();
-const getFontSize = (size: number) => size / fontScale;
+import { Dimensions } from "react-native"
 
 const { width, height } = Dimensions.get("window")
+
+/** Width the screens were designed at (iPhone 15/16 class). */
+export const DESIGN_WIDTH = 390
+
+/**
+ * Moderate, damped scale factor from the window WIDTH (never height): half of the relative
+ * difference from the design width, clamped to 0.9 to 1.15. Small Androids shrink a little, large
+ * phones and small tablets grow a little, never more. The OS text size is applied separately by
+ * React Native (capped with maxFontSizeMultiplier), so it is deliberately not divided out here.
+ */
+export const scaleFactor = (windowWidth: number): number =>
+  Math.min(1.15, Math.max(0.9, 1 + (windowWidth / DESIGN_WIDTH - 1) * 0.5))
+
+const factor = scaleFactor(width)
+const scale = (size: number) => Math.round(size * factor * 2) / 2
+
+/** Cap for the OS accessibility text size, so large settings do not break layouts. */
+export const MAX_FONT_SCALE = 1.3
 
 export const theme = {
   colors: {
@@ -28,12 +43,12 @@ export const theme = {
     soft: "#F8F8FC"
   },
   spacing: {
-    xs: 4,
-    sm: 8,
-    md: 16,
-    lg: 24,
-    xl: 32,
-    xxl: 48,
+    xs: scale(4),
+    sm: scale(8),
+    md: scale(16),
+    lg: scale(24),
+    xl: scale(32),
+    xxl: scale(48),
   },
   borderRadius: {
     sm: 4,
@@ -43,17 +58,14 @@ export const theme = {
     xxl: 20,
     round: 9999,
   },
+  /** The only font sizes in the app (design values, scaled by width). Raw `fontSize:` numbers are banned. */
   sizes: {
-    nano: getFontSize(4),
-    base: getFontSize(8),
-    small: getFontSize(height * 0.015),
-    font: getFontSize(height * 0.018),
-    medium: getFontSize(height * 0.02),
-    large: getFontSize(height * 0.022),
-    extraLarge: getFontSize(height * 0.026),
-    xxl: getFontSize(height * 0.028),
-    xxxl: getFontSize(28),
-    button: getFontSize(48),
+    caption: scale(13),
+    body: scale(15),
+    subtitle: scale(17),
+    title: scale(20),
+    heading: scale(24),
+    display: scale(28),
   },
   shadows: {
     small: {
@@ -91,3 +103,6 @@ export const screenSize = {
   height,
   isSmallDevice: width < 375,
 }
+
+/** Line height for a font size from the scale. */
+export const lineHeightFor = (fontSize: number): number => Math.round(fontSize * 1.35)

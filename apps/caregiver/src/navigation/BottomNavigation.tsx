@@ -3,7 +3,9 @@ import { theme } from "../constants/theme";
 import Text from "../components/ui/text";
 import { globalStyles } from "../constants/styles";
 import Home from "../screens/home/Home";
-import { useState } from "react";
+import { useEffect, useState } from "react";
+import type { StackScreenProps } from "@react-navigation/stack";
+import type { ScreenParamLists } from "./Navigations";
 // import Fall from "../screens/fall/Fall";
 import Booking from "../screens/booking/Booking";
 import PagerView, { type PagerViewOnPageSelectedEvent } from "react-native-pager-view";
@@ -13,7 +15,7 @@ import Animated from "react-native-reanimated";
 import useTextAnimation from "../hooks/use-text-animation";
 // import Vitals from "../screens/vital/Vitals";
 
-const BottomNavigation = () => {
+const BottomNavigation = ({ route }: Partial<StackScreenProps<ScreenParamLists, "BottomNavigation">>) => {
   const tabs = [
     {
       id: "home",
@@ -53,6 +55,19 @@ const BottomNavigation = () => {
 
   const [tab, setTab] = useState(0);
   const [key, setKey] = useState(0);
+
+  // Arriving with a requested tab (e.g. "Back to home" after a visit) jumps to it.
+  const requested = route?.params?.tab;
+  const requestedAt = route?.params?.at;
+  useEffect(() => {
+    if (!requested) return;
+    const index = tabs.findIndex((t) => t.id === requested);
+    if (index >= 0) {
+      setTab(index);
+      setKey((prevKey) => prevKey + 1);
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [requested, requestedAt]);
 
   const handleTab = (index: number) => {
     setTab(index);

@@ -12,7 +12,7 @@ import {
   setAudioModeAsync,
 } from "expo-audio"
 
-import { theme } from "@/src/constants/theme"
+import { theme, MAX_FONT_SCALE } from "@/src/constants/theme"
 import Text from "@/src/components/ui/text"
 import Button from "@/src/components/ui/button"
 import HeaderBack from "@/src/components/back/HeaderBack"
@@ -234,11 +234,12 @@ const AINoteTaker: React.FC<StackScreenProps<ScreenParamLists, "AINoteTaker">> =
             }}
           >
             <TextInput
+ maxFontSizeMultiplier={MAX_FONT_SCALE}
               placeholder="Note title..."
               value={noteTitle}
               onChangeText={setNoteTitle}
               style={{
-                fontSize: 18,
+                fontSize: theme.sizes.subtitle,
                 fontWeight: "bold",
                 color: theme.colors.text,
                 marginBottom: 12,
@@ -246,13 +247,14 @@ const AINoteTaker: React.FC<StackScreenProps<ScreenParamLists, "AINoteTaker">> =
             />
 
             <TextInput
+ maxFontSizeMultiplier={MAX_FONT_SCALE}
               placeholder="Write your observations here..."
               value={currentNote}
               onChangeText={setCurrentNote}
               multiline
               numberOfLines={4}
               style={{
-                fontSize: 16,
+                fontSize: theme.sizes.body,
                 color: theme.colors.text,
                 textAlignVertical: "top",
                 marginBottom: 16,

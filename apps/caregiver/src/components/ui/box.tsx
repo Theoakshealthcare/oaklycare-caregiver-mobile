@@ -53,7 +53,7 @@ const Box: React.FC<BoxProps> = ({
   ]
 
   return (
-    <View style={[{padding: theme.sizes.font}, boxStyles]} {...rest}>
+    <View style={[{padding: theme.spacing.md}, boxStyles]} {...rest}>
       {children}
     </View>
   )

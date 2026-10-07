@@ -30,7 +30,7 @@ const AccountCreated = () => {
         <Text>Close</Text>
       </Pressable>
 
-      <Box flex={1} center style={{gap: theme.sizes.xxl}}>
+      <Box flex={1} center style={{gap: theme.spacing.lg}}>
         <Done />
 
         <Text

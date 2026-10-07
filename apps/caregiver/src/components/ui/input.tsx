@@ -14,7 +14,7 @@ import {
 } from "react-native";
 import { Feather } from "@expo/vector-icons";
 import Text from "./text";
-import { theme } from "../../constants/theme";
+import { theme, MAX_FONT_SCALE } from "../../constants/theme";
 import Box from "./box";
 import { globalStyles } from "@/src/constants/styles";
 
@@ -93,6 +93,7 @@ const Input: React.FC<InputProps> = ({
           onFocus={handleFocus}
           onBlur={handleBlur}
           secureTextEntry={secureTextEntry && !isPasswordVisible}
+          maxFontSizeMultiplier={MAX_FONT_SCALE}
           {...rest}
         />
 
@@ -130,9 +131,9 @@ const Input: React.FC<InputProps> = ({
 const styles = StyleSheet.create({
   input: {
     flex: 1,
-    paddingVertical: theme.sizes.font,
-    paddingHorizontal: theme.sizes.font,
-    fontSize: theme.sizes.medium,
+    paddingVertical: theme.spacing.md,
+    paddingHorizontal: theme.spacing.md,
+    fontSize: theme.sizes.body,
     color: theme.colors.text,
   },
   inputWithLeftIcon: {

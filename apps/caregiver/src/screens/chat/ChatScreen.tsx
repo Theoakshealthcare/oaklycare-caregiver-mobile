@@ -6,7 +6,7 @@ import { View, ScrollView, TextInput, TouchableOpacity, KeyboardAvoidingView, Pl
 import type { StackScreenProps } from "@react-navigation/stack"
 import { Feather } from "@expo/vector-icons"
 
-import { theme } from "@/src/constants/theme"
+import { theme, MAX_FONT_SCALE } from "@/src/constants/theme"
 import Text from "@/src/components/ui/text"
 import { globalStyles } from "@/src/constants/styles"
 import Navigation from "@/src/hooks/use-navigation"
@@ -163,13 +163,14 @@ const ChatScreen: React.FC<StackScreenProps<ScreenParamLists, "ChatScreen">> = (
               }}
             >
               <TextInput
+ maxFontSizeMultiplier={MAX_FONT_SCALE}
                 value={newMessage}
                 onChangeText={setNewMessage}
                 placeholder="Type a message..."
                 placeholderTextColor={theme.colors.textLight}
                 multiline
                 style={{
-                  fontSize: 16,
+                  fontSize: theme.sizes.body,
                   color: theme.colors.text,
                   maxHeight: 80,
                 }}

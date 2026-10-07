@@ -127,7 +127,6 @@ const OnboardingScreen = () => {
             description={item.description}
             image={item.image}
             backgroundColor={item.backgroundColor}
-            isLast={index === slides.length - 1}
             onNext={handleNext}
             onSkip={handleSkip}
             onLogin={handleLogin}

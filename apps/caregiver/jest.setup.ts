@@ -59,3 +59,6 @@ jest.mock("expo-notifications", () => ({
   addNotificationResponseReceivedListener: jest.fn(() => ({ remove: jest.fn() })),
   useLastNotificationResponse: jest.fn(() => null),
 }));
+
+// SafeAreaProvider only renders children after a native layout pass; use the library's jest mock (zero insets).
+jest.mock("react-native-safe-area-context", () => require("react-native-safe-area-context/jest/mock").default);

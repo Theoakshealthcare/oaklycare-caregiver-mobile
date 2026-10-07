@@ -51,10 +51,10 @@ const OfferCard: React.FC<Props> = ({ offer, busy = false, onView, onAccept, onD
       </Text>
     </View>
 
-    <View style={{ flexDirection: "row", gap: 12 }}>
-      <Button title="Details" variant="outline" onPress={onView} disabled={busy} style={{ flex: 1 }} />
-      <Button title="Decline" variant="outline" onPress={onDecline} disabled={busy} style={{ flex: 1 }} />
-      <Button title="Accept" onPress={onAccept} loading={busy} style={{ flex: 1 }} />
+    <View style={{ flexDirection: "row", gap: 8 }}>
+      <Button title="Details" variant="outline" onPress={onView} disabled={busy} style={{ flex: 1, paddingHorizontal: 8 }} />
+      <Button title="Decline" variant="outline" onPress={onDecline} disabled={busy} style={{ flex: 1, paddingHorizontal: 8 }} />
+      <Button title="Accept" onPress={onAccept} loading={busy} style={{ flex: 1, paddingHorizontal: 8 }} />
     </View>
   </View>
 );

@@ -1,4 +1,5 @@
 import React, { useState } from 'react';
+import { theme } from "@/src/constants/theme";
 import { View, Text, TouchableOpacity, Modal, FlatList, StyleSheet } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 
@@ -121,7 +122,7 @@ const styles = StyleSheet.create({
     marginBottom: 16,
   },
   label: {
-    fontSize: 16,
+    fontSize: theme.sizes.body,
     fontWeight: '600',
     color: '#333',
     marginBottom: 8,
@@ -148,7 +149,7 @@ const styles = StyleSheet.create({
     borderColor: '#E1E1E1',
   },
   selectButtonText: {
-    fontSize: 16,
+    fontSize: theme.sizes.body,
     color: '#333',
     flex: 1,
   },
@@ -160,7 +161,7 @@ const styles = StyleSheet.create({
   },
   errorText: {
     color: '#FF3B30',
-    fontSize: 14,
+    fontSize: theme.sizes.body,
     marginTop: 4,
   },
   modalOverlay: {
@@ -183,7 +184,7 @@ const styles = StyleSheet.create({
     borderBottomColor: '#E1E1E1',
   },
   modalTitle: {
-    fontSize: 18,
+    fontSize: theme.sizes.subtitle,
     fontWeight: '600',
     color: '#333',
   },
@@ -200,7 +201,7 @@ const styles = StyleSheet.create({
     backgroundColor: '#F0F8FF',
   },
   optionText: {
-    fontSize: 16,
+    fontSize: theme.sizes.body,
     color: '#333',
     flex: 1,
   },

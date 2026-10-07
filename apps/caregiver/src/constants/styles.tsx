@@ -7,18 +7,18 @@ export const globalStyles = StyleSheet.create({
   container: {
     // height: "100%",
     width: "100%",
-    padding: theme.sizes.medium,
-    paddingVertical: theme.sizes.extraLarge,
+    padding: theme.spacing.md,
+    paddingVertical: theme.spacing.lg,
     paddingBottom: screenSize.height * 0.06,
     backgroundColor: theme.colors.white,
     flex: 1
   },
 
-  row: { flexDirection: "row", alignItems: "center", gap: theme.sizes.base },
+  row: { flexDirection: "row", alignItems: "center", gap: theme.spacing.sm },
 
-  column: { flexDirection: "column", gap: theme.sizes.large },
+  column: { flexDirection: "column", gap: theme.spacing.md },
 
-  box: { padding: theme.sizes.font, borderRadius: 10 },
+  box: { padding: theme.spacing.md, borderRadius: 10 },
 
   center: { justifyContent: "center", alignItems: "center" },
 
