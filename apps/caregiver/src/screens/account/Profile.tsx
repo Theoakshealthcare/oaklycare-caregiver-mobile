@@ -1,8 +1,9 @@
 import React from "react";
-import { Alert, Pressable, ScrollView, View } from "react-native";
+import { Alert, Linking, Pressable, ScrollView, View } from "react-native";
 import { Feather } from "@expo/vector-icons";
 
 import { messageForError } from "@/src/api/errors";
+import { ABOUT_URL, FAQ_URL } from "@/src/config/contact";
 import HeaderBack from "@/src/components/back/HeaderBack";
 import Image from "@/src/components/ui/image";
 import Text from "@/src/components/ui/text";
@@ -53,7 +54,7 @@ const Profile: React.FC = () => {
   const confirmDelete = () =>
     Alert.alert(
       "Delete your account?",
-      "This permanently deletes your Oakly account and profile. It cannot be undone, and you will be signed out.",
+      "Your personal details will be removed and you will be signed out. This cannot be undone. Records we must keep by law, such as past bookings and payments, are kept without your details.",
       [
         { text: "Cancel", style: "cancel" },
         {
@@ -124,8 +125,8 @@ const Profile: React.FC = () => {
 
           <MenuRow icon="user" label="Edit personal information" onPress={() => navigation.navigate("EditProfile")} />
           <MenuRow icon="credit-card" label="Payment & earnings" onPress={() => navigation.navigate("Wallet")} />
-          <MenuRow icon="info" label="About us" onPress={() => navigation.navigate("About")} />
-          <MenuRow icon="help-circle" label="FAQs" onPress={() => navigation.navigate("Faq")} />
+          <MenuRow icon="info" label="About us" onPress={() => void Linking.openURL(ABOUT_URL)} />
+          <MenuRow icon="help-circle" label="FAQs" onPress={() => void Linking.openURL(FAQ_URL)} />
           <MenuRow icon="phone" label="Contact us" onPress={() => navigation.navigate("Contact")} />
           <MenuRow icon="log-out" label="Logout" onPress={confirmLogout} danger />
           <MenuRow icon="trash-2" label="Delete account" onPress={confirmDelete} danger />

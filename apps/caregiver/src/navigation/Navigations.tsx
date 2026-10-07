@@ -26,8 +26,6 @@ export type ScreenParamLists = {
   EditProfile: undefined;
   Wallet: undefined;
   BankDetails: undefined;
-  About: undefined;
-  Faq: undefined;
   Contact: undefined;
   /** accepted -> on my way -> visit code -> in progress -> complete, driven by the booking status. */
   VisitFlow: { bookingId: string };
