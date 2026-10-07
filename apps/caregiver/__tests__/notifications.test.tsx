@@ -29,6 +29,7 @@ const notification: CaregiverNotification = {
   booking: {
     id: "1b4b008b-c4d2-4fb1-a7b6-1eca61375802",
     booking_code: "2DC38733",
+    channel: "whatsapp",
     patient_id: "d6439478-3aa3-40c0-ae01-4545fe16d585",
     patient_details: null,
     caregiver_id: null,

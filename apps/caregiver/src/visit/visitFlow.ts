@@ -131,6 +131,14 @@ export function isOnMyWayOpen(scheduledDateMs: number, nowMs: number): boolean {
   return nowMs >= onMyWayUnlocksAt(scheduledDateMs);
 }
 
+/**
+ * The drop-out button is only for a WhatsApp booking that is still `accepted` and more than the same
+ * window (2 h) before the start; the backend refuses inside it with a 409.
+ */
+export function canDropOut(channel: string, status: string, scheduledDateMs: number, nowMs: number): boolean {
+  return channel === "whatsapp" && status === "accepted" && nowMs < onMyWayUnlocksAt(scheduledDateMs);
+}
+
 /** Wording for the confirmation before a caregiver drops a job they accepted. Promises nothing about money. */
 export const DROP_OUT_CONFIRM = {
   title: "Can't make this visit?",

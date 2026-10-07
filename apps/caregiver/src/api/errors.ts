@@ -58,6 +58,8 @@ const DETAIL = {
  */
 const ON_MY_WAY_TOO_EARLY = /^You can mark yourself on the way from (\d+ (?:hours?|minutes?)) before the visit$/;
 
+const TOO_CLOSE_TO_CANCEL = "It's too close to the visit to cancel in the app. Please contact support.";
+
 /** The lock the backend applies after 3 wrong codes (guide, section 8). */
 export const VISIT_CODE_LOCK_SECONDS = 900;
 
@@ -103,6 +105,9 @@ function visitMessage(status: number, detail: string | null, retryAfterSeconds: 
   }
   if (status === 409) {
     if (detail === DETAIL.onlyAcceptedOnTheWay) return "This visit has already moved past this step. We've refreshed it.";
+    if (detail === TOO_CLOSE_TO_CANCEL) {
+      return "It's too close to the visit to cancel in the app. Please contact support from the Contact screen.";
+    }
     const early = detail ? ON_MY_WAY_TOO_EARLY.exec(detail) : null;
     if (early) return `You can mark yourself on the way from ${early[1]} before the visit.`;
     if (detail === DETAIL.onlyAcceptedStart) return "This visit can't be started right now. We've refreshed it.";

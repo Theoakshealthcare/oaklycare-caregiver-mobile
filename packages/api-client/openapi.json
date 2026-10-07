@@ -2187,19 +2187,25 @@
               }
             }
           }
-        }
+        },
+        "security": [
+          {
+            "AdminBearer": []
+          }
+        ]
       },
       "post": {
         "tags": [
           "booking_settings"
         ],
         "summary": "Create Booking Settings",
+        "description": "Create the very first pricing version. Once one exists this is a 409: edit the latest with PUT.",
         "operationId": "create_booking_settings_api_v1_booking_settings__post",
         "requestBody": {
           "content": {
             "application/json": {
               "schema": {
-                "$ref": "#/components/schemas/BookingSettingsCreate"
+                "$ref": "#/components/schemas/BookingSettingsWrite"
               }
             }
           },
@@ -2252,7 +2258,12 @@
               }
             }
           }
-        }
+        },
+        "security": [
+          {
+            "AdminBearer": []
+          }
+        ]
       }
     },
     "/api/v1/booking-settings/{settings_id}": {
@@ -2261,6 +2272,7 @@
           "booking_settings"
         ],
         "summary": "Update Booking Settings",
+        "description": "Publish a new version that replaces ``settings_id``, which must still be the latest. The old row is untouched.",
         "operationId": "update_booking_settings_api_v1_booking_settings__settings_id__put",
         "security": [
           {
@@ -2274,6 +2286,7 @@
             "required": true,
             "schema": {
               "type": "string",
+              "format": "uuid",
               "title": "Settings Id"
             }
           }
@@ -2283,7 +2296,7 @@
           "content": {
             "application/json": {
               "schema": {
-                "$ref": "#/components/schemas/BookingSettingsUpdate"
+                "$ref": "#/components/schemas/BookingSettingsWrite"
               }
             }
           }
@@ -2316,6 +2329,7 @@
           "booking_settings"
         ],
         "summary": "Delete Booking Settings",
+        "description": "Refused: versions are the pricing history that quotes and bookings point at. To change the price, publish a new\nversion (PUT); to go back, publish the old values again.",
         "operationId": "delete_booking_settings_api_v1_booking_settings__settings_id__delete",
         "security": [
           {
@@ -2329,13 +2343,22 @@
             "required": true,
             "schema": {
               "type": "string",
+              "format": "uuid",
               "title": "Settings Id"
             }
           }
         ],
         "responses": {
-          "204": {
-            "description": "Successful Response"
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {}
+              }
+            }
+          },
+          "409": {
+            "description": "Always: pricing versions are never deleted"
           },
           "422": {
             "description": "Validation Error",
@@ -8836,6 +8859,15 @@
             "type": "string",
             "title": "Booking Code"
           },
+          "channel": {
+            "type": "string",
+            "enum": [
+              "app",
+              "whatsapp",
+              "admin"
+            ],
+            "title": "Channel"
+          },
           "patient_id": {
             "type": "string",
             "format": "uuid",
@@ -9059,6 +9091,7 @@
         "required": [
           "id",
           "booking_code",
+          "channel",
           "patient_id",
           "service_type",
           "assistance_type",
@@ -9077,80 +9110,6 @@
           "updated_at"
         ],
         "title": "BookingResponse"
-      },
-      "BookingSettingsCreate": {
-        "properties": {
-          "base_fee": {
-            "type": "number",
-            "title": "Base Fee",
-            "description": "Base fee per hour"
-          },
-          "platform_fee_percent": {
-            "type": "number",
-            "title": "Platform Fee Percent",
-            "description": "Platform fee in percent"
-          },
-          "multipliers": {
-            "anyOf": [
-              {
-                "additionalProperties": {
-                  "type": "number"
-                },
-                "type": "object"
-              },
-              {
-                "type": "null"
-              }
-            ],
-            "title": "Multipliers",
-            "description": "Service type multipliers"
-          },
-          "surge_pricing": {
-            "anyOf": [
-              {
-                "type": "boolean"
-              },
-              {
-                "type": "null"
-              }
-            ],
-            "title": "Surge Pricing",
-            "description": "Is surge pricing active?",
-            "default": false
-          },
-          "surge_multiplier": {
-            "anyOf": [
-              {
-                "type": "number"
-              },
-              {
-                "type": "null"
-              }
-            ],
-            "title": "Surge Multiplier",
-            "description": "Surge multiplier",
-            "default": 1
-          },
-          "discount": {
-            "anyOf": [
-              {
-                "type": "number"
-              },
-              {
-                "type": "null"
-              }
-            ],
-            "title": "Discount",
-            "description": "Discount in percent",
-            "default": 0
-          }
-        },
-        "type": "object",
-        "required": [
-          "base_fee",
-          "platform_fee_percent"
-        ],
-        "title": "BookingSettingsCreate"
       },
       "BookingSettingsResponse": {
         "properties": {
@@ -9244,15 +9203,19 @@
         ],
         "title": "BookingSettingsResponse"
       },
-      "BookingSettingsUpdate": {
+      "BookingSettingsWrite": {
         "properties": {
           "base_fee": {
             "type": "number",
+            "maximum": 1000000,
+            "minimum": 0.01,
             "title": "Base Fee",
-            "description": "Base fee per hour"
+            "description": "Base fee per hour, in naira"
           },
           "platform_fee_percent": {
             "type": "number",
+            "maximum": 100,
+            "minimum": 0,
             "title": "Platform Fee Percent",
             "description": "Platform fee in percent"
           },
@@ -9269,54 +9232,46 @@
               }
             ],
             "title": "Multipliers",
-            "description": "Service type multipliers"
+            "description": "Service type multipliers; keys: nurse, doctor, physiotherapist, caregiver, nutritionist; each above 0 and at most 10"
           },
           "surge_pricing": {
-            "anyOf": [
-              {
-                "type": "boolean"
-              },
-              {
-                "type": "null"
-              }
-            ],
+            "type": "boolean",
             "title": "Surge Pricing",
             "description": "Is surge pricing active?",
             "default": false
           },
           "surge_multiplier": {
-            "anyOf": [
-              {
-                "type": "number"
-              },
-              {
-                "type": "null"
-              }
-            ],
+            "type": "number",
+            "maximum": 5,
+            "minimum": 1,
             "title": "Surge Multiplier",
             "description": "Surge multiplier",
             "default": 1
           },
           "discount": {
-            "anyOf": [
-              {
-                "type": "number"
-              },
-              {
-                "type": "null"
-              }
-            ],
+            "type": "number",
+            "maximum": 100,
+            "minimum": 0,
             "title": "Discount",
             "description": "Discount in percent",
             "default": 0
+          },
+          "reason": {
+            "type": "string",
+            "maxLength": 2000,
+            "title": "Reason",
+            "description": "Why the pricing is changing (kept in the audit log)"
           }
         },
+        "additionalProperties": false,
         "type": "object",
         "required": [
           "base_fee",
-          "platform_fee_percent"
+          "platform_fee_percent",
+          "reason"
         ],
-        "title": "BookingSettingsUpdate"
+        "title": "BookingSettingsWrite",
+        "description": "A complete pricing version plus why it is being published."
       },
       "BookingStatus": {
         "type": "string",
@@ -9506,6 +9461,15 @@
           "booking_code": {
             "type": "string",
             "title": "Booking Code"
+          },
+          "channel": {
+            "type": "string",
+            "enum": [
+              "app",
+              "whatsapp",
+              "admin"
+            ],
+            "title": "Channel"
           },
           "patient_id": {
             "type": "string",
@@ -9799,6 +9763,7 @@
         "required": [
           "id",
           "booking_code",
+          "channel",
           "patient_id",
           "service_type",
           "assistance_type",

@@ -875,7 +875,10 @@ export interface paths {
         /** Get Booking Settings */
         get: operations["get_booking_settings_api_v1_booking_settings__get"];
         put?: never;
-        /** Create Booking Settings */
+        /**
+         * Create Booking Settings
+         * @description Create the very first pricing version. Once one exists this is a 409: edit the latest with PUT.
+         */
         post: operations["create_booking_settings_api_v1_booking_settings__post"];
         delete?: never;
         options?: never;
@@ -908,10 +911,17 @@ export interface paths {
             cookie?: never;
         };
         get?: never;
-        /** Update Booking Settings */
+        /**
+         * Update Booking Settings
+         * @description Publish a new version that replaces ``settings_id``, which must still be the latest. The old row is untouched.
+         */
         put: operations["update_booking_settings_api_v1_booking_settings__settings_id__put"];
         post?: never;
-        /** Delete Booking Settings */
+        /**
+         * Delete Booking Settings
+         * @description Refused: versions are the pricing history that quotes and bookings point at. To change the price, publish a new
+         *     version (PUT); to go back, publish the old values again.
+         */
         delete: operations["delete_booking_settings_api_v1_booking_settings__settings_id__delete"];
         options?: never;
         head?: never;
@@ -3075,6 +3085,11 @@ export interface components {
             /** Booking Code */
             booking_code: string;
             /**
+             * Channel
+             * @enum {string}
+             */
+            channel: "app" | "whatsapp" | "admin";
+            /**
              * Patient Id
              * Format: uuid
              */
@@ -3163,44 +3178,6 @@ export interface components {
              */
             payment_error?: string | null;
         };
-        /** BookingSettingsCreate */
-        BookingSettingsCreate: {
-            /**
-             * Base Fee
-             * @description Base fee per hour
-             */
-            base_fee: number;
-            /**
-             * Platform Fee Percent
-             * @description Platform fee in percent
-             */
-            platform_fee_percent: number;
-            /**
-             * Multipliers
-             * @description Service type multipliers
-             */
-            multipliers?: {
-                [key: string]: number;
-            } | null;
-            /**
-             * Surge Pricing
-             * @description Is surge pricing active?
-             * @default false
-             */
-            surge_pricing: boolean | null;
-            /**
-             * Surge Multiplier
-             * @description Surge multiplier
-             * @default 1
-             */
-            surge_multiplier: number | null;
-            /**
-             * Discount
-             * @description Discount in percent
-             * @default 0
-             */
-            discount: number | null;
-        };
         /** BookingSettingsResponse */
         BookingSettingsResponse: {
             /**
@@ -3254,11 +3231,14 @@ export interface components {
              */
             updated_at: string;
         };
-        /** BookingSettingsUpdate */
-        BookingSettingsUpdate: {
+        /**
+         * BookingSettingsWrite
+         * @description A complete pricing version plus why it is being published.
+         */
+        BookingSettingsWrite: {
             /**
              * Base Fee
-             * @description Base fee per hour
+             * @description Base fee per hour, in naira
              */
             base_fee: number;
             /**
@@ -3268,7 +3248,7 @@ export interface components {
             platform_fee_percent: number;
             /**
              * Multipliers
-             * @description Service type multipliers
+             * @description Service type multipliers; keys: nurse, doctor, physiotherapist, caregiver, nutritionist; each above 0 and at most 10
              */
             multipliers?: {
                 [key: string]: number;
@@ -3278,19 +3258,24 @@ export interface components {
              * @description Is surge pricing active?
              * @default false
              */
-            surge_pricing: boolean | null;
+            surge_pricing: boolean;
             /**
              * Surge Multiplier
              * @description Surge multiplier
              * @default 1
              */
-            surge_multiplier: number | null;
+            surge_multiplier: number;
             /**
              * Discount
              * @description Discount in percent
              * @default 0
              */
-            discount: number | null;
+            discount: number;
+            /**
+             * Reason
+             * @description Why the pricing is changing (kept in the audit log)
+             */
+            reason: string;
         };
         /**
          * BookingStatus
@@ -3385,6 +3370,11 @@ export interface components {
             id: string;
             /** Booking Code */
             booking_code: string;
+            /**
+             * Channel
+             * @enum {string}
+             */
+            channel: "app" | "whatsapp" | "admin";
             /**
              * Patient Id
              * Format: uuid
@@ -7059,7 +7049,7 @@ export interface operations {
         };
         requestBody: {
             content: {
-                "application/json": components["schemas"]["BookingSettingsCreate"];
+                "application/json": components["schemas"]["BookingSettingsWrite"];
             };
         };
         responses: {
@@ -7114,7 +7104,7 @@ export interface operations {
         };
         requestBody: {
             content: {
-                "application/json": components["schemas"]["BookingSettingsUpdate"];
+                "application/json": components["schemas"]["BookingSettingsWrite"];
             };
         };
         responses: {
@@ -7150,7 +7140,16 @@ export interface operations {
         requestBody?: never;
         responses: {
             /** @description Successful Response */
-            204: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": unknown;
+                };
+            };
+            /** @description Always: pricing versions are never deleted */
+            409: {
                 headers: {
                     [name: string]: unknown;
                 };

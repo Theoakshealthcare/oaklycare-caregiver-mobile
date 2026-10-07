@@ -6,7 +6,7 @@ import Button from "@/src/components/ui/button";
 import Text from "@/src/components/ui/text";
 import { theme, MAX_FONT_SCALE } from "@/src/constants/theme";
 import { parseBackendDate } from "@/src/utils/dates";
-import { isCompleteCode, isOnMyWayOpen, onMyWayUnlocksAt, sanitizeCode, secondsLeft, VISIT_CODE_LENGTH } from "@/src/visit/visitFlow";
+import { canDropOut, isCompleteCode, isOnMyWayOpen, onMyWayUnlocksAt, sanitizeCode, secondsLeft, VISIT_CODE_LENGTH } from "@/src/visit/visitFlow";
 
 interface StepFrameProps {
   title: string;
@@ -56,10 +56,13 @@ export const OnMyWayStep: React.FC<{
   busy: boolean;
   onOnMyWay: () => void;
   onArrived: () => void;
-  onCantMakeIt?: () => void;
+  /** Booking channel: only a WhatsApp booking can be dropped in the app. */
+  channel: string;
+  onCantMakeIt: () => void;
+  onContactSupport: () => void;
   /** Injected so tests can drive the clock. */
   now?: () => number;
-}> = ({ visit, scheduledDate, busy, onOnMyWay, onArrived, onCantMakeIt, now = Date.now }) => {
+}> = ({ visit, scheduledDate, busy, onOnMyWay, onArrived, channel, onCantMakeIt, onContactSupport, now = Date.now }) => {
   const startMs = parseBackendDate(scheduledDate).getTime();
   const [tick, setTick] = useState(now());
   useEffect(() => {
@@ -78,7 +81,13 @@ export const OnMyWayStep: React.FC<{
         </Text>
       )}
       <Button title="I've arrived: enter visit code" variant="outline" onPress={onArrived} disabled={busy} />
-      {onCantMakeIt ? <Button title="I can't make this visit" variant="outline" onPress={onCantMakeIt} disabled={busy} /> : null}
+      {canDropOut(channel, "accepted", startMs, tick) ? (
+        <Button title="I can't make this visit" variant="outline" onPress={onCantMakeIt} disabled={busy} />
+      ) : (
+        <Text variant="small" color={theme.colors.textLight} testID="contact-support-link" onPress={onContactSupport}>
+          Need to cancel? Contact support
+        </Text>
+      )}
     </StepFrame>
   );
 };

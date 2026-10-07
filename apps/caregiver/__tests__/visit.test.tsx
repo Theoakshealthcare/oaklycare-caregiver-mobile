@@ -263,7 +263,7 @@ describe("OnMyWayStep: unlocks two hours before the visit", () => {
     const onOnMyWay = jest.fn();
     const onArrived = jest.fn();
     await render(
-      <OnMyWayStep visit={visit} scheduledDate="2026-10-06T12:00:00" busy={false} onOnMyWay={onOnMyWay} onArrived={onArrived} />,
+      <OnMyWayStep visit={visit} scheduledDate="2026-10-06T12:00:00" busy={false} onOnMyWay={onOnMyWay} onArrived={onArrived} channel="whatsapp" onCantMakeIt={jest.fn()} onContactSupport={jest.fn()} />,
     );
     expect(screen.getByTestId("on-my-way-hint")).toBeTruthy();
     await fireEvent.press(screen.getByText("On my way"));
@@ -280,11 +280,48 @@ describe("OnMyWayStep: unlocks two hours before the visit", () => {
     expect(onOnMyWay).toHaveBeenCalledTimes(1);
   });
 
+  const renderStep = (channel: string, onCant = jest.fn(), onSupport = jest.fn()) =>
+    render(
+      <OnMyWayStep visit={visit} scheduledDate="2026-10-06T12:00:00" busy={false} onOnMyWay={jest.fn()} onArrived={jest.fn()} channel={channel} onCantMakeIt={onCant} onContactSupport={onSupport} />,
+    );
+
+  it("shows the drop-out button for a WhatsApp booking more than 2 h out, then swaps it for support inside 2 h", async () => {
+    jest.setSystemTime(Date.parse("2026-10-06T09:50:00Z"));
+    const onCant = jest.fn();
+    const onSupport = jest.fn();
+    await renderStep("whatsapp", onCant, onSupport);
+    expect(screen.queryByTestId("contact-support-link")).toBeNull();
+    await fireEvent.press(screen.getByText("I can't make this visit"));
+    expect(onCant).toHaveBeenCalledTimes(1);
+    await act(async () => {
+      jest.advanceTimersByTime(11 * 60_000);
+    });
+    expect(screen.queryByText("I can't make this visit")).toBeNull();
+    await fireEvent.press(screen.getByText("Need to cancel? Contact support"));
+    expect(onSupport).toHaveBeenCalledTimes(1);
+  });
+
+  it.each(["app", "admin"])("hides the drop-out button for a %s booking and shows the support link", async (channel) => {
+    jest.setSystemTime(Date.parse("2026-10-06T08:00:00Z"));
+    await renderStep(channel);
+    expect(screen.queryByText("I can't make this visit")).toBeNull();
+    expect(screen.getByTestId("contact-support-link")).toBeTruthy();
+  });
+
+  it("maps the too-close-to-cancel 409", () => {
+    expect(
+      messageForError(
+        new ApiError(409, { detail: "It's too close to the visit to cancel in the app. Please contact support." }, "x"),
+        "visit",
+      ),
+    ).toContain("too close to the visit to cancel in the app");
+  });
+
   it("is enabled straight away inside the window", async () => {
     jest.setSystemTime(Date.parse("2026-10-06T11:00:00Z"));
     const onOnMyWay = jest.fn();
     await render(
-      <OnMyWayStep visit={visit} scheduledDate="2026-10-06T12:00:00" busy={false} onOnMyWay={onOnMyWay} onArrived={jest.fn()} />,
+      <OnMyWayStep visit={visit} scheduledDate="2026-10-06T12:00:00" busy={false} onOnMyWay={onOnMyWay} onArrived={jest.fn()} channel="whatsapp" onCantMakeIt={jest.fn()} onContactSupport={jest.fn()} />,
     );
     expect(screen.queryByTestId("on-my-way-hint")).toBeNull();
     await fireEvent.press(screen.getByText("On my way"));

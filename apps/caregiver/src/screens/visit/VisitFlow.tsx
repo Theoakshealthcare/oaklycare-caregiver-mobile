@@ -162,7 +162,9 @@ const VisitFlow: React.FC<Props> = ({ route, navigation }) => {
             busy={busy}
             onOnMyWay={onMyWay}
             onArrived={() => setArrived(true)}
+            channel={booking.channel}
             onCantMakeIt={confirmDropOut}
+            onContactSupport={() => navigation.navigate("Contact")}
           />
         );
       case "enter_code":

@@ -9,7 +9,7 @@
 ## What shipped
 - API client re-synced from the drop-out backend branch (`packages/api-client/openapi.json`, `src/schema.d.ts`).
 - Visit flow: **On my way** is disabled before the window with a hint showing when it unlocks; the too-early 409 has a friendly message.
-- A **"I can't make this visit"** button on the first visit step (the app had no caregiver cancel UI before), with neutral confirmation copy, which sends `cancel`.
+- A **"I can't make this visit"** button on the first visit step (the app had no caregiver cancel UI before), with neutral confirmation copy, which sends `cancel`. **Owner rule (2026-10-07):** shown only when the booking's `channel` is `whatsapp`, its status is `accepted`, and the visit is more than 2 h away (`canDropOut` in `src/visit/visitFlow.ts`, re-checked every 15 s). Otherwise a **"Need to cancel? Contact support"** link opens the Contact screen. The backend enforces the same rule (innocent98/backend#32): inside the window it answers 409 `It's too close to the visit to cancel in the app. Please contact support.`, mapped in `src/api/errors.ts`.
 
 ## Why
 The backend now refuses `on_my_way` earlier than `onmyway_compensation_window_minutes` before the start (409, all bookings), and a caregiver cancel of a WhatsApp booking reopens it as `pending` for re-dispatch instead of ending it. The app must not offer a button the server will refuse, and must not promise the family a refund.
@@ -23,17 +23,19 @@ The backend now refuses `on_my_way` earlier than `onmyway_compensation_window_mi
 | After cancel | `useBookingAction` already invalidates lists, the booking and home on settle; the dropped booking is no longer the caregiver's, so it leaves their lists. The screen then goes Home. Cancel response status (`pending`) is not shown. |
 
 ## What's involved
+- `packages/api-client` re-synced from backend#32 (`channel` on booking responses); test fixtures gained `channel`.
 - `src/api/errors.ts`, `src/visit/visitFlow.ts`, `src/services/booking.service.ts` (`cancel` added to `VisitAction`), `src/screens/visit/VisitSteps.tsx` (`OnMyWayStep`), `src/screens/visit/VisitFlow.tsx`.
 - Schema drift fixes after the sync (the committed spec predated the account-erasure and WhatsApp work): `email` and `patient_address` are now nullable. `src/navigation/gate.ts`, `src/screens/booking/BookingDetails.tsx`.
 - Tests in `apps/caregiver/__tests__/visit.test.tsx`.
 
 ## Verification
-CI reproduced locally: frozen install, `api:generate` (no diff after commit), typecheck, lint, `pnpm test` (21 suites, 245 tests passed), admin build. Tests cover the 409 mapping, button disabled then enabled with fake timers (and the code entry staying available), the cancel copy, and the invalidation after a cancel. **Not exercised against a running backend or a device** (no simulator by instruction).
+CI reproduced locally: frozen install, `api:generate` (no diff after commit), typecheck, lint, `pnpm test` (21 suites, 249 tests passed), admin build. Tests cover both 409 mappings, the drop-out button shown for a WhatsApp booking more than 2 h out and swapped for the support link inside 2 h (fake timers), hidden with the support link for `app` and `admin` bookings, button disabled then enabled with fake timers (and the code entry staying available), the cancel copy, and the invalidation after a cancel. **Not exercised against a running backend or a device** (no simulator by instruction).
 
 ## Operate / roll back
-Revert the branch. Do not deploy before the backend change: before it, `cancel` ends the booking rather than reopening it, and the copy would then be inaccurate.
+Revert the branch. Merge and deploy only after innocent98/backend#30 and innocent98/backend#32: before them, `cancel` ends the booking rather than reopening it, the late-cancel 409 does not exist, and `channel` is not in the response (the button would stay hidden for everyone).
 
 ## Follow-ups
 - Read the unlock time from the policy if the backend ever exposes it.
 - Drop-out is only offered while the booking is `accepted`; an `en_route` caregiver cannot cancel from the app (the code step), by design for now.
-- Confirm with product that a visible cancel button for the caregiver is wanted.
+- ~~Confirm with product that a visible cancel button is wanted.~~ Confirmed by the owner on 2026-10-07, with the rule above.
+- The 2 h window is hard-coded in the app (no response carries the policy value); the server is authoritative if an admin changes `dropout_redispatch_min_lead_minutes`.
