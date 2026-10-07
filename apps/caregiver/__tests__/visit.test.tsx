@@ -1,9 +1,18 @@
 import { act, fireEvent, render, screen } from "@testing-library/react-native";
 import React from "react";
 
+import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
+import { renderHook, waitFor } from "@testing-library/react-native";
+
+import { queryKeys } from "../src/api/keys";
+import { useBookingAction } from "../src/hooks/queries";
+import { bookingService } from "../src/services/booking.service";
 import { ApiError, formatCountdown, isSuspendedStop, messageForError, visitCodeFailure } from "../src/api/errors";
-import { VisitCodeStep } from "../src/screens/visit/VisitSteps";
+import { OnMyWayStep, VisitCodeStep } from "../src/screens/visit/VisitSteps";
 import {
+  DROP_OUT_CONFIRM,
+  isOnMyWayOpen,
+  onMyWayUnlocksAt,
   createCodeLocks,
   isCompleteCode,
   sanitizeCode,
@@ -73,6 +82,19 @@ describe("visit error mapping (exact backend strings)", () => {
     [409, "This booking has no visit code. Contact support", "This visit has no visit code. Please contact Oakly support."],
     [400, "A visit code is required to start the visit", "Enter the 4-digit visit code."],
   ])("%i %s", (status, detail, expected) => expect(map(status, detail)).toBe(expected));
+
+  it("maps the too-early On my way 409 to a friendly sentence, following the policy window", () => {
+    expect(map(409, "You can mark yourself on the way from 2 hours before the visit")).toBe(
+      "You can mark yourself on the way from 2 hours before the visit.",
+    );
+    expect(map(409, "You can mark yourself on the way from 90 minutes before the visit")).toBe(
+      "You can mark yourself on the way from 90 minutes before the visit.",
+    );
+    // Not an exact sentence: falls through to the server's own text, not the friendly one.
+    expect(map(409, "You can mark yourself on the way from tomorrow before the visit")).toBe(
+      "You can mark yourself on the way from tomorrow before the visit",
+    );
+  });
 
   it("parses failures", () => {
     expect(visitCodeFailure(wrong1)).toEqual({ kind: "incorrect", attemptsLeft: 2 });
@@ -220,5 +242,114 @@ describe("VisitCodeStep", () => {
     });
     expect(screen.queryByTestId("lock-countdown")).toBeNull();
     expect(screen.getByTestId("visit-code-input")).toBeTruthy();
+  });
+});
+
+describe("OnMyWayStep: unlocks two hours before the visit", () => {
+  const visit = { patientName: "Placeholder Patient", address: "12 Placeholder Street, Lekki", when: "Tue 6 Oct" };
+  const start = Date.parse("2026-10-06T12:00:00Z");
+
+  beforeEach(() => jest.useFakeTimers());
+  afterEach(() => jest.useRealTimers());
+
+  it("computes the unlock time and boundary", () => {
+    expect(onMyWayUnlocksAt(start)).toBe(Date.parse("2026-10-06T10:00:00Z"));
+    expect(isOnMyWayOpen(start, Date.parse("2026-10-06T09:59:59Z"))).toBe(false);
+    expect(isOnMyWayOpen(start, Date.parse("2026-10-06T10:00:00Z"))).toBe(true);
+  });
+
+  it("is disabled with a hint before the window and enables once it opens", async () => {
+    jest.setSystemTime(Date.parse("2026-10-06T09:50:00Z"));
+    const onOnMyWay = jest.fn();
+    const onArrived = jest.fn();
+    await render(
+      <OnMyWayStep visit={visit} scheduledDate="2026-10-06T12:00:00" busy={false} onOnMyWay={onOnMyWay} onArrived={onArrived} channel="whatsapp" onCantMakeIt={jest.fn()} onContactSupport={jest.fn()} />,
+    );
+    expect(screen.getByTestId("on-my-way-hint")).toBeTruthy();
+    await fireEvent.press(screen.getByText("On my way"));
+    expect(onOnMyWay).not.toHaveBeenCalled();
+    // The code entry stays available.
+    await fireEvent.press(screen.getByText("I've arrived: enter visit code"));
+    expect(onArrived).toHaveBeenCalledTimes(1);
+
+    await act(async () => {
+      jest.advanceTimersByTime(11 * 60_000);
+    });
+    expect(screen.queryByTestId("on-my-way-hint")).toBeNull();
+    await fireEvent.press(screen.getByText("On my way"));
+    expect(onOnMyWay).toHaveBeenCalledTimes(1);
+  });
+
+  const renderStep = (channel: string, onCant = jest.fn(), onSupport = jest.fn()) =>
+    render(
+      <OnMyWayStep visit={visit} scheduledDate="2026-10-06T12:00:00" busy={false} onOnMyWay={jest.fn()} onArrived={jest.fn()} channel={channel} onCantMakeIt={onCant} onContactSupport={onSupport} />,
+    );
+
+  it("shows the drop-out button for a WhatsApp booking more than 2 h out, then swaps it for support inside 2 h", async () => {
+    jest.setSystemTime(Date.parse("2026-10-06T09:50:00Z"));
+    const onCant = jest.fn();
+    const onSupport = jest.fn();
+    await renderStep("whatsapp", onCant, onSupport);
+    expect(screen.queryByTestId("contact-support-link")).toBeNull();
+    await fireEvent.press(screen.getByText("I can't make this visit"));
+    expect(onCant).toHaveBeenCalledTimes(1);
+    await act(async () => {
+      jest.advanceTimersByTime(11 * 60_000);
+    });
+    expect(screen.queryByText("I can't make this visit")).toBeNull();
+    await fireEvent.press(screen.getByText("Need to cancel? Contact support"));
+    expect(onSupport).toHaveBeenCalledTimes(1);
+  });
+
+  it.each(["app", "admin"])("hides the drop-out button for a %s booking and shows the support link", async (channel) => {
+    jest.setSystemTime(Date.parse("2026-10-06T08:00:00Z"));
+    await renderStep(channel);
+    expect(screen.queryByText("I can't make this visit")).toBeNull();
+    expect(screen.getByTestId("contact-support-link")).toBeTruthy();
+  });
+
+  it("maps the too-close-to-cancel 409", () => {
+    expect(
+      messageForError(
+        new ApiError(409, { detail: "It's too close to the visit to cancel in the app. Please contact support." }, "x"),
+        "visit",
+      ),
+    ).toContain("too close to the visit to cancel in the app");
+  });
+
+  it("is enabled straight away inside the window", async () => {
+    jest.setSystemTime(Date.parse("2026-10-06T11:00:00Z"));
+    const onOnMyWay = jest.fn();
+    await render(
+      <OnMyWayStep visit={visit} scheduledDate="2026-10-06T12:00:00" busy={false} onOnMyWay={onOnMyWay} onArrived={jest.fn()} channel="whatsapp" onCantMakeIt={jest.fn()} onContactSupport={jest.fn()} />,
+    );
+    expect(screen.queryByTestId("on-my-way-hint")).toBeNull();
+    await fireEvent.press(screen.getByText("On my way"));
+    expect(onOnMyWay).toHaveBeenCalledTimes(1);
+  });
+});
+
+describe("caregiver drop-out", () => {
+  it("confirmation copy promises nothing about money and says what happens next", () => {
+    expect(DROP_OUT_CONFIRM.message).toBe("We'll let the family know and find another professional.");
+    expect(DROP_OUT_CONFIRM.done).toContain("find another professional");
+    for (const text of Object.values(DROP_OUT_CONFIRM)) expect(text.toLowerCase()).not.toMatch(/refund|fee|charge|paid/);
+  });
+
+  it("a successful cancel refetches the lists, the booking and home", async () => {
+    jest.spyOn(bookingService, "act").mockResolvedValue({ status: "pending" });
+    const client = new QueryClient({ defaultOptions: { queries: { retry: false }, mutations: { retry: false } } });
+    const invalidate = jest.spyOn(client, "invalidateQueries");
+    const wrapper = ({ children }: { children: React.ReactNode }) => (
+      <QueryClientProvider client={client}>{children}</QueryClientProvider>
+    );
+    const { result } = await renderHook(() => useBookingAction(), { wrapper });
+    await act(async () => {
+      result.current.mutate({ bookingId: "b-1", action: "cancel" });
+    });
+    await waitFor(() => expect(result.current.isSuccess).toBe(true));
+    expect(bookingService.act).toHaveBeenCalledWith("b-1", "cancel", undefined);
+    const keys = invalidate.mock.calls.map((c) => c[0]?.queryKey);
+    expect(keys).toEqual(expect.arrayContaining([queryKeys.allBookings, queryKeys.booking("b-1"), queryKeys.home]));
   });
 });

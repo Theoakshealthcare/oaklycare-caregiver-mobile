@@ -427,6 +427,7 @@
           "authentication"
         ],
         "summary": "Delete Account",
+        "description": "Erase the account (anonymisation). Bookings, payments and consent records are kept for legal\nretention; the person's data is wiped and the account can no longer sign in. 409 while the person\nhas active bookings or money owed, with a detail that says what to do.",
         "operationId": "delete_account_api_v1_auth_profile_delete",
         "responses": {
           "200": {
@@ -434,9 +435,7 @@
             "content": {
               "application/json": {
                 "schema": {
-                  "additionalProperties": true,
-                  "type": "object",
-                  "title": "Response Delete Account Api V1 Auth Profile Delete"
+                  "$ref": "#/components/schemas/DetailResponse"
                 }
               }
             }
@@ -775,9 +774,7 @@
             "content": {
               "application/json": {
                 "schema": {
-                  "additionalProperties": true,
-                  "type": "object",
-                  "title": "Response Get Verification Status Api V1 Caregiver Verification Status Get"
+                  "$ref": "#/components/schemas/VerificationStatusOut"
                 }
               }
             }
@@ -804,9 +801,7 @@
             "content": {
               "application/json": {
                 "schema": {
-                  "additionalProperties": true,
-                  "type": "object",
-                  "title": "Response Get Form Options Api V1 Caregiver Form Options Get"
+                  "$ref": "#/components/schemas/FormOptionsOut"
                 }
               }
             }
@@ -1621,7 +1616,7 @@
             "content": {
               "application/json": {
                 "schema": {
-                  "title": "Response Handle Booking Action Api V1 Booking Caregiver Action  Booking Id  Post"
+                  "$ref": "#/components/schemas/CaregiverActionResponse"
                 }
               }
             }
@@ -2192,19 +2187,25 @@
               }
             }
           }
-        }
+        },
+        "security": [
+          {
+            "AdminBearer": []
+          }
+        ]
       },
       "post": {
         "tags": [
           "booking_settings"
         ],
         "summary": "Create Booking Settings",
+        "description": "Create the very first pricing version. Once one exists this is a 409: edit the latest with PUT.",
         "operationId": "create_booking_settings_api_v1_booking_settings__post",
         "requestBody": {
           "content": {
             "application/json": {
               "schema": {
-                "$ref": "#/components/schemas/BookingSettingsCreate"
+                "$ref": "#/components/schemas/BookingSettingsWrite"
               }
             }
           },
@@ -2257,7 +2258,12 @@
               }
             }
           }
-        }
+        },
+        "security": [
+          {
+            "AdminBearer": []
+          }
+        ]
       }
     },
     "/api/v1/booking-settings/{settings_id}": {
@@ -2266,6 +2272,7 @@
           "booking_settings"
         ],
         "summary": "Update Booking Settings",
+        "description": "Publish a new version that replaces ``settings_id``, which must still be the latest. The old row is untouched.",
         "operationId": "update_booking_settings_api_v1_booking_settings__settings_id__put",
         "security": [
           {
@@ -2279,6 +2286,7 @@
             "required": true,
             "schema": {
               "type": "string",
+              "format": "uuid",
               "title": "Settings Id"
             }
           }
@@ -2288,7 +2296,7 @@
           "content": {
             "application/json": {
               "schema": {
-                "$ref": "#/components/schemas/BookingSettingsUpdate"
+                "$ref": "#/components/schemas/BookingSettingsWrite"
               }
             }
           }
@@ -2321,6 +2329,7 @@
           "booking_settings"
         ],
         "summary": "Delete Booking Settings",
+        "description": "Refused: versions are the pricing history that quotes and bookings point at. To change the price, publish a new\nversion (PUT); to go back, publish the old values again.",
         "operationId": "delete_booking_settings_api_v1_booking_settings__settings_id__delete",
         "security": [
           {
@@ -2334,13 +2343,22 @@
             "required": true,
             "schema": {
               "type": "string",
+              "format": "uuid",
               "title": "Settings Id"
             }
           }
         ],
         "responses": {
-          "204": {
-            "description": "Successful Response"
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {}
+              }
+            }
+          },
+          "409": {
+            "description": "Always: pricing versions are never deleted"
           },
           "422": {
             "description": "Validation Error",
@@ -4265,7 +4283,7 @@
             "content": {
               "application/json": {
                 "schema": {
-                  "title": "Response List Applications Api V1 Admin Caregivers Get"
+                  "$ref": "#/components/schemas/ApplicationList"
                 }
               }
             }
@@ -4371,7 +4389,7 @@
             "content": {
               "application/json": {
                 "schema": {
-                  "title": "Response Get Application Api V1 Admin Caregivers  Caregiver Id  Get"
+                  "$ref": "#/components/schemas/ApplicationDetail"
                 }
               }
             }
@@ -4831,6 +4849,1037 @@
             }
           }
         }
+      }
+    },
+    "/api/v1/admin/bookings": {
+      "get": {
+        "tags": [
+          "admin-bookings"
+        ],
+        "summary": "List Bookings",
+        "operationId": "list_bookings_api_v1_admin_bookings_get",
+        "security": [
+          {
+            "AdminBearer": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "q",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string",
+                  "maxLength": 100
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "description": "booking code, patient or caregiver name, phone",
+              "title": "Q"
+            },
+            "description": "booking code, patient or caregiver name, phone"
+          },
+          {
+            "name": "status",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "enum": [
+                    "pending",
+                    "accepted",
+                    "en_route",
+                    "in_progress",
+                    "completed",
+                    "cancelled",
+                    "declined"
+                  ],
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Status"
+            }
+          },
+          {
+            "name": "payment_status",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "enum": [
+                    "pending",
+                    "paid",
+                    "failed",
+                    "refunded"
+                  ],
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Payment Status"
+            }
+          },
+          {
+            "name": "dispatch_state",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "enum": [
+                    "dispatching",
+                    "matched",
+                    "unmatched"
+                  ],
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Dispatch State"
+            }
+          },
+          {
+            "name": "channel",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "enum": [
+                    "app",
+                    "whatsapp",
+                    "admin"
+                  ],
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Channel"
+            }
+          },
+          {
+            "name": "city",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string",
+                  "maxLength": 100
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "City"
+            }
+          },
+          {
+            "name": "service_type",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "enum": [
+                    "nurse",
+                    "doctor",
+                    "physiotherapist",
+                    "caregiver",
+                    "nutritionist"
+                  ],
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Service Type"
+            }
+          },
+          {
+            "name": "caregiver_id",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string",
+                  "format": "uuid"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Caregiver Id"
+            }
+          },
+          {
+            "name": "scheduled_from",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string",
+                  "format": "date-time"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Scheduled From"
+            }
+          },
+          {
+            "name": "scheduled_to",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string",
+                  "format": "date-time"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Scheduled To"
+            }
+          },
+          {
+            "name": "created_from",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string",
+                  "format": "date-time"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Created From"
+            }
+          },
+          {
+            "name": "created_to",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string",
+                  "format": "date-time"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Created To"
+            }
+          },
+          {
+            "name": "needs_address_check",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "boolean"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Needs Address Check"
+            }
+          },
+          {
+            "name": "no_show",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "boolean"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "description": "true: flagged or suspected no-shows only",
+              "title": "No Show"
+            },
+            "description": "true: flagged or suspected no-shows only"
+          },
+          {
+            "name": "sort",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "enum": [
+                "scheduled_date",
+                "created_at",
+                "total_amount_kobo"
+              ],
+              "type": "string",
+              "default": "scheduled_date",
+              "title": "Sort"
+            }
+          },
+          {
+            "name": "order",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "enum": [
+                "asc",
+                "desc"
+              ],
+              "type": "string",
+              "default": "desc",
+              "title": "Order"
+            }
+          },
+          {
+            "name": "limit",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "integer",
+              "maximum": 100,
+              "minimum": 1,
+              "default": 25,
+              "title": "Limit"
+            }
+          },
+          {
+            "name": "offset",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "integer",
+              "minimum": 0,
+              "default": 0,
+              "title": "Offset"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/BookingList"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/admin/bookings/unmatched": {
+      "get": {
+        "tags": [
+          "admin-bookings"
+        ],
+        "summary": "Unmatched Queue",
+        "operationId": "unmatched_queue_api_v1_admin_bookings_unmatched_get",
+        "security": [
+          {
+            "AdminBearer": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "reason",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "enum": [
+                    "address_check",
+                    "unmatched",
+                    "sla_breached"
+                  ],
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Reason"
+            }
+          },
+          {
+            "name": "limit",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "integer",
+              "maximum": 100,
+              "minimum": 1,
+              "default": 25,
+              "title": "Limit"
+            }
+          },
+          {
+            "name": "offset",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "integer",
+              "minimum": 0,
+              "default": 0,
+              "title": "Offset"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/UnmatchedList"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/admin/bookings/{booking_id}": {
+      "get": {
+        "tags": [
+          "admin-bookings"
+        ],
+        "summary": "Get Booking",
+        "operationId": "get_booking_api_v1_admin_bookings__booking_id__get",
+        "security": [
+          {
+            "AdminBearer": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "booking_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid",
+              "title": "Booking Id"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/BookingDetail"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/admin/bookings/{booking_id}/candidates": {
+      "get": {
+        "tags": [
+          "admin-bookings"
+        ],
+        "summary": "Candidates",
+        "operationId": "candidates_api_v1_admin_bookings__booking_id__candidates_get",
+        "security": [
+          {
+            "AdminBearer": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "booking_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid",
+              "title": "Booking Id"
+            }
+          },
+          {
+            "name": "radius_km",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "number",
+                  "maximum": 100,
+                  "minimum": 1
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Radius Km"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/CandidateList"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/admin/bookings/{booking_id}/redispatch": {
+      "post": {
+        "tags": [
+          "admin-bookings"
+        ],
+        "summary": "Redispatch",
+        "operationId": "redispatch_api_v1_admin_bookings__booking_id__redispatch_post",
+        "security": [
+          {
+            "AdminBearer": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "booking_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid",
+              "title": "Booking Id"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/RedispatchIn"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/BookingActionOut"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/admin/bookings/{booking_id}/assign": {
+      "post": {
+        "tags": [
+          "admin-bookings"
+        ],
+        "summary": "Assign",
+        "description": "Offer a pending booking to one caregiver (they still accept), or force it (Super Admin).",
+        "operationId": "assign_api_v1_admin_bookings__booking_id__assign_post",
+        "security": [
+          {
+            "AdminBearer": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "booking_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid",
+              "title": "Booking Id"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/AssignIn"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/BookingActionOut"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/admin/bookings/{booking_id}/reassign": {
+      "post": {
+        "tags": [
+          "admin-bookings"
+        ],
+        "summary": "Reassign",
+        "description": "Move an accepted visit that has not started to another approved caregiver.",
+        "operationId": "reassign_api_v1_admin_bookings__booking_id__reassign_post",
+        "security": [
+          {
+            "AdminBearer": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "booking_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid",
+              "title": "Booking Id"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/ReassignIn"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/BookingActionOut"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/admin/bookings/{booking_id}/cancel": {
+      "post": {
+        "tags": [
+          "admin-bookings"
+        ],
+        "summary": "Cancel",
+        "operationId": "cancel_api_v1_admin_bookings__booking_id__cancel_post",
+        "security": [
+          {
+            "AdminBearer": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "booking_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid",
+              "title": "Booking Id"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/CancelIn"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/BookingActionOut"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/admin/bookings/{booking_id}/confirm-address": {
+      "post": {
+        "tags": [
+          "admin-bookings"
+        ],
+        "summary": "Confirm Address",
+        "operationId": "confirm_address_api_v1_admin_bookings__booking_id__confirm_address_post",
+        "security": [
+          {
+            "AdminBearer": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "booking_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid",
+              "title": "Booking Id"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/ConfirmAddressIn"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/BookingActionOut"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/admin/bookings/{booking_id}/no-show": {
+      "post": {
+        "tags": [
+          "admin-bookings"
+        ],
+        "summary": "Flag No Show",
+        "operationId": "flag_no_show_api_v1_admin_bookings__booking_id__no_show_post",
+        "security": [
+          {
+            "AdminBearer": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "booking_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid",
+              "title": "Booking Id"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/ReasonIn"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/BookingActionOut"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/admin/bookings/{booking_id}/correct-status": {
+      "post": {
+        "tags": [
+          "admin-bookings"
+        ],
+        "summary": "Correct Status",
+        "operationId": "correct_status_api_v1_admin_bookings__booking_id__correct_status_post",
+        "security": [
+          {
+            "AdminBearer": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "booking_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid",
+              "title": "Booking Id"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/CorrectStatusIn"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/BookingActionOut"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/admin/booking-policy": {
+      "get": {
+        "tags": [
+          "admin-booking-policy"
+        ],
+        "summary": "Get Policy",
+        "operationId": "get_policy_api_v1_admin_booking_policy_get",
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/BookingPolicyOut"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "AdminBearer": []
+          }
+        ]
+      },
+      "patch": {
+        "tags": [
+          "admin-booking-policy"
+        ],
+        "summary": "Update Policy",
+        "operationId": "update_policy_api_v1_admin_booking_policy_patch",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/BookingPolicyPatch"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/BookingPolicyOut"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "AdminBearer": []
+          }
+        ]
       }
     },
     "/api/v1/admin/auth/login": {
@@ -5426,6 +6475,67 @@
   },
   "components": {
     "schemas": {
+      "AddressOut": {
+        "properties": {
+          "city": {
+            "type": "string",
+            "title": "City"
+          },
+          "state": {
+            "type": "string",
+            "title": "State"
+          },
+          "visible": {
+            "type": "boolean",
+            "title": "Visible"
+          },
+          "line": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Line"
+          },
+          "latitude": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Latitude"
+          },
+          "longitude": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Longitude"
+          },
+          "needs_address_check": {
+            "type": "boolean",
+            "title": "Needs Address Check"
+          }
+        },
+        "type": "object",
+        "required": [
+          "city",
+          "state",
+          "visible",
+          "needs_address_check"
+        ],
+        "title": "AddressOut"
+      },
       "AdminInviteIn": {
         "properties": {
           "email": {
@@ -5700,6 +6810,383 @@
         "type": "object",
         "title": "AdminPatchIn"
       },
+      "ApplicationDetail": {
+        "properties": {
+          "profile": {
+            "$ref": "#/components/schemas/CaregiverProfile"
+          },
+          "consents": {
+            "$ref": "#/components/schemas/ConsentsOut"
+          },
+          "documents": {
+            "items": {
+              "$ref": "#/components/schemas/ApplicationDocument"
+            },
+            "type": "array",
+            "title": "Documents"
+          },
+          "identity": {
+            "$ref": "#/components/schemas/IdentityOut"
+          },
+          "background_check": {
+            "$ref": "#/components/schemas/BackgroundCheckOut"
+          },
+          "decision": {
+            "$ref": "#/components/schemas/DecisionOut"
+          },
+          "skills": {
+            "items": {
+              "$ref": "#/components/schemas/SkillOut"
+            },
+            "type": "array",
+            "title": "Skills"
+          },
+          "audit_history": {
+            "items": {
+              "$ref": "#/components/schemas/AuditEntry"
+            },
+            "type": "array",
+            "title": "Audit History"
+          }
+        },
+        "type": "object",
+        "required": [
+          "profile",
+          "consents",
+          "documents",
+          "identity",
+          "background_check",
+          "decision",
+          "skills",
+          "audit_history"
+        ],
+        "title": "ApplicationDetail"
+      },
+      "ApplicationDocument": {
+        "properties": {
+          "id": {
+            "type": "string",
+            "format": "uuid",
+            "title": "Id"
+          },
+          "document_type": {
+            "type": "string",
+            "title": "Document Type"
+          },
+          "document_name": {
+            "type": "string",
+            "title": "Document Name"
+          },
+          "mime_type": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Mime Type"
+          },
+          "file_size": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "File Size"
+          },
+          "verification_status": {
+            "type": "string",
+            "title": "Verification Status"
+          },
+          "rejection_reason": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Rejection Reason"
+          },
+          "expires_on": {
+            "anyOf": [
+              {
+                "type": "string",
+                "format": "date"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Expires On"
+          },
+          "uploaded_at": {
+            "anyOf": [
+              {
+                "type": "string",
+                "format": "date-time"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Uploaded At"
+          },
+          "verified_at": {
+            "anyOf": [
+              {
+                "type": "string",
+                "format": "date-time"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Verified At"
+          },
+          "reviewed_by": {
+            "anyOf": [
+              {
+                "type": "string",
+                "format": "uuid"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Reviewed By"
+          },
+          "download_url": {
+            "type": "string",
+            "title": "Download Url"
+          }
+        },
+        "type": "object",
+        "required": [
+          "id",
+          "document_type",
+          "document_name",
+          "verification_status",
+          "download_url"
+        ],
+        "title": "ApplicationDocument"
+      },
+      "ApplicationList": {
+        "properties": {
+          "items": {
+            "items": {
+              "$ref": "#/components/schemas/ApplicationListItem"
+            },
+            "type": "array",
+            "title": "Items"
+          },
+          "total": {
+            "type": "integer",
+            "title": "Total"
+          },
+          "limit": {
+            "type": "integer",
+            "title": "Limit"
+          },
+          "offset": {
+            "type": "integer",
+            "title": "Offset"
+          }
+        },
+        "type": "object",
+        "required": [
+          "items",
+          "total",
+          "limit",
+          "offset"
+        ],
+        "title": "ApplicationList"
+      },
+      "ApplicationListItem": {
+        "properties": {
+          "id": {
+            "type": "string",
+            "format": "uuid",
+            "title": "Id"
+          },
+          "full_name": {
+            "type": "string",
+            "title": "Full Name"
+          },
+          "state": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "State"
+          },
+          "specialization": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Specialization"
+          },
+          "years_of_experience": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Years Of Experience"
+          },
+          "submitted_at": {
+            "anyOf": [
+              {
+                "type": "string",
+                "format": "date-time"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Submitted At"
+          },
+          "age_in_days": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Age In Days"
+          },
+          "document_count": {
+            "type": "integer",
+            "title": "Document Count"
+          },
+          "identity_verification_status": {
+            "type": "string",
+            "title": "Identity Verification Status"
+          },
+          "background_check_status": {
+            "type": "string",
+            "title": "Background Check Status"
+          },
+          "profile_status": {
+            "type": "string",
+            "title": "Profile Status"
+          }
+        },
+        "type": "object",
+        "required": [
+          "id",
+          "full_name",
+          "document_count",
+          "identity_verification_status",
+          "background_check_status",
+          "profile_status"
+        ],
+        "title": "ApplicationListItem"
+      },
+      "AssignIn": {
+        "properties": {
+          "reason": {
+            "type": "string",
+            "maxLength": 2000,
+            "title": "Reason"
+          },
+          "caregiver_id": {
+            "type": "string",
+            "format": "uuid",
+            "title": "Caregiver Id"
+          },
+          "force": {
+            "type": "boolean",
+            "title": "Force",
+            "default": false
+          }
+        },
+        "additionalProperties": false,
+        "type": "object",
+        "required": [
+          "reason",
+          "caregiver_id"
+        ],
+        "title": "AssignIn"
+      },
+      "AuditEntry": {
+        "properties": {
+          "id": {
+            "type": "string",
+            "format": "uuid",
+            "title": "Id"
+          },
+          "action": {
+            "type": "string",
+            "title": "Action"
+          },
+          "admin_user_id": {
+            "type": "string",
+            "format": "uuid",
+            "title": "Admin User Id"
+          },
+          "entity_type": {
+            "type": "string",
+            "title": "Entity Type"
+          },
+          "entity_id": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Entity Id"
+          },
+          "reason": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Reason"
+          },
+          "created_at": {
+            "type": "string",
+            "format": "date-time",
+            "title": "Created At"
+          }
+        },
+        "type": "object",
+        "required": [
+          "id",
+          "action",
+          "admin_user_id",
+          "entity_type",
+          "created_at"
+        ],
+        "title": "AuditEntry"
+      },
       "AuditEntryOut": {
         "properties": {
           "id": {
@@ -5920,6 +7407,52 @@
         ],
         "title": "BackgroundCheckDecision"
       },
+      "BackgroundCheckOut": {
+        "properties": {
+          "status": {
+            "type": "string",
+            "title": "Status"
+          },
+          "evidence": {
+            "anyOf": [
+              {},
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Evidence"
+          },
+          "decided_by": {
+            "anyOf": [
+              {
+                "type": "string",
+                "format": "uuid"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Decided By"
+          },
+          "decided_at": {
+            "anyOf": [
+              {
+                "type": "string",
+                "format": "date-time"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Decided At"
+          }
+        },
+        "type": "object",
+        "required": [
+          "status"
+        ],
+        "title": "BackgroundCheckOut"
+      },
       "Body_login_api_v1_auth_login_post": {
         "properties": {
           "grant_type": {
@@ -6038,6 +7571,128 @@
           "file"
         ],
         "title": "Body_upload_profile_image_api_v1_auth_profile_upload_image_post"
+      },
+      "BookingActionOut": {
+        "properties": {
+          "id": {
+            "type": "string",
+            "format": "uuid",
+            "title": "Id"
+          },
+          "booking_code": {
+            "type": "string",
+            "title": "Booking Code"
+          },
+          "status": {
+            "type": "string",
+            "enum": [
+              "pending",
+              "accepted",
+              "en_route",
+              "in_progress",
+              "completed",
+              "cancelled",
+              "declined"
+            ],
+            "title": "Status"
+          },
+          "payment_status": {
+            "type": "string",
+            "enum": [
+              "pending",
+              "paid",
+              "failed",
+              "refunded"
+            ],
+            "title": "Payment Status"
+          },
+          "dispatch_state": {
+            "anyOf": [
+              {
+                "type": "string",
+                "enum": [
+                  "dispatching",
+                  "matched",
+                  "unmatched"
+                ]
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Dispatch State"
+          },
+          "caregiver_id": {
+            "anyOf": [
+              {
+                "type": "string",
+                "format": "uuid"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Caregiver Id"
+          },
+          "needs_address_check": {
+            "type": "boolean",
+            "title": "Needs Address Check"
+          },
+          "refund_required": {
+            "type": "boolean",
+            "title": "Refund Required"
+          },
+          "refund_required_reason": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Refund Required Reason"
+          },
+          "refund_amount_kobo": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Refund Amount Kobo"
+          },
+          "no_show_flagged_at": {
+            "anyOf": [
+              {
+                "type": "string",
+                "format": "date-time"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "No Show Flagged At"
+          },
+          "notified_caregivers": {
+            "type": "integer",
+            "title": "Notified Caregivers",
+            "default": 0
+          }
+        },
+        "type": "object",
+        "required": [
+          "id",
+          "booking_code",
+          "status",
+          "payment_status",
+          "needs_address_check",
+          "refund_required"
+        ],
+        "title": "BookingActionOut",
+        "description": "What changed. Fetch the detail for the rest."
       },
       "BookingActionRequest": {
         "properties": {
@@ -6200,6 +7855,408 @@
           "booking_for"
         ],
         "title": "BookingCreate"
+      },
+      "BookingDetail": {
+        "properties": {
+          "id": {
+            "type": "string",
+            "format": "uuid",
+            "title": "Id"
+          },
+          "booking_code": {
+            "type": "string",
+            "title": "Booking Code"
+          },
+          "service_type": {
+            "type": "string",
+            "title": "Service Type"
+          },
+          "assistance_type": {
+            "type": "string",
+            "title": "Assistance Type"
+          },
+          "booking_for": {
+            "type": "string",
+            "title": "Booking For"
+          },
+          "duration_hours": {
+            "type": "integer",
+            "title": "Duration Hours"
+          },
+          "scheduled_date": {
+            "type": "string",
+            "format": "date-time",
+            "title": "Scheduled Date"
+          },
+          "scheduled_end_date": {
+            "type": "string",
+            "format": "date-time",
+            "title": "Scheduled End Date"
+          },
+          "actual_start_time": {
+            "anyOf": [
+              {
+                "type": "string",
+                "format": "date-time"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Actual Start Time"
+          },
+          "actual_end_time": {
+            "anyOf": [
+              {
+                "type": "string",
+                "format": "date-time"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Actual End Time"
+          },
+          "status": {
+            "type": "string",
+            "enum": [
+              "pending",
+              "accepted",
+              "en_route",
+              "in_progress",
+              "completed",
+              "cancelled",
+              "declined"
+            ],
+            "title": "Status"
+          },
+          "channel": {
+            "type": "string",
+            "enum": [
+              "app",
+              "whatsapp",
+              "admin"
+            ],
+            "title": "Channel"
+          },
+          "cancel_reason": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Cancel Reason"
+          },
+          "created_at": {
+            "type": "string",
+            "format": "date-time",
+            "title": "Created At"
+          },
+          "updated_at": {
+            "type": "string",
+            "format": "date-time",
+            "title": "Updated At"
+          },
+          "age_minutes": {
+            "type": "integer",
+            "title": "Age Minutes"
+          },
+          "patient": {
+            "$ref": "#/components/schemas/PartyOut"
+          },
+          "caregiver": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/PartyOut"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "address": {
+            "$ref": "#/components/schemas/AddressOut"
+          },
+          "clinical": {
+            "$ref": "#/components/schemas/ClinicalOut"
+          },
+          "price": {
+            "$ref": "#/components/schemas/PriceOut"
+          },
+          "payment": {
+            "$ref": "#/components/schemas/PaymentOut"
+          },
+          "dispatch": {
+            "$ref": "#/components/schemas/DispatchOut"
+          },
+          "events": {
+            "items": {
+              "$ref": "#/components/schemas/EventOut"
+            },
+            "type": "array",
+            "title": "Events"
+          },
+          "no_show_flagged_at": {
+            "anyOf": [
+              {
+                "type": "string",
+                "format": "date-time"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "No Show Flagged At"
+          },
+          "no_show_suspected": {
+            "type": "boolean",
+            "title": "No Show Suspected"
+          },
+          "note_count": {
+            "type": "integer",
+            "title": "Note Count"
+          },
+          "timeline": {
+            "items": {
+              "$ref": "#/components/schemas/TimelineEntry"
+            },
+            "type": "array",
+            "title": "Timeline"
+          },
+          "available_actions": {
+            "items": {
+              "type": "string",
+              "enum": [
+                "redispatch",
+                "assign",
+                "force_assign",
+                "reassign",
+                "cancel",
+                "confirm_address",
+                "flag_no_show",
+                "correct_status"
+              ]
+            },
+            "type": "array",
+            "title": "Available Actions"
+          }
+        },
+        "type": "object",
+        "required": [
+          "id",
+          "booking_code",
+          "service_type",
+          "assistance_type",
+          "booking_for",
+          "duration_hours",
+          "scheduled_date",
+          "scheduled_end_date",
+          "status",
+          "channel",
+          "created_at",
+          "updated_at",
+          "age_minutes",
+          "patient",
+          "address",
+          "clinical",
+          "price",
+          "payment",
+          "dispatch",
+          "events",
+          "no_show_suspected",
+          "note_count",
+          "timeline",
+          "available_actions"
+        ],
+        "title": "BookingDetail"
+      },
+      "BookingList": {
+        "properties": {
+          "items": {
+            "items": {
+              "$ref": "#/components/schemas/BookingListItem"
+            },
+            "type": "array",
+            "title": "Items"
+          },
+          "total": {
+            "type": "integer",
+            "title": "Total"
+          },
+          "limit": {
+            "type": "integer",
+            "title": "Limit"
+          },
+          "offset": {
+            "type": "integer",
+            "title": "Offset"
+          }
+        },
+        "type": "object",
+        "required": [
+          "items",
+          "total",
+          "limit",
+          "offset"
+        ],
+        "title": "BookingList"
+      },
+      "BookingListItem": {
+        "properties": {
+          "id": {
+            "type": "string",
+            "format": "uuid",
+            "title": "Id"
+          },
+          "booking_code": {
+            "type": "string",
+            "title": "Booking Code"
+          },
+          "service_type": {
+            "type": "string",
+            "title": "Service Type"
+          },
+          "scheduled_date": {
+            "type": "string",
+            "format": "date-time",
+            "title": "Scheduled Date"
+          },
+          "scheduled_end_date": {
+            "type": "string",
+            "format": "date-time",
+            "title": "Scheduled End Date"
+          },
+          "city": {
+            "type": "string",
+            "title": "City"
+          },
+          "state": {
+            "type": "string",
+            "title": "State"
+          },
+          "patient": {
+            "$ref": "#/components/schemas/PartyOut"
+          },
+          "caregiver": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/PartyOut"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "status": {
+            "type": "string",
+            "enum": [
+              "pending",
+              "accepted",
+              "en_route",
+              "in_progress",
+              "completed",
+              "cancelled",
+              "declined"
+            ],
+            "title": "Status"
+          },
+          "payment_status": {
+            "type": "string",
+            "enum": [
+              "pending",
+              "paid",
+              "failed",
+              "refunded"
+            ],
+            "title": "Payment Status"
+          },
+          "dispatch_state": {
+            "anyOf": [
+              {
+                "type": "string",
+                "enum": [
+                  "dispatching",
+                  "matched",
+                  "unmatched"
+                ]
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Dispatch State"
+          },
+          "total_amount_kobo": {
+            "type": "integer",
+            "title": "Total Amount Kobo"
+          },
+          "channel": {
+            "type": "string",
+            "enum": [
+              "app",
+              "whatsapp",
+              "admin"
+            ],
+            "title": "Channel"
+          },
+          "created_at": {
+            "type": "string",
+            "format": "date-time",
+            "title": "Created At"
+          },
+          "age_minutes": {
+            "type": "integer",
+            "title": "Age Minutes"
+          },
+          "needs_address_check": {
+            "type": "boolean",
+            "title": "Needs Address Check"
+          },
+          "refund_required": {
+            "type": "boolean",
+            "title": "Refund Required"
+          },
+          "no_show_flagged_at": {
+            "anyOf": [
+              {
+                "type": "string",
+                "format": "date-time"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "No Show Flagged At"
+          },
+          "no_show_suspected": {
+            "type": "boolean",
+            "title": "No Show Suspected"
+          }
+        },
+        "type": "object",
+        "required": [
+          "id",
+          "booking_code",
+          "service_type",
+          "scheduled_date",
+          "scheduled_end_date",
+          "city",
+          "state",
+          "patient",
+          "status",
+          "payment_status",
+          "total_amount_kobo",
+          "channel",
+          "created_at",
+          "age_minutes",
+          "needs_address_check",
+          "refund_required",
+          "no_show_suspected"
+        ],
+        "title": "BookingListItem"
       },
       "BookingNoteCreate": {
         "properties": {
@@ -6391,6 +8448,190 @@
           "booking"
         ],
         "title": "BookingNotificationResponse"
+      },
+      "BookingPolicyOut": {
+        "properties": {
+          "cancel_free_hours": {
+            "type": "integer",
+            "title": "Cancel Free Hours",
+            "description": "Full refund when the visit is more than this many hours away (or nobody is assigned)"
+          },
+          "cancel_late_hours": {
+            "type": "integer",
+            "title": "Cancel Late Hours",
+            "description": "Inside this many hours of the start, or once the caregiver is on the way, the late fee applies"
+          },
+          "cancel_fee_percent": {
+            "type": "integer",
+            "title": "Cancel Fee Percent",
+            "description": "Fee, as a percent of the service fee, between the two lines above"
+          },
+          "cancel_late_fee_percent": {
+            "type": "integer",
+            "title": "Cancel Late Fee Percent",
+            "description": "Fee, as a percent of the service fee, inside the late window or once on the way"
+          },
+          "dropout_redispatch_min_lead_minutes": {
+            "type": "integer",
+            "title": "Dropout Redispatch Min Lead Minutes",
+            "description": "A caregiver drop-out more than this many minutes before the start is re-dispatched automatically"
+          },
+          "dropout_decision_lead_minutes": {
+            "type": "integer",
+            "title": "Dropout Decision Lead Minutes",
+            "description": "If nobody has accepted this many minutes before the start, the family is given the choice"
+          },
+          "onmyway_compensation_window_minutes": {
+            "type": "integer",
+            "title": "Onmyway Compensation Window Minutes",
+            "description": "An on-my-way tapped no earlier than this many minutes before the start can qualify for compensation"
+          },
+          "caregiver_late_fee_share_percent": {
+            "type": "integer",
+            "title": "Caregiver Late Fee Share Percent",
+            "description": "Caregiver's share of a late fee, in percent (stored now, paid out by the compensation work)"
+          },
+          "updated_at": {
+            "anyOf": [
+              {
+                "type": "string",
+                "format": "date-time"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Updated At"
+          },
+          "updated_by": {
+            "anyOf": [
+              {
+                "type": "string",
+                "format": "uuid"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Updated By"
+          }
+        },
+        "type": "object",
+        "required": [
+          "cancel_free_hours",
+          "cancel_late_hours",
+          "cancel_fee_percent",
+          "cancel_late_fee_percent",
+          "dropout_redispatch_min_lead_minutes",
+          "dropout_decision_lead_minutes",
+          "onmyway_compensation_window_minutes",
+          "caregiver_late_fee_share_percent"
+        ],
+        "title": "BookingPolicyOut"
+      },
+      "BookingPolicyPatch": {
+        "properties": {
+          "reason": {
+            "type": "string",
+            "maxLength": 2000,
+            "title": "Reason"
+          },
+          "cancel_free_hours": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Cancel Free Hours"
+          },
+          "cancel_late_hours": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Cancel Late Hours"
+          },
+          "cancel_fee_percent": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Cancel Fee Percent"
+          },
+          "cancel_late_fee_percent": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Cancel Late Fee Percent"
+          },
+          "dropout_redispatch_min_lead_minutes": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Dropout Redispatch Min Lead Minutes"
+          },
+          "dropout_decision_lead_minutes": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Dropout Decision Lead Minutes"
+          },
+          "onmyway_compensation_window_minutes": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Onmyway Compensation Window Minutes"
+          },
+          "caregiver_late_fee_share_percent": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Caregiver Late Fee Share Percent"
+          }
+        },
+        "additionalProperties": false,
+        "type": "object",
+        "required": [
+          "reason"
+        ],
+        "title": "BookingPolicyPatch",
+        "description": "Send only the fields to change, and why. The merged policy is validated as a whole."
       },
       "BookingPreviewRequest": {
         "properties": {
@@ -6618,6 +8859,15 @@
             "type": "string",
             "title": "Booking Code"
           },
+          "channel": {
+            "type": "string",
+            "enum": [
+              "app",
+              "whatsapp",
+              "admin"
+            ],
+            "title": "Channel"
+          },
           "patient_id": {
             "type": "string",
             "format": "uuid",
@@ -6689,15 +8939,36 @@
             "title": "Scheduled End Date"
           },
           "patient_address": {
-            "type": "string",
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
             "title": "Patient Address"
           },
           "patient_latitude": {
-            "type": "number",
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
             "title": "Patient Latitude"
           },
           "patient_longitude": {
-            "type": "number",
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
             "title": "Patient Longitude"
           },
           "patient_city": {
@@ -6820,15 +9091,13 @@
         "required": [
           "id",
           "booking_code",
+          "channel",
           "patient_id",
           "service_type",
           "assistance_type",
           "duration_hours",
           "scheduled_date",
           "scheduled_end_date",
-          "patient_address",
-          "patient_latitude",
-          "patient_longitude",
           "patient_city",
           "patient_state",
           "status",
@@ -6841,80 +9110,6 @@
           "updated_at"
         ],
         "title": "BookingResponse"
-      },
-      "BookingSettingsCreate": {
-        "properties": {
-          "base_fee": {
-            "type": "number",
-            "title": "Base Fee",
-            "description": "Base fee per hour"
-          },
-          "platform_fee_percent": {
-            "type": "number",
-            "title": "Platform Fee Percent",
-            "description": "Platform fee in percent"
-          },
-          "multipliers": {
-            "anyOf": [
-              {
-                "additionalProperties": {
-                  "type": "number"
-                },
-                "type": "object"
-              },
-              {
-                "type": "null"
-              }
-            ],
-            "title": "Multipliers",
-            "description": "Service type multipliers"
-          },
-          "surge_pricing": {
-            "anyOf": [
-              {
-                "type": "boolean"
-              },
-              {
-                "type": "null"
-              }
-            ],
-            "title": "Surge Pricing",
-            "description": "Is surge pricing active?",
-            "default": false
-          },
-          "surge_multiplier": {
-            "anyOf": [
-              {
-                "type": "number"
-              },
-              {
-                "type": "null"
-              }
-            ],
-            "title": "Surge Multiplier",
-            "description": "Surge multiplier",
-            "default": 1
-          },
-          "discount": {
-            "anyOf": [
-              {
-                "type": "number"
-              },
-              {
-                "type": "null"
-              }
-            ],
-            "title": "Discount",
-            "description": "Discount in percent",
-            "default": 0
-          }
-        },
-        "type": "object",
-        "required": [
-          "base_fee",
-          "platform_fee_percent"
-        ],
-        "title": "BookingSettingsCreate"
       },
       "BookingSettingsResponse": {
         "properties": {
@@ -7008,15 +9203,19 @@
         ],
         "title": "BookingSettingsResponse"
       },
-      "BookingSettingsUpdate": {
+      "BookingSettingsWrite": {
         "properties": {
           "base_fee": {
             "type": "number",
+            "maximum": 1000000,
+            "minimum": 0.01,
             "title": "Base Fee",
-            "description": "Base fee per hour"
+            "description": "Base fee per hour, in naira"
           },
           "platform_fee_percent": {
             "type": "number",
+            "maximum": 100,
+            "minimum": 0,
             "title": "Platform Fee Percent",
             "description": "Platform fee in percent"
           },
@@ -7033,54 +9232,46 @@
               }
             ],
             "title": "Multipliers",
-            "description": "Service type multipliers"
+            "description": "Service type multipliers; keys: nurse, doctor, physiotherapist, caregiver, nutritionist; each above 0 and at most 10"
           },
           "surge_pricing": {
-            "anyOf": [
-              {
-                "type": "boolean"
-              },
-              {
-                "type": "null"
-              }
-            ],
+            "type": "boolean",
             "title": "Surge Pricing",
             "description": "Is surge pricing active?",
             "default": false
           },
           "surge_multiplier": {
-            "anyOf": [
-              {
-                "type": "number"
-              },
-              {
-                "type": "null"
-              }
-            ],
+            "type": "number",
+            "maximum": 5,
+            "minimum": 1,
             "title": "Surge Multiplier",
             "description": "Surge multiplier",
             "default": 1
           },
           "discount": {
-            "anyOf": [
-              {
-                "type": "number"
-              },
-              {
-                "type": "null"
-              }
-            ],
+            "type": "number",
+            "maximum": 100,
+            "minimum": 0,
             "title": "Discount",
             "description": "Discount in percent",
             "default": 0
+          },
+          "reason": {
+            "type": "string",
+            "maxLength": 2000,
+            "title": "Reason",
+            "description": "Why the pricing is changing (kept in the audit log)"
           }
         },
+        "additionalProperties": false,
         "type": "object",
         "required": [
           "base_fee",
-          "platform_fee_percent"
+          "platform_fee_percent",
+          "reason"
         ],
-        "title": "BookingSettingsUpdate"
+        "title": "BookingSettingsWrite",
+        "description": "A complete pricing version plus why it is being published."
       },
       "BookingStatus": {
         "type": "string",
@@ -7094,6 +9285,117 @@
           "declined"
         ],
         "title": "BookingStatus"
+      },
+      "CancelIn": {
+        "properties": {
+          "reason": {
+            "type": "string",
+            "maxLength": 2000,
+            "title": "Reason"
+          },
+          "reason_code": {
+            "type": "string",
+            "enum": [
+              "patient_request",
+              "no_supply",
+              "caregiver_no_show",
+              "safety",
+              "duplicate",
+              "other"
+            ],
+            "title": "Reason Code"
+          },
+          "refund": {
+            "type": "string",
+            "enum": [
+              "full",
+              "partial",
+              "none"
+            ],
+            "title": "Refund"
+          },
+          "refund_amount_kobo": {
+            "anyOf": [
+              {
+                "type": "integer",
+                "exclusiveMinimum": 0
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Refund Amount Kobo"
+          }
+        },
+        "additionalProperties": false,
+        "type": "object",
+        "required": [
+          "reason",
+          "reason_code",
+          "refund"
+        ],
+        "title": "CancelIn"
+      },
+      "CandidateList": {
+        "properties": {
+          "items": {
+            "items": {
+              "$ref": "#/components/schemas/CandidateOut"
+            },
+            "type": "array",
+            "title": "Items"
+          }
+        },
+        "type": "object",
+        "required": [
+          "items"
+        ],
+        "title": "CandidateList"
+      },
+      "CandidateOut": {
+        "properties": {
+          "caregiver_id": {
+            "type": "string",
+            "format": "uuid",
+            "title": "Caregiver Id"
+          },
+          "full_name": {
+            "type": "string",
+            "title": "Full Name"
+          },
+          "specialization": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Specialization"
+          },
+          "distance_km": {
+            "type": "number",
+            "title": "Distance Km"
+          },
+          "estimated_arrival_minutes": {
+            "type": "integer",
+            "title": "Estimated Arrival Minutes"
+          },
+          "match_score": {
+            "type": "number",
+            "title": "Match Score"
+          }
+        },
+        "type": "object",
+        "required": [
+          "caregiver_id",
+          "full_name",
+          "distance_km",
+          "estimated_arrival_minutes",
+          "match_score"
+        ],
+        "title": "CandidateOut"
       },
       "Caregiver": {
         "properties": {
@@ -7148,6 +9450,360 @@
           "updated_at"
         ],
         "title": "Caregiver"
+      },
+      "CaregiverActionBooking": {
+        "properties": {
+          "id": {
+            "type": "string",
+            "format": "uuid",
+            "title": "Id"
+          },
+          "booking_code": {
+            "type": "string",
+            "title": "Booking Code"
+          },
+          "channel": {
+            "type": "string",
+            "enum": [
+              "app",
+              "whatsapp",
+              "admin"
+            ],
+            "title": "Channel"
+          },
+          "patient_id": {
+            "type": "string",
+            "format": "uuid",
+            "title": "Patient Id"
+          },
+          "patient_details": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/PatientDetails"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "caregiver_id": {
+            "anyOf": [
+              {
+                "type": "string",
+                "format": "uuid"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Caregiver Id"
+          },
+          "caregiver_details": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/CaregiverDetails"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "service_type": {
+            "type": "string",
+            "title": "Service Type"
+          },
+          "assistance_type": {
+            "type": "string",
+            "title": "Assistance Type"
+          },
+          "condition": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Condition"
+          },
+          "duration_hours": {
+            "type": "integer",
+            "title": "Duration Hours"
+          },
+          "scheduled_date": {
+            "type": "string",
+            "format": "date-time",
+            "title": "Scheduled Date"
+          },
+          "scheduled_end_date": {
+            "type": "string",
+            "format": "date-time",
+            "title": "Scheduled End Date"
+          },
+          "actual_start_time": {
+            "anyOf": [
+              {
+                "type": "string",
+                "format": "date-time"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Actual Start Time"
+          },
+          "actual_end_time": {
+            "anyOf": [
+              {
+                "type": "string",
+                "format": "date-time"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Actual End Time"
+          },
+          "patient_address": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Patient Address"
+          },
+          "patient_latitude": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Patient Latitude"
+          },
+          "patient_longitude": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Patient Longitude"
+          },
+          "patient_city": {
+            "type": "string",
+            "title": "Patient City"
+          },
+          "patient_state": {
+            "type": "string",
+            "title": "Patient State"
+          },
+          "status": {
+            "$ref": "#/components/schemas/BookingStatus"
+          },
+          "payment_status": {
+            "$ref": "#/components/schemas/PaymentStatus"
+          },
+          "paystack_reference": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Paystack Reference"
+          },
+          "payment_expires_at": {
+            "anyOf": [
+              {
+                "type": "string",
+                "format": "date-time"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Payment Expires At"
+          },
+          "payment_failure_reason": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Payment Failure Reason"
+          },
+          "total_amount": {
+            "type": "string",
+            "pattern": "^(?!^[-+.]*$)[+-]?0*\\d*\\.?\\d*$",
+            "title": "Total Amount"
+          },
+          "service_fee": {
+            "type": "string",
+            "pattern": "^(?!^[-+.]*$)[+-]?0*\\d*\\.?\\d*$",
+            "title": "Service Fee"
+          },
+          "platform_fee": {
+            "type": "string",
+            "pattern": "^(?!^[-+.]*$)[+-]?0*\\d*\\.?\\d*$",
+            "title": "Platform Fee"
+          },
+          "total_amount_kobo": {
+            "type": "integer",
+            "title": "Total Amount Kobo"
+          },
+          "service_fee_kobo": {
+            "type": "integer",
+            "title": "Service Fee Kobo"
+          },
+          "platform_fee_kobo": {
+            "type": "integer",
+            "title": "Platform Fee Kobo"
+          },
+          "special_instructions": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Special Instructions"
+          },
+          "booking_for": {
+            "type": "string",
+            "title": "Booking For"
+          },
+          "cancel_reason": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Cancel Reason"
+          },
+          "refund_required": {
+            "type": "boolean",
+            "title": "Refund Required"
+          },
+          "refund_required_reason": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Refund Required Reason"
+          },
+          "dispatch_state": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Dispatch State"
+          },
+          "dispatch_started_at": {
+            "anyOf": [
+              {
+                "type": "string",
+                "format": "date-time"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Dispatch Started At"
+          },
+          "visit_code": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Visit Code"
+          },
+          "created_at": {
+            "type": "string",
+            "format": "date-time",
+            "title": "Created At"
+          },
+          "updated_at": {
+            "type": "string",
+            "format": "date-time",
+            "title": "Updated At"
+          }
+        },
+        "type": "object",
+        "required": [
+          "id",
+          "booking_code",
+          "channel",
+          "patient_id",
+          "service_type",
+          "assistance_type",
+          "duration_hours",
+          "scheduled_date",
+          "scheduled_end_date",
+          "patient_city",
+          "patient_state",
+          "status",
+          "payment_status",
+          "total_amount",
+          "service_fee",
+          "platform_fee",
+          "total_amount_kobo",
+          "service_fee_kobo",
+          "platform_fee_kobo",
+          "booking_for",
+          "refund_required",
+          "created_at",
+          "updated_at"
+        ],
+        "title": "CaregiverActionBooking",
+        "description": "The booking as a caregiver sees it in the action response (accept, decline, start, ...).\n\nDescribes what the endpoint has always returned; fields that are null in the offer view\n(patient_details, caregiver_details, caregiver_id, condition, special_instructions) are Optional.\nMoney is naira as Decimal (serialised as a string such as \"55000.00\") next to the *_kobo integers."
+      },
+      "CaregiverActionResponse": {
+        "properties": {
+          "message": {
+            "type": "string",
+            "title": "Message"
+          },
+          "booking": {
+            "$ref": "#/components/schemas/CaregiverActionBooking"
+          }
+        },
+        "type": "object",
+        "required": [
+          "message",
+          "booking"
+        ],
+        "title": "CaregiverActionResponse"
       },
       "CaregiverBankAccountOut": {
         "properties": {
@@ -8090,6 +10746,287 @@
         ],
         "title": "ChatMessageResponse"
       },
+      "ClinicalOut": {
+        "properties": {
+          "masked": {
+            "type": "boolean",
+            "title": "Masked"
+          },
+          "has_condition": {
+            "type": "boolean",
+            "title": "Has Condition"
+          },
+          "has_special_instructions": {
+            "type": "boolean",
+            "title": "Has Special Instructions"
+          },
+          "condition": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Condition"
+          },
+          "special_instructions": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Special Instructions"
+          }
+        },
+        "type": "object",
+        "required": [
+          "masked",
+          "has_condition",
+          "has_special_instructions"
+        ],
+        "title": "ClinicalOut",
+        "description": "The condition and special instructions. Present only with clinical.read; reading them is audited."
+      },
+      "ConfirmAddressIn": {
+        "properties": {
+          "reason": {
+            "type": "string",
+            "maxLength": 2000,
+            "title": "Reason"
+          },
+          "latitude": {
+            "type": "number",
+            "title": "Latitude"
+          },
+          "longitude": {
+            "type": "number",
+            "title": "Longitude"
+          },
+          "address": {
+            "anyOf": [
+              {
+                "type": "string",
+                "maxLength": 1000
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Address"
+          }
+        },
+        "additionalProperties": false,
+        "type": "object",
+        "required": [
+          "reason",
+          "latitude",
+          "longitude"
+        ],
+        "title": "ConfirmAddressIn"
+      },
+      "ConsentsOut": {
+        "properties": {
+          "terms_accepted": {
+            "type": "boolean",
+            "title": "Terms Accepted"
+          },
+          "privacy_policy_accepted": {
+            "type": "boolean",
+            "title": "Privacy Policy Accepted"
+          },
+          "background_check_consent": {
+            "type": "boolean",
+            "title": "Background Check Consent"
+          },
+          "consent_date": {
+            "anyOf": [
+              {
+                "type": "string",
+                "format": "date-time"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Consent Date"
+          }
+        },
+        "type": "object",
+        "required": [
+          "terms_accepted",
+          "privacy_policy_accepted",
+          "background_check_consent"
+        ],
+        "title": "ConsentsOut"
+      },
+      "CorrectStatusIn": {
+        "properties": {
+          "reason": {
+            "type": "string",
+            "maxLength": 2000,
+            "title": "Reason"
+          },
+          "status": {
+            "type": "string",
+            "enum": [
+              "en_route",
+              "in_progress",
+              "completed"
+            ],
+            "title": "Status"
+          }
+        },
+        "additionalProperties": false,
+        "type": "object",
+        "required": [
+          "reason",
+          "status"
+        ],
+        "title": "CorrectStatusIn"
+      },
+      "DecisionOut": {
+        "properties": {
+          "approved_by": {
+            "anyOf": [
+              {
+                "type": "string",
+                "format": "uuid"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Approved By"
+          },
+          "approved_at": {
+            "anyOf": [
+              {
+                "type": "string",
+                "format": "date-time"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Approved At"
+          },
+          "suspended_at": {
+            "anyOf": [
+              {
+                "type": "string",
+                "format": "date-time"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Suspended At"
+          },
+          "suspension_reason": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Suspension Reason"
+          },
+          "rejection_reason": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Rejection Reason"
+          },
+          "changes_requested": {
+            "anyOf": [
+              {},
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Changes Requested"
+          }
+        },
+        "type": "object",
+        "title": "DecisionOut"
+      },
+      "DetailResponse": {
+        "properties": {
+          "detail": {
+            "type": "string",
+            "title": "Detail"
+          }
+        },
+        "type": "object",
+        "required": [
+          "detail"
+        ],
+        "title": "DetailResponse"
+      },
+      "DispatchOut": {
+        "properties": {
+          "state": {
+            "anyOf": [
+              {
+                "type": "string",
+                "enum": [
+                  "dispatching",
+                  "matched",
+                  "unmatched"
+                ]
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "State"
+          },
+          "started_at": {
+            "anyOf": [
+              {
+                "type": "string",
+                "format": "date-time"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Started At"
+          },
+          "waves": {
+            "items": {
+              "$ref": "#/components/schemas/WaveOut"
+            },
+            "type": "array",
+            "title": "Waves"
+          },
+          "offers": {
+            "items": {
+              "$ref": "#/components/schemas/OfferOut"
+            },
+            "type": "array",
+            "title": "Offers"
+          }
+        },
+        "type": "object",
+        "required": [
+          "waves",
+          "offers"
+        ],
+        "title": "DispatchOut"
+      },
       "DocumentDecision": {
         "properties": {
           "decision": {
@@ -8204,6 +11141,53 @@
           "email"
         ],
         "title": "EmailVerificationRequest"
+      },
+      "EventOut": {
+        "properties": {
+          "event": {
+            "type": "string",
+            "title": "Event"
+          },
+          "created_at": {
+            "type": "string",
+            "format": "date-time",
+            "title": "Created At"
+          },
+          "delivered_at": {
+            "anyOf": [
+              {
+                "type": "string",
+                "format": "date-time"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Delivered At"
+          },
+          "attempts": {
+            "type": "integer",
+            "title": "Attempts"
+          },
+          "last_error": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Last Error"
+          }
+        },
+        "type": "object",
+        "required": [
+          "event",
+          "created_at",
+          "attempts"
+        ],
+        "title": "EventOut"
       },
       "FallGuardAnswerBase": {
         "properties": {
@@ -8491,6 +11475,46 @@
         ],
         "title": "FallGuardQuestionUpdate"
       },
+      "FormOptionsOut": {
+        "properties": {
+          "specializations": {
+            "items": {
+              "type": "string"
+            },
+            "type": "array",
+            "title": "Specializations"
+          },
+          "service_areas": {
+            "items": {
+              "type": "string"
+            },
+            "type": "array",
+            "title": "Service Areas"
+          },
+          "work_hours": {
+            "items": {
+              "type": "string"
+            },
+            "type": "array",
+            "title": "Work Hours"
+          },
+          "states": {
+            "items": {
+              "type": "string"
+            },
+            "type": "array",
+            "title": "States"
+          }
+        },
+        "type": "object",
+        "required": [
+          "specializations",
+          "service_areas",
+          "work_hours",
+          "states"
+        ],
+        "title": "FormOptionsOut"
+      },
       "HTTPValidationError": {
         "properties": {
           "detail": {
@@ -8612,7 +11636,14 @@
             "title": "Patient Name"
           },
           "patient_address": {
-            "type": "string",
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
             "title": "Patient Address"
           },
           "patient_city": {
@@ -8633,7 +11664,6 @@
           "scheduled_date",
           "scheduled_end_date",
           "duration_hours",
-          "patient_address",
           "patient_city",
           "patient_state"
         ],
@@ -8663,6 +11693,48 @@
           "notes"
         ],
         "title": "IdentityDecision"
+      },
+      "IdentityOut": {
+        "properties": {
+          "status": {
+            "type": "string",
+            "title": "Status"
+          },
+          "document_verification_result": {
+            "anyOf": [
+              {},
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Document Verification Result"
+          },
+          "face_verification_status": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Face Verification Status"
+          },
+          "face_verification_result": {
+            "anyOf": [
+              {},
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Face Verification Result"
+          }
+        },
+        "type": "object",
+        "required": [
+          "status"
+        ],
+        "title": "IdentityOut"
       },
       "InviteAcceptIn": {
         "properties": {
@@ -8923,6 +11995,89 @@
         ],
         "title": "MfaVerifyOut"
       },
+      "OfferOut": {
+        "properties": {
+          "caregiver_id": {
+            "type": "string",
+            "format": "uuid",
+            "title": "Caregiver Id"
+          },
+          "caregiver_name": {
+            "type": "string",
+            "title": "Caregiver Name"
+          },
+          "offered_at": {
+            "type": "string",
+            "format": "date-time",
+            "title": "Offered At"
+          },
+          "response": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Response"
+          },
+          "response_at": {
+            "anyOf": [
+              {
+                "type": "string",
+                "format": "date-time"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Response At"
+          }
+        },
+        "type": "object",
+        "required": [
+          "caregiver_id",
+          "caregiver_name",
+          "offered_at"
+        ],
+        "title": "OfferOut"
+      },
+      "PartyOut": {
+        "properties": {
+          "id": {
+            "type": "string",
+            "format": "uuid",
+            "title": "Id"
+          },
+          "full_name": {
+            "type": "string",
+            "title": "Full Name"
+          },
+          "phone": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Phone"
+          },
+          "masked": {
+            "type": "boolean",
+            "title": "Masked"
+          }
+        },
+        "type": "object",
+        "required": [
+          "id",
+          "full_name",
+          "masked"
+        ],
+        "title": "PartyOut"
+      },
       "PasswordReset": {
         "properties": {
           "token": {
@@ -8958,8 +12113,15 @@
       "Patient": {
         "properties": {
           "email": {
-            "type": "string",
-            "format": "email",
+            "anyOf": [
+              {
+                "type": "string",
+                "format": "email"
+              },
+              {
+                "type": "null"
+              }
+            ],
             "title": "Email"
           },
           "full_name": {
@@ -9185,7 +12347,6 @@
         },
         "type": "object",
         "required": [
-          "email",
           "full_name",
           "id",
           "user_id",
@@ -9951,6 +13112,140 @@
         ],
         "title": "PatientWalletSummary"
       },
+      "PaymentAttemptOut": {
+        "properties": {
+          "id": {
+            "type": "string",
+            "format": "uuid",
+            "title": "Id"
+          },
+          "type": {
+            "type": "string",
+            "title": "Type"
+          },
+          "status": {
+            "type": "string",
+            "title": "Status"
+          },
+          "amount_kobo": {
+            "type": "integer",
+            "title": "Amount Kobo"
+          },
+          "paystack_reference": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Paystack Reference"
+          },
+          "created_at": {
+            "type": "string",
+            "format": "date-time",
+            "title": "Created At"
+          }
+        },
+        "type": "object",
+        "required": [
+          "id",
+          "type",
+          "status",
+          "amount_kobo",
+          "created_at"
+        ],
+        "title": "PaymentAttemptOut"
+      },
+      "PaymentOut": {
+        "properties": {
+          "status": {
+            "type": "string",
+            "enum": [
+              "pending",
+              "paid",
+              "failed",
+              "refunded"
+            ],
+            "title": "Status"
+          },
+          "paystack_reference": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Paystack Reference"
+          },
+          "failure_reason": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Failure Reason"
+          },
+          "expires_at": {
+            "anyOf": [
+              {
+                "type": "string",
+                "format": "date-time"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Expires At"
+          },
+          "refund_required": {
+            "type": "boolean",
+            "title": "Refund Required"
+          },
+          "refund_required_reason": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Refund Required Reason"
+          },
+          "refund_amount_kobo": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Refund Amount Kobo"
+          },
+          "attempts": {
+            "items": {
+              "$ref": "#/components/schemas/PaymentAttemptOut"
+            },
+            "type": "array",
+            "title": "Attempts"
+          }
+        },
+        "type": "object",
+        "required": [
+          "status",
+          "refund_required",
+          "attempts"
+        ],
+        "title": "PaymentOut"
+      },
       "PaymentStatus": {
         "type": "string",
         "enum": [
@@ -10517,6 +13812,29 @@
         "type": "object",
         "title": "PrescriptionUpdate"
       },
+      "PriceOut": {
+        "properties": {
+          "total_kobo": {
+            "type": "integer",
+            "title": "Total Kobo"
+          },
+          "service_fee_kobo": {
+            "type": "integer",
+            "title": "Service Fee Kobo"
+          },
+          "platform_fee_kobo": {
+            "type": "integer",
+            "title": "Platform Fee Kobo"
+          }
+        },
+        "type": "object",
+        "required": [
+          "total_kobo",
+          "service_fee_kobo",
+          "platform_fee_kobo"
+        ],
+        "title": "PriceOut"
+      },
       "PushTokenDelete": {
         "properties": {
           "token": {
@@ -10588,6 +13906,60 @@
           "reason"
         ],
         "title": "ReasonIn"
+      },
+      "ReassignIn": {
+        "properties": {
+          "reason": {
+            "type": "string",
+            "maxLength": 2000,
+            "title": "Reason"
+          },
+          "caregiver_id": {
+            "type": "string",
+            "format": "uuid",
+            "title": "Caregiver Id"
+          }
+        },
+        "additionalProperties": false,
+        "type": "object",
+        "required": [
+          "reason",
+          "caregiver_id"
+        ],
+        "title": "ReassignIn"
+      },
+      "RedispatchIn": {
+        "properties": {
+          "reason": {
+            "type": "string",
+            "maxLength": 2000,
+            "title": "Reason"
+          },
+          "radius_km": {
+            "anyOf": [
+              {
+                "type": "number",
+                "maximum": 100,
+                "minimum": 1
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Radius Km"
+          },
+          "include_previously_notified": {
+            "type": "boolean",
+            "title": "Include Previously Notified",
+            "default": false
+          }
+        },
+        "additionalProperties": false,
+        "type": "object",
+        "required": [
+          "reason"
+        ],
+        "title": "RedispatchIn"
       },
       "RefreshIn": {
         "properties": {
@@ -10675,6 +14047,30 @@
         ],
         "title": "SkillIn"
       },
+      "SkillOut": {
+        "properties": {
+          "service_type": {
+            "type": "string",
+            "title": "Service Type"
+          },
+          "sub_specialty": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Sub Specialty"
+          }
+        },
+        "type": "object",
+        "required": [
+          "service_type"
+        ],
+        "title": "SkillOut"
+      },
       "SkillsIn": {
         "properties": {
           "skills": {
@@ -10692,6 +14088,63 @@
           "skills"
         ],
         "title": "SkillsIn"
+      },
+      "TimelineEntry": {
+        "properties": {
+          "at": {
+            "type": "string",
+            "format": "date-time",
+            "title": "At"
+          },
+          "kind": {
+            "type": "string",
+            "enum": [
+              "booking_created",
+              "dispatch_started",
+              "wave_sent",
+              "offer_response",
+              "notification_queued",
+              "notification_delivered",
+              "visit_started",
+              "visit_completed",
+              "admin_action"
+            ],
+            "title": "Kind"
+          },
+          "title": {
+            "type": "string",
+            "title": "Title"
+          },
+          "actor": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Actor"
+          },
+          "detail": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Detail"
+          }
+        },
+        "type": "object",
+        "required": [
+          "at",
+          "kind",
+          "title"
+        ],
+        "title": "TimelineEntry"
       },
       "Token": {
         "properties": {
@@ -10745,11 +14198,218 @@
         ],
         "title": "TokenPairOut"
       },
+      "UnmatchedItem": {
+        "properties": {
+          "id": {
+            "type": "string",
+            "format": "uuid",
+            "title": "Id"
+          },
+          "booking_code": {
+            "type": "string",
+            "title": "Booking Code"
+          },
+          "service_type": {
+            "type": "string",
+            "title": "Service Type"
+          },
+          "scheduled_date": {
+            "type": "string",
+            "format": "date-time",
+            "title": "Scheduled Date"
+          },
+          "scheduled_end_date": {
+            "type": "string",
+            "format": "date-time",
+            "title": "Scheduled End Date"
+          },
+          "city": {
+            "type": "string",
+            "title": "City"
+          },
+          "state": {
+            "type": "string",
+            "title": "State"
+          },
+          "patient": {
+            "$ref": "#/components/schemas/PartyOut"
+          },
+          "caregiver": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/PartyOut"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "status": {
+            "type": "string",
+            "enum": [
+              "pending",
+              "accepted",
+              "en_route",
+              "in_progress",
+              "completed",
+              "cancelled",
+              "declined"
+            ],
+            "title": "Status"
+          },
+          "payment_status": {
+            "type": "string",
+            "enum": [
+              "pending",
+              "paid",
+              "failed",
+              "refunded"
+            ],
+            "title": "Payment Status"
+          },
+          "dispatch_state": {
+            "anyOf": [
+              {
+                "type": "string",
+                "enum": [
+                  "dispatching",
+                  "matched",
+                  "unmatched"
+                ]
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Dispatch State"
+          },
+          "total_amount_kobo": {
+            "type": "integer",
+            "title": "Total Amount Kobo"
+          },
+          "channel": {
+            "type": "string",
+            "enum": [
+              "app",
+              "whatsapp",
+              "admin"
+            ],
+            "title": "Channel"
+          },
+          "created_at": {
+            "type": "string",
+            "format": "date-time",
+            "title": "Created At"
+          },
+          "age_minutes": {
+            "type": "integer",
+            "title": "Age Minutes"
+          },
+          "needs_address_check": {
+            "type": "boolean",
+            "title": "Needs Address Check"
+          },
+          "refund_required": {
+            "type": "boolean",
+            "title": "Refund Required"
+          },
+          "no_show_flagged_at": {
+            "anyOf": [
+              {
+                "type": "string",
+                "format": "date-time"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "No Show Flagged At"
+          },
+          "no_show_suspected": {
+            "type": "boolean",
+            "title": "No Show Suspected"
+          },
+          "queue_reason": {
+            "type": "string",
+            "enum": [
+              "address_check",
+              "unmatched",
+              "sla_breached"
+            ],
+            "title": "Queue Reason"
+          },
+          "waiting_minutes": {
+            "type": "integer",
+            "title": "Waiting Minutes"
+          }
+        },
+        "type": "object",
+        "required": [
+          "id",
+          "booking_code",
+          "service_type",
+          "scheduled_date",
+          "scheduled_end_date",
+          "city",
+          "state",
+          "patient",
+          "status",
+          "payment_status",
+          "total_amount_kobo",
+          "channel",
+          "created_at",
+          "age_minutes",
+          "needs_address_check",
+          "refund_required",
+          "no_show_suspected",
+          "queue_reason",
+          "waiting_minutes"
+        ],
+        "title": "UnmatchedItem"
+      },
+      "UnmatchedList": {
+        "properties": {
+          "items": {
+            "items": {
+              "$ref": "#/components/schemas/UnmatchedItem"
+            },
+            "type": "array",
+            "title": "Items"
+          },
+          "total": {
+            "type": "integer",
+            "title": "Total"
+          },
+          "limit": {
+            "type": "integer",
+            "title": "Limit"
+          },
+          "offset": {
+            "type": "integer",
+            "title": "Offset"
+          }
+        },
+        "type": "object",
+        "required": [
+          "items",
+          "total",
+          "limit",
+          "offset"
+        ],
+        "title": "UnmatchedList"
+      },
       "User": {
         "properties": {
           "email": {
-            "type": "string",
-            "format": "email",
+            "anyOf": [
+              {
+                "type": "string",
+                "format": "email"
+              },
+              {
+                "type": "null"
+              }
+            ],
             "title": "Email"
           },
           "phone_number": {
@@ -10812,7 +14472,6 @@
         },
         "type": "object",
         "required": [
-          "email",
           "full_name",
           "user_type",
           "id",
@@ -10908,8 +14567,15 @@
             "title": "Full Name"
           },
           "email": {
-            "type": "string",
-            "format": "email",
+            "anyOf": [
+              {
+                "type": "string",
+                "format": "email"
+              },
+              {
+                "type": "null"
+              }
+            ],
             "title": "Email"
           },
           "phone_number": {
@@ -11032,7 +14698,6 @@
         "required": [
           "id",
           "full_name",
-          "email",
           "phone_number",
           "profile_image_url",
           "user_type",
@@ -11190,8 +14855,15 @@
       "UserWithTypeData": {
         "properties": {
           "email": {
-            "type": "string",
-            "format": "email",
+            "anyOf": [
+              {
+                "type": "string",
+                "format": "email"
+              },
+              {
+                "type": "null"
+              }
+            ],
             "title": "Email"
           },
           "phone_number": {
@@ -11274,7 +14946,6 @@
         },
         "type": "object",
         "required": [
-          "email",
           "full_name",
           "user_type",
           "id",
@@ -11348,6 +15019,79 @@
         ],
         "title": "VerificationResultRequest"
       },
+      "VerificationStatusOut": {
+        "properties": {
+          "profile_completion_step": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Profile Completion Step"
+          },
+          "identity_verification_status": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Identity Verification Status"
+          },
+          "background_check_status": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Background Check Status"
+          },
+          "profile_status": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Profile Status"
+          },
+          "rejection_reason": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Rejection Reason"
+          },
+          "changes_requested": {
+            "anyOf": [
+              {
+                "additionalProperties": true,
+                "type": "object"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Changes Requested"
+          }
+        },
+        "type": "object",
+        "title": "VerificationStatusOut"
+      },
       "VitalSource": {
         "type": "string",
         "enum": [
@@ -11355,6 +15099,36 @@
           "wearable"
         ],
         "title": "VitalSource"
+      },
+      "WaveOut": {
+        "properties": {
+          "wave_no": {
+            "type": "integer",
+            "title": "Wave No"
+          },
+          "sent_at": {
+            "type": "string",
+            "format": "date-time",
+            "title": "Sent At"
+          },
+          "expires_at": {
+            "type": "string",
+            "format": "date-time",
+            "title": "Expires At"
+          },
+          "notified_count": {
+            "type": "integer",
+            "title": "Notified Count"
+          }
+        },
+        "type": "object",
+        "required": [
+          "wave_no",
+          "sent_at",
+          "expires_at",
+          "notified_count"
+        ],
+        "title": "WaveOut"
       }
     },
     "securitySchemes": {

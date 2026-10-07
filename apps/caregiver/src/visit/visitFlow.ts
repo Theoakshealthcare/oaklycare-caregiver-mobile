@@ -115,3 +115,35 @@ export async function submitVisitCode(bookingId: string, code: string, deps: Sub
     return { kind: "error", message };
   }
 }
+
+/**
+ * The backend only accepts "On my way" from `onmyway_compensation_window_minutes` before the start
+ * (policy default 120; it is not in any response). The server is authoritative: this only decides
+ * whether the button looks enabled, and a too-early 409 is still mapped to a message.
+ */
+export const ON_MY_WAY_WINDOW_MINUTES = 120;
+
+export function onMyWayUnlocksAt(scheduledDateMs: number, windowMinutes = ON_MY_WAY_WINDOW_MINUTES): number {
+  return scheduledDateMs - windowMinutes * 60_000;
+}
+
+export function isOnMyWayOpen(scheduledDateMs: number, nowMs: number): boolean {
+  return nowMs >= onMyWayUnlocksAt(scheduledDateMs);
+}
+
+/**
+ * The drop-out button is only for a WhatsApp booking that is still `accepted` and more than the same
+ * window (2 h) before the start; the backend refuses inside it with a 409.
+ */
+export function canDropOut(channel: string, status: string, scheduledDateMs: number, nowMs: number): boolean {
+  return channel === "whatsapp" && status === "accepted" && nowMs < onMyWayUnlocksAt(scheduledDateMs);
+}
+
+/** Wording for the confirmation before a caregiver drops a job they accepted. Promises nothing about money. */
+export const DROP_OUT_CONFIRM = {
+  title: "Can't make this visit?",
+  message: "We'll let the family know and find another professional.",
+  confirm: "Yes, I can't make it",
+  keep: "Keep visit",
+  done: "Thanks for letting us know. We'll let the family know and find another professional.",
+} as const;

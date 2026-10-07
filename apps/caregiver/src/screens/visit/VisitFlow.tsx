@@ -14,7 +14,7 @@ import { useBooking, useBookingAction } from "@/src/hooks/queries";
 import type { ScreenParamLists } from "@/src/navigation/Navigations";
 import { bookingService } from "@/src/services/booking.service";
 import { ensureBackgroundLocation } from "@/src/supply/permissions";
-import { codeLocks, stepForStatus, submitVisitCode } from "@/src/visit/visitFlow";
+import { codeLocks, DROP_OUT_CONFIRM, stepForStatus, submitVisitCode } from "@/src/visit/visitFlow";
 import { formatVisitTime } from "@/src/utils/dates";
 
 import { InProgressStep, OnMyWayStep, VisitClosedStep, VisitCodeStep, VisitDoneStep, VisitStoppedStep } from "./VisitSteps";
@@ -62,6 +62,27 @@ const VisitFlow: React.FC<Props> = ({ route, navigation }) => {
     // never blocks the visit: tracking falls back to foreground while the app is open.
     void ensureBackgroundLocation().finally(() => run("on_my_way"));
   };
+
+  const confirmDropOut = () =>
+    Alert.alert(DROP_OUT_CONFIRM.title, DROP_OUT_CONFIRM.message, [
+      { text: DROP_OUT_CONFIRM.keep, style: "cancel" },
+      {
+        text: DROP_OUT_CONFIRM.confirm,
+        style: "destructive",
+        onPress: () =>
+          action.mutate(
+            { bookingId, action: "cancel" },
+            {
+              // The booking is no longer this caregiver's: the hook refetches the lists, so it leaves them.
+              onSuccess: () => {
+                Alert.alert("Visit cancelled", DROP_OUT_CONFIRM.done);
+                goHome();
+              },
+              onError: (err) => Alert.alert("Couldn't cancel the visit", messageForError(err, "visit")),
+            },
+          ),
+      },
+    ]);
 
   const confirmComplete = () =>
     Alert.alert("Complete this visit?", "This ends the visit and stops sharing your location.", [
@@ -119,7 +140,7 @@ const VisitFlow: React.FC<Props> = ({ route, navigation }) => {
     }
     const visit = {
       patientName: booking.patient_details?.full_name ?? "Patient",
-      address: booking.patient_address,
+      address: booking.patient_address ?? "",
       when: formatVisitTime(booking.scheduled_date),
     };
     const busy = action.isPending;
@@ -135,7 +156,16 @@ const VisitFlow: React.FC<Props> = ({ route, navigation }) => {
             onSubmit={(code) => void submitCode(code)}
           />
         ) : (
-          <OnMyWayStep visit={visit} busy={busy} onOnMyWay={onMyWay} onArrived={() => setArrived(true)} />
+          <OnMyWayStep
+            visit={visit}
+            scheduledDate={booking.scheduled_date}
+            busy={busy}
+            onOnMyWay={onMyWay}
+            onArrived={() => setArrived(true)}
+            channel={booking.channel}
+            onCantMakeIt={confirmDropOut}
+            onContactSupport={() => navigation.navigate("Contact")}
+          />
         );
       case "enter_code":
         return (
