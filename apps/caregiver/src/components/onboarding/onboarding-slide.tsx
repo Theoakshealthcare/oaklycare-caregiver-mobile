@@ -5,7 +5,6 @@ import Box from "../ui/box"
 import Text from "../ui/text"
 import Button from "../ui/button"
 import Image from "../ui/image"
-import { useSafeAreaInsets } from "react-native-safe-area-context"
 import ScreenSize from "@/src/hooks/screen-size"
 
 export interface OnboardingSlideProps {
@@ -38,7 +37,6 @@ const OnboardingSlide: React.FC<OnboardingSlideProps> = ({
   index = 0,
 }) => {
   const { height, width } = ScreenSize()
-  const insets = useSafeAreaInsets()
 
   // Calculate animation values based on scroll position
   const inputRange = [(index - 1) * width, index * width, (index + 1) * width]
@@ -73,7 +71,7 @@ const OnboardingSlide: React.FC<OnboardingSlideProps> = ({
           variant="ghost"
           textStyle={{ color: theme.colors.primary }}
           onPress={onSkip}
-          style={{ position: "absolute", zIndex: 10, top: Math.max(insets.top, theme.spacing.sm), right: 0 }}
+          style={{ position: "absolute", zIndex: 10, top: theme.spacing.sm, right: 0 }}
         />
 
         <Animated.View

@@ -1,7 +1,6 @@
 import React, { useEffect } from "react";
 import { Pressable, View } from "react-native";
 
-import { useSafeAreaInsets } from "react-native-safe-area-context";
 import Text from "@/src/components/ui/text";
 import { theme } from "@/src/constants/theme";
 import { useBanner } from "@/src/push/banner";
@@ -11,7 +10,6 @@ const VISIBLE_MS = 8_000;
 /** Slides over the top of the app when a job offer push arrives in the foreground. */
 const InAppBanner: React.FC<{ onOpen: (bookingId: string) => void }> = ({ onOpen }) => {
   const { banner, hide } = useBanner();
-  const insets = useSafeAreaInsets();
 
   useEffect(() => {
     if (!banner) return;
@@ -21,7 +19,7 @@ const InAppBanner: React.FC<{ onOpen: (bookingId: string) => void }> = ({ onOpen
 
   if (!banner) return null;
   return (
-    <View pointerEvents="box-none" style={{ position: "absolute", top: insets.top, left: 0, right: 0, padding: 12 }}>
+    <View pointerEvents="box-none" style={{ position: "absolute", top: 0, left: 0, right: 0, padding: 12 }}>
       <Pressable
         accessibilityRole="button"
         accessibilityLabel={`${banner.title}. ${banner.body}. Tap to view.`}

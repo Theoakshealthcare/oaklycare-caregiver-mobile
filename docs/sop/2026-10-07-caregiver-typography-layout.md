@@ -10,13 +10,13 @@ Running on an iPhone 17 Pro showed "Declin/e", "Complete/d" and a two-line "New 
 ## How
 | Decision | Detail |
 |---|---|
-| Six font tokens only | `theme.sizes`: caption 12, body 15, subtitle 17, title 20, heading 24, display 28 (at the 390 pt design width). Old names (nano, base, small, font, medium, large, extraLarge, xxl, xxxl, button) removed; spacing uses went to `theme.spacing`. |
+| Six font tokens only | `theme.sizes`: caption 13, body 15, subtitle 17, title 20, heading 24, display 28 (at the 390 pt design width). Old names (nano, base, small, font, medium, large, extraLarge, xxl, xxxl, button) removed; spacing uses went to `theme.spacing`. |
 | Width-damped scale | `scaleFactor(w) = clamp(1 + (w/390 - 1) * 0.5, 0.9, 1.15)`, computed once from `Dimensions`. Applied to sizes and `theme.spacing`. Never height. |
 | Accessibility | RN applies the OS text size natively; we cap it with `maxFontSizeMultiplier = 1.3` (`MAX_FONT_SCALE`) in `Text`, `Input`, `Button` labels and raw `TextInput`s. `allowFontScaling` stays on. |
 | Labels | `Button` labels: `numberOfLines={1}`, `adjustsFontSizeToFit`, `minimumFontScale={0.85}`, horizontal padding 16 (was ~23). Job card actions: `flex: 1`, padding 8, gap 8. Bookings tabs: one line, fit-to-width, padding 4; label "New request" (kept; fit-to-width covers 375 pt). |
-| Text variants | h1 display, h2 heading, h3 title, body body, small and caption both caption (12); line height = 1.35 x size (`lineHeightFor`). |
+| Text variants | h1 display, h2 heading, h3 title, body body, small and caption both caption (13); line height = 1.35 x size (`lineHeightFor`). |
 | Guard | `__tests__/typography.test.tsx` fails if a raw numeric `fontSize:` appears anywhere in `src/` outside `theme.ts`. |
-| Safe area | `SafeAreaProvider` added in `App.tsx`; onboarding Skip uses `max(insets.top, 8)`; `InAppBanner` uses `insets.top`. Jest uses the library mock. |
+| Safe area | `SafeAreaProvider` added in `App.tsx` (Jest uses the library mock). `MainApp`'s `SafeAreaView` already applies the top inset, so Skip and `InAppBanner` use fixed small offsets inside it (adding `insets.top` double-padded them). |
 | Login link | `isLast` prop removed from the slide; link always rendered. |
 | Back to home | `VisitFlow.goHome` -> `popTo("BottomNavigation", { tab: "home", at: Date.now() })`. `BottomNavigation` reads `route.params` and switches tab (it kept the previously selected Bookings tab because its tab state is local). |
 
@@ -34,5 +34,5 @@ Jest: scale function at 320/375/390/430/768 and clamps; sizes unchanged with moc
 Pure client change; revert the branch. No API or migration changes.
 
 ## Follow-ups
-- Visual pass on a 375 pt and a large-text setting; confirm Skip is not double-padded under the existing `SafeAreaView` in `MainApp`.
+- Visual pass on a 375 pt and a large-text setting; none for Skip.
 - Many screens still use literal paddings and radii (only fonts are guarded).

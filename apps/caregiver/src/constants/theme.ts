@@ -60,7 +60,7 @@ export const theme = {
   },
   /** The only font sizes in the app (design values, scaled by width). Raw `fontSize:` numbers are banned. */
   sizes: {
-    caption: scale(12),
+    caption: scale(13),
     body: scale(15),
     subtitle: scale(17),
     title: scale(20),
