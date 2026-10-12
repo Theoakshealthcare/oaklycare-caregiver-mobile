@@ -1943,6 +1943,74 @@ export interface paths {
         patch: operations["update_policy_api_v1_admin_booking_policy_patch"];
         trace?: never;
     };
+    "/api/v1/admin/earnings": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** List Earnings */
+        get: operations["list_earnings_api_v1_admin_earnings_get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/admin/earnings/{earning_id}/hold": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** Hold Earning */
+        post: operations["hold_earning_api_v1_admin_earnings__earning_id__hold_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/admin/earnings/{earning_id}/release-hold": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** Release Hold */
+        post: operations["release_hold_api_v1_admin_earnings__earning_id__release_hold_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/admin/earnings/{earning_id}/void": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** Void Earning */
+        post: operations["void_earning_api_v1_admin_earnings__earning_id__void_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/v1/admin/auth/login": {
         parameters: {
             query?: never;
@@ -2907,9 +2975,35 @@ export interface components {
             onmyway_compensation_window_minutes: number;
             /**
              * Caregiver Late Fee Share Percent
-             * @description Caregiver's share of a late fee, in percent (stored now, paid out by the compensation work)
+             * @description Caregiver's share of a kept late-cancellation fee, in percent
              */
             caregiver_late_fee_share_percent: number;
+            /**
+             * Caregiver Visit Share Percent
+             * @description Caregiver's share of a completed visit's service fee (not the platform fee), in percent
+             */
+            caregiver_visit_share_percent: number;
+            /**
+             * Earning Hold Hours
+             * @description An earning becomes withdrawable this many hours after the visit is completed
+             */
+            earning_hold_hours: number;
+            /**
+             * Payout Cadence
+             * @description How often scheduled payouts run (used by the payouts work; not read yet)
+             * @enum {string}
+             */
+            payout_cadence: "weekly" | "biweekly" | "monthly";
+            /**
+             * Payout Min Naira
+             * @description Smallest available balance a scheduled payout pays out, in naira (not read yet)
+             */
+            payout_min_naira: number;
+            /**
+             * Finance Refund Limit Naira
+             * @description Largest refund Finance may approve without a Super Admin, in naira (not read yet)
+             */
+            finance_refund_limit_naira: number;
             /** Updated At */
             updated_at?: string | null;
             /** Updated By */
@@ -2938,6 +3032,16 @@ export interface components {
             onmyway_compensation_window_minutes?: number | null;
             /** Caregiver Late Fee Share Percent */
             caregiver_late_fee_share_percent?: number | null;
+            /** Caregiver Visit Share Percent */
+            caregiver_visit_share_percent?: number | null;
+            /** Earning Hold Hours */
+            earning_hold_hours?: number | null;
+            /** Payout Cadence */
+            payout_cadence?: ("weekly" | "biweekly" | "monthly") | null;
+            /** Payout Min Naira */
+            payout_min_naira?: number | null;
+            /** Finance Refund Limit Naira */
+            finance_refund_limit_naira?: number | null;
         };
         /** BookingPreviewRequest */
         BookingPreviewRequest: {
@@ -3759,11 +3863,17 @@ export interface components {
              * Type
              * @enum {string}
              */
-            type: "earning" | "withdrawal";
+            type: "earning" | "late_cancel_compensation" | "withdrawal";
             /** Amount */
             amount: number;
             /** Status */
             status: string;
+            /** Booking Id */
+            booking_id?: string | null;
+            /** Available At */
+            available_at?: string | null;
+            /** Released At */
+            released_at?: string | null;
             /** Bank Name */
             bank_name?: string | null;
             /** Account Number */
@@ -3798,6 +3908,16 @@ export interface components {
              * @default NGN
              */
             currency: string;
+            /** Available Balance */
+            available_balance: number;
+            /** Pending Balance */
+            pending_balance: number;
+            /** Held Balance */
+            held_balance: number;
+            /** Total Pending */
+            total_pending: number;
+            /** Next Available At */
+            next_available_at?: string | null;
         };
         /** CaregiverWithdrawalRequest */
         CaregiverWithdrawalRequest: {
@@ -3969,6 +4089,74 @@ export interface components {
              * Format: date-time
              */
             uploaded_at: string;
+        };
+        /** EarningList */
+        EarningList: {
+            /** Items */
+            items: components["schemas"]["EarningOut"][];
+            /** Total */
+            total: number;
+        };
+        /** EarningOut */
+        EarningOut: {
+            /**
+             * Id
+             * Format: uuid
+             */
+            id: string;
+            /**
+             * Type
+             * @enum {string}
+             */
+            type: "earning" | "late_cancel_compensation";
+            /**
+             * Status
+             * @enum {string}
+             */
+            status: "pending_clearance" | "held" | "successful" | "voided";
+            /** Amount Kobo */
+            amount_kobo: number;
+            /**
+             * Base Amount Kobo
+             * @description What the share was taken of: the service fee, or the late fee kept
+             */
+            base_amount_kobo: number | null;
+            /** Share Percent */
+            share_percent: number | null;
+            /**
+             * Caregiver Id
+             * Format: uuid
+             */
+            caregiver_id: string;
+            /** Caregiver Name */
+            caregiver_name: string | null;
+            /** Booking Id */
+            booking_id: string | null;
+            /** Booking Code */
+            booking_code: string | null;
+            /** Available At */
+            available_at: string | null;
+            /** Released At */
+            released_at: string | null;
+            /**
+             * Status Reason
+             * @description Why it is held or voided
+             */
+            status_reason: string | null;
+            /** Status Changed By */
+            status_changed_by: string | null;
+            /** Status Changed At */
+            status_changed_at: string | null;
+            /**
+             * Created At
+             * Format: date-time
+             */
+            created_at: string;
+        };
+        /** EarningReasonIn */
+        EarningReasonIn: {
+            /** Reason */
+            reason: string;
         };
         /** EmailVerification */
         EmailVerification: {
@@ -9172,6 +9360,146 @@ export interface operations {
                 };
                 content: {
                     "application/json": components["schemas"]["BookingPolicyOut"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    list_earnings_api_v1_admin_earnings_get: {
+        parameters: {
+            query?: {
+                caregiver_id?: string | null;
+                booking_id?: string | null;
+                status?: ("pending_clearance" | "held" | "successful" | "voided") | null;
+                limit?: number;
+                offset?: number;
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["EarningList"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    hold_earning_api_v1_admin_earnings__earning_id__hold_post: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                earning_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["EarningReasonIn"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["EarningOut"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    release_hold_api_v1_admin_earnings__earning_id__release_hold_post: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                earning_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["EarningReasonIn"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["EarningOut"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    void_earning_api_v1_admin_earnings__earning_id__void_post: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                earning_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["EarningReasonIn"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["EarningOut"];
                 };
             };
             /** @description Validation Error */
