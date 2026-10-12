@@ -3,8 +3,11 @@ import {
   currentMonth,
   formatKobo,
   groupTransactions,
+  MIN_PAYOUT_NAIRA_TEXT,
+  availableFromText,
   monthOptions,
   transactionView,
+  walletBalances,
 } from "../src/wallet/walletModel";
 
 // Shaped after capture 130 in the backend guide (a withdrawal) plus an earning.
@@ -55,15 +58,88 @@ describe("transactionView", () => {
     expect(transactionView(earning)).toMatchObject({
       title: "Visit ECCADB9F",
       amount: "+₦55,000.00",
-      statusLabel: "Successful",
+      statusLabel: "Available",
       tone: "success",
     });
   });
 
   it("falls back to a generic title and flags failures", () => {
-    const view = transactionView({ ...earning, narration: null, status: "failed" });
+    const view = transactionView({ ...withdrawal, type: "earning", narration: null, status: "weird" });
     expect(view.title).toBe("Visit earning");
-    expect(view.tone).toBe("error");
+    expect(transactionView({ ...withdrawal, status: "failed" }).tone).toBe("error");
+  });
+});
+
+// Shaped after captures 154 (pending), 158 (held) and 164 (released) of the backend guide.
+const base = {
+  balance: 2300000,
+  total_earned: 0,
+  total_withdrawn: 0,
+  currency: "NGN",
+  available_balance: 2300000,
+  pending_balance: 4000000,
+  held_balance: 0,
+  total_pending: 4000000,
+  next_available_at: "2026-10-08T19:48:51.599904",
+};
+
+describe("walletBalances", () => {
+  it("shows pending with the local time it becomes available (naive UTC read as UTC)", () => {
+    const b = walletBalances(base);
+    expect(b.available).toBe("₦23,000.00");
+    expect(b.pending).toEqual({ amount: "₦40,000.00", availableFrom: availableFromText(base.next_available_at) });
+    expect(b.held).toBeNull();
+    expect(availableFromText(base.next_available_at)).toBe(
+      new Date("2026-10-08T19:48:51.599904Z").toLocaleString("en-NG", {
+        weekday: "short", day: "numeric", month: "short", hour: "numeric", minute: "2-digit",
+      }),
+    );
+  });
+
+  it("shows held when above zero, and no pending line", () => {
+    const b = walletBalances({ ...base, pending_balance: 0, held_balance: 4000000, next_available_at: null });
+    expect(b.pending).toBeNull();
+    expect(b.held).toEqual({ amount: "₦40,000.00" });
+  });
+
+  it("hides pending and held when both are zero", () => {
+    const b = walletBalances({ ...base, pending_balance: 0, total_pending: 0, next_available_at: null });
+    expect(b.pending).toBeNull();
+    expect(b.held).toBeNull();
+  });
+
+  it("has pending without a date when none is given", () => {
+    expect(walletBalances({ ...base, next_available_at: null }).pending?.availableFrom).toBeNull();
+  });
+
+  it("states the minimum payout", () => {
+    expect(MIN_PAYOUT_NAIRA_TEXT).toBe("₦5,000");
+  });
+});
+
+describe("earning transactions in plain English", () => {
+  const e = { ...earning, narration: "Visit 71DC62E0", available_at: "2026-10-08T19:48:51.599904" };
+  it("pending_clearance", () => {
+    expect(transactionView({ ...e, status: "pending_clearance" })).toMatchObject({
+      title: "Visit 71DC62E0",
+      statusLabel: "Pending",
+      tone: "pending",
+      subtitle: `Available from ${availableFromText(e.available_at as string)}`,
+    });
+  });
+  it("held", () => {
+    expect(transactionView({ ...e, status: "held" })).toMatchObject({ statusLabel: "Under review by Oakly", tone: "pending" });
+  });
+  it("successful earning is available", () => {
+    expect(transactionView({ ...e, status: "successful" })).toMatchObject({ statusLabel: "Available", tone: "success", amount: "+₦55,000.00" });
+  });
+  it("voided", () => {
+    expect(transactionView({ ...e, status: "voided" })).toMatchObject({ statusLabel: "Cancelled", tone: "error" });
+  });
+  it("late cancellation compensation", () => {
+    expect(transactionView({ ...e, type: "late_cancel_compensation", narration: null, status: "successful" }).title).toBe(
+      "Late cancellation compensation",
+    );
   });
 });
 

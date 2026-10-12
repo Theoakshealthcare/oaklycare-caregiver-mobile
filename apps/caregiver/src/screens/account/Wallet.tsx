@@ -12,7 +12,15 @@ import { theme } from "@/src/constants/theme";
 import { useBankAccount, useWallet, useWalletTransactions } from "@/src/hooks/queries";
 import useNavigation from "@/src/hooks/use-navigation";
 import { sharePayslip } from "@/src/wallet/payslip";
-import { currentMonth, formatKobo, groupTransactions, monthOptions, type Tone } from "@/src/wallet/walletModel";
+import {
+  currentMonth,
+  formatKobo,
+  groupTransactions,
+  MIN_PAYOUT_NAIRA_TEXT,
+  monthOptions,
+  walletBalances,
+  type Tone,
+} from "@/src/wallet/walletModel";
 
 const TONE_COLOR: Record<Tone, string> = {
   success: theme.colors.success,
@@ -77,20 +85,40 @@ const Wallet: React.FC = () => {
     if (wallet.isError && !wallet.data) return <ErrorState error={wallet.error} onRetry={() => void wallet.refetch()} />;
     if (!wallet.data) return <LoadingState testID="wallet-loading" />;
     const summary = wallet.data;
+    const balances = walletBalances(summary);
     return (
       <>
-        <View style={{ backgroundColor: theme.colors.primary, borderRadius: 20, padding: 24, alignItems: "center", marginBottom: 16 }}>
+        <View style={{ backgroundColor: theme.colors.primary, borderRadius: 20, padding: 24, alignItems: "center", marginBottom: 12 }}>
           <Text variant="small" color={theme.colors.white}>
-            Wallet balance ({summary.currency})
+            Available balance
           </Text>
           <Text variant="h1" weight="bold" color={theme.colors.white} testID="wallet-balance">
-            {formatKobo(summary.balance)}
+            {balances.available}
           </Text>
         </View>
 
-        <Text variant="small" color={theme.colors.textLight} style={{ marginBottom: 16 }}>
-          Earnings appear here after your completed visits are credited. Your balance is paid out on a schedule.
-        </Text>
+        {balances.pending ? (
+          <Text variant="small" color={theme.colors.warningText} style={{ marginBottom: 8 }} testID="wallet-pending">
+            {`${balances.pending.amount} pending${balances.pending.availableFrom ? ` · available from ${balances.pending.availableFrom}` : ""}`}
+          </Text>
+        ) : null}
+        {balances.held ? (
+          <View style={{ marginBottom: 8 }}>
+            <Text variant="small" weight="medium" color={theme.colors.warningText} testID="wallet-held">
+              {`${balances.held.amount} on hold`}
+            </Text>
+            <Text variant="small" color={theme.colors.textLight}>
+              Under review by Oakly
+            </Text>
+          </View>
+        ) : null}
+
+        <View style={{ flexDirection: "row", gap: 10, padding: 14, borderRadius: 12, backgroundColor: theme.colors.soft, marginVertical: 8 }}>
+          <Feather name="info" size={18} color={theme.colors.primary} />
+          <Text variant="small" color={theme.colors.textLight} style={{ flex: 1 }}>
+            {`Payouts are sent weekly to your bank account once your available balance is at least ${MIN_PAYOUT_NAIRA_TEXT}.`}
+          </Text>
+        </View>
 
         {bank.data ? (
           <View style={{ flexDirection: "row", alignItems: "center", padding: 14, borderRadius: 12, backgroundColor: theme.colors.primaryLight, marginBottom: 12 }}>
@@ -120,7 +148,7 @@ const Wallet: React.FC = () => {
         ) : null}
 
         <TotalCard label="Total amount paid in" value={formatKobo(summary.total_earned)} icon="arrow-down-left" />
-        <TotalCard label="Total amount withdrawn" value={formatKobo(summary.total_withdrawn)} icon="arrow-up-right" />
+        <TotalCard label="Total paid out" value={formatKobo(summary.total_withdrawn)} icon="arrow-up-right" />
 
         <View style={{ flexDirection: "row", alignItems: "center", justifyContent: "space-between", marginTop: 16 }}>
           <Text variant="h3" weight="bold">
