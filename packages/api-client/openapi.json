@@ -5882,6 +5882,297 @@
         ]
       }
     },
+    "/api/v1/admin/earnings": {
+      "get": {
+        "tags": [
+          "admin-earnings"
+        ],
+        "summary": "List Earnings",
+        "operationId": "list_earnings_api_v1_admin_earnings_get",
+        "security": [
+          {
+            "AdminBearer": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "caregiver_id",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string",
+                  "format": "uuid"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Caregiver Id"
+            }
+          },
+          {
+            "name": "booking_id",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string",
+                  "format": "uuid"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Booking Id"
+            }
+          },
+          {
+            "name": "status",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "enum": [
+                    "pending_clearance",
+                    "held",
+                    "successful",
+                    "voided"
+                  ],
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Status"
+            }
+          },
+          {
+            "name": "limit",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "integer",
+              "maximum": 200,
+              "minimum": 1,
+              "default": 50,
+              "title": "Limit"
+            }
+          },
+          {
+            "name": "offset",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "integer",
+              "minimum": 0,
+              "default": 0,
+              "title": "Offset"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/EarningList"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/admin/earnings/{earning_id}/hold": {
+      "post": {
+        "tags": [
+          "admin-earnings"
+        ],
+        "summary": "Hold Earning",
+        "operationId": "hold_earning_api_v1_admin_earnings__earning_id__hold_post",
+        "security": [
+          {
+            "AdminBearer": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "earning_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid",
+              "title": "Earning Id"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/EarningReasonIn"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/EarningOut"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/admin/earnings/{earning_id}/release-hold": {
+      "post": {
+        "tags": [
+          "admin-earnings"
+        ],
+        "summary": "Release Hold",
+        "operationId": "release_hold_api_v1_admin_earnings__earning_id__release_hold_post",
+        "security": [
+          {
+            "AdminBearer": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "earning_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid",
+              "title": "Earning Id"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/EarningReasonIn"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/EarningOut"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/admin/earnings/{earning_id}/void": {
+      "post": {
+        "tags": [
+          "admin-earnings"
+        ],
+        "summary": "Void Earning",
+        "operationId": "void_earning_api_v1_admin_earnings__earning_id__void_post",
+        "security": [
+          {
+            "AdminBearer": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "earning_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid",
+              "title": "Earning Id"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/EarningReasonIn"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/EarningOut"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
     "/api/v1/admin/auth/login": {
       "post": {
         "tags": [
@@ -8489,7 +8780,37 @@
           "caregiver_late_fee_share_percent": {
             "type": "integer",
             "title": "Caregiver Late Fee Share Percent",
-            "description": "Caregiver's share of a late fee, in percent (stored now, paid out by the compensation work)"
+            "description": "Caregiver's share of a kept late-cancellation fee, in percent"
+          },
+          "caregiver_visit_share_percent": {
+            "type": "integer",
+            "title": "Caregiver Visit Share Percent",
+            "description": "Caregiver's share of a completed visit's service fee (not the platform fee), in percent"
+          },
+          "earning_hold_hours": {
+            "type": "integer",
+            "title": "Earning Hold Hours",
+            "description": "An earning becomes withdrawable this many hours after the visit is completed"
+          },
+          "payout_cadence": {
+            "type": "string",
+            "enum": [
+              "weekly",
+              "biweekly",
+              "monthly"
+            ],
+            "title": "Payout Cadence",
+            "description": "How often scheduled payouts run (used by the payouts work; not read yet)"
+          },
+          "payout_min_naira": {
+            "type": "integer",
+            "title": "Payout Min Naira",
+            "description": "Smallest available balance a scheduled payout pays out, in naira (not read yet)"
+          },
+          "finance_refund_limit_naira": {
+            "type": "integer",
+            "title": "Finance Refund Limit Naira",
+            "description": "Largest refund Finance may approve without a Super Admin, in naira (not read yet)"
           },
           "updated_at": {
             "anyOf": [
@@ -8525,7 +8846,12 @@
           "dropout_redispatch_min_lead_minutes",
           "dropout_decision_lead_minutes",
           "onmyway_compensation_window_minutes",
-          "caregiver_late_fee_share_percent"
+          "caregiver_late_fee_share_percent",
+          "caregiver_visit_share_percent",
+          "earning_hold_hours",
+          "payout_cadence",
+          "payout_min_naira",
+          "finance_refund_limit_naira"
         ],
         "title": "BookingPolicyOut"
       },
@@ -8623,6 +8949,66 @@
               }
             ],
             "title": "Caregiver Late Fee Share Percent"
+          },
+          "caregiver_visit_share_percent": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Caregiver Visit Share Percent"
+          },
+          "earning_hold_hours": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Earning Hold Hours"
+          },
+          "payout_cadence": {
+            "anyOf": [
+              {
+                "type": "string",
+                "enum": [
+                  "weekly",
+                  "biweekly",
+                  "monthly"
+                ]
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Payout Cadence"
+          },
+          "payout_min_naira": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Payout Min Naira"
+          },
+          "finance_refund_limit_naira": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Finance Refund Limit Naira"
           }
         },
         "additionalProperties": false,
@@ -10494,6 +10880,7 @@
             "type": "string",
             "enum": [
               "earning",
+              "late_cancel_compensation",
               "withdrawal"
             ],
             "title": "Type"
@@ -10505,6 +10892,41 @@
           "status": {
             "type": "string",
             "title": "Status"
+          },
+          "booking_id": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Booking Id"
+          },
+          "available_at": {
+            "anyOf": [
+              {
+                "type": "string",
+                "format": "date-time"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Available At"
+          },
+          "released_at": {
+            "anyOf": [
+              {
+                "type": "string",
+                "format": "date-time"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Released At"
           },
           "bank_name": {
             "anyOf": [
@@ -10601,13 +11023,45 @@
             "type": "string",
             "title": "Currency",
             "default": "NGN"
+          },
+          "available_balance": {
+            "type": "integer",
+            "title": "Available Balance"
+          },
+          "pending_balance": {
+            "type": "integer",
+            "title": "Pending Balance"
+          },
+          "held_balance": {
+            "type": "integer",
+            "title": "Held Balance"
+          },
+          "total_pending": {
+            "type": "integer",
+            "title": "Total Pending"
+          },
+          "next_available_at": {
+            "anyOf": [
+              {
+                "type": "string",
+                "format": "date-time"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Next Available At"
           }
         },
         "type": "object",
         "required": [
           "balance",
           "total_earned",
-          "total_withdrawn"
+          "total_withdrawn",
+          "available_balance",
+          "pending_balance",
+          "held_balance",
+          "total_pending"
         ],
         "title": "CaregiverWalletSummary"
       },
@@ -11108,6 +11562,220 @@
           "uploaded_at"
         ],
         "title": "DocumentUploadResponse"
+      },
+      "EarningList": {
+        "properties": {
+          "items": {
+            "items": {
+              "$ref": "#/components/schemas/EarningOut"
+            },
+            "type": "array",
+            "title": "Items"
+          },
+          "total": {
+            "type": "integer",
+            "title": "Total"
+          }
+        },
+        "type": "object",
+        "required": [
+          "items",
+          "total"
+        ],
+        "title": "EarningList"
+      },
+      "EarningOut": {
+        "properties": {
+          "id": {
+            "type": "string",
+            "format": "uuid",
+            "title": "Id"
+          },
+          "type": {
+            "type": "string",
+            "enum": [
+              "earning",
+              "late_cancel_compensation"
+            ],
+            "title": "Type"
+          },
+          "status": {
+            "type": "string",
+            "enum": [
+              "pending_clearance",
+              "held",
+              "successful",
+              "voided"
+            ],
+            "title": "Status"
+          },
+          "amount_kobo": {
+            "type": "integer",
+            "title": "Amount Kobo"
+          },
+          "base_amount_kobo": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Base Amount Kobo",
+            "description": "What the share was taken of: the service fee, or the late fee kept"
+          },
+          "share_percent": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Share Percent"
+          },
+          "caregiver_id": {
+            "type": "string",
+            "format": "uuid",
+            "title": "Caregiver Id"
+          },
+          "caregiver_name": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Caregiver Name"
+          },
+          "booking_id": {
+            "anyOf": [
+              {
+                "type": "string",
+                "format": "uuid"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Booking Id"
+          },
+          "booking_code": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Booking Code"
+          },
+          "available_at": {
+            "anyOf": [
+              {
+                "type": "string",
+                "format": "date-time"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Available At"
+          },
+          "released_at": {
+            "anyOf": [
+              {
+                "type": "string",
+                "format": "date-time"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Released At"
+          },
+          "status_reason": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Status Reason",
+            "description": "Why it is held or voided"
+          },
+          "status_changed_by": {
+            "anyOf": [
+              {
+                "type": "string",
+                "format": "uuid"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Status Changed By"
+          },
+          "status_changed_at": {
+            "anyOf": [
+              {
+                "type": "string",
+                "format": "date-time"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Status Changed At"
+          },
+          "created_at": {
+            "type": "string",
+            "format": "date-time",
+            "title": "Created At"
+          }
+        },
+        "type": "object",
+        "required": [
+          "id",
+          "type",
+          "status",
+          "amount_kobo",
+          "base_amount_kobo",
+          "share_percent",
+          "caregiver_id",
+          "caregiver_name",
+          "booking_id",
+          "booking_code",
+          "available_at",
+          "released_at",
+          "status_reason",
+          "status_changed_by",
+          "status_changed_at",
+          "created_at"
+        ],
+        "title": "EarningOut"
+      },
+      "EarningReasonIn": {
+        "properties": {
+          "reason": {
+            "type": "string",
+            "maxLength": 2000,
+            "title": "Reason"
+          }
+        },
+        "additionalProperties": false,
+        "type": "object",
+        "required": [
+          "reason"
+        ],
+        "title": "EarningReasonIn"
       },
       "EmailVerification": {
         "properties": {

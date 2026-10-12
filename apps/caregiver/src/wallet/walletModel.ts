@@ -1,5 +1,5 @@
 import { formatNaira } from "@/src/home/homeModel";
-import type { CaregiverTransaction } from "@/src/services/wallet.service";
+import type { CaregiverTransaction, WalletSummary } from "@/src/services/wallet.service";
 import { parseBackendDate } from "@/src/utils/dates";
 
 /** The wallet endpoints speak integer kobo (100 kobo = 1 naira); only /caregiver/home speaks naira. */
@@ -35,24 +35,66 @@ export interface TransactionView {
   tone: Tone;
 }
 
+export const MIN_PAYOUT_NAIRA_TEXT = "₦5,000";
+
+/** "Thu, 8 Oct, 8:48 pm" in the phone's local time; the backend sends naive UTC. */
+export function availableFromText(iso: string, locale = "en-NG"): string {
+  const date = parseBackendDate(iso);
+  if (Number.isNaN(date.getTime())) return "";
+  return date.toLocaleString(locale, { weekday: "short", day: "numeric", month: "short", hour: "numeric", minute: "2-digit" });
+}
+
+export interface WalletBalances {
+  available: string;
+  pending: { amount: string; availableFrom: string | null } | null;
+  held: { amount: string } | null;
+}
+
+export function walletBalances(summary: WalletSummary): WalletBalances {
+  const from = summary.next_available_at ? availableFromText(summary.next_available_at) : "";
+  return {
+    available: formatKobo(summary.available_balance),
+    pending:
+      summary.pending_balance > 0
+        ? { amount: formatKobo(summary.pending_balance), availableFrom: from || null }
+        : null,
+    held: summary.held_balance > 0 ? { amount: formatKobo(summary.held_balance) } : null,
+  };
+}
+
 const STATUS: Record<string, { label: string; tone: Tone }> = {
   successful: { label: "Successful", tone: "success" },
   pending: { label: "Requested", tone: "pending" },
   failed: { label: "Failed", tone: "error" },
 };
 
+/** Earnings use their own lifecycle: pending_clearance -> successful, or held / voided (backend guide). */
+const EARNING_STATUS: Record<string, { label: string; tone: Tone }> = {
+  pending_clearance: { label: "Pending", tone: "pending" },
+  held: { label: "Under review by Oakly", tone: "pending" },
+  successful: { label: "Available", tone: "success" },
+  voided: { label: "Cancelled", tone: "error" },
+};
+
 export function transactionView(tx: CaregiverTransaction): TransactionView {
-  const status = STATUS[tx.status] ?? { label: tx.status, tone: "pending" as Tone };
   const isWithdrawal = tx.type === "withdrawal";
+  const table = isWithdrawal ? STATUS : EARNING_STATUS;
+  const status = table[tx.status] ?? { label: tx.status, tone: "pending" as Tone };
+  const earningTitle = tx.type === "late_cancel_compensation" ? "Late cancellation compensation" : "Visit earning";
+  const waiting = tx.status === "pending_clearance" && tx.available_at ? availableFromText(tx.available_at) : "";
   return {
     id: tx.id,
-    // A pending withdrawal is only requested: no payout process runs yet (guide, section 10).
+    // Historic withdrawals are only requested: Oakly now sends payouts weekly.
     title: isWithdrawal
       ? tx.status === "pending"
         ? "Withdrawal requested"
         : "Withdrawal"
-      : (tx.narration ?? "Visit earning"),
-    subtitle: isWithdrawal ? [tx.bank_name, tx.account_number].filter(Boolean).join(" ") : (tx.reference ?? ""),
+      : (tx.narration ?? earningTitle),
+    subtitle: isWithdrawal
+      ? [tx.bank_name, tx.account_number].filter(Boolean).join(" ")
+      : waiting
+        ? `Available from ${waiting}`
+        : (tx.reference ?? ""),
     amount: `${isWithdrawal ? "-" : "+"}${formatKobo(tx.amount)}`,
     statusLabel: status.label,
     tone: status.tone,

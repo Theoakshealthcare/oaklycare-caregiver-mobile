@@ -25,7 +25,17 @@ const mockSharePayslip = jest.fn();
 jest.mock("../src/wallet/payslip", () => ({ sharePayslip: (...args: unknown[]) => mockSharePayslip(...args) }));
 
 // Amounts are integer kobo, as in capture 122 / 130 of the backend guide.
-const wallet = { balance: 2500000, total_earned: 4000000, total_withdrawn: 1500000, currency: "NGN" };
+const wallet = {
+  balance: 2500000,
+  total_earned: 4000000,
+  total_withdrawn: 1500000,
+  currency: "NGN",
+  available_balance: 2500000,
+  pending_balance: 0,
+  held_balance: 0,
+  total_pending: 0,
+  next_available_at: null,
+};
 const tx = (over: Partial<CaregiverTransaction>): CaregiverTransaction => ({
   id: "t1",
   type: "withdrawal",
@@ -94,16 +104,15 @@ describe("Wallet screen", () => {
     jest.spyOn(walletService, "getTransactions").mockResolvedValue([]);
     await renderWith(<Wallet />);
     expect((await screen.findByTestId("wallet-balance")).props.children).toBe("₦25,000.00");
+    expect(screen.getByText("Available balance")).toBeTruthy();
     expect(screen.getByText("₦40,000.00")).toBeTruthy();
-    expect(screen.getByText("₦15,000.00")).toBeTruthy();
   });
 
-  it("explains the empty state: earnings arrive after completed visits are credited", async () => {
-    jest.spyOn(walletService, "getWallet").mockResolvedValue({ ...wallet, balance: 0, total_earned: 0, total_withdrawn: 0 });
+  it("shows the empty state for a month with no payments", async () => {
+    jest.spyOn(walletService, "getWallet").mockResolvedValue({ ...wallet, balance: 0, available_balance: 0, total_earned: 0, total_withdrawn: 0 });
     jest.spyOn(walletService, "getTransactions").mockResolvedValue([]);
     await renderWith(<Wallet />);
     expect(await screen.findByText("No payments this month")).toBeTruthy();
-    expect(screen.getByText(/after your completed visits are credited/i)).toBeTruthy();
   });
 
   it("lists the transactions grouped by date and shows a pending withdrawal as requested", async () => {
@@ -121,13 +130,35 @@ describe("Wallet screen", () => {
     expect(getTx).toHaveBeenCalledWith(currentMonth());
   });
 
-  it("has no withdraw button: payouts are scheduled", async () => {
+  it("shows pending with its local availability time and no hold line", async () => {
+    jest.spyOn(walletService, "getWallet").mockResolvedValue({
+      ...wallet, pending_balance: 4000000, total_pending: 4000000, next_available_at: "2026-10-08T19:48:51.599904",
+    });
+    jest.spyOn(walletService, "getTransactions").mockResolvedValue([]);
+    await renderWith(<Wallet />);
+    expect(await screen.findByTestId("wallet-pending")).toBeTruthy();
+    expect(screen.getByTestId("wallet-pending").props.children).toMatch(/^₦40,000\.00 pending · available from /);
+    expect(screen.queryByText("Under review by Oakly")).toBeNull();
+  });
+
+  it("shows money on hold as under review", async () => {
+    jest.spyOn(walletService, "getWallet").mockResolvedValue({ ...wallet, held_balance: 4000000, total_pending: 4000000 });
+    jest.spyOn(walletService, "getTransactions").mockResolvedValue([]);
+    await renderWith(<Wallet />);
+    expect((await screen.findByTestId("wallet-held")).props.children).toBe("₦40,000.00 on hold");
+    expect(screen.getByText("Under review by Oakly")).toBeTruthy();
+    expect(screen.queryByTestId("wallet-pending")).toBeNull();
+  });
+
+  it("shows the weekly payout info card and no withdraw button", async () => {
     jest.spyOn(walletService, "getWallet").mockResolvedValue(wallet);
     jest.spyOn(walletService, "getTransactions").mockResolvedValue([]);
     await renderWith(<Wallet />);
     await screen.findByTestId("wallet-balance");
     expect(screen.queryByText(/withdraw$/i)).toBeNull();
-    expect(screen.getByText(/paid out on a schedule/i)).toBeTruthy();
+    expect(
+      screen.getByText("Payouts are sent weekly to your bank account once your available balance is at least ₦5,000."),
+    ).toBeTruthy();
   });
 
   it("downloads the payslip for the selected month through the share sheet", async () => {
