@@ -81,6 +81,9 @@ const base = {
   held_balance: 0,
   total_pending: 4000000,
   next_available_at: "2026-10-08T19:48:51.599904",
+  payout_cadence: "weekly",
+  payout_min_kobo: 500000,
+  payout_in_progress_kobo: 0,
 };
 
 describe("walletBalances", () => {
