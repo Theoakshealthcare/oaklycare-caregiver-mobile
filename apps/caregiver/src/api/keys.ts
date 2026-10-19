@@ -11,6 +11,7 @@ export const queryKeys = {
   wallet: ["wallet"] as const,
   walletTransactions: (month: string) => ["wallet-transactions", month] as const,
   bankAccount: ["bank-account"] as const,
+  banks: ["banks"] as const,
   caregiverProfile: ["caregiver-profile"] as const,
   notes: (bookingId: string) => ["notes", bookingId] as const,
 };

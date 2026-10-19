@@ -8,6 +8,11 @@ channel) lives in the backend repo: `docs/checklist/MASTER_CHECKLIST.md`. Update
 - [x] Onboarding Skip safe area, Login link on all slides, Back to home lands on Home
 - [ ] Owner visual pass on device
 
+## Caregiver bank account
+- [x] Payment details screen: bank picker, name confirmation, add/change, 24 h pause notice, legacy re-verify (2026-10-19, see docs/sop/2026-10-19-caregiver-bank-account.md)
+- [x] Wallet shows "payouts paused until ..."
+- [ ] Device check against live Paystack
+
 ## Admin console: payouts (A3 slice 2 UI)
 - [x] Nav entry "Payouts" gated by `payments.read` (what the backend enforces for reads; `payouts.execute` is unused) (2026-10-19)
 - [x] Batches list (status filter, paging) and batch detail with its payouts

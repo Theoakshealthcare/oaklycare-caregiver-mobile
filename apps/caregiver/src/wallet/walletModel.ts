@@ -154,3 +154,34 @@ export function monthOptions(now: Date = new Date(), count = 6): { value: string
   }
   return options;
 }
+
+/** "Thu, 8 Oct, 8:48 pm" when payouts are paused (account just changed), else null. `now` is injectable for tests. */
+export function payoutsPausedUntil(iso: string | null | undefined, now: number = Date.now()): string | null {
+  if (!iso) return null;
+  const date = parseBackendDate(iso);
+  if (Number.isNaN(date.getTime()) || date.getTime() <= now) return null;
+  return availableFromText(iso);
+}
+
+export const PAUSE_REASON = "because you changed your bank account";
+
+export const ACCOUNT_NUMBER_LENGTH = 10;
+
+export type BankAccountState = "none" | "needs_resave" | "ready";
+
+/** Accounts saved before the verified flow have no bank_code and cannot be paid until saved again. */
+export function bankAccountState(account: { bank_code?: string | null; verified: boolean } | null | undefined): BankAccountState {
+  if (!account) return "none";
+  return account.verified && account.bank_code ? "ready" : "needs_resave";
+}
+
+/** Returns a problem with the typed number, or null when it can be checked. */
+export function accountNumberProblem(value: string): string | null {
+  return /^\d{10}$/.test(value) ? null : `An account number has ${ACCOUNT_NUMBER_LENGTH} digits.`;
+}
+
+/** Case-insensitive "contains" filter for the bank picker. */
+export function filterBanks<T extends { name: string }>(banks: readonly T[], query: string): T[] {
+  const q = query.trim().toLowerCase();
+  return q ? banks.filter((b) => b.name.toLowerCase().includes(q)) : [...banks];
+}

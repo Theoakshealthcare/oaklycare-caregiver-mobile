@@ -1,0 +1,216 @@
+import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
+import { act, fireEvent, render, screen } from "@testing-library/react-native";
+import React from "react";
+
+import { ApiError } from "../src/api/errors";
+import { session } from "../src/auth";
+import BankDetails from "../src/screens/account/BankDetails";
+import { walletService } from "../src/services/wallet.service";
+import { accountNumberProblem, bankAccountState, filterBanks, payoutsPausedUntil } from "../src/wallet/walletModel";
+
+jest.mock("../src/hooks/use-navigation", () => ({
+  __esModule: true,
+  default: () => ({ navigation: { navigate: jest.fn(), goBack: jest.fn() } }),
+}));
+jest.mock("@react-navigation/native", () => ({
+  ...jest.requireActual("@react-navigation/native"),
+  useNavigation: () => ({ canGoBack: () => true, goBack: jest.fn() }),
+  useFocusEffect: jest.fn(),
+}));
+
+// Shapes follow backend captures 124 (banks), 125 (resolve), 127 and 178 (bank account); placeholder data only.
+const banks = [
+  { name: "Placeholder Bank", code: "058" },
+  { name: "Sample Microfinance Bank", code: "090" },
+];
+const resolved = { account_name: "PLACEHOLDER CAREGIVER A", account_number: "0000000000", bank_code: "058", bank_name: "Placeholder Bank" };
+const saved = {
+  bank_name: "Placeholder Bank",
+  bank_code: "058",
+  account_number: "0000000000",
+  account_name: "PLACEHOLDER CAREGIVER A",
+  verified: true,
+  payouts_blocked_until: null as string | null,
+  created_at: "2026-10-12T13:35:26.985349",
+  updated_at: "2026-10-12T13:35:26.985349",
+};
+const inHours = (h: number) => new Date(Date.now() + h * 3600 * 1000).toISOString().replace("Z", "");
+
+async function renderScreen() {
+  const client = new QueryClient({ defaultOptions: { queries: { retry: false } } });
+  return await render(
+    <QueryClientProvider client={client}>
+      <BankDetails />
+    </QueryClientProvider>,
+  );
+}
+
+async function fillAndCheck() {
+  await fireEvent.press(await screen.findByLabelText("Choose your bank"));
+  await fireEvent.press(await screen.findByText("Placeholder Bank"));
+  await fireEvent.changeText(screen.getByPlaceholderText("10 digits"), "0000000000");
+  await fireEvent.press(screen.getByText("Check account"));
+}
+
+beforeEach(async () => {
+  await session.signIn({ accessToken: "access", refreshToken: "refresh" });
+  jest.spyOn(walletService, "getBankAccount").mockResolvedValue(null);
+  jest.spyOn(walletService, "getBanks").mockResolvedValue(banks);
+});
+afterEach(async () => {
+  jest.restoreAllMocks();
+  await act(async () => {
+    await session.signOut();
+  });
+});
+
+describe("BankDetails screen", () => {
+  it("shows a spinner while loading", async () => {
+    (walletService.getBankAccount as jest.Mock).mockReturnValue(new Promise(() => undefined));
+    await renderScreen();
+    expect(screen.getByTestId("bank-loading")).toBeTruthy();
+  });
+
+  it("shows the error with a retry", async () => {
+    (walletService.getBankAccount as jest.Mock).mockRejectedValueOnce(new ApiError(0, null, "x")).mockResolvedValue(saved);
+    await renderScreen();
+    expect(await screen.findByText(/Can't reach Oakly/)).toBeTruthy();
+    await fireEvent.press(screen.getByText("Try again"));
+    expect(await screen.findByText("PLACEHOLDER CAREGIVER A")).toBeTruthy();
+  });
+
+  it("empty: no account yet opens the add form", async () => {
+    await renderScreen();
+    expect(await screen.findByText("Add your bank account")).toBeTruthy();
+    expect(screen.getByText("Check account")).toBeTruthy();
+    expect(screen.queryByText("Cancel")).toBeNull();
+  });
+
+  it("view: shows the saved account and the 24 h change warning", async () => {
+    (walletService.getBankAccount as jest.Mock).mockResolvedValue(saved);
+    await renderScreen();
+    expect(await screen.findByText("PLACEHOLDER CAREGIVER A")).toBeTruthy();
+    expect(screen.getByText("0000000000")).toBeTruthy();
+    expect(screen.getByText("Change bank account")).toBeTruthy();
+    expect(screen.getByText(/changing your bank account pauses payouts for 24 hours/)).toBeTruthy();
+    expect(screen.queryByTestId("bank-paused")).toBeNull();
+  });
+
+  it("view: shows payouts paused while payouts_blocked_until is in the future", async () => {
+    (walletService.getBankAccount as jest.Mock).mockResolvedValue({ ...saved, payouts_blocked_until: inHours(20) });
+    await renderScreen();
+    expect(await screen.findByTestId("bank-paused")).toHaveTextContent(/Payouts are paused until .* because you changed your bank account\./);
+  });
+
+  it("view: an account without a bank code must be verified again", async () => {
+    (walletService.getBankAccount as jest.Mock).mockResolvedValue({ ...saved, bank_code: null, verified: false });
+    await renderScreen();
+    expect(await screen.findByTestId("bank-resave")).toBeTruthy();
+    expect(screen.getByText("Verify bank account")).toBeTruthy();
+  });
+
+  it("validation: needs a bank and a 10-digit number before any lookup", async () => {
+    const resolve = jest.spyOn(walletService, "resolveBankAccount");
+    await renderScreen();
+    await fireEvent.press(await screen.findByText("Check account"));
+    expect(screen.getByText("Choose a bank from the list.")).toBeTruthy();
+    expect(screen.getByText("An account number has 10 digits.")).toBeTruthy();
+    expect(resolve).not.toHaveBeenCalled();
+  });
+
+  it("resolve success: shows the account name to confirm", async () => {
+    const resolve = jest.spyOn(walletService, "resolveBankAccount").mockResolvedValue(resolved);
+    await renderScreen();
+    await fillAndCheck();
+    expect(await screen.findByText("PLACEHOLDER CAREGIVER A")).toBeTruthy();
+    expect(resolve).toHaveBeenCalledWith({ bank_code: "058", account_number: "0000000000" });
+    expect(screen.getByText("Yes, this is my account")).toBeTruthy();
+  });
+
+  it.each([
+    [400, "We could not find that account. Check the account number and the bank."],
+    [429, "Too many account checks. Please wait a minute and try again."],
+    [503, "We cannot check the account right now. Please try again in a moment."],
+  ])("resolve failure %d shows the backend's sentence", async (status, detail) => {
+    jest.spyOn(walletService, "resolveBankAccount").mockRejectedValue(new ApiError(status, { detail }, "x"));
+    await renderScreen();
+    await fillAndCheck();
+    expect(await screen.findByTestId("bank-failure")).toHaveTextContent(detail);
+    expect(screen.queryByText("Yes, this is my account")).toBeNull();
+  });
+
+  it("save success: sends only bank_code + account_number and tells the caregiver about the 24 h pause", async () => {
+    jest.spyOn(walletService, "resolveBankAccount").mockResolvedValue(resolved);
+    const update = jest.spyOn(walletService, "updateBankAccount").mockResolvedValue({ ...saved, payouts_blocked_until: inHours(24) });
+    await renderScreen();
+    await fillAndCheck();
+    await fireEvent.press(await screen.findByText("Yes, this is my account"));
+    expect(update).toHaveBeenCalledWith({ bank_code: "058", account_number: "0000000000" });
+    expect(await screen.findByTestId("bank-saved-notice")).toHaveTextContent(/payouts are paused for 24 hours because you changed your bank account, until /);
+    expect(screen.getByText("PLACEHOLDER CAREGIVER A")).toBeTruthy();
+  });
+
+  it("save success without a pause just confirms", async () => {
+    jest.spyOn(walletService, "resolveBankAccount").mockResolvedValue(resolved);
+    jest.spyOn(walletService, "updateBankAccount").mockResolvedValue(saved);
+    await renderScreen();
+    await fillAndCheck();
+    await fireEvent.press(await screen.findByText("Yes, this is my account"));
+    expect(await screen.findByTestId("bank-saved-notice")).toHaveTextContent(/Your bank account is saved\./);
+    expect(screen.getByTestId("bank-saved-notice")).not.toHaveTextContent(/paused/);
+  });
+
+  it("save failure shows the backend's sentence and keeps the form", async () => {
+    const detail = "This account cannot receive payouts. Check the account number and the bank.";
+    jest.spyOn(walletService, "resolveBankAccount").mockResolvedValue(resolved);
+    jest.spyOn(walletService, "updateBankAccount").mockRejectedValue(new ApiError(400, { detail }, "x"));
+    await renderScreen();
+    await fillAndCheck();
+    await fireEvent.press(await screen.findByText("Yes, this is my account"));
+    expect(await screen.findByTestId("bank-failure")).toHaveTextContent(detail);
+  });
+
+  it("change flow: starts from the saved account and can be cancelled", async () => {
+    (walletService.getBankAccount as jest.Mock).mockResolvedValue(saved);
+    await renderScreen();
+    await fireEvent.press(await screen.findByText("Change bank account"));
+    expect(await screen.findByText("Check account")).toBeTruthy();
+    await fireEvent.press(screen.getByText("Cancel"));
+    expect(await screen.findByText("PLACEHOLDER CAREGIVER A")).toBeTruthy();
+  });
+
+  it("bank picker: searches the list and shows a retry when it fails to load", async () => {
+    jest.spyOn(walletService, "getBanks").mockRejectedValueOnce(new ApiError(0, null, "x")).mockResolvedValue(banks);
+    await renderScreen();
+    await fireEvent.press(await screen.findByLabelText("Choose your bank"));
+    expect(await screen.findByText(/Can't reach Oakly/)).toBeTruthy();
+    await fireEvent.press(screen.getByText("Try again"));
+    await fireEvent.changeText(screen.getByPlaceholderText("Search banks"), "micro");
+    expect(await screen.findByText("Sample Microfinance Bank")).toBeTruthy();
+    expect(screen.queryByText("Placeholder Bank")).toBeNull();
+  });
+});
+
+describe("bank helpers", () => {
+  it("accountNumberProblem", () => {
+    expect(accountNumberProblem("0000000000")).toBeNull();
+    expect(accountNumberProblem("123")).toBe("An account number has 10 digits.");
+    expect(accountNumberProblem("00000000a0")).not.toBeNull();
+  });
+  it("bankAccountState", () => {
+    expect(bankAccountState(null)).toBe("none");
+    expect(bankAccountState({ bank_code: null, verified: false })).toBe("needs_resave");
+    expect(bankAccountState({ bank_code: "058", verified: true })).toBe("ready");
+  });
+  it("payoutsPausedUntil is null for null, past and invalid values", () => {
+    const now = Date.parse("2026-10-13T00:00:00Z");
+    expect(payoutsPausedUntil(null, now)).toBeNull();
+    expect(payoutsPausedUntil("2026-10-12T00:00:00", now)).toBeNull();
+    expect(payoutsPausedUntil("nope", now)).toBeNull();
+    expect(payoutsPausedUntil("2026-10-13T13:35:26.985349", now)).toBeTruthy();
+  });
+  it("filterBanks is a case-insensitive contains", () => {
+    expect(filterBanks(banks, "MICRO")).toEqual([banks[1]]);
+    expect(filterBanks(banks, " ")).toHaveLength(2);
+  });
+});
