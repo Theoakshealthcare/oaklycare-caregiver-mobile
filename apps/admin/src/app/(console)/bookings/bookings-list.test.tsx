@@ -23,7 +23,7 @@ const B = makeListItem({
   id: "11111111-1111-4111-8111-111111111111",
   booking_code: "ZZZ99999",
   patient: MASKED_PATIENT,
-  caregiver: { id: "c1", full_name: "Placeholder Nurse", phone: "+2340000000000" } as never,
+  caregiver: { id: "c1", full_name: "Placeholder N.", phone: "+234****0000", masked: true },
   status: "accepted",
   payment_status: "paid",
   channel: "whatsapp",
@@ -54,7 +54,7 @@ describe("BookingsList", () => {
 
     const rowB = await screen.findByRole("row", { name: /ZZZ99999/ });
     expect(rowB).toHaveTextContent("Chidi E.");
-    expect(within(rowB).getByText("masked")).toBeInTheDocument();
+    expect(within(rowB).getAllByText("masked")).toHaveLength(2); // patient and caregiver
     expect(rowB).toHaveTextContent("WhatsApp");
     expect(rowB).toHaveTextContent("3 h");
     expect(rowB).toHaveTextContent("Address check");

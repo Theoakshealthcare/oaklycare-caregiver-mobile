@@ -227,7 +227,16 @@ export function BookingsList() {
                     <td className="px-3 py-2">
                       <PatientCell patient={b.patient} />
                     </td>
-                    <td className="px-3 py-2">{b.caregiver?.full_name ?? "—"}</td>
+                    <td className="px-3 py-2">
+                      {b.caregiver ? (
+                        <>
+                          {b.caregiver.full_name}
+                          {b.caregiver.masked ? <span className="ml-1 text-xs text-muted-foreground">masked</span> : null}
+                        </>
+                      ) : (
+                        "—"
+                      )}
+                    </td>
                     <td className="px-3 py-2">
                       <StatusBadge value={b.status} />
                     </td>

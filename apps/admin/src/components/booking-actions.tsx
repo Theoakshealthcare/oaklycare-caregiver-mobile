@@ -72,6 +72,9 @@ export function BookingActions({ booking, onDone }: { booking: BookingDetail; on
 
   const visible = BUTTONS.filter((b) => available.includes(b.action));
   if (visible.length === 0) return null;
+  // A dialog stays open only while its action is still offered: after a refused attempt the refetched detail can drop it
+  // (someone else acted first), and the admin must not keep resubmitting a stale action.
+  const shown = visible.some((b) => b.dialog === dialog) ? dialog : null;
 
   return (
     <div className="flex flex-wrap justify-end gap-2">
@@ -81,14 +84,14 @@ export function BookingActions({ booking, onDone }: { booking: BookingDetail; on
         </Button>
       ))}
 
-      {dialog === "redispatch" ? <RedispatchDialog booking={booking} close={close} act={act} /> : null}
-      {dialog === "assign" ? (
+      {shown === "redispatch" ? <RedispatchDialog booking={booking} close={close} act={act} /> : null}
+      {shown === "assign" ? (
         <AssignDialog booking={booking} close={close} act={act} canForce={available.includes("force_assign")} />
       ) : null}
-      {dialog === "reassign" ? <ReassignDialog booking={booking} close={close} act={act} /> : null}
-      {dialog === "cancel" ? <CancelDialog booking={booking} close={close} act={act} /> : null}
-      {dialog === "confirm_address" ? <ConfirmAddressDialog booking={booking} close={close} act={act} /> : null}
-      {dialog === "flag_no_show" ? (
+      {shown === "reassign" ? <ReassignDialog booking={booking} close={close} act={act} /> : null}
+      {shown === "cancel" ? <CancelDialog booking={booking} close={close} act={act} /> : null}
+      {shown === "confirm_address" ? <ConfirmAddressDialog booking={booking} close={close} act={act} /> : null}
+      {shown === "flag_no_show" ? (
         <ConfirmActionDialog
           open
           onOpenChange={close}
@@ -101,7 +104,7 @@ export function BookingActions({ booking, onDone }: { booking: BookingDetail; on
           }
         />
       ) : null}
-      {dialog === "correct_status" ? <CorrectStatusDialog booking={booking} close={close} act={act} /> : null}
+      {shown === "correct_status" ? <CorrectStatusDialog booking={booking} close={close} act={act} /> : null}
     </div>
   );
 }

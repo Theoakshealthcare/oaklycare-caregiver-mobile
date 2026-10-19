@@ -522,3 +522,35 @@ describe("Correct status", () => {
     expect(await within(dialog).findByRole("alert")).toHaveTextContent("Access denied. Missing permission: bookings.correct_status");
   });
 });
+
+describe("BookingActions: a refetched detail that no longer offers the action", () => {
+  it("closes the open dialog when its action is dropped", async () => {
+    const user = userEvent.setup();
+    stubFetch({ [`GET ${BASE}/candidates`]: () => jsonResponse({ items: CANDIDATES }) });
+    const { rerender } = render(withAuth([], <BookingActions booking={withActions(["assign", "cancel"])} />));
+    await dialogOf(user, "Assign caregiver");
+    // Someone else assigned first: the refetched detail offers reassign and cancel only.
+    rerender(withAuth([], <BookingActions booking={withActions(["reassign", "cancel"], ACCEPTED)} />));
+    await waitFor(() => expect(screen.queryByRole("dialog")).not.toBeInTheDocument());
+    expect(screen.getByRole("button", { name: "Reassign" })).toBeInTheDocument();
+  });
+
+  it("never sends force: true once force_assign is withdrawn, even with the box ticked", async () => {
+    const user = userEvent.setup();
+    const calls = stubFetch({
+      [`GET ${BASE}/candidates`]: () => jsonResponse({ items: CANDIDATES }),
+      [`POST ${BASE}/assign`]: () => jsonResponse(makeActionResult({ notified_caregivers: 1 })),
+    });
+    const { rerender } = render(withAuth([], <BookingActions booking={withActions(["assign", "force_assign"])} />));
+    const dialog = await dialogOf(user, "Assign caregiver");
+    await user.click(await within(dialog).findByRole("radio", { name: /Placeholder Nurse One/ }));
+    await user.click(within(dialog).getByLabelText("Assign now, without waiting for them to accept (Super Admin)"));
+    rerender(withAuth([], <BookingActions booking={withActions(["assign"])} />));
+    const fresh = screen.getByRole("dialog");
+    expect(within(fresh).queryByLabelText(/Assign now, without waiting/)).not.toBeInTheDocument();
+    await typeReason(user, fresh, "Closest");
+    await user.click(within(fresh).getByRole("button", { name: "Offer to caregiver" }));
+    await waitFor(() => expect(calls.some((c) => c.key === `POST ${BASE}/assign`)).toBe(true));
+    expect(calls.find((c) => c.key === `POST ${BASE}/assign`)?.body).toMatchObject({ force: false });
+  });
+});
