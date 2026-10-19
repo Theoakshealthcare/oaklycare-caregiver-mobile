@@ -9,7 +9,8 @@ import { Button } from "@/components/ui/button";
 import { formatNaira } from "@/lib/format";
 import {
   type Payout,
-  PAYOUTS_ACT,
+  PAYOUTS_ADJUST,
+  PAYOUTS_EXECUTE,
   canCancelPayout,
   canResolvePayout,
   canRetryPayout,
@@ -28,15 +29,17 @@ function describe(p: Payout) {
 }
 
 /**
- * Per-payout actions. Every one needs `ledger.adjust` (Super Admin today), so for anyone else nothing
- * is rendered, not a disabled button. Each goes through the confirm dialog, which names the payout
+ * Per-payout actions. Cancel needs `payouts.execute` (Finance, Super Admin); Retry and Resolve need `ledger.adjust`
+ * (Super Admin only). An action the admin lacks the permission for is not rendered, not a disabled button. Each goes through the confirm dialog, which names the payout
  * and amount, so the admin sees which money is about to move.
  */
 export function PayoutActions({ payout, onDone }: { payout: Payout; onDone?: (notice: string) => void }) {
   const { can } = useAuth();
   const queryClient = useQueryClient();
   const [dialog, setDialog] = React.useState<Dialog>(null);
-  if (!can(PAYOUTS_ACT)) return null;
+  const mayExecute = can(PAYOUTS_EXECUTE);
+  const mayAdjust = can(PAYOUTS_ADJUST);
+  if (!mayExecute && !mayAdjust) return null;
 
   const close = (o: boolean) => !o && setDialog(null);
   const done = (notice: string) => async () => {
@@ -57,17 +60,17 @@ export function PayoutActions({ payout, onDone }: { payout: Payout; onDone?: (no
 
   return (
     <div className="flex flex-wrap justify-end gap-2">
-      {canCancelPayout(payout) ? (
+      {mayExecute && canCancelPayout(payout) ? (
         <Button size="sm" variant="outline" onClick={() => setDialog("cancel")}>
           Cancel<span className="sr-only"> payout of {describe(payout)}</span>
         </Button>
       ) : null}
-      {canRetryPayout(payout) ? (
+      {mayAdjust && canRetryPayout(payout) ? (
         <Button size="sm" variant="outline" onClick={() => setDialog("retry")}>
           Retry<span className="sr-only"> payout of {describe(payout)}</span>
         </Button>
       ) : null}
-      {canResolvePayout(payout) ? (
+      {mayAdjust && canResolvePayout(payout) ? (
         <Button size="sm" variant="outline" onClick={() => setDialog("resolve")}>
           Resolve<span className="sr-only"> payout of {describe(payout)}</span>
         </Button>
@@ -189,7 +192,7 @@ export function UnfreezeButton({
   const { can } = useAuth();
   const queryClient = useQueryClient();
   const [open, setOpen] = React.useState(false);
-  if (!can(PAYOUTS_ACT)) return null;
+  if (!can(PAYOUTS_ADJUST)) return null;
   return (
     <>
       <Button size="sm" variant="outline" onClick={() => setOpen(true)}>

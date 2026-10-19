@@ -29,8 +29,9 @@ const C = makePayout({
   caregiver_name: "Placeholder Cancelled",
   amount_kobo: 800000,
 });
-const SUPER = ["payments.read", "ledger.adjust"];
-const FINANCE = ["payments.read"];
+const SUPER = ["payments.read", "payouts.execute", "ledger.adjust"];
+const FINANCE = ["payments.read", "payouts.execute"];
+const READER = ["payments.read"];
 
 describe("BatchView", () => {
   it("shows the batch with its payouts, naira totals and per-status counts", async () => {
@@ -179,9 +180,16 @@ describe("BatchView", () => {
     expect(await within(dialog).findByRole("alert")).toHaveTextContent("This batch is already approved");
   });
 
-  it("hides every money action from an admin without ledger.adjust (Finance can read only)", async () => {
+  it("lets Finance (payouts.execute) approve and cancel the batch", async () => {
     stubFetch({ [`GET ${PATH}`]: () => jsonResponse(makeBatchDetail([A, B])) });
     render(withAuth(FINANCE, <BatchView id={BATCH_ID} />));
+    expect(await screen.findByRole("button", { name: "Approve batch" })).toBeInTheDocument();
+    expect(screen.getByRole("button", { name: "Cancel batch" })).toBeInTheDocument();
+  });
+
+  it("hides every money action from an admin without payouts.execute (a reader)", async () => {
+    stubFetch({ [`GET ${PATH}`]: () => jsonResponse(makeBatchDetail([A, B])) });
+    render(withAuth(READER, <BatchView id={BATCH_ID} />));
     await screen.findByRole("heading", { name: /Batch 2026-10-19/ });
     expect(screen.queryByRole("button", { name: /Approve batch|Cancel batch/ })).not.toBeInTheDocument();
     expect(screen.queryByRole("button", { name: /^Cancel/ })).not.toBeInTheDocument();
