@@ -1,6 +1,7 @@
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { act, fireEvent, render, screen } from "@testing-library/react-native";
 import React from "react";
+import { Keyboard, StyleSheet } from "react-native";
 
 import { ApiError } from "../src/api/errors";
 import { session } from "../src/auth";
@@ -99,7 +100,7 @@ describe("BankDetails screen", () => {
   it("view: shows payouts paused while payouts_blocked_until is in the future", async () => {
     (walletService.getBankAccount as jest.Mock).mockResolvedValue({ ...saved, payouts_blocked_until: inHours(20) });
     await renderScreen();
-    expect(await screen.findByTestId("bank-paused")).toHaveTextContent(/Payouts are paused until .* because you changed your bank account\./);
+    expect(await screen.findByTestId("bank-paused")).toHaveTextContent(/Payouts are paused until .* because your bank account was added or changed\./);
   });
 
   it("view: an account without a bank code must be verified again", async () => {
@@ -107,6 +108,23 @@ describe("BankDetails screen", () => {
     await renderScreen();
     expect(await screen.findByTestId("bank-resave")).toBeTruthy();
     expect(screen.getByText("Verify bank account")).toBeTruthy();
+  });
+
+  it("dismisses the keyboard once the 10th digit is typed, not before", async () => {
+    const dismiss = jest.spyOn(Keyboard, "dismiss").mockImplementation(() => {});
+    await renderScreen();
+    const field = await screen.findByPlaceholderText("10 digits");
+    await fireEvent.changeText(field, "000000000");
+    expect(dismiss).not.toHaveBeenCalled();
+    await fireEvent.changeText(field, "0000000000");
+    expect(dismiss).toHaveBeenCalledTimes(1);
+  });
+
+  it("info rows let the message shrink inside the card instead of overflowing its padding", async () => {
+    (walletService.getBankAccount as jest.Mock).mockResolvedValue({ ...saved, payouts_blocked_until: inHours(12) });
+    await renderScreen();
+    const body = await screen.findByTestId("bank-paused-body");
+    expect(StyleSheet.flatten(body.props.style)).toMatchObject({ flex: 1, minWidth: 0 });
   });
 
   it("validation: needs a bank and a 10-digit number before any lookup", async () => {
@@ -146,7 +164,7 @@ describe("BankDetails screen", () => {
     await fillAndCheck();
     await fireEvent.press(await screen.findByText("Yes, this is my account"));
     expect(update).toHaveBeenCalledWith({ bank_code: "058", account_number: "0000000000" });
-    expect(await screen.findByTestId("bank-saved-notice")).toHaveTextContent(/payouts are paused for 24 hours because you changed your bank account, until /);
+    expect(await screen.findByTestId("bank-saved-notice")).toHaveTextContent(/payouts are paused for 24 hours because your bank account was added or changed, until /);
     expect(screen.getByText("PLACEHOLDER CAREGIVER A")).toBeTruthy();
   });
 

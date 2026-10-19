@@ -1,8 +1,8 @@
 import React, { useState } from "react";
-import { View } from "react-native";
-import { Feather } from "@expo/vector-icons";
+import { Keyboard, View } from "react-native";
 
 import { messageForError } from "@/src/api/errors";
+import InfoRow from "@/src/components/account/InfoRow";
 import ScreenShell from "@/src/components/account/ScreenShell";
 import BankPicker from "@/src/components/account/BankPicker";
 import { ErrorState, LoadingState } from "@/src/components/account/StateViews";
@@ -12,7 +12,7 @@ import Text from "@/src/components/ui/text";
 import { theme } from "@/src/constants/theme";
 import { useBankAccount, useBanks, useResolveBankAccount, useSaveBankAccount } from "@/src/hooks/queries";
 import type { Bank, BankAccount, ResolvedAccount } from "@/src/services/wallet.service";
-import { accountNumberProblem, bankAccountState, PAUSE_REASON, payoutsPausedUntil } from "@/src/wallet/walletModel";
+import { ACCOUNT_NUMBER_LENGTH, accountNumberProblem, bankAccountState, PAUSE_REASON, payoutsPausedUntil } from "@/src/wallet/walletModel";
 
 const Detail: React.FC<{ label: string; value: string }> = ({ label, value }) => (
   <View style={{ marginBottom: 14 }}>
@@ -26,22 +26,9 @@ const Detail: React.FC<{ label: string; value: string }> = ({ label, value }) =>
 );
 
 const Banner: React.FC<{ tone: "info" | "warning"; testID: string; children: string }> = ({ tone, testID, children }) => (
-  <View
-    testID={testID}
-    style={{
-      flexDirection: "row",
-      gap: 10,
-      padding: 14,
-      borderRadius: 12,
-      marginBottom: 16,
-      backgroundColor: tone === "warning" ? theme.colors.warning + "33" : theme.colors.soft,
-    }}
-  >
-    <Feather name={tone === "warning" ? "alert-triangle" : "info"} size={18} color={tone === "warning" ? theme.colors.warningText : theme.colors.primary} />
-    <Text variant="small" color={tone === "warning" ? theme.colors.warningText : theme.colors.textLight} style={{ flex: 1 }}>
-      {children}
-    </Text>
-  </View>
+  <InfoRow tone={tone} testID={testID} style={{ marginBottom: 16 }}>
+    {children}
+  </InfoRow>
 );
 
 /** What the caregiver is told after a save; the 24 h pause is the backend's anti-fraud rule (guide, 10.3). */
@@ -125,7 +112,10 @@ const BankForm: React.FC<{ hasAccount: boolean; onSaved: (account: BankAccount) 
         placeholder="10 digits"
         error={numberProblem}
         onChangeText={(v) => {
-          setNumber(v.replace(/\D/g, ""));
+          const digits = v.replace(/\D/g, "");
+          setNumber(digits);
+          // The iOS number pad has no Done key and would cover the confirm button.
+          if (digits.length === ACCOUNT_NUMBER_LENGTH) Keyboard.dismiss();
           setNumberProblem(undefined);
           reset();
         }}
@@ -212,7 +202,7 @@ const BankDetails: React.FC = () => {
           }}
         />
         <Text variant="small" color={theme.colors.textLight} style={{ marginTop: 12 }}>
-          For your security, changing your bank account pauses payouts for 24 hours.
+          For your security, adding or changing your bank account pauses payouts for 24 hours.
         </Text>
       </>
     );

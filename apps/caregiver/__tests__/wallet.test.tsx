@@ -211,7 +211,7 @@ describe("Wallet screen: payouts paused", () => {
     jest.spyOn(walletService, "getWallet").mockResolvedValue({ ...wallet, payouts_blocked_until: until });
     jest.spyOn(walletService, "getTransactions").mockResolvedValue([]);
     await renderWith(<Wallet />);
-    expect(await screen.findByTestId("wallet-paused")).toHaveTextContent(/Payouts are paused until .* because you changed your bank account\./);
+    expect(await screen.findByTestId("wallet-paused")).toHaveTextContent(/Payouts are paused until .* because your bank account was added or changed\./);
   });
 
   it("hides the notice once the pause has passed", async () => {
