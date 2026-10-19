@@ -83,10 +83,13 @@ export function Attention() {
         </p>
         {recent.isPending || attention.isPending ? (
           <Skeleton className="h-16 w-full" aria-label="Loading frozen caregivers" />
-        ) : recent.isError ? (
+        ) : recent.isError || attention.isError ? (
           <ErrorState
-            message={`We couldn't load frozen caregivers. ${errorMessage({ detail: recent.error.message }, "")}`.trim()}
-            onRetry={() => void recent.refetch()}
+            message={`We couldn't load frozen caregivers. ${errorMessage({ detail: (recent.error ?? attention.error)?.message }, "")}`.trim()}
+            onRetry={() => {
+              void recent.refetch();
+              void attention.refetch();
+            }}
           />
         ) : frozen.length === 0 ? (
           <EmptyState title="No frozen caregivers" hint="Every caregiver can be paid." />

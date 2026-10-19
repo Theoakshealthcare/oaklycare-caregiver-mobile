@@ -134,4 +134,34 @@ describe("Attention", () => {
     await screen.findByRole("table", { name: "Frozen caregivers" });
     expect(screen.queryByRole("button", { name: /Unfreeze|Resolve/ })).not.toBeInTheDocument();
   });
+
+  it("offers the write-off only after the server says a shortfall is left", async () => {
+    const user = userEvent.setup();
+    const noShortfall = { ...LATE_SUCCESS, shortfall_kobo: 0 };
+    const msg =
+      "This caregiver still owes 500000 kobo that Paystack paid beyond their earnings, even after 0 kobo is taken from their available balance. Unfreeze with write_off_shortfall to write it off, or leave them frozen";
+    stubFetch({
+      [LIST]: () => jsonResponse({ items: [noShortfall], total: 1 }),
+      [`POST /api/v1/admin/payouts/caregivers/${LATE_SUCCESS.caregiver_id}/unfreeze`]: () => jsonResponse({ detail: msg }, { status: 409 }),
+    });
+    render(withAuth(SUPER, <Attention />));
+    await user.click(within(await screen.findByRole("table", { name: "Frozen caregivers" })).getByRole("button", { name: /Unfreeze/ }));
+    const dialog = await screen.findByRole("dialog");
+    expect(within(dialog).queryByLabelText(/Write off any shortfall/)).not.toBeInTheDocument();
+    await user.type(within(dialog).getByLabelText(/Reason for unfreezing/), "x");
+    await user.click(within(dialog).getByRole("button", { name: "Unfreeze" }));
+    expect(await within(dialog).findByRole("alert")).toHaveTextContent(msg);
+    expect(within(dialog).getByLabelText(/Write off any shortfall/)).toBeInTheDocument();
+  });
+
+  it("reports what the unfreeze debited and wrote off", async () => {
+    const user = userEvent.setup();
+    stubList([LATE_SUCCESS], [LATE_SUCCESS]);
+    render(withAuth(SUPER, <Attention />));
+    await user.click(within(await screen.findByRole("table", { name: "Frozen caregivers" })).getByRole("button", { name: /Unfreeze/ }));
+    const dialog = await screen.findByRole("dialog");
+    await user.type(within(dialog).getByLabelText(/Reason for unfreezing/), "ok");
+    await user.click(within(dialog).getByRole("button", { name: "Unfreeze" }));
+    expect(await screen.findByRole("status")).toHaveTextContent("Debited from their balance: ₦8,000. Written off: ₦0.");
+  });
 });

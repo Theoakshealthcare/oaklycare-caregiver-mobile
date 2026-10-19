@@ -13,7 +13,7 @@ import { Button } from "@/components/ui/button";
 import { ErrorState, Skeleton } from "@/components/ui/states";
 import { errorMessage } from "@/lib/api";
 import { formatNaira, formatWat, humanize } from "@/lib/format";
-import { PAYOUTS_ACT, PAYOUTS_KEY, approveBatch, cancelBatch, fetchBatch, invalidatePayouts } from "@/lib/payouts";
+import { type BatchDetail, PAYOUTS_ACT, PAYOUTS_KEY, approveBatch, cancelBatch, fetchBatch, invalidatePayouts } from "@/lib/payouts";
 
 export function BatchView({ id }: { id: string }) {
   const { can } = useAuth();
@@ -78,9 +78,14 @@ export function BatchView({ id }: { id: string }) {
         <ApproveDialog
           id={id}
           onOpenChange={(o) => !o && setDialog(null)}
-          onApproved={async () => {
+          onApproved={async (res) => {
             await invalidatePayouts(queryClient);
-            setNotice("Batch approved. The send job posts each transfer to Paystack within a minute; this click sent nothing itself.");
+            const cancelled = res.counts.cancelled ?? 0;
+            setNotice(
+              `Batch approved: ${res.counts.processing ?? 0} payout${(res.counts.processing ?? 0) === 1 ? "" : "s"} totalling ${formatNaira(res.total_kobo)} will be sent.${
+                cancelled > 0 ? ` ${cancelled} cancelled at approval (caregiver suspended or bank account changed); their money was returned.` : ""
+              } The send job posts each transfer to Paystack within a minute; this click sent nothing itself.`,
+            );
           }}
         />
       ) : null}
@@ -118,7 +123,7 @@ function ApproveDialog({
 }: {
   id: string;
   onOpenChange: (open: boolean) => void;
-  onApproved: () => Promise<void>;
+  onApproved: (res: BatchDetail) => Promise<void>;
 }) {
   const fresh = useQuery({
     queryKey: [...PAYOUTS_KEY, "batch-approve", id],
@@ -144,13 +149,12 @@ function ApproveDialog({
       onOpenChange={onOpenChange}
       title={ready ? `Approve ${formatNaira(total)} to ${waiting.length} caregiver${waiting.length === 1 ? "" : "s"}?` : "Approve batch?"}
       sideEffects={sideEffects}
-      confirmLabel="Approve and send"
+      confirmLabel="Approve batch"
       destructive
       reasonLabel="Reason for approving (what you checked)"
       extraValid={ready}
       onConfirm={async (reason) => {
-        await approveBatch(id, reason);
-        await onApproved();
+        await onApproved(await approveBatch(id, reason));
       }}
     />
   );

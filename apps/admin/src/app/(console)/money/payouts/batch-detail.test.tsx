@@ -67,7 +67,7 @@ describe("BatchView", () => {
     expect(await within(dialog).findByText("Approve ₦42,000 to 2 caregivers?")).toBeInTheDocument();
     expect(dialog).toHaveTextContent("Approving 2 payouts totalling ₦42,000");
     await user.type(within(dialog).getByLabelText(/Reason for approving/), "Totals checked");
-    await user.click(within(dialog).getByRole("button", { name: "Approve and send" }));
+    await user.click(within(dialog).getByRole("button", { name: "Approve batch" }));
 
     await waitFor(() => expect(screen.queryByRole("dialog")).not.toBeInTheDocument());
     expect(calls.filter((c) => c.key === `POST ${PATH}/approve`)).toEqual([
@@ -93,9 +93,9 @@ describe("BatchView", () => {
     const dialog = await screen.findByRole("dialog");
     expect(dialog).toHaveTextContent("Checking the batch's current totals");
     await user.type(within(dialog).getByLabelText(/Reason for approving/), "x");
-    expect(within(dialog).getByRole("button", { name: "Approve and send" })).toBeDisabled();
+    expect(within(dialog).getByRole("button", { name: "Approve batch" })).toBeDisabled();
     release?.();
-    await waitFor(() => expect(within(dialog).getByRole("button", { name: "Approve and send" })).toBeEnabled());
+    await waitFor(() => expect(within(dialog).getByRole("button", { name: "Approve batch" })).toBeEnabled());
   });
 
   it("will not approve a batch that is no longer waiting when re-read", async () => {
@@ -112,7 +112,7 @@ describe("BatchView", () => {
     const dialog = await screen.findByRole("dialog");
     expect(await within(dialog).findByText(/there is nothing to approve/)).toBeInTheDocument();
     await user.type(within(dialog).getByLabelText(/Reason for approving/), "x");
-    expect(within(dialog).getByRole("button", { name: "Approve and send" })).toBeDisabled();
+    expect(within(dialog).getByRole("button", { name: "Approve batch" })).toBeDisabled();
   });
 
   it("shows the server's refusal verbatim and keeps the dialog open", async () => {
@@ -126,8 +126,8 @@ describe("BatchView", () => {
     const dialog = await screen.findByRole("dialog");
     await within(dialog).findByText("Approve ₦42,000 to 2 caregivers?");
     await user.type(await within(dialog).findByLabelText(/Reason for approving/), "ok");
-    await waitFor(() => expect(within(dialog).getByRole("button", { name: "Approve and send" })).toBeEnabled());
-    await user.click(within(dialog).getByRole("button", { name: "Approve and send" }));
+    await waitFor(() => expect(within(dialog).getByRole("button", { name: "Approve batch" })).toBeEnabled());
+    await user.click(within(dialog).getByRole("button", { name: "Approve batch" }));
     expect(await within(dialog).findByRole("alert")).toHaveTextContent("This batch is already approved");
     expect(screen.getByRole("dialog")).toBeInTheDocument();
   });
@@ -142,7 +142,7 @@ describe("BatchView", () => {
     await user.click(await screen.findByRole("button", { name: "Approve batch" }));
     const dialog = await screen.findByRole("dialog");
     await user.type(await within(dialog).findByLabelText(/Reason for approving/), "ok");
-    const confirm = within(dialog).getByRole("button", { name: "Approve and send" });
+    const confirm = within(dialog).getByRole("button", { name: "Approve batch" });
     await waitFor(() => expect(confirm).toBeEnabled());
     await user.dblClick(confirm);
     await waitFor(() => expect(screen.queryByRole("dialog")).not.toBeInTheDocument());

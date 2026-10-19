@@ -148,6 +148,27 @@ describe("AllPayouts", () => {
       await user.click(within(dialog).getByRole("button", { name: "Retry payout" }));
       expect(await within(dialog).findByRole("alert")).toHaveTextContent(msg);
     });
+
+    it("refreshes the list even when the retry is refused (the server may have moved the payout)", async () => {
+      const user = userEvent.setup();
+      let state: "failed" | "needs_attention" = "failed";
+      const calls = stubFetch({
+        [LIST]: () => jsonResponse({ items: [{ ...FAILING, status: state }], total: 1 }),
+        [`POST /api/v1/admin/payouts/${FAILING.id}/retry`]: () => {
+          state = "needs_attention";
+          return jsonResponse({ detail: "Paystack reports this transfer as successful, so it was not sent again. The payout now needs attention: check it before doing anything else" }, { status: 409 });
+        },
+      });
+      render(withAuth(SUPER, <AllPayouts />));
+      await user.click(within(await rowOf(/Placeholder Failing/)).getByRole("button", { name: /^Retry/ }));
+      const dialog = await screen.findByRole("dialog");
+      await user.type(within(dialog).getByLabelText(/Reason for retrying/), "x");
+      await user.click(within(dialog).getByRole("button", { name: "Retry payout" }));
+      await within(dialog).findByRole("alert");
+      await waitFor(() => expect(calls.filter((c) => c.key === LIST).length).toBeGreaterThan(1));
+      await user.click(within(dialog).getByRole("button", { name: "Cancel" }));
+      await waitFor(async () => expect(await rowOf(/Placeholder Failing/)).toHaveTextContent("Needs attention"));
+    });
   });
 
   describe("resolve", () => {

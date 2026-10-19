@@ -43,6 +43,17 @@ export function PayoutActions({ payout, onDone }: { payout: Payout; onDone?: (no
     await invalidatePayouts(queryClient);
     onDone?.(notice);
   };
+  // A refused action can still have changed the payout server-side (e.g. retry refused because Paystack
+  // says it was paid, which moves it to needs_attention), so refresh on failure too.
+  const act = async (run: () => Promise<unknown>, notice: string) => {
+    try {
+      await run();
+    } catch (e) {
+      void invalidatePayouts(queryClient);
+      throw e;
+    }
+    await done(notice)();
+  };
 
   return (
     <div className="flex flex-wrap justify-end gap-2">
@@ -72,8 +83,7 @@ export function PayoutActions({ payout, onDone }: { payout: Payout; onDone?: (no
           destructive
           reasonLabel="Reason for cancelling"
           onConfirm={async (reason) => {
-            await cancelPayout(payout.id, reason);
-            await done(`Payout to ${payout.caregiver_name ?? "the caregiver"} was cancelled.`)();
+            await act(() => cancelPayout(payout.id, reason), `Payout to ${payout.caregiver_name ?? "the caregiver"} was cancelled.`);
           }}
         />
       ) : null}
@@ -87,8 +97,7 @@ export function PayoutActions({ payout, onDone }: { payout: Payout; onDone?: (no
           destructive
           reasonLabel="Reason for retrying"
           onConfirm={async (reason) => {
-            await retryPayout(payout.id, reason);
-            await done(`Payout to ${payout.caregiver_name ?? "the caregiver"} is being sent again.`)();
+            await act(() => retryPayout(payout.id, reason), `Payout to ${payout.caregiver_name ?? "the caregiver"} is being sent again.`);
           }}
         />
       ) : null}
@@ -96,7 +105,9 @@ export function PayoutActions({ payout, onDone }: { payout: Payout; onDone?: (no
         <ResolveDialog
           payout={payout}
           onOpenChange={close}
-          onResolved={done(`Payout to ${payout.caregiver_name ?? "the caregiver"} was resolved.`)}
+          onResolve={(body) =>
+            act(() => resolvePayout(payout.id, body), `Payout to ${payout.caregiver_name ?? "the caregiver"} was resolved.`)
+          }
         />
       ) : null}
     </div>
@@ -115,11 +126,11 @@ const RESOLVE_EFFECTS: Record<Outcome | "none", string> = {
 function ResolveDialog({
   payout,
   onOpenChange,
-  onResolved,
+  onResolve,
 }: {
   payout: Payout;
   onOpenChange: (open: boolean) => void;
-  onResolved: () => Promise<void>;
+  onResolve: (body: { outcome: Outcome; reason: string; force: boolean }) => Promise<void>;
 }) {
   // Nothing is preselected: the admin must state the outcome, so a stray click can't pick one.
   const [outcome, setOutcome] = React.useState<Outcome | null>(null);
@@ -136,8 +147,7 @@ function ResolveDialog({
       extraValid={outcome !== null}
       onConfirm={async (reason) => {
         if (!outcome) return;
-        await resolvePayout(payout.id, { outcome, reason, force });
-        await onResolved();
+        await onResolve({ outcome, reason, force });
       }}
     >
       <fieldset className="grid gap-2">
@@ -155,7 +165,9 @@ function ResolveDialog({
         <input type="checkbox" className="mt-0.5 size-4" checked={force} onChange={(e) => setForce(e.target.checked)} />
         <span>
           Force. Tick only when Paystack&apos;s answer isn&apos;t final (pending, waiting for an OTP, no record, or
-          unreachable) and you have checked another way. It never overrides a definite answer.
+          unreachable) and you have checked another way. It never overrides a definite answer. If Paystack later answers
+          differently, this payout needs attention again and the caregiver is frozen; a forced Failed returns the money
+          while Paystack may still pay, which can mean paying twice.
         </span>
       </label>
     </ConfirmActionDialog>
@@ -189,9 +201,11 @@ export function UnfreezeButton({
           shortfallKobo={shortfallKobo}
           onOpenChange={setOpen}
           onConfirm={async (reason, writeOff) => {
-            await unfreezeCaregiver(caregiverId, { reason, write_off_shortfall: writeOff });
+            const res = await unfreezeCaregiver(caregiverId, { reason, write_off_shortfall: writeOff });
             await invalidatePayouts(queryClient);
-            onDone?.(`${name ?? "The caregiver"} can be paid again.`);
+            onDone?.(
+              `${name ?? "The caregiver"} can be paid again. Debited from their balance: ${formatNaira(res.debited_from_balance_kobo)}. Written off: ${formatNaira(res.written_off_shortfall_kobo)}.`,
+            );
           }}
         />
       ) : null}
@@ -211,6 +225,9 @@ function UnfreezeDialog({
   onConfirm: (reason: string, writeOff: boolean) => Promise<void>;
 }) {
   const [writeOff, setWriteOff] = React.useState(false);
+  // The shortfall we can see is only what the loaded payouts show, so the write-off option appears once
+  // the server itself says a shortfall is left (its refusal names the amount), or when we already see one.
+  const [offerWriteOff, setOfferWriteOff] = React.useState(shortfallKobo > 0);
   const owed =
     shortfallKobo > 0
       ? `Paystack paid ${formatNaira(shortfallKobo)} beyond what they earned. `
@@ -224,12 +241,21 @@ function UnfreezeDialog({
       confirmLabel="Unfreeze"
       destructive
       reasonLabel="Reason for unfreezing"
-      onConfirm={(reason) => onConfirm(reason, writeOff)}
+      onConfirm={async (reason) => {
+        try {
+          await onConfirm(reason, writeOff);
+        } catch (e) {
+          if (e instanceof Error && e.message.includes("write_off_shortfall")) setOfferWriteOff(true);
+          throw e;
+        }
+      }}
     >
-      <label className="flex items-start gap-2 text-sm">
-        <input type="checkbox" className="mt-0.5 size-4" checked={writeOff} onChange={(e) => setWriteOff(e.target.checked)} />
-        <span>Write off any shortfall their balance cannot cover. This cannot be undone.</span>
-      </label>
+      {offerWriteOff ? (
+        <label className="flex items-start gap-2 text-sm">
+          <input type="checkbox" className="mt-0.5 size-4" checked={writeOff} onChange={(e) => setWriteOff(e.target.checked)} />
+          <span>Write off any shortfall their balance cannot cover. This cannot be undone.</span>
+        </label>
+      ) : null}
     </ConfirmActionDialog>
   );
 }
