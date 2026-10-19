@@ -455,6 +455,47 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/v1/caregiver/banks": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * List Banks
+         * @description Banks a payout can go to (from Paystack, cached for a day). The app shows the names and sends back the code.
+         */
+        get: operations["list_banks_api_v1_caregiver_banks_get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/caregiver/bank-account/resolve": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Resolve Bank Account
+         * @description Check an account number and bank and return the name the bank holds for it, so the caregiver can confirm it is
+         *     theirs before saving. Rate limited per caregiver.
+         */
+        post: operations["resolve_bank_account_api_v1_caregiver_bank_account_resolve_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/v1/caregiver/bank-account": {
         parameters: {
             query?: never;
@@ -464,7 +505,12 @@ export interface paths {
         };
         /** Get Bank Account */
         get: operations["get_bank_account_api_v1_caregiver_bank_account_get"];
-        /** Update Bank Account */
+        /**
+         * Update Bank Account
+         * @description Save the payout account. The server resolves the account holder's name itself (a name sent by the client is never
+         *     used) and registers the account with Paystack. Changing to a different account, or saving the first one while there is money in the wallet,
+         *     blocks payouts for 24 hours.
+         */
         put: operations["update_bank_account_api_v1_caregiver_bank_account_put"];
         post?: never;
         delete?: never;
@@ -482,7 +528,11 @@ export interface paths {
         };
         get?: never;
         put?: never;
-        /** Request Withdrawal */
+        /**
+         * Request Withdrawal
+         * @description Removed. Caregivers no longer withdraw: the available balance is paid to their bank account on the payout schedule
+         *     (A3 slice 2). Kept as a clear 410 so an older app version shows a message instead of an unexplained 404.
+         */
         post: operations["request_withdrawal_api_v1_caregiver_wallet_withdraw_post"];
         delete?: never;
         options?: never;
@@ -939,7 +989,7 @@ export interface paths {
         put?: never;
         /**
          * Paystack Webhook
-         * @description Paystack webhook for bookings, prescriptions, wallet deposits and refunds.
+         * @description Paystack webhook for bookings, prescriptions, wallet deposits, refunds and caregiver payout transfers.
          */
         post: operations["paystack_webhook_api_v1_payment_paystack_webhook_post"];
         delete?: never;
@@ -2011,6 +2061,181 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/v1/admin/payouts/batches": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** List Batches */
+        get: operations["list_batches_api_v1_admin_payouts_batches_get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/admin/payouts/batches/{batch_id}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Get Batch */
+        get: operations["get_batch_api_v1_admin_payouts_batches__batch_id__get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/admin/payouts/batches/{batch_id}/approve": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Approve Batch
+         * @description Approve every payout still waiting in the batch. The send job then pays them through Paystack.
+         */
+        post: operations["approve_batch_api_v1_admin_payouts_batches__batch_id__approve_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/admin/payouts/batches/{batch_id}/cancel": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Cancel Batch
+         * @description Cancel a batch that has not been approved: every payout in it is cancelled and its money returned.
+         */
+        post: operations["cancel_batch_api_v1_admin_payouts_batches__batch_id__cancel_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/admin/payouts": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** List Payouts */
+        get: operations["list_payouts_api_v1_admin_payouts_get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/admin/payouts/{payout_id}/cancel": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Cancel Payout
+         * @description Cancel a payout that has not been approved; the reserved money goes back to the caregiver's available balance.
+         */
+        post: operations["cancel_payout_api_v1_admin_payouts__payout_id__cancel_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/admin/payouts/{payout_id}/retry": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Retry Payout
+         * @description Send a failed or reversed payout again (the money is reserved again; the send job pays it).
+         */
+        post: operations["retry_payout_api_v1_admin_payouts__payout_id__retry_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/admin/payouts/{payout_id}/resolve": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Resolve Payout
+         * @description Settle a payout Paystack's own word has not (``processing``, for example stuck at OTP, or ``needs_attention``) as
+         *     ``paid`` or ``failed`` (the reserved money is returned). Paystack is asked first; an answer that contradicts the outcome
+         *     refuses it, and an answer that is not final needs ``force: true``.
+         */
+        post: operations["resolve_payout_api_v1_admin_payouts__payout_id__resolve_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/admin/payouts/caregivers/{caregiver_id}/unfreeze": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Unfreeze Caregiver
+         * @description Let a caregiver whose payouts were frozen be paid again. Refused while any of their payouts still needs attention or is
+         *     processing. A shortfall is first debited from the caregiver's available balance; what the balance cannot cover refuses the
+         *     unfreeze (409) unless ``write_off_shortfall`` is true.
+         */
+        post: operations["unfreeze_caregiver_api_v1_admin_payouts_caregivers__caregiver_id__unfreeze_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/v1/admin/auth/login": {
         parameters: {
             query?: never;
@@ -2426,6 +2651,25 @@ export interface components {
              */
             force: boolean;
         };
+        /** AttemptOut */
+        AttemptOut: {
+            /** Attempt */
+            attempt: number;
+            /** Reference */
+            reference: string;
+            /**
+             * Status
+             * @enum {string}
+             */
+            status: "pending" | "success" | "failed" | "reversed" | "refused";
+            /** Failure Reason */
+            failure_reason: string | null;
+            /**
+             * Created At
+             * Format: date-time
+             */
+            created_at: string;
+        };
         /** AuditEntry */
         AuditEntry: {
             /**
@@ -2537,6 +2781,128 @@ export interface components {
             decided_by?: string | null;
             /** Decided At */
             decided_at?: string | null;
+        };
+        /** BankAccountResolveOut */
+        BankAccountResolveOut: {
+            /** Account Name */
+            account_name: string;
+            /** Account Number */
+            account_number: string;
+            /** Bank Code */
+            bank_code: string;
+            /** Bank Name */
+            bank_name: string;
+        };
+        /** BankAccountResolveRequest */
+        BankAccountResolveRequest: {
+            /** Account Number */
+            account_number: string;
+            /** Bank Code */
+            bank_code: string;
+        };
+        /** BankOut */
+        BankOut: {
+            /** Name */
+            name: string;
+            /** Code */
+            code: string;
+        };
+        /** BatchDetail */
+        BatchDetail: {
+            /**
+             * Id
+             * Format: uuid
+             */
+            id: string;
+            /** Period Key */
+            period_key: string;
+            /** Cadence */
+            cadence: string;
+            /** Min Payout Kobo */
+            min_payout_kobo: number;
+            /**
+             * Status
+             * @enum {string}
+             */
+            status: "pending_approval" | "approved" | "cancelled";
+            /** Approved By */
+            approved_by: string | null;
+            /** Approved At */
+            approved_at: string | null;
+            /** Approval Reason */
+            approval_reason: string | null;
+            /**
+             * Created At
+             * Format: date-time
+             */
+            created_at: string;
+            /** Payout Count */
+            payout_count: number;
+            /**
+             * Total Kobo
+             * @description Sum of the payouts that are not cancelled
+             */
+            total_kobo: number;
+            /**
+             * Counts
+             * @description Number of payouts in each status
+             */
+            counts: {
+                [key: string]: number;
+            };
+            /** Payouts */
+            payouts: components["schemas"]["PayoutOut"][];
+        };
+        /** BatchList */
+        BatchList: {
+            /** Items */
+            items: components["schemas"]["BatchOut"][];
+            /** Total */
+            total: number;
+        };
+        /** BatchOut */
+        BatchOut: {
+            /**
+             * Id
+             * Format: uuid
+             */
+            id: string;
+            /** Period Key */
+            period_key: string;
+            /** Cadence */
+            cadence: string;
+            /** Min Payout Kobo */
+            min_payout_kobo: number;
+            /**
+             * Status
+             * @enum {string}
+             */
+            status: "pending_approval" | "approved" | "cancelled";
+            /** Approved By */
+            approved_by: string | null;
+            /** Approved At */
+            approved_at: string | null;
+            /** Approval Reason */
+            approval_reason: string | null;
+            /**
+             * Created At
+             * Format: date-time
+             */
+            created_at: string;
+            /** Payout Count */
+            payout_count: number;
+            /**
+             * Total Kobo
+             * @description Sum of the payouts that are not cancelled
+             */
+            total_kobo: number;
+            /**
+             * Counts
+             * @description Number of payouts in each status
+             */
+            counts: {
+                [key: string]: number;
+            };
         };
         /** Body_login_api_v1_auth_login_post */
         Body_login_api_v1_auth_login_post: {
@@ -3577,10 +3943,16 @@ export interface components {
         CaregiverBankAccountOut: {
             /** Bank Name */
             bank_name: string;
+            /** Bank Code */
+            bank_code?: string | null;
             /** Account Number */
             account_number: string;
             /** Account Name */
             account_name: string;
+            /** Verified */
+            verified: boolean;
+            /** Payouts Blocked Until */
+            payouts_blocked_until?: string | null;
             /**
              * Created At
              * Format: date-time
@@ -3594,12 +3966,10 @@ export interface components {
         };
         /** CaregiverBankAccountUpdate */
         CaregiverBankAccountUpdate: {
-            /** Bank Name */
-            bank_name: string;
+            /** Bank Code */
+            bank_code: string;
             /** Account Number */
             account_number: string;
-            /** Account Name */
-            account_name: string;
         };
         /** CaregiverConsentData */
         CaregiverConsentData: {
@@ -3863,7 +4233,7 @@ export interface components {
              * Type
              * @enum {string}
              */
-            type: "earning" | "late_cancel_compensation" | "withdrawal";
+            type: "earning" | "late_cancel_compensation" | "withdrawal" | "payout";
             /** Amount */
             amount: number;
             /** Status */
@@ -3918,22 +4288,25 @@ export interface components {
             total_pending: number;
             /** Next Available At */
             next_available_at?: string | null;
-        };
-        /** CaregiverWithdrawalRequest */
-        CaregiverWithdrawalRequest: {
-            /** Amount */
-            amount: number;
-            /** Narration */
-            narration?: string | null;
-        };
-        /** CaregiverWithdrawalResponse */
-        CaregiverWithdrawalResponse: {
-            /** Transaction Id */
-            transaction_id: string;
-            /** Status */
-            status: string;
-            /** Message */
-            message: string;
+            /**
+             * Payout Cadence
+             * @default weekly
+             */
+            payout_cadence: string;
+            /**
+             * Payout Min Kobo
+             * @default 0
+             */
+            payout_min_kobo: number;
+            /** Next Payout On */
+            next_payout_on?: string | null;
+            /**
+             * Payout In Progress Kobo
+             * @default 0
+             */
+            payout_in_progress_kobo: number;
+            /** Payouts Blocked Until */
+            payouts_blocked_until?: string | null;
         };
         /** ChatMessageCreate */
         ChatMessageCreate: {
@@ -5033,6 +5406,161 @@ export interface components {
             /** Amount */
             amount?: string | null;
         };
+        /** PayoutList */
+        PayoutList: {
+            /** Items */
+            items: components["schemas"]["PayoutOut"][];
+            /** Total */
+            total: number;
+        };
+        /** PayoutOut */
+        PayoutOut: {
+            /**
+             * Id
+             * Format: uuid
+             */
+            id: string;
+            /**
+             * Batch Id
+             * Format: uuid
+             */
+            batch_id: string;
+            /**
+             * Batch Period
+             * @description The payout day of the batch (an ISO date)
+             */
+            batch_period: string | null;
+            /**
+             * Caregiver Id
+             * Format: uuid
+             */
+            caregiver_id: string;
+            /** Caregiver Name */
+            caregiver_name: string | null;
+            /** Amount Kobo */
+            amount_kobo: number;
+            /**
+             * Status
+             * @enum {string}
+             */
+            status: "pending_approval" | "processing" | "success" | "failed" | "reversed" | "cancelled" | "needs_attention";
+            /** Bank Name */
+            bank_name: string;
+            /**
+             * Account Number
+             * @description Masked to the last four digits
+             */
+            account_number: string;
+            /** Account Name */
+            account_name: string;
+            /**
+             * Reference
+             * @description Our unique Paystack reference for the current attempt
+             */
+            reference: string;
+            /**
+             * Transfer Code
+             * @description Paystack's code once the transfer exists
+             */
+            transfer_code: string | null;
+            /**
+             * Attempts
+             * @description The number of the current attempt
+             */
+            attempts: number;
+            /**
+             * Attempt History
+             * @description Every send of this payout, oldest first, with its failure reason
+             */
+            attempt_history: components["schemas"]["AttemptOut"][];
+            /**
+             * Shortfall Kobo
+             * @description Paid out by Paystack but not recoverable from the caregiver's balance. Goes down only when an admin nets it off (resolve as failed), or at unfreeze, when it is debited from the caregiver's balance or written off
+             */
+            shortfall_kobo: number;
+            /**
+             * Returned Kobo
+             * @description Set by resolving as failed: how much of the reservation went back to the balance
+             */
+            returned_kobo: number;
+            /**
+             * Netted Kobo
+             * @description Set by resolving as failed: how much was kept against the caregiver's shortfall
+             */
+            netted_kobo: number;
+            /**
+             * Caregiver Payouts Frozen At
+             * @description The caregiver-level freeze (the same on every payout of the caregiver); null when they can be paid
+             */
+            caregiver_payouts_frozen_at: string | null;
+            /**
+             * Caregiver Payouts Frozen Reason
+             * @description What started the freeze
+             */
+            caregiver_payouts_frozen_reason: string | null;
+            /**
+             * Failure Reason
+             * @description Why it failed, or a note that needs a person (for example the OTP message)
+             */
+            failure_reason: string | null;
+            /**
+             * Initiated At
+             * @description When the send job claimed it to call Paystack; null until then
+             */
+            initiated_at: string | null;
+            /** Completed At */
+            completed_at: string | null;
+            /** Approved By */
+            approved_by: string | null;
+            /** Approved At */
+            approved_at: string | null;
+            /**
+             * Cancelled By
+             * @description Null when the system cancelled it at approval
+             */
+            cancelled_by: string | null;
+            /** Cancelled At */
+            cancelled_at: string | null;
+            /** Cancel Reason */
+            cancel_reason: string | null;
+            /**
+             * Created At
+             * Format: date-time
+             */
+            created_at: string;
+        };
+        /** PayoutReasonIn */
+        PayoutReasonIn: {
+            /** Reason */
+            reason: string;
+        };
+        /** PayoutResolveIn */
+        PayoutResolveIn: {
+            /** Reason */
+            reason: string;
+            /**
+             * Outcome
+             * @enum {string}
+             */
+            outcome: "paid" | "failed";
+            /**
+             * Force
+             * @description Resolve although Paystack's answer is not final (pending, OTP, no record, unreachable). Never overrides a definite answer that contradicts the outcome.
+             * @default false
+             */
+            force: boolean;
+        };
+        /** PayoutUnfreezeIn */
+        PayoutUnfreezeIn: {
+            /** Reason */
+            reason: string;
+            /**
+             * Write Off Shortfall
+             * @description Write off the shortfall that the caregiver's available balance cannot cover (money Paystack paid beyond their earnings). The balance is debited first; without this flag a shortfall that is left refuses the unfreeze (409).
+             * @default false
+             */
+            write_off_shortfall: boolean;
+        };
         /** PrescriptionCreate */
         PrescriptionCreate: {
             /** Medication Name */
@@ -5353,6 +5881,31 @@ export interface components {
             token_type: "bearer";
             /** Expires In */
             expires_in: number;
+        };
+        /** UnfreezeOut */
+        UnfreezeOut: {
+            /**
+             * Caregiver Id
+             * Format: uuid
+             */
+            caregiver_id: string;
+            /**
+             * Payouts Frozen At
+             * @description Null: the caregiver can be paid again
+             */
+            payouts_frozen_at: string | null;
+            /**
+             * Debited From Balance Kobo
+             * @description Taken from the caregiver's available balance against the shortfall
+             */
+            debited_from_balance_kobo: number;
+            /** Written Off Shortfall Kobo */
+            written_off_shortfall_kobo: number;
+            /**
+             * Outstanding Shortfall Kobo
+             * @description Shortfall still recorded on the caregiver's payouts (always 0: what the balance cannot cover is written off or the unfreeze is refused)
+             */
+            outstanding_shortfall_kobo: number;
         };
         /** UnmatchedItem */
         UnmatchedItem: {
@@ -6390,6 +6943,59 @@ export interface operations {
             };
         };
     };
+    list_banks_api_v1_caregiver_banks_get: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["BankOut"][];
+                };
+            };
+        };
+    };
+    resolve_bank_account_api_v1_caregiver_bank_account_resolve_post: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["BankAccountResolveRequest"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["BankAccountResolveOut"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
     get_bank_account_api_v1_caregiver_bank_account_get: {
         parameters: {
             query?: never;
@@ -6450,28 +7056,15 @@ export interface operations {
             path?: never;
             cookie?: never;
         };
-        requestBody: {
-            content: {
-                "application/json": components["schemas"]["CaregiverWithdrawalRequest"];
-            };
-        };
+        requestBody?: never;
         responses: {
-            /** @description Successful Response */
-            200: {
+            /** @description Self-withdrawal was replaced by scheduled payouts. */
+            410: {
                 headers: {
                     [name: string]: unknown;
                 };
                 content: {
-                    "application/json": components["schemas"]["CaregiverWithdrawalResponse"];
-                };
-            };
-            /** @description Validation Error */
-            422: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["HTTPValidationError"];
+                    "application/json": unknown;
                 };
             };
         };
@@ -9500,6 +10093,315 @@ export interface operations {
                 };
                 content: {
                     "application/json": components["schemas"]["EarningOut"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    list_batches_api_v1_admin_payouts_batches_get: {
+        parameters: {
+            query?: {
+                status?: ("pending_approval" | "approved" | "cancelled") | null;
+                limit?: number;
+                offset?: number;
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["BatchList"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    get_batch_api_v1_admin_payouts_batches__batch_id__get: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                batch_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["BatchDetail"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    approve_batch_api_v1_admin_payouts_batches__batch_id__approve_post: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                batch_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["PayoutReasonIn"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["BatchDetail"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    cancel_batch_api_v1_admin_payouts_batches__batch_id__cancel_post: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                batch_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["PayoutReasonIn"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["BatchDetail"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    list_payouts_api_v1_admin_payouts_get: {
+        parameters: {
+            query?: {
+                batch_id?: string | null;
+                caregiver_id?: string | null;
+                status?: ("pending_approval" | "processing" | "success" | "failed" | "reversed" | "cancelled" | "needs_attention") | null;
+                limit?: number;
+                offset?: number;
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["PayoutList"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    cancel_payout_api_v1_admin_payouts__payout_id__cancel_post: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                payout_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["PayoutReasonIn"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["PayoutOut"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    retry_payout_api_v1_admin_payouts__payout_id__retry_post: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                payout_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["PayoutReasonIn"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["PayoutOut"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    resolve_payout_api_v1_admin_payouts__payout_id__resolve_post: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                payout_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["PayoutResolveIn"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["PayoutOut"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    unfreeze_caregiver_api_v1_admin_payouts_caregivers__caregiver_id__unfreeze_post: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                caregiver_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["PayoutUnfreezeIn"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["UnfreezeOut"];
                 };
             };
             /** @description Validation Error */

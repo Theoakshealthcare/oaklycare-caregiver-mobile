@@ -984,6 +984,84 @@
         }
       }
     },
+    "/api/v1/caregiver/banks": {
+      "get": {
+        "tags": [
+          "caregiver"
+        ],
+        "summary": "List Banks",
+        "description": "Banks a payout can go to (from Paystack, cached for a day). The app shows the names and sends back the code.",
+        "operationId": "list_banks_api_v1_caregiver_banks_get",
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "items": {
+                    "$ref": "#/components/schemas/BankOut"
+                  },
+                  "type": "array",
+                  "title": "Response List Banks Api V1 Caregiver Banks Get"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "OAuth2PasswordBearer": []
+          }
+        ]
+      }
+    },
+    "/api/v1/caregiver/bank-account/resolve": {
+      "post": {
+        "tags": [
+          "caregiver"
+        ],
+        "summary": "Resolve Bank Account",
+        "description": "Check an account number and bank and return the name the bank holds for it, so the caregiver can confirm it is\ntheirs before saving. Rate limited per caregiver.",
+        "operationId": "resolve_bank_account_api_v1_caregiver_bank_account_resolve_post",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/BankAccountResolveRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/BankAccountResolveOut"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "OAuth2PasswordBearer": []
+          }
+        ]
+      }
+    },
     "/api/v1/caregiver/bank-account": {
       "get": {
         "tags": [
@@ -1014,6 +1092,7 @@
           "caregiver"
         ],
         "summary": "Update Bank Account",
+        "description": "Save the payout account. The server resolves the account holder's name itself (a name sent by the client is never\nused) and registers the account with Paystack. Changing to a different account, or saving the first one while there is money in the wallet,\nblocks payouts for 24 hours.",
         "operationId": "update_bank_account_api_v1_caregiver_bank_account_put",
         "requestBody": {
           "content": {
@@ -1060,35 +1139,14 @@
           "caregiver"
         ],
         "summary": "Request Withdrawal",
+        "description": "Removed. Caregivers no longer withdraw: the available balance is paid to their bank account on the payout schedule\n(A3 slice 2). Kept as a clear 410 so an older app version shows a message instead of an unexplained 404.",
         "operationId": "request_withdrawal_api_v1_caregiver_wallet_withdraw_post",
-        "requestBody": {
-          "content": {
-            "application/json": {
-              "schema": {
-                "$ref": "#/components/schemas/CaregiverWithdrawalRequest"
-              }
-            }
-          },
-          "required": true
-        },
         "responses": {
-          "200": {
-            "description": "Successful Response",
+          "410": {
+            "description": "Self-withdrawal was replaced by scheduled payouts.",
             "content": {
               "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/CaregiverWithdrawalResponse"
-                }
-              }
-            }
-          },
-          "422": {
-            "description": "Validation Error",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/HTTPValidationError"
-                }
+                "schema": {}
               }
             }
           }
@@ -2379,7 +2437,7 @@
           "payment"
         ],
         "summary": "Paystack Webhook",
-        "description": "Paystack webhook for bookings, prescriptions, wallet deposits and refunds.",
+        "description": "Paystack webhook for bookings, prescriptions, wallet deposits, refunds and caregiver payout transfers.",
         "operationId": "paystack_webhook_api_v1_payment_paystack_webhook_post",
         "responses": {
           "200": {
@@ -6173,6 +6231,610 @@
         }
       }
     },
+    "/api/v1/admin/payouts/batches": {
+      "get": {
+        "tags": [
+          "admin-payouts"
+        ],
+        "summary": "List Batches",
+        "operationId": "list_batches_api_v1_admin_payouts_batches_get",
+        "security": [
+          {
+            "AdminBearer": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "status",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "enum": [
+                    "pending_approval",
+                    "approved",
+                    "cancelled"
+                  ],
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Status"
+            }
+          },
+          {
+            "name": "limit",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "integer",
+              "maximum": 200,
+              "minimum": 1,
+              "default": 50,
+              "title": "Limit"
+            }
+          },
+          {
+            "name": "offset",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "integer",
+              "minimum": 0,
+              "default": 0,
+              "title": "Offset"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/BatchList"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/admin/payouts/batches/{batch_id}": {
+      "get": {
+        "tags": [
+          "admin-payouts"
+        ],
+        "summary": "Get Batch",
+        "operationId": "get_batch_api_v1_admin_payouts_batches__batch_id__get",
+        "security": [
+          {
+            "AdminBearer": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "batch_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid",
+              "title": "Batch Id"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/BatchDetail"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/admin/payouts/batches/{batch_id}/approve": {
+      "post": {
+        "tags": [
+          "admin-payouts"
+        ],
+        "summary": "Approve Batch",
+        "description": "Approve every payout still waiting in the batch. The send job then pays them through Paystack.",
+        "operationId": "approve_batch_api_v1_admin_payouts_batches__batch_id__approve_post",
+        "security": [
+          {
+            "AdminBearer": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "batch_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid",
+              "title": "Batch Id"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/PayoutReasonIn"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/BatchDetail"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/admin/payouts/batches/{batch_id}/cancel": {
+      "post": {
+        "tags": [
+          "admin-payouts"
+        ],
+        "summary": "Cancel Batch",
+        "description": "Cancel a batch that has not been approved: every payout in it is cancelled and its money returned.",
+        "operationId": "cancel_batch_api_v1_admin_payouts_batches__batch_id__cancel_post",
+        "security": [
+          {
+            "AdminBearer": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "batch_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid",
+              "title": "Batch Id"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/PayoutReasonIn"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/BatchDetail"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/admin/payouts": {
+      "get": {
+        "tags": [
+          "admin-payouts"
+        ],
+        "summary": "List Payouts",
+        "operationId": "list_payouts_api_v1_admin_payouts_get",
+        "security": [
+          {
+            "AdminBearer": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "batch_id",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string",
+                  "format": "uuid"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Batch Id"
+            }
+          },
+          {
+            "name": "caregiver_id",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string",
+                  "format": "uuid"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Caregiver Id"
+            }
+          },
+          {
+            "name": "status",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "enum": [
+                    "pending_approval",
+                    "processing",
+                    "success",
+                    "failed",
+                    "reversed",
+                    "cancelled",
+                    "needs_attention"
+                  ],
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Status"
+            }
+          },
+          {
+            "name": "limit",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "integer",
+              "maximum": 200,
+              "minimum": 1,
+              "default": 50,
+              "title": "Limit"
+            }
+          },
+          {
+            "name": "offset",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "integer",
+              "minimum": 0,
+              "default": 0,
+              "title": "Offset"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/PayoutList"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/admin/payouts/{payout_id}/cancel": {
+      "post": {
+        "tags": [
+          "admin-payouts"
+        ],
+        "summary": "Cancel Payout",
+        "description": "Cancel a payout that has not been approved; the reserved money goes back to the caregiver's available balance.",
+        "operationId": "cancel_payout_api_v1_admin_payouts__payout_id__cancel_post",
+        "security": [
+          {
+            "AdminBearer": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "payout_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid",
+              "title": "Payout Id"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/PayoutReasonIn"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/PayoutOut"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/admin/payouts/{payout_id}/retry": {
+      "post": {
+        "tags": [
+          "admin-payouts"
+        ],
+        "summary": "Retry Payout",
+        "description": "Send a failed or reversed payout again (the money is reserved again; the send job pays it).",
+        "operationId": "retry_payout_api_v1_admin_payouts__payout_id__retry_post",
+        "security": [
+          {
+            "AdminBearer": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "payout_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid",
+              "title": "Payout Id"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/PayoutReasonIn"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/PayoutOut"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/admin/payouts/{payout_id}/resolve": {
+      "post": {
+        "tags": [
+          "admin-payouts"
+        ],
+        "summary": "Resolve Payout",
+        "description": "Settle a payout Paystack's own word has not (``processing``, for example stuck at OTP, or ``needs_attention``) as\n``paid`` or ``failed`` (the reserved money is returned). Paystack is asked first; an answer that contradicts the outcome\nrefuses it, and an answer that is not final needs ``force: true``.",
+        "operationId": "resolve_payout_api_v1_admin_payouts__payout_id__resolve_post",
+        "security": [
+          {
+            "AdminBearer": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "payout_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid",
+              "title": "Payout Id"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/PayoutResolveIn"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/PayoutOut"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/admin/payouts/caregivers/{caregiver_id}/unfreeze": {
+      "post": {
+        "tags": [
+          "admin-payouts"
+        ],
+        "summary": "Unfreeze Caregiver",
+        "description": "Let a caregiver whose payouts were frozen be paid again. Refused while any of their payouts still needs attention or is\nprocessing. A shortfall is first debited from the caregiver's available balance; what the balance cannot cover refuses the\nunfreeze (409) unless ``write_off_shortfall`` is true.",
+        "operationId": "unfreeze_caregiver_api_v1_admin_payouts_caregivers__caregiver_id__unfreeze_post",
+        "security": [
+          {
+            "AdminBearer": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "caregiver_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid",
+              "title": "Caregiver Id"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/PayoutUnfreezeIn"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/UnfreezeOut"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
     "/api/v1/admin/auth/login": {
       "post": {
         "tags": [
@@ -7420,6 +8082,54 @@
         ],
         "title": "AssignIn"
       },
+      "AttemptOut": {
+        "properties": {
+          "attempt": {
+            "type": "integer",
+            "title": "Attempt"
+          },
+          "reference": {
+            "type": "string",
+            "title": "Reference"
+          },
+          "status": {
+            "type": "string",
+            "enum": [
+              "pending",
+              "success",
+              "failed",
+              "reversed",
+              "refused"
+            ],
+            "title": "Status"
+          },
+          "failure_reason": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Failure Reason"
+          },
+          "created_at": {
+            "type": "string",
+            "format": "date-time",
+            "title": "Created At"
+          }
+        },
+        "type": "object",
+        "required": [
+          "attempt",
+          "reference",
+          "status",
+          "failure_reason",
+          "created_at"
+        ],
+        "title": "AttemptOut"
+      },
       "AuditEntry": {
         "properties": {
           "id": {
@@ -7743,6 +8453,309 @@
           "status"
         ],
         "title": "BackgroundCheckOut"
+      },
+      "BankAccountResolveOut": {
+        "properties": {
+          "account_name": {
+            "type": "string",
+            "title": "Account Name"
+          },
+          "account_number": {
+            "type": "string",
+            "title": "Account Number"
+          },
+          "bank_code": {
+            "type": "string",
+            "title": "Bank Code"
+          },
+          "bank_name": {
+            "type": "string",
+            "title": "Bank Name"
+          }
+        },
+        "type": "object",
+        "required": [
+          "account_name",
+          "account_number",
+          "bank_code",
+          "bank_name"
+        ],
+        "title": "BankAccountResolveOut"
+      },
+      "BankAccountResolveRequest": {
+        "properties": {
+          "account_number": {
+            "type": "string",
+            "maxLength": 20,
+            "minLength": 1,
+            "title": "Account Number"
+          },
+          "bank_code": {
+            "type": "string",
+            "maxLength": 20,
+            "minLength": 1,
+            "title": "Bank Code"
+          }
+        },
+        "type": "object",
+        "required": [
+          "account_number",
+          "bank_code"
+        ],
+        "title": "BankAccountResolveRequest"
+      },
+      "BankOut": {
+        "properties": {
+          "name": {
+            "type": "string",
+            "title": "Name"
+          },
+          "code": {
+            "type": "string",
+            "title": "Code"
+          }
+        },
+        "type": "object",
+        "required": [
+          "name",
+          "code"
+        ],
+        "title": "BankOut"
+      },
+      "BatchDetail": {
+        "properties": {
+          "id": {
+            "type": "string",
+            "format": "uuid",
+            "title": "Id"
+          },
+          "period_key": {
+            "type": "string",
+            "title": "Period Key"
+          },
+          "cadence": {
+            "type": "string",
+            "title": "Cadence"
+          },
+          "min_payout_kobo": {
+            "type": "integer",
+            "title": "Min Payout Kobo"
+          },
+          "status": {
+            "type": "string",
+            "enum": [
+              "pending_approval",
+              "approved",
+              "cancelled"
+            ],
+            "title": "Status"
+          },
+          "approved_by": {
+            "anyOf": [
+              {
+                "type": "string",
+                "format": "uuid"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Approved By"
+          },
+          "approved_at": {
+            "anyOf": [
+              {
+                "type": "string",
+                "format": "date-time"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Approved At"
+          },
+          "approval_reason": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Approval Reason"
+          },
+          "created_at": {
+            "type": "string",
+            "format": "date-time",
+            "title": "Created At"
+          },
+          "payout_count": {
+            "type": "integer",
+            "title": "Payout Count"
+          },
+          "total_kobo": {
+            "type": "integer",
+            "title": "Total Kobo",
+            "description": "Sum of the payouts that are not cancelled"
+          },
+          "counts": {
+            "additionalProperties": {
+              "type": "integer"
+            },
+            "type": "object",
+            "title": "Counts",
+            "description": "Number of payouts in each status"
+          },
+          "payouts": {
+            "items": {
+              "$ref": "#/components/schemas/PayoutOut"
+            },
+            "type": "array",
+            "title": "Payouts"
+          }
+        },
+        "type": "object",
+        "required": [
+          "id",
+          "period_key",
+          "cadence",
+          "min_payout_kobo",
+          "status",
+          "approved_by",
+          "approved_at",
+          "approval_reason",
+          "created_at",
+          "payout_count",
+          "total_kobo",
+          "counts",
+          "payouts"
+        ],
+        "title": "BatchDetail"
+      },
+      "BatchList": {
+        "properties": {
+          "items": {
+            "items": {
+              "$ref": "#/components/schemas/BatchOut"
+            },
+            "type": "array",
+            "title": "Items"
+          },
+          "total": {
+            "type": "integer",
+            "title": "Total"
+          }
+        },
+        "type": "object",
+        "required": [
+          "items",
+          "total"
+        ],
+        "title": "BatchList"
+      },
+      "BatchOut": {
+        "properties": {
+          "id": {
+            "type": "string",
+            "format": "uuid",
+            "title": "Id"
+          },
+          "period_key": {
+            "type": "string",
+            "title": "Period Key"
+          },
+          "cadence": {
+            "type": "string",
+            "title": "Cadence"
+          },
+          "min_payout_kobo": {
+            "type": "integer",
+            "title": "Min Payout Kobo"
+          },
+          "status": {
+            "type": "string",
+            "enum": [
+              "pending_approval",
+              "approved",
+              "cancelled"
+            ],
+            "title": "Status"
+          },
+          "approved_by": {
+            "anyOf": [
+              {
+                "type": "string",
+                "format": "uuid"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Approved By"
+          },
+          "approved_at": {
+            "anyOf": [
+              {
+                "type": "string",
+                "format": "date-time"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Approved At"
+          },
+          "approval_reason": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Approval Reason"
+          },
+          "created_at": {
+            "type": "string",
+            "format": "date-time",
+            "title": "Created At"
+          },
+          "payout_count": {
+            "type": "integer",
+            "title": "Payout Count"
+          },
+          "total_kobo": {
+            "type": "integer",
+            "title": "Total Kobo",
+            "description": "Sum of the payouts that are not cancelled"
+          },
+          "counts": {
+            "additionalProperties": {
+              "type": "integer"
+            },
+            "type": "object",
+            "title": "Counts",
+            "description": "Number of payouts in each status"
+          }
+        },
+        "type": "object",
+        "required": [
+          "id",
+          "period_key",
+          "cadence",
+          "min_payout_kobo",
+          "status",
+          "approved_by",
+          "approved_at",
+          "approval_reason",
+          "created_at",
+          "payout_count",
+          "total_kobo",
+          "counts"
+        ],
+        "title": "BatchOut"
       },
       "Body_login_api_v1_auth_login_post": {
         "properties": {
@@ -10197,6 +11210,17 @@
             "type": "string",
             "title": "Bank Name"
           },
+          "bank_code": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Bank Code"
+          },
           "account_number": {
             "type": "string",
             "title": "Account Number"
@@ -10204,6 +11228,22 @@
           "account_name": {
             "type": "string",
             "title": "Account Name"
+          },
+          "verified": {
+            "type": "boolean",
+            "title": "Verified"
+          },
+          "payouts_blocked_until": {
+            "anyOf": [
+              {
+                "type": "string",
+                "format": "date-time"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Payouts Blocked Until"
           },
           "created_at": {
             "type": "string",
@@ -10221,6 +11261,7 @@
           "bank_name",
           "account_number",
           "account_name",
+          "verified",
           "created_at",
           "updated_at"
         ],
@@ -10228,24 +11269,23 @@
       },
       "CaregiverBankAccountUpdate": {
         "properties": {
-          "bank_name": {
+          "bank_code": {
             "type": "string",
-            "title": "Bank Name"
+            "maxLength": 20,
+            "minLength": 1,
+            "title": "Bank Code"
           },
           "account_number": {
             "type": "string",
+            "maxLength": 20,
+            "minLength": 1,
             "title": "Account Number"
-          },
-          "account_name": {
-            "type": "string",
-            "title": "Account Name"
           }
         },
         "type": "object",
         "required": [
-          "bank_name",
-          "account_number",
-          "account_name"
+          "bank_code",
+          "account_number"
         ],
         "title": "CaregiverBankAccountUpdate"
       },
@@ -10881,7 +11921,8 @@
             "enum": [
               "earning",
               "late_cancel_compensation",
-              "withdrawal"
+              "withdrawal",
+              "payout"
             ],
             "title": "Type"
           },
@@ -11051,6 +12092,45 @@
               }
             ],
             "title": "Next Available At"
+          },
+          "payout_cadence": {
+            "type": "string",
+            "title": "Payout Cadence",
+            "default": "weekly"
+          },
+          "payout_min_kobo": {
+            "type": "integer",
+            "title": "Payout Min Kobo",
+            "default": 0
+          },
+          "next_payout_on": {
+            "anyOf": [
+              {
+                "type": "string",
+                "format": "date"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Next Payout On"
+          },
+          "payout_in_progress_kobo": {
+            "type": "integer",
+            "title": "Payout In Progress Kobo",
+            "default": 0
+          },
+          "payouts_blocked_until": {
+            "anyOf": [
+              {
+                "type": "string",
+                "format": "date-time"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Payouts Blocked Until"
           }
         },
         "type": "object",
@@ -11064,54 +12144,6 @@
           "total_pending"
         ],
         "title": "CaregiverWalletSummary"
-      },
-      "CaregiverWithdrawalRequest": {
-        "properties": {
-          "amount": {
-            "type": "integer",
-            "exclusiveMinimum": 0,
-            "title": "Amount"
-          },
-          "narration": {
-            "anyOf": [
-              {
-                "type": "string"
-              },
-              {
-                "type": "null"
-              }
-            ],
-            "title": "Narration"
-          }
-        },
-        "type": "object",
-        "required": [
-          "amount"
-        ],
-        "title": "CaregiverWithdrawalRequest"
-      },
-      "CaregiverWithdrawalResponse": {
-        "properties": {
-          "transaction_id": {
-            "type": "string",
-            "title": "Transaction Id"
-          },
-          "status": {
-            "type": "string",
-            "title": "Status"
-          },
-          "message": {
-            "type": "string",
-            "title": "Message"
-          }
-        },
-        "type": "object",
-        "required": [
-          "transaction_id",
-          "status",
-          "message"
-        ],
-        "title": "CaregiverWithdrawalResponse"
       },
       "ChatMessageCreate": {
         "properties": {
@@ -13978,6 +15010,369 @@
         ],
         "title": "PaymentVerificationResponse"
       },
+      "PayoutList": {
+        "properties": {
+          "items": {
+            "items": {
+              "$ref": "#/components/schemas/PayoutOut"
+            },
+            "type": "array",
+            "title": "Items"
+          },
+          "total": {
+            "type": "integer",
+            "title": "Total"
+          }
+        },
+        "type": "object",
+        "required": [
+          "items",
+          "total"
+        ],
+        "title": "PayoutList"
+      },
+      "PayoutOut": {
+        "properties": {
+          "id": {
+            "type": "string",
+            "format": "uuid",
+            "title": "Id"
+          },
+          "batch_id": {
+            "type": "string",
+            "format": "uuid",
+            "title": "Batch Id"
+          },
+          "batch_period": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Batch Period",
+            "description": "The payout day of the batch (an ISO date)"
+          },
+          "caregiver_id": {
+            "type": "string",
+            "format": "uuid",
+            "title": "Caregiver Id"
+          },
+          "caregiver_name": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Caregiver Name"
+          },
+          "amount_kobo": {
+            "type": "integer",
+            "title": "Amount Kobo"
+          },
+          "status": {
+            "type": "string",
+            "enum": [
+              "pending_approval",
+              "processing",
+              "success",
+              "failed",
+              "reversed",
+              "cancelled",
+              "needs_attention"
+            ],
+            "title": "Status"
+          },
+          "bank_name": {
+            "type": "string",
+            "title": "Bank Name"
+          },
+          "account_number": {
+            "type": "string",
+            "title": "Account Number",
+            "description": "Masked to the last four digits"
+          },
+          "account_name": {
+            "type": "string",
+            "title": "Account Name"
+          },
+          "reference": {
+            "type": "string",
+            "title": "Reference",
+            "description": "Our unique Paystack reference for the current attempt"
+          },
+          "transfer_code": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Transfer Code",
+            "description": "Paystack's code once the transfer exists"
+          },
+          "attempts": {
+            "type": "integer",
+            "title": "Attempts",
+            "description": "The number of the current attempt"
+          },
+          "attempt_history": {
+            "items": {
+              "$ref": "#/components/schemas/AttemptOut"
+            },
+            "type": "array",
+            "title": "Attempt History",
+            "description": "Every send of this payout, oldest first, with its failure reason"
+          },
+          "shortfall_kobo": {
+            "type": "integer",
+            "title": "Shortfall Kobo",
+            "description": "Paid out by Paystack but not recoverable from the caregiver's balance. Goes down only when an admin nets it off (resolve as failed), or at unfreeze, when it is debited from the caregiver's balance or written off"
+          },
+          "returned_kobo": {
+            "type": "integer",
+            "title": "Returned Kobo",
+            "description": "Set by resolving as failed: how much of the reservation went back to the balance"
+          },
+          "netted_kobo": {
+            "type": "integer",
+            "title": "Netted Kobo",
+            "description": "Set by resolving as failed: how much was kept against the caregiver's shortfall"
+          },
+          "caregiver_payouts_frozen_at": {
+            "anyOf": [
+              {
+                "type": "string",
+                "format": "date-time"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Caregiver Payouts Frozen At",
+            "description": "The caregiver-level freeze (the same on every payout of the caregiver); null when they can be paid"
+          },
+          "caregiver_payouts_frozen_reason": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Caregiver Payouts Frozen Reason",
+            "description": "What started the freeze"
+          },
+          "failure_reason": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Failure Reason",
+            "description": "Why it failed, or a note that needs a person (for example the OTP message)"
+          },
+          "initiated_at": {
+            "anyOf": [
+              {
+                "type": "string",
+                "format": "date-time"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Initiated At",
+            "description": "When the send job claimed it to call Paystack; null until then"
+          },
+          "completed_at": {
+            "anyOf": [
+              {
+                "type": "string",
+                "format": "date-time"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Completed At"
+          },
+          "approved_by": {
+            "anyOf": [
+              {
+                "type": "string",
+                "format": "uuid"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Approved By"
+          },
+          "approved_at": {
+            "anyOf": [
+              {
+                "type": "string",
+                "format": "date-time"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Approved At"
+          },
+          "cancelled_by": {
+            "anyOf": [
+              {
+                "type": "string",
+                "format": "uuid"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Cancelled By",
+            "description": "Null when the system cancelled it at approval"
+          },
+          "cancelled_at": {
+            "anyOf": [
+              {
+                "type": "string",
+                "format": "date-time"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Cancelled At"
+          },
+          "cancel_reason": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Cancel Reason"
+          },
+          "created_at": {
+            "type": "string",
+            "format": "date-time",
+            "title": "Created At"
+          }
+        },
+        "type": "object",
+        "required": [
+          "id",
+          "batch_id",
+          "batch_period",
+          "caregiver_id",
+          "caregiver_name",
+          "amount_kobo",
+          "status",
+          "bank_name",
+          "account_number",
+          "account_name",
+          "reference",
+          "transfer_code",
+          "attempts",
+          "attempt_history",
+          "shortfall_kobo",
+          "returned_kobo",
+          "netted_kobo",
+          "caregiver_payouts_frozen_at",
+          "caregiver_payouts_frozen_reason",
+          "failure_reason",
+          "initiated_at",
+          "completed_at",
+          "approved_by",
+          "approved_at",
+          "cancelled_by",
+          "cancelled_at",
+          "cancel_reason",
+          "created_at"
+        ],
+        "title": "PayoutOut"
+      },
+      "PayoutReasonIn": {
+        "properties": {
+          "reason": {
+            "type": "string",
+            "maxLength": 2000,
+            "title": "Reason"
+          }
+        },
+        "additionalProperties": false,
+        "type": "object",
+        "required": [
+          "reason"
+        ],
+        "title": "PayoutReasonIn"
+      },
+      "PayoutResolveIn": {
+        "properties": {
+          "reason": {
+            "type": "string",
+            "maxLength": 2000,
+            "title": "Reason"
+          },
+          "outcome": {
+            "type": "string",
+            "enum": [
+              "paid",
+              "failed"
+            ],
+            "title": "Outcome"
+          },
+          "force": {
+            "type": "boolean",
+            "title": "Force",
+            "description": "Resolve although Paystack's answer is not final (pending, OTP, no record, unreachable). Never overrides a definite answer that contradicts the outcome.",
+            "default": false
+          }
+        },
+        "additionalProperties": false,
+        "type": "object",
+        "required": [
+          "reason",
+          "outcome"
+        ],
+        "title": "PayoutResolveIn"
+      },
+      "PayoutUnfreezeIn": {
+        "properties": {
+          "reason": {
+            "type": "string",
+            "maxLength": 2000,
+            "title": "Reason"
+          },
+          "write_off_shortfall": {
+            "type": "boolean",
+            "title": "Write Off Shortfall",
+            "description": "Write off the shortfall that the caregiver's available balance cannot cover (money Paystack paid beyond their earnings). The balance is debited first; without this flag a shortfall that is left refuses the unfreeze (409).",
+            "default": false
+          }
+        },
+        "additionalProperties": false,
+        "type": "object",
+        "required": [
+          "reason"
+        ],
+        "title": "PayoutUnfreezeIn"
+      },
       "PrescriptionCreate": {
         "properties": {
           "medication_name": {
@@ -14865,6 +16260,51 @@
           "expires_in"
         ],
         "title": "TokenPairOut"
+      },
+      "UnfreezeOut": {
+        "properties": {
+          "caregiver_id": {
+            "type": "string",
+            "format": "uuid",
+            "title": "Caregiver Id"
+          },
+          "payouts_frozen_at": {
+            "anyOf": [
+              {
+                "type": "string",
+                "format": "date-time"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Payouts Frozen At",
+            "description": "Null: the caregiver can be paid again"
+          },
+          "debited_from_balance_kobo": {
+            "type": "integer",
+            "title": "Debited From Balance Kobo",
+            "description": "Taken from the caregiver's available balance against the shortfall"
+          },
+          "written_off_shortfall_kobo": {
+            "type": "integer",
+            "title": "Written Off Shortfall Kobo"
+          },
+          "outstanding_shortfall_kobo": {
+            "type": "integer",
+            "title": "Outstanding Shortfall Kobo",
+            "description": "Shortfall still recorded on the caregiver's payouts (always 0: what the balance cannot cover is written off or the unfreeze is refused)"
+          }
+        },
+        "type": "object",
+        "required": [
+          "caregiver_id",
+          "payouts_frozen_at",
+          "debited_from_balance_kobo",
+          "written_off_shortfall_kobo",
+          "outstanding_shortfall_kobo"
+        ],
+        "title": "UnfreezeOut"
       },
       "UnmatchedItem": {
         "properties": {

@@ -35,6 +35,9 @@ const wallet = {
   held_balance: 0,
   total_pending: 0,
   next_available_at: null,
+  payout_cadence: "weekly",
+  payout_min_kobo: 500000,
+  payout_in_progress_kobo: 0,
 };
 const tx = (over: Partial<CaregiverTransaction>): CaregiverTransaction => ({
   id: "t1",
@@ -52,6 +55,8 @@ const tx = (over: Partial<CaregiverTransaction>): CaregiverTransaction => ({
 });
 const bank = {
   bank_name: "Placeholder Bank",
+  bank_code: "000",
+  verified: true,
   account_number: "0000000000",
   account_name: "Placeholder Caregiver A",
   created_at: "2026-10-06T08:23:31.051733",
@@ -216,11 +221,11 @@ describe("BankDetails screen", () => {
     expect(await screen.findByText("Placeholder Caregiver A")).toBeTruthy();
   });
 
-  it("empty: no account yet, goes straight to the form", async () => {
+  it("empty: no account yet, says adding one is coming soon", async () => {
     (walletService.getBankAccount as jest.Mock).mockResolvedValue(null);
     await renderWith(<BankDetails />);
     expect(await screen.findByText("No payment details yet")).toBeTruthy();
-    expect(screen.getByText("Save payment details")).toBeTruthy();
+    expect(screen.getByText(/coming in the next app update/)).toBeTruthy();
   });
 
   it("success: shows the current account", async () => {
@@ -228,45 +233,5 @@ describe("BankDetails screen", () => {
     expect(await screen.findByText("Placeholder Caregiver A")).toBeTruthy();
     expect(screen.getByText("0000000000")).toBeTruthy();
     expect(screen.getByText("Placeholder Bank")).toBeTruthy();
-  });
-
-  it("saves with exactly the schema's three fields", async () => {
-    (walletService.getBankAccount as jest.Mock).mockResolvedValue(null);
-    const update = jest.spyOn(walletService, "updateBankAccount").mockResolvedValue(bank);
-    await renderWith(<BankDetails />);
-    await fireEvent.changeText(await screen.findByPlaceholderText("Bank name"), " Placeholder Bank ");
-    await fireEvent.changeText(screen.getByPlaceholderText("10-digit account number"), "0000000000");
-    await fireEvent.changeText(screen.getByPlaceholderText("Name on the account"), "Placeholder Caregiver A");
-    await fireEvent.press(screen.getByText("Save payment details"));
-    await waitFor(() =>
-      expect(update).toHaveBeenCalledWith({
-        bank_name: "Placeholder Bank",
-        account_number: "0000000000",
-        account_name: "Placeholder Caregiver A",
-      }),
-    );
-  });
-
-  it("validates before sending", async () => {
-    (walletService.getBankAccount as jest.Mock).mockResolvedValue(null);
-    const update = jest.spyOn(walletService, "updateBankAccount");
-    await renderWith(<BankDetails />);
-    await fireEvent.changeText(await screen.findByPlaceholderText("10-digit account number"), "123");
-    await fireEvent.press(screen.getByText("Save payment details"));
-    expect(await screen.findByText("Bank name is required")).toBeTruthy();
-    expect(screen.getByText("Account number must be 10 digits")).toBeTruthy();
-    expect(screen.getByText("Account name is required")).toBeTruthy();
-    expect(update).not.toHaveBeenCalled();
-  });
-
-  it("shows the server error when saving fails", async () => {
-    (walletService.getBankAccount as jest.Mock).mockResolvedValue(null);
-    jest.spyOn(walletService, "updateBankAccount").mockRejectedValue(new ApiError(0, null, "x"));
-    await renderWith(<BankDetails />);
-    await fireEvent.changeText(await screen.findByPlaceholderText("Bank name"), "B");
-    await fireEvent.changeText(screen.getByPlaceholderText("10-digit account number"), "0000000000");
-    await fireEvent.changeText(screen.getByPlaceholderText("Name on the account"), "N");
-    await fireEvent.press(screen.getByText("Save payment details"));
-    await waitFor(() => expect(alertSpy).toHaveBeenCalledWith("Couldn't save", expect.stringContaining("Can't reach Oakly")));
   });
 });
