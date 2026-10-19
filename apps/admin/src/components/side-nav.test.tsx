@@ -49,4 +49,14 @@ describe("permission-gated navigation", () => {
     const groups = visibleNav([...SUPER, "payments.read", "support.inbox"], true).map((g) => g.label);
     expect(groups).toEqual(["Overview", "Queues", "Bookings", "Money", "Admin"]);
   });
+
+  it("shows Payouts to a reader (payments.read), not by payouts.execute", () => {
+    render(<SideNav permissions={["payments.read"]} pathname="/money/payouts" />);
+    expect(screen.getByRole("link", { name: "Payouts" })).toHaveAttribute("aria-current", "page");
+  });
+
+  it("hides Payouts from an admin without payments.read", () => {
+    render(<SideNav permissions={["payouts.execute", "caregivers.read"]} pathname="/" />);
+    expect(screen.queryByRole("link", { name: "Payouts" })).not.toBeInTheDocument();
+  });
 });

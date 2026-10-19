@@ -14,6 +14,11 @@ const TONES: Record<string, Tone> = {
   rejected: "danger",
   suspended: "danger",
   failed: "danger",
+  reversed: "danger",
+  needs_attention: "danger",
+  success: "success",
+  processing: "warning",
+  pending_approval: "warning",
 };
 
 /** Status as text plus a tone, so state is never conveyed by colour alone. */

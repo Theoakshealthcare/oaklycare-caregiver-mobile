@@ -49,3 +49,24 @@ export function jsonResponse(body: unknown, init: ResponseInit = {}): Response {
     ...init,
   });
 }
+
+export interface RecordedCall {
+  key: string;
+  search: string;
+  body: unknown;
+}
+
+/** Stub `fetch` with handlers keyed "METHOD /path"; returns every call (with parsed JSON body) for assertions. */
+export function stubFetch(handlers: Record<string, (req: Request) => Response>): RecordedCall[] {
+  const calls: RecordedCall[] = [];
+  globalThis.fetch = (async (input: Request) => {
+    const url = new URL(input.url);
+    const key = `${input.method} ${url.pathname}`;
+    const text = input.method === "GET" ? "" : await input.clone().text();
+    calls.push({ key, search: url.search, body: text ? JSON.parse(text) : undefined });
+    const h = handlers[key];
+    if (!h) throw new Error(`Unexpected fetch ${key}`);
+    return h(input);
+  }) as typeof fetch;
+  return calls;
+}
