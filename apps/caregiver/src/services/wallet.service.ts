@@ -8,6 +8,8 @@ export type WalletSummary = Schemas["CaregiverWalletSummary"];
 export type CaregiverTransaction = Schemas["CaregiverTransactionOut"];
 export type BankAccount = Schemas["CaregiverBankAccountOut"];
 export type BankAccountInput = Schemas["CaregiverBankAccountUpdate"];
+export type Bank = Schemas["BankOut"];
+export type ResolvedAccount = Schemas["BankAccountResolveOut"];
 
 export const walletService = {
   /** Integer kobo (guide, section 10). */
@@ -37,6 +39,17 @@ export const walletService = {
     }
   },
 
+  /** Paystack's Nigerian bank list (cached a day by the backend): show `name`, send back `code`. */
+  getBanks() {
+    return unwrap(api.GET("/api/v1/caregiver/banks"));
+  },
+
+  /** Looks up the account holder's name so the caregiver can confirm it (10 lookups a minute). */
+  resolveBankAccount(input: BankAccountInput) {
+    return unwrap(api.POST("/api/v1/caregiver/bank-account/resolve", { body: input }));
+  },
+
+  /** Only bank_code + account_number: the backend resolves and stores the name itself. */
   updateBankAccount(input: BankAccountInput) {
     return unwrap(api.PUT("/api/v1/caregiver/bank-account", { body: input }));
   },

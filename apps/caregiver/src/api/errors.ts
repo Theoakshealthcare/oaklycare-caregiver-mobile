@@ -8,7 +8,7 @@
 import { errorMessage } from "@oakly/api-client";
 
 /** Where an error happened; the same status code reads differently on accept and on login. */
-export type ErrorContext = "default" | "login" | "accept" | "decline" | "availability" | "visit";
+export type ErrorContext = "default" | "login" | "accept" | "decline" | "availability" | "visit" | "bank";
 
 export class ApiError extends Error {
   /** HTTP status, or 0 when the request never reached the server (offline, DNS, timeout). */
@@ -148,6 +148,10 @@ export function messageForStatus(
       return "We need your location before you can go available. Turn on location and try again.";
     }
   }
+
+  // Bank lookups/saves: the backend's sentences are written for the caregiver (guide, section 10.3),
+  // so show them as sent (wrong number, unknown bank, Paystack down, lookup rate limit).
+  if (context === "bank" && detail && (status === 400 || status === 429 || status === 503)) return detail;
 
   if (context === "visit") {
     const mapped = visitMessage(status, detail, retryAfterSeconds);

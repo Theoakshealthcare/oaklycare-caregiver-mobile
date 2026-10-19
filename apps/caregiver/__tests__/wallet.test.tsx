@@ -5,7 +5,6 @@ import { Alert } from "react-native";
 
 import { ApiError } from "../src/api/errors";
 import { session } from "../src/auth";
-import BankDetails from "../src/screens/account/BankDetails";
 import Wallet from "../src/screens/account/Wallet";
 import { walletService, type CaregiverTransaction } from "../src/services/wallet.service";
 import { currentMonth } from "../src/wallet/walletModel";
@@ -38,6 +37,8 @@ const wallet = {
   payout_cadence: "weekly",
   payout_min_kobo: 500000,
   payout_in_progress_kobo: 0,
+  next_payout_on: "2026-10-19",
+  payouts_blocked_until: null,
 };
 const tx = (over: Partial<CaregiverTransaction>): CaregiverTransaction => ({
   id: "t1",
@@ -204,34 +205,29 @@ describe("Wallet screen", () => {
   });
 });
 
-describe("BankDetails screen", () => {
-  it("shows a spinner while loading", async () => {
-    (walletService.getBankAccount as jest.Mock).mockReturnValue(new Promise(() => undefined));
-    await renderWith(<BankDetails />);
-    expect(screen.getByTestId("bank-loading")).toBeTruthy();
+describe("Wallet screen: payouts paused", () => {
+  it("shows when payouts are paused after a bank change", async () => {
+    const until = new Date(Date.now() + 20 * 3600 * 1000).toISOString().replace("Z", "");
+    jest.spyOn(walletService, "getWallet").mockResolvedValue({ ...wallet, payouts_blocked_until: until });
+    jest.spyOn(walletService, "getTransactions").mockResolvedValue([]);
+    await renderWith(<Wallet />);
+    expect(await screen.findByTestId("wallet-paused")).toHaveTextContent(/Payouts are paused until .* because you changed your bank account\./);
   });
 
-  it("shows the error with a retry", async () => {
-    (walletService.getBankAccount as jest.Mock)
-      .mockRejectedValueOnce(new ApiError(0, null, "x"))
-      .mockResolvedValue(bank);
-    await renderWith(<BankDetails />);
-    expect(await screen.findByText(/Can't reach Oakly/)).toBeTruthy();
-    await fireEvent.press(screen.getByText("Try again"));
-    expect(await screen.findByText("Placeholder Caregiver A")).toBeTruthy();
+  it("hides the notice once the pause has passed", async () => {
+    const past = new Date(Date.now() - 3600 * 1000).toISOString().replace("Z", "");
+    jest.spyOn(walletService, "getWallet").mockResolvedValue({ ...wallet, payouts_blocked_until: past });
+    jest.spyOn(walletService, "getTransactions").mockResolvedValue([]);
+    await renderWith(<Wallet />);
+    await screen.findByTestId("wallet-balance");
+    expect(screen.queryByTestId("wallet-paused")).toBeNull();
   });
 
-  it("empty: no account yet, says adding one is coming soon", async () => {
-    (walletService.getBankAccount as jest.Mock).mockResolvedValue(null);
-    await renderWith(<BankDetails />);
-    expect(await screen.findByText("No payment details yet")).toBeTruthy();
-    expect(screen.getByText(/coming in the next app update/)).toBeTruthy();
-  });
-
-  it("success: shows the current account", async () => {
-    await renderWith(<BankDetails />);
-    expect(await screen.findByText("Placeholder Caregiver A")).toBeTruthy();
-    expect(screen.getByText("0000000000")).toBeTruthy();
-    expect(screen.getByText("Placeholder Bank")).toBeTruthy();
+  it("asks an account without a bank code to be verified again", async () => {
+    (walletService.getBankAccount as jest.Mock).mockResolvedValue({ ...bank, bank_code: null, verified: false });
+    jest.spyOn(walletService, "getWallet").mockResolvedValue(wallet);
+    jest.spyOn(walletService, "getTransactions").mockResolvedValue([]);
+    await renderWith(<Wallet />);
+    expect(await screen.findByText("Verify account")).toBeTruthy();
   });
 });
