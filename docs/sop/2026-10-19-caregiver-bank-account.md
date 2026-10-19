@@ -35,3 +35,15 @@ Pure app change; revert the PR. No config.
 ## Follow-ups
 - Owner visual pass on device (picker modal, keyboard overlap on small phones).
 - The guide marks the 400/429/503 sentences as test-verified only; re-check against live Paystack.
+
+## Polish after the simulator check (iPhone 17 Pro)
+
+Three issues found driving the merged screens against a local backend, fixed in `fix/wallet-bank-ui`:
+
+| Issue | Cause | Fix |
+|---|---|---|
+| Info rows ("Payouts are sent weekly…", pause banners, post-save notice) ran past the card's right padding | `ui/Text` wraps its `RNText` in a bare `<View>`, so `style={{ flex: 1 }}` on `Text` never reached the node sitting beside the icon | New `src/components/account/InfoRow.tsx` puts `flex: 1, minWidth: 0` on the wrapper; Wallet (pause + weekly rows) and BankDetails (`Banner`) use it |
+| Pause copy said "because you changed your bank account" even for a first add | The backend pauses payouts on add and on change; the copy only described change | `PAUSE_REASON` is now "because your bank account was added or changed" (Wallet, BankDetails view, post-save notice); the security footnote says "adding or changing" |
+| iOS number pad has no Done key and covered "Yes, this is my account" | Account-number field kept focus after 10 digits | `Keyboard.dismiss()` fires when the 10th digit is typed (`ACCOUNT_NUMBER_LENGTH`); `ScreenShell` already has `keyboardShouldPersistTaps="handled"` |
+
+Tests: `__tests__/bankDetails.test.tsx` (keyboard dismiss at 10 digits only, `InfoRow` body style), copy assertions updated in `bankDetails`/`wallet` tests. Not re-checked on the simulator (no simulator started on this RAM-constrained Mac); the layout fix is asserted by style, so confirm visually on the next device pass.

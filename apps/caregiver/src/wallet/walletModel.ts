@@ -163,7 +163,7 @@ export function payoutsPausedUntil(iso: string | null | undefined, now: number =
   return availableFromText(iso);
 }
 
-export const PAUSE_REASON = "because you changed your bank account";
+export const PAUSE_REASON = "because your bank account was added or changed";
 
 export const ACCOUNT_NUMBER_LENGTH = 10;
 

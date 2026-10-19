@@ -3,6 +3,7 @@ import { Alert, Pressable, RefreshControl, View } from "react-native";
 import { Feather } from "@expo/vector-icons";
 
 import { messageForError } from "@/src/api/errors";
+import InfoRow from "@/src/components/account/InfoRow";
 import ScreenShell from "@/src/components/account/ScreenShell";
 import { EmptyState, ErrorState, LoadingState } from "@/src/components/account/StateViews";
 import Button from "@/src/components/ui/button";
@@ -118,20 +119,14 @@ const Wallet: React.FC = () => {
         ) : null}
 
         {pausedUntil ? (
-          <View style={{ flexDirection: "row", gap: 10, padding: 14, borderRadius: 12, backgroundColor: theme.colors.warning + "33", marginTop: 8 }}>
-            <Feather name="pause-circle" size={18} color={theme.colors.warningText} />
-            <Text variant="small" color={theme.colors.warningText} style={{ flex: 1 }} testID="wallet-paused">
-              {`Payouts are paused until ${pausedUntil} ${PAUSE_REASON}.`}
-            </Text>
-          </View>
+          <InfoRow tone="warning" icon="pause-circle" textTestID="wallet-paused" style={{ marginTop: 8 }}>
+            {`Payouts are paused until ${pausedUntil} ${PAUSE_REASON}.`}
+          </InfoRow>
         ) : null}
 
-        <View style={{ flexDirection: "row", gap: 10, padding: 14, borderRadius: 12, backgroundColor: theme.colors.soft, marginVertical: 8 }}>
-          <Feather name="info" size={18} color={theme.colors.primary} />
-          <Text variant="small" color={theme.colors.textLight} style={{ flex: 1 }}>
-            {`Payouts are sent weekly to your bank account once your available balance is at least ${MIN_PAYOUT_NAIRA_TEXT}.`}
-          </Text>
-        </View>
+        <InfoRow style={{ marginVertical: 8 }}>
+          {`Payouts are sent weekly to your bank account once your available balance is at least ${MIN_PAYOUT_NAIRA_TEXT}.`}
+        </InfoRow>
 
         {bank.data ? (
           <View style={{ flexDirection: "row", alignItems: "center", padding: 14, borderRadius: 12, backgroundColor: theme.colors.primaryLight, marginBottom: 12 }}>
