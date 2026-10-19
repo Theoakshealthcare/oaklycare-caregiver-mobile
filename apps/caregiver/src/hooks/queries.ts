@@ -7,7 +7,7 @@ import { homePollInterval } from "@/src/home/homeModel";
 import { bookingService, type BookingAction, type VisitAction } from "@/src/services/booking.service";
 import { caregiverService } from "@/src/services/caregiver.service";
 import { notificationService } from "@/src/services/notification.service";
-import { walletService } from "@/src/services/wallet.service";
+import { walletService, type BankAccountInput } from "@/src/services/wallet.service";
 import { locationService } from "@/src/supply/locationService";
 
 function useSignedIn(): boolean {
@@ -145,4 +145,31 @@ export function useWalletTransactions(month: string) {
 export function useBankAccount() {
   const enabled = useSignedIn();
   return useQuery({ queryKey: queryKeys.bankAccount, queryFn: walletService.getBankAccount, enabled });
+}
+
+/** The bank list changes rarely (the backend caches it for a day), so keep it for the session. */
+export function useBanks(enabled = true) {
+  const signedIn = useSignedIn();
+  return useQuery({
+    queryKey: queryKeys.banks,
+    queryFn: walletService.getBanks,
+    enabled: signedIn && enabled,
+    staleTime: 24 * 60 * 60 * 1000,
+  });
+}
+
+export function useResolveBankAccount() {
+  return useMutation({ mutationFn: (input: BankAccountInput) => walletService.resolveBankAccount(input) });
+}
+
+/** Saving can pause payouts for 24 h, so the wallet is refetched too (it carries `payouts_blocked_until`). */
+export function useSaveBankAccount() {
+  const client = useQueryClient();
+  return useMutation({
+    mutationFn: (input: BankAccountInput) => walletService.updateBankAccount(input),
+    onSuccess: (account) => {
+      client.setQueryData(queryKeys.bankAccount, account);
+      void client.invalidateQueries({ queryKey: queryKeys.wallet });
+    },
+  });
 }

@@ -16,7 +16,10 @@ import {
   currentMonth,
   formatKobo,
   groupTransactions,
+  bankAccountState,
   MIN_PAYOUT_NAIRA_TEXT,
+  PAUSE_REASON,
+  payoutsPausedUntil,
   monthOptions,
   walletBalances,
   type Tone,
@@ -86,6 +89,7 @@ const Wallet: React.FC = () => {
     if (!wallet.data) return <LoadingState testID="wallet-loading" />;
     const summary = wallet.data;
     const balances = walletBalances(summary);
+    const pausedUntil = payoutsPausedUntil(summary.payouts_blocked_until);
     return (
       <>
         <View style={{ backgroundColor: theme.colors.primary, borderRadius: 20, padding: 24, alignItems: "center", marginBottom: 12 }}>
@@ -113,6 +117,15 @@ const Wallet: React.FC = () => {
           </View>
         ) : null}
 
+        {pausedUntil ? (
+          <View style={{ flexDirection: "row", gap: 10, padding: 14, borderRadius: 12, backgroundColor: theme.colors.warning + "33", marginTop: 8 }}>
+            <Feather name="pause-circle" size={18} color={theme.colors.warningText} />
+            <Text variant="small" color={theme.colors.warningText} style={{ flex: 1 }} testID="wallet-paused">
+              {`Payouts are paused until ${pausedUntil} ${PAUSE_REASON}.`}
+            </Text>
+          </View>
+        ) : null}
+
         <View style={{ flexDirection: "row", gap: 10, padding: 14, borderRadius: 12, backgroundColor: theme.colors.soft, marginVertical: 8 }}>
           <Feather name="info" size={18} color={theme.colors.primary} />
           <Text variant="small" color={theme.colors.textLight} style={{ flex: 1 }}>
@@ -130,7 +143,7 @@ const Wallet: React.FC = () => {
             </View>
             <Pressable accessibilityRole="button" onPress={() => navigation.navigate("BankDetails")}>
               <Text variant="small" weight="medium" color={theme.colors.primary}>
-                Payment details
+                {bankAccountState(bank.data) === "needs_resave" ? "Verify account" : "Payment details"}
               </Text>
             </Pressable>
           </View>
