@@ -17,7 +17,7 @@ vi.mock("next/link", () => ({
 }));
 
 const LIST = "GET /api/v1/admin/payouts";
-const SUPER = ["payments.read", "ledger.adjust"];
+const SUPER = ["payments.read", "payouts.execute", "ledger.adjust"];
 // Frozen but nothing open any more: its payout was resolved as failed, the freeze stays until unfrozen (capture 221/222).
 const RESOLVED_FROZEN = makePayout({
   id: "93d04961-704d-4177-abfa-39f35a0b7b76",
@@ -128,9 +128,9 @@ describe("Attention", () => {
     expect(screen.getByRole("dialog")).toBeInTheDocument();
   });
 
-  it("hides Unfreeze and Resolve from an admin without ledger.adjust", async () => {
+  it("hides Unfreeze and Resolve from an admin without ledger.adjust (Finance included)", async () => {
     stubList([LATE_SUCCESS], [LATE_SUCCESS]);
-    render(withAuth(["payments.read"], <Attention />));
+    render(withAuth(["payments.read", "payouts.execute"], <Attention />));
     await screen.findByRole("table", { name: "Frozen caregivers" });
     expect(screen.queryByRole("button", { name: /Unfreeze|Resolve/ })).not.toBeInTheDocument();
   });

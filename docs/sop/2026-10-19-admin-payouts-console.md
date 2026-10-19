@@ -10,7 +10,7 @@ Contract is backend `docs/fe-integration-guide-admin.md` §12.11 (captured again
 
 | Decision | Reason |
 |---|---|
-| Reads gated by `payments.read`, every action by `ledger.adjust`; actions are **not rendered** (not disabled) without it | That is what the backend enforces (Finance reads, Super Admin acts). `payouts.execute` exists but is unused by the API, so the nav item switched from it to `payments.read` |
+| Reads gated by `payments.read`; approve batch, cancel batch and cancel payout by `payouts.execute` (Finance, Super Admin), retry, resolve and unfreeze by `ledger.adjust` (Super Admin only), per the 2026-10-19 backend change (#17). Superseded text in this table that says "every action by `ledger.adjust`" is out of date; actions are **not rendered** (not disabled) without it | That is what the backend enforces (Finance reads, Super Admin acts). `payouts.execute` exists but is unused by the API, so the nav item switched from it to `payments.read` |
 | Approve dialog **re-fetches the batch on open** and shows the fresh payout count and total; confirm stays disabled until that read lands and the batch is still `pending_approval` | The page may be minutes old; approval moves money for whatever is waiting server-side |
 | Every dialog names the payout (amount, caregiver, batch day) in its title | Wrong-button-wrong-payout guard in long tables |
 | Resolve has no preselected outcome; `force` is an explicit, explained checkbox, default `false` | `force` only matters when Paystack's answer is not final and never overrides a definite answer |
@@ -42,3 +42,6 @@ Pure frontend. Revert the PR; the nav item returns to hidden. No config or migra
 - Backend list/filter for frozen caregivers (`GET /admin/payouts/caregivers?frozen=true` or `caregiver_payouts_frozen=true`), so the frozen view stops depending on a 200-payout window.
 - Approval takes the batch's current waiting payouts server-side; the dialog shows the fresh total but the API has no "expected total" guard. A body field would close the last race.
 - Playwright e2e and a run against a live Paystack account.
+
+## Update 2026-10-19: Finance approves and cancels
+Backend Theoakshealthcare/backend#17 moved batch approve, batch cancel and payout cancel to `payouts.execute`. In `apps/admin/src/lib/payouts.ts` the single `PAYOUTS_ACT` is split into `PAYOUTS_EXECUTE` and `PAYOUTS_ADJUST`. `batch-detail.tsx` gates Approve/Cancel batch on `payouts.execute`; `payout-actions.tsx` gates Cancel on `payouts.execute` and Retry, Resolve and Unfreeze on `ledger.adjust` (nothing is rendered for an admin with neither). Tests: a Finance user sees batch Approve/Cancel and payout Cancel but no Retry, Resolve or Unfreeze; a reader sees none. No API client change (the OpenAPI is unchanged). Pure frontend; revert the commit to roll back.

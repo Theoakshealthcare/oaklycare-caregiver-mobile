@@ -13,7 +13,7 @@ import { Button } from "@/components/ui/button";
 import { ErrorState, Skeleton } from "@/components/ui/states";
 import { errorMessage } from "@/lib/api";
 import { formatNaira, formatWat, humanize } from "@/lib/format";
-import { type BatchDetail, PAYOUTS_ACT, PAYOUTS_KEY, approveBatch, cancelBatch, fetchBatch, invalidatePayouts } from "@/lib/payouts";
+import { type BatchDetail, PAYOUTS_EXECUTE, PAYOUTS_KEY, approveBatch, cancelBatch, fetchBatch, invalidatePayouts } from "@/lib/payouts";
 
 export function BatchView({ id }: { id: string }) {
   const { can } = useAuth();
@@ -33,7 +33,7 @@ export function BatchView({ id }: { id: string }) {
   }
   const b = batch.data;
   const waiting = b.payouts.filter((p) => p.status === "pending_approval");
-  const canAct = can(PAYOUTS_ACT) && b.status === "pending_approval" && waiting.length > 0;
+  const canAct = can(PAYOUTS_EXECUTE) && b.status === "pending_approval" && waiting.length > 0;
 
   return (
     <div className="grid gap-4">

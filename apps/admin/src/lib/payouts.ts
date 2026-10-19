@@ -13,9 +13,13 @@ export type Batch = Schemas["BatchOut"];
 export type BatchDetail = Schemas["BatchDetail"];
 export type BatchStatus = Batch["status"];
 
-/** Reads need `payments.read`; every money-moving action needs `ledger.adjust` (Super Admin). */
+/**
+ * Reads need `payments.read`. Approving a batch and cancelling a batch or a payout need `payouts.execute` (Finance,
+ * Super Admin); retry, resolve and unfreeze need `ledger.adjust` (Super Admin only). The backend enforces both.
+ */
 export const PAYOUTS_READ = "payments.read";
-export const PAYOUTS_ACT = "ledger.adjust";
+export const PAYOUTS_EXECUTE = "payouts.execute";
+export const PAYOUTS_ADJUST = "ledger.adjust";
 
 export const PAGE_SIZE = 50;
 

@@ -17,7 +17,8 @@ vi.mock("next/link", () => ({
 }));
 
 const LIST = "GET /api/v1/admin/payouts";
-const SUPER = ["payments.read", "ledger.adjust"];
+const SUPER = ["payments.read", "payouts.execute", "ledger.adjust"];
+const FINANCE = ["payments.read", "payouts.execute"];
 const WAITING = makePayout();
 
 function list(items: ReturnType<typeof makePayout>[]) {
@@ -70,7 +71,15 @@ describe("AllPayouts", () => {
     expect(within(await rowOf(/Placeholder Failing/)).queryByRole("button", { name: /^Retry/ })).not.toBeInTheDocument();
   });
 
-  it("hides every action from an admin without ledger.adjust", async () => {
+  it("shows Finance only Cancel: Retry and Resolve need ledger.adjust", async () => {
+    stubFetch({ [LIST]: list([WAITING, FAILING, OTP_STUCK, LATE_SUCCESS]) });
+    render(withAuth(FINANCE, <AllPayouts />));
+    expect(within(await rowOf(/Placeholder Paid/)).getByRole("button", { name: /^Cancel/ })).toBeInTheDocument();
+    await rowOf(/Placeholder Failing/);
+    expect(screen.queryByRole("button", { name: /Retry|Resolve/ })).not.toBeInTheDocument();
+  });
+
+  it("hides every action from an admin with neither payouts.execute nor ledger.adjust", async () => {
     stubFetch({ [LIST]: list([WAITING, FAILING, OTP_STUCK, LATE_SUCCESS]) });
     render(withAuth(["payments.read"], <AllPayouts />));
     await rowOf(/Placeholder Failing/);
