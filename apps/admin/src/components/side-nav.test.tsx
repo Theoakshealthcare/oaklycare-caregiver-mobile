@@ -37,11 +37,9 @@ describe("permission-gated navigation", () => {
 
   it("does not list modules that aren't built yet, even when permitted", () => {
     const labels = visibleNav(SUPER).flatMap((g) => g.items.map((i) => i.label));
-    expect(labels).not.toContain("Bookings");
     expect(labels).not.toContain("Audit");
     // ...but the information architecture still has them for later.
     const all = visibleNav(SUPER, true).flatMap((g) => g.items.map((i) => i.label));
-    expect(all).toContain("Bookings");
     expect(all).toContain("Audit");
   });
 
@@ -58,5 +56,17 @@ describe("permission-gated navigation", () => {
   it("hides Payouts from an admin without payments.read", () => {
     render(<SideNav permissions={["payouts.execute", "caregivers.read"]} pathname="/" />);
     expect(screen.queryByRole("link", { name: "Payouts" })).not.toBeInTheDocument();
+  });
+
+  it("shows an Operations admin both Bookings and Unmatched", () => {
+    render(<SideNav permissions={["bookings.read", "bookings.dispatch", "bookings.assign", "bookings.address"]} pathname="/bookings" />);
+    expect(screen.getByRole("link", { name: "Bookings" })).toHaveAttribute("aria-current", "page");
+    expect(screen.getByRole("link", { name: "Unmatched" })).toHaveAttribute("href", "/queues/unmatched");
+  });
+
+  it("shows a Finance admin with only bookings.read Bookings but not Unmatched", () => {
+    render(<SideNav permissions={["bookings.read", "payments.read"]} pathname="/" />);
+    expect(screen.getByRole("link", { name: "Bookings" })).toBeInTheDocument();
+    expect(screen.queryByRole("link", { name: "Unmatched" })).not.toBeInTheDocument();
   });
 });

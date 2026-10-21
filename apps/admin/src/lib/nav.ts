@@ -25,7 +25,12 @@ export const NAV: NavGroup[] = [
     label: "Queues",
     items: [
       { label: "Applications", href: "/caregivers/applications", anyOf: ["caregivers.read"], available: true },
-      { label: "Unmatched", href: "/queues/unmatched", anyOf: ["bookings.dispatch"], available: false },
+      {
+        label: "Unmatched",
+        href: "/queues/unmatched",
+        anyOf: ["bookings.dispatch", "bookings.assign", "bookings.address"],
+        available: true,
+      },
       { label: "Refunds", href: "/queues/refunds", anyOf: ["refunds.approve", "refunds.request"], available: false },
       { label: "Support", href: "/queues/support", anyOf: ["support.inbox"], available: false },
       { label: "Exceptions", href: "/queues/exceptions", anyOf: ["payments.read"], available: false },
@@ -33,7 +38,7 @@ export const NAV: NavGroup[] = [
   },
   {
     label: "Bookings",
-    items: [{ label: "Bookings", href: "/bookings", anyOf: ["bookings.read"], available: false }],
+    items: [{ label: "Bookings", href: "/bookings", anyOf: ["bookings.read"], available: true }],
   },
   {
     label: "People",

@@ -2,8 +2,21 @@ import { describe, expect, it } from "vitest";
 
 import { ADMIN_ROLES, KNOWN_PERMISSIONS, classifyLogin } from "./admin-auth-contract";
 import { NAV } from "./nav";
-import { formatAge, formatNaira, formatWat, formatWatDate, humanize } from "./format";
+import { formatAge, formatMinutes, formatNaira, formatWat, formatWatDate, humanize } from "./format";
 import { safeNext } from "./redirect";
+
+describe("formatMinutes", () => {
+  it("picks minutes, hours or days", () => {
+    expect(formatMinutes(0)).toBe("0 min");
+    expect(formatMinutes(40)).toBe("40 min");
+    expect(formatMinutes(59)).toBe("59 min");
+    expect(formatMinutes(60)).toBe("1 h");
+    expect(formatMinutes(180)).toBe("3 h");
+    expect(formatMinutes(1440)).toBe("1 d");
+    expect(formatMinutes(2 * 1440 + 100)).toBe("2 d");
+    expect(formatMinutes(null)).toBe("—");
+  });
+});
 
 describe("format", () => {
   it("shows times in WAT (UTC+1), treating naive backend timestamps as UTC", () => {

@@ -24,3 +24,13 @@ channel) lives in the backend repo: `docs/checklist/MASTER_CHECKLIST.md`. Update
 - [ ] Backend: a frozen-caregivers list/filter so the frozen view is not derived from a 200-payout window
 - [ ] Live Paystack account exercised (guide §12.11 captures use a local fake)
 - [ ] Playwright e2e for the payouts flow
+
+## Admin console: bookings operations (A2 UI)
+- [x] Nav "Bookings" (`bookings.read`) and "Unmatched" (dispatch/assign/address) (2026-10-19, see docs/sop/2026-10-19-admin-bookings-ops-console.md)
+- [x] Bookings list: search, status/payment/dispatch/channel/city/date filters, address-check and no-show toggles, paging, masking markers
+- [x] Unmatched queue with reason filter and explanations
+- [x] Booking detail: visit, people, address, clinical (gated), price and payment, no-show, dispatch waves/offers, timeline; never polled
+- [x] Actions from `available_actions` only: re-dispatch, assign (force for Super Admin), reassign, cancel (refund choice + policy guide), confirm address, flag no-show, correct status
+- [ ] Live browser pass against the local backend
+- [ ] Backend: cancel terms on the admin detail so the policy guide is exact
+- [ ] Booking-policy edit screen, audit log screen, Overview attention panel

@@ -57,3 +57,12 @@ export function humanize(value: string | null | undefined): string {
   const text = value.replace(/_/g, " ");
   return text.charAt(0).toUpperCase() + text.slice(1);
 }
+
+/** Minutes as a short age: "40 min", "3 h", "2 d" (rounded down to the largest unit). */
+export function formatMinutes(minutes: number | null | undefined): string {
+  if (minutes === null || minutes === undefined || !Number.isFinite(minutes)) return "—";
+  const m = Math.max(0, Math.floor(minutes));
+  if (m < 60) return `${m} min`;
+  if (m < 60 * 24) return `${Math.floor(m / 60)} h`;
+  return `${Math.floor(m / (60 * 24))} d`;
+}

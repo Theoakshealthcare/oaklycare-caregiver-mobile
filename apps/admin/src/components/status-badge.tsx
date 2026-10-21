@@ -19,6 +19,14 @@ const TONES: Record<string, Tone> = {
   success: "success",
   processing: "warning",
   pending_approval: "warning",
+  accepted: "success",
+  en_route: "success",
+  completed: "success",
+  paid: "success",
+  declined: "danger",
+  unmatched: "danger",
+  address_check: "warning",
+  sla_breached: "warning",
 };
 
 /** Status as text plus a tone, so state is never conveyed by colour alone. */
