@@ -5,6 +5,7 @@ import { useSession } from "@/src/auth";
 import { authService } from "@/src/services/auth.service";
 import { homePollInterval } from "@/src/home/homeModel";
 import { bookingService, type BookingAction, type VisitAction } from "@/src/services/booking.service";
+import { clientsService } from "@/src/services/clients.service";
 import { caregiverService } from "@/src/services/caregiver.service";
 import { notificationService } from "@/src/services/notification.service";
 import { vitalsService, type NewVital } from "@/src/services/vitals.service";
@@ -194,5 +195,16 @@ export function useCreateVital() {
   return useMutation({
     mutationFn: (vital: NewVital) => vitalsService.create(vital),
     onSuccess: (_data, vital) => client.invalidateQueries({ queryKey: queryKeys.vitals(vital.patientId) }),
+  });
+}
+
+/** The client of a live visit. Short-lived in memory; a 404 (the visit is no longer live) is not retried. */
+export function useClientProfile(bookingId: string) {
+  const enabled = useSignedIn();
+  return useQuery({
+    queryKey: queryKeys.clientProfile(bookingId),
+    queryFn: () => clientsService.getClientProfile(bookingId),
+    enabled,
+    gcTime: 2 * 60_000,
   });
 }

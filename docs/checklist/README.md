@@ -17,6 +17,11 @@ channel) lives in the backend repo: `docs/checklist/MASTER_CHECKLIST.md`. Update
 - [ ] Live check against the backend and a device pass (share sheet, entry modal keyboard)
 - [ ] FallGuard report (needs a source of incidents)
 
+## Caregiver client profile (Client care v1, part 2)
+- [x] Client profile screen from Job details (live visit only): name, age, sex, latest vitals, medical history if stored, emergency contact with call, Add notes (2026-10-27, see docs/sop/2026-10-27-caregiver-client-profile.md). Stacked on the Vitals tab PR; needs the backend endpoint
+- [ ] Care plan summary (care plans not built), FallGuard entry (no source)
+- [ ] Device pass; full `api:sync` after the refunds console PR
+
 ## Caregiver bank account
 - [x] Payment details screen: bank picker, name confirmation, add/change, 24 h pause notice, legacy re-verify (2026-10-19, see docs/sop/2026-10-19-caregiver-bank-account.md)
 - [x] Wallet shows "payouts paused until ..."

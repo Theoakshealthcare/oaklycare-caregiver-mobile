@@ -18,6 +18,7 @@ import AINoteTaker from "../screens/chat/AINoteTaker";
 import CallScreen from "../screens/chat/CallScreen";
 import ChatScreen from "../screens/chat/ChatScreen";
 import BookingDetails from "../screens/booking/BookingDetails";
+import ClientProfile from "../screens/booking/ClientProfile";
 import VisitFlow from "../screens/visit/VisitFlow";
 import AddVitals from "../screens/vitals/AddVitals";
 import VitalDetail from "../screens/vitals/VitalDetail";
@@ -130,6 +131,7 @@ const StackNavigator = () => {
             <Stack.Screen name="Wallet" component={Wallet} />
             <Stack.Screen name="BankDetails" component={BankDetails} />
             <Stack.Screen name="Contact" component={Contact} />
+            <Stack.Screen name="ClientProfile" component={ClientProfile} />
             <Stack.Screen name="VitalDetail" component={VitalDetail} />
             <Stack.Screen name="AddVitals" component={AddVitals} />
           </Stack.Navigator>

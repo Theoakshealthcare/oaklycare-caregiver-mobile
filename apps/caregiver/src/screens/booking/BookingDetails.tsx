@@ -68,8 +68,9 @@ const AssignedDetails: React.FC<{
   booking: Booking;
   onChat: () => void;
   onNotes: () => void;
+  onClient: () => void;
   onVisit: () => void;
-}> = ({ booking, onChat, onNotes, onVisit }) => {
+}> = ({ booking, onChat, onNotes, onClient, onVisit }) => {
   // Only for an active assignment whose booking really carries coordinates.
   const destination = directionsTarget(booking);
   return (
@@ -110,6 +111,7 @@ const AssignedDetails: React.FC<{
           onPress={() => void Linking.openURL(buildDirectionsUrl(destination))}
         />
       ) : null}
+      {ACTIVE_STATUSES.includes(booking.status) ? <Button title="Client profile" variant="outline" onPress={onClient} /> : null}
       <Button title="Message patient" variant="outline" onPress={onChat} />
       <Button title="Visit notes" variant="outline" onPress={onNotes} />
     </View>
@@ -162,6 +164,7 @@ const BookingDetails: React.FC<Props> = ({ route, navigation }) => {
           navigation.navigate("ChatScreen", { bookingId, patientName: booking.patient_details?.full_name })
         }
         onNotes={() => navigation.navigate("AINoteTaker", { bookingId })}
+        onClient={() => navigation.navigate("ClientProfile", { bookingId, bookingCode: booking.booking_code })}
         onVisit={() => navigation.navigate("VisitFlow", { bookingId })}
       />
     );
