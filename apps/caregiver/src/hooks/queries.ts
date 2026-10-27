@@ -7,7 +7,9 @@ import { homePollInterval } from "@/src/home/homeModel";
 import { bookingService, type BookingAction, type VisitAction } from "@/src/services/booking.service";
 import { caregiverService } from "@/src/services/caregiver.service";
 import { notificationService } from "@/src/services/notification.service";
+import { vitalsService, type NewVital } from "@/src/services/vitals.service";
 import { walletService, type BankAccountInput } from "@/src/services/wallet.service";
+import { historyStart } from "@/src/vitals/vitalsModel";
 import { locationService } from "@/src/supply/locationService";
 
 function useSignedIn(): boolean {
@@ -171,5 +173,26 @@ export function useSaveBankAccount() {
       client.setQueryData(queryKeys.bankAccount, account);
       void client.invalidateQueries({ queryKey: queryKeys.wallet });
     },
+  });
+}
+
+/**
+ * The last 30 days of a patient's vitals (newest first): the grid, the charts and the history all
+ * read this one call. In memory only (`gcTime` short, cleared on sign-out); a 403 is not retried.
+ */
+export function useVitals(patientId: string | undefined, enabled = true) {
+  return useQuery({
+    queryKey: queryKeys.vitals(patientId ?? ""),
+    queryFn: () => vitalsService.list(patientId as string, historyStart()),
+    enabled: enabled && !!patientId,
+    gcTime: 2 * 60_000,
+  });
+}
+
+export function useCreateVital() {
+  const client = useQueryClient();
+  return useMutation({
+    mutationFn: (vital: NewVital) => vitalsService.create(vital),
+    onSuccess: (_data, vital) => client.invalidateQueries({ queryKey: queryKeys.vitals(vital.patientId) }),
   });
 }

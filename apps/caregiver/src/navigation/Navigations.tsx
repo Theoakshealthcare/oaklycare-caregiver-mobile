@@ -1,4 +1,5 @@
 import type { Offer } from "../services/booking.service";
+import type { VitalKind } from "../vitals/vitalsModel";
 
 export type ScreenParamLists = {
   // Signed out
@@ -28,6 +29,10 @@ export type ScreenParamLists = {
   Wallet: undefined;
   BankDetails: undefined;
   Contact: undefined;
+  /** One vital of the patient on the current visit: chart and history. */
+  VitalDetail: { patientId: string; patientName?: string; kind: VitalKind };
+  /** Manual vital entry for the patient on the current visit. */
+  AddVitals: { patientId: string; patientName?: string };
   /** accepted -> on my way -> visit code -> in progress -> complete, driven by the booking status. */
   VisitFlow: { bookingId: string };
 };
