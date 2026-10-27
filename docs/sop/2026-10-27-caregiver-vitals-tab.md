@@ -4,7 +4,7 @@
 |---|---|
 | **Date** | 2026-10-27 |
 | **Branch / PR** | `feat/caregiver-vitals` off `oakly/main` 4b28b7b; PR number set by the lead when it opens it. |
-| **Depends on** | Backend `main` f4b2f80, `app/api/v1/endpoints/vitals.py` (no backend change). Design: Figma exports `8.20.40`, `8.21.23`, `8.21.38`, `8.21.51`, `8.22.05`; gap analysis section 5 (`backend/docs/plans/2026-10-06-caregiver-design-gap-analysis.md`). |
+| **Depends on** | **Backend fix `fix/vitals-caregiver-access` (0a3ea84, branch of backend main f4b2f80): on f4b2f80 every caregiver call to `/vitals` answers 500** (`'active'` is not a booking status), so this tab shows its error state until that fix is deployed. No other backend change; `app/api/v1/endpoints/vitals.py`. Design: Figma exports `8.20.40`, `8.21.23`, `8.21.38`, `8.21.51`, `8.22.05`; gap analysis section 5 (`backend/docs/plans/2026-10-06-caregiver-design-gap-analysis.md`). |
 
 ## What shipped
 - The **Vitals** tab: the six-vital grid (heart rate, blood pressure, temperature, respiration, glucose, sleep) for the patient on the caregiver's in-progress visit, a per-vital screen with a Day / Week / Month chart and its history, **manual entry** for each vital, and report **download then share** through the native share sheet.
@@ -47,7 +47,7 @@ All under `apps/caregiver`; no `packages/api-client` change (the vitals, booking
 ## Verification
 Local CI, as `.github/workflows/ci.yml` runs it (frozen install, api types drift, typecheck, lint, test, admin build): see the report. New tests (62): `__tests__/vitalsModel.test.ts` (parsing, ranges, bars, validation, patient choice, 403 matcher), `__tests__/vitals.test.tsx` (loading, no visit, visit not started, 403, grid with no status text, patient switch, retry, navigation, fetch only when active, download and share, refused download, failed share, chart and Day / Week / Month, empty chart, every entry modal, validation, glucose context and unit, 403 and network errors), `__tests__/vitalsReport.test.ts` (temp file is shared then deleted, also on failure), `__tests__/bottomNavigation.test.tsx` (four tabs, four pages, Fall not blank). The typography test still enforces the six type tokens.
 
-**Not verified:** against a live backend (no stack was started on this RAM-constrained Mac, and no vitals capture exists in the caregiver guide yet), on a simulator or device (layout, share sheet, keyboard over the entry modal), and the `start` filter's behaviour server-side. Fixtures follow the schema (`PatientVitalResponse`: string value, UTC timestamp without `Z`), not a capture.
+**Not verified:** end to end against a running backend (no stack was started on this RAM-constrained Mac, and no vitals capture exists in the caregiver guide yet), on a simulator or device (layout, share sheet, keyboard over the entry modal), (the backend's `app/tests/test_vitals_access.py` does exercise `GET /vitals/{id}?start=<UTC without offset>` and the CSV download against a real Postgres, after the fix above). Fixtures follow the schema (`PatientVitalResponse`: string value, UTC timestamp without `Z`), not a capture.
 
 ## Operate / roll back
 Pure app change; revert the PR. No config, migration or dependency.
@@ -58,4 +58,5 @@ Pure app change; revert the PR. No config, migration or dependency.
 - Backend: `POST /vitals/` trusts `recorded_by_user_id` from the body (a caregiver could name someone else); set it from the caller. Pin `vital_type` to an enum and add a glucose `context` field. `GET /vitals/{id}` has no limit or paging (the app sends `start`).
 - The explicit-access grant is invisible to the app, so a caregiver without an in-progress visit never sees a patient even if granted. A caregiver-facing list of granted patients is needed to use it.
 - "Add to Care Note", a client search, and the FallGuard report once an incident source exists.
+- Merge and deploy the backend fix first (see Depends on).
 - Capture a vitals flow in `scripts/capture_caregiver_flow.py` and add a guide section; verify on a device.
