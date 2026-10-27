@@ -8,6 +8,15 @@ channel) lives in the backend repo: `docs/checklist/MASTER_CHECKLIST.md`. Update
 - [x] Onboarding Skip safe area, Login link on all slides, Back to home lands on Home
 - [ ] Owner visual pass on device
 
+## Caregiver vitals (Client care v1, part 1)
+- [x] Vitals tab: six-vital grid for the patient on the in-progress visit; "available during an active visit" on 403 or before the visit starts (2026-10-27, see docs/sop/2026-10-27-caregiver-vitals-tab.md)
+- [x] Per-vital chart (Day / Week / Month) and history; manual entry for all six (glucose mg/dL / mmol/L with RBS / FBS / PP); report download then native share, temp file deleted
+- [x] No blank tab: each tab carries its page; Fall tab says "coming soon"
+- [ ] Critical / Normal chips (needs clinical sign-off and a status in the API)
+- [ ] Insights (clinical and privacy sign-off)
+- [ ] Live check against the backend and a device pass (share sheet, entry modal keyboard)
+- [ ] FallGuard report (needs a source of incidents)
+
 ## Caregiver bank account
 - [x] Payment details screen: bank picker, name confirmation, add/change, 24 h pause notice, legacy re-verify (2026-10-19, see docs/sop/2026-10-19-caregiver-bank-account.md)
 - [x] Wallet shows "payouts paused until ..."

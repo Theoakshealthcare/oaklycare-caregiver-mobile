@@ -6,55 +6,54 @@ import Home from "../screens/home/Home";
 import { useEffect, useState } from "react";
 import type { StackScreenProps } from "@react-navigation/stack";
 import type { ScreenParamLists } from "./Navigations";
-// import Fall from "../screens/fall/Fall";
+import Fall from "../screens/fall/Fall";
 import Booking from "../screens/booking/Booking";
 import PagerView, { type PagerViewOnPageSelectedEvent } from "react-native-pager-view";
 import Image from "../components/ui/image";
 import ScreenSize from "../hooks/screen-size";
 import Animated from "react-native-reanimated";
 import useTextAnimation from "../hooks/use-text-animation";
-// import Vitals from "../screens/vital/Vitals";
+import Vitals from "../screens/vitals/Vitals";
 
 const BottomNavigation = ({ route }: Partial<StackScreenProps<ScreenParamLists, "BottomNavigation">>) => {
+  const [tab, setTab] = useState(0);
+  const [key, setKey] = useState(0);
+
+  // Each tab carries its own page, so a tab can never be drawn without one.
   const tabs = [
     {
       id: "home",
       icon: require("@/assets/images/tabs/home.png"),
       icon_active: require("@/assets/images/tabs/home-active.png"),
       label: "Home",
+      page: <Home />,
     },
     {
       id: "booking",
       icon: require("@/assets/images/tabs/booking.png"),
       icon_active: require("@/assets/images/tabs/booking-active.png"),
       label: "Booking",
+      page: <Booking />,
     },
     {
       id: "vitals",
       icon: require("@/assets/images/tabs/vital.png"),
       icon_active: require("@/assets/images/tabs/vital-active.png"),
       label: "Vitals",
+      // Fetches only while its tab is showing (the pager keeps every page mounted).
+      page: <Vitals active={tab === 2} />,
     },
     {
       id: "fall",
       icon: require("@/assets/images/tabs/fall.png"),
       icon_active: require("@/assets/images/tabs/fall-active.png"),
       label: "Fall",
+      page: <Fall />,
     },
-  ];
-
-  const pages = [
-    { key: 1, component: <Home /> },
-    { key: 2, component: <Booking /> },
-    // { key: 3, component: <Vitals /> },
-    // { key: 4, component: <Fall /> },
   ];
 
   const { width, height } = ScreenSize();
   const { textStyle } = useTextAnimation();
-
-  const [tab, setTab] = useState(0);
-  const [key, setKey] = useState(0);
 
   // Arriving with a requested tab (e.g. "Back to home" after a visit) jumps to it.
   const requested = route?.params?.tab;
@@ -89,9 +88,9 @@ const BottomNavigation = ({ route }: Partial<StackScreenProps<ScreenParamLists, 
         onPageSelected={handlePageSelected}
         scrollEnabled={false}
       >
-        {pages.map((page) => (
-          <View key={page.key} style={{ flex: 1, paddingBottom: height * 0.1 }}>
-            {page.component}
+        {tabs.map((item) => (
+          <View key={item.id} style={{ flex: 1, paddingBottom: height * 0.1 }}>
+            {item.page}
           </View>
         ))}
       </PagerView>

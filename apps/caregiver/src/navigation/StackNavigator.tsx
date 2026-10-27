@@ -19,6 +19,8 @@ import CallScreen from "../screens/chat/CallScreen";
 import ChatScreen from "../screens/chat/ChatScreen";
 import BookingDetails from "../screens/booking/BookingDetails";
 import VisitFlow from "../screens/visit/VisitFlow";
+import AddVitals from "../screens/vitals/AddVitals";
+import VitalDetail from "../screens/vitals/VitalDetail";
 import GateMessage from "../screens/GateMessage";
 import OnboardingScreen from "../screens/onboarding-screen";
 import CaregiverSetupStep1 from "../screens/setup/CaregiverSetupStep1";
@@ -128,6 +130,8 @@ const StackNavigator = () => {
             <Stack.Screen name="Wallet" component={Wallet} />
             <Stack.Screen name="BankDetails" component={BankDetails} />
             <Stack.Screen name="Contact" component={Contact} />
+            <Stack.Screen name="VitalDetail" component={VitalDetail} />
+            <Stack.Screen name="AddVitals" component={AddVitals} />
           </Stack.Navigator>
           {/* Location tracking, push-tap routing and the in-app banner: approved caregivers only. */}
           <AppRuntime />
