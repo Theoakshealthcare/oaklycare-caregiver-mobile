@@ -17,7 +17,7 @@ export type ScreenParamLists = {
   VerificationStatus: undefined;
   // Signed in and approved
   /** `tab` + `at` select a tab on arrival (`at` is a changing nonce so repeating the same tab still applies). */
-  BottomNavigation: { tab?: "home" | "booking"; at?: number } | undefined;
+  BottomNavigation: { tab?: "home" | "booking" | "vitals"; at?: number } | undefined;
   /** With `offer` it is an un-accepted job (offer view, nothing is fetched); without it, an assigned booking. */
   BookingDetails: { bookingId: string; offer?: Offer };
   ChatScreen: { bookingId: string; patientName?: string };
@@ -29,6 +29,8 @@ export type ScreenParamLists = {
   Wallet: undefined;
   BankDetails: undefined;
   Contact: undefined;
+  /** Who the visit is for (age, emergency contact, history, latest vitals) while the visit is live. */
+  ClientProfile: { bookingId: string; bookingCode?: string };
   /** One vital of the patient on the current visit: chart and history. */
   VitalDetail: { patientId: string; patientName?: string; kind: VitalKind };
   /** Manual vital entry for the patient on the current visit. */

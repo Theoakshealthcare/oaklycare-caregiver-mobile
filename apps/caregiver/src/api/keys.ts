@@ -14,5 +14,6 @@ export const queryKeys = {
   banks: ["banks"] as const,
   caregiverProfile: ["caregiver-profile"] as const,
   notes: (bookingId: string) => ["notes", bookingId] as const,
+  clientProfile: (bookingId: string) => ["client-profile", bookingId] as const,
   vitals: (patientId: string) => ["vitals", patientId] as const,
 };

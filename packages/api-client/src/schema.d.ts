@@ -585,6 +585,27 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/v1/caregiver/bookings/{booking_id}/client": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Get Client Profile
+         * @description Who the visit is for: name, age, sex, emergency contact, medical history if stored, and the latest
+         *     vitals when the vitals rule allows them. Health data: never cached.
+         */
+        get: operations["get_client_profile_api_v1_caregiver_bookings__booking_id__client_get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/v1/devices/push-token": {
         parameters: {
             query?: never;
@@ -3971,6 +3992,33 @@ export interface components {
             /** Account Number */
             account_number: string;
         };
+        /** CaregiverClientProfile */
+        CaregiverClientProfile: {
+            /**
+             * Booking Id
+             * Format: uuid
+             */
+            booking_id: string;
+            /**
+             * Patient Id
+             * Format: uuid
+             */
+            patient_id: string;
+            /** Full Name */
+            full_name: string;
+            /** Profile Image Url */
+            profile_image_url?: string | null;
+            /** Booking For */
+            booking_for: string;
+            /** Age */
+            age?: number | null;
+            /** Gender */
+            gender?: string | null;
+            emergency_contact?: components["schemas"]["ClientEmergencyContact"] | null;
+            medical_history?: components["schemas"]["ClientMedicalHistory"] | null;
+            /** Latest Vitals */
+            latest_vitals?: components["schemas"]["ClientVital"][] | null;
+        };
         /** CaregiverConsentData */
         CaregiverConsentData: {
             /** Terms Accepted */
@@ -4350,6 +4398,61 @@ export interface components {
              * Format: date-time
              */
             created_at: string;
+        };
+        /** ClientEmergencyContact */
+        ClientEmergencyContact: {
+            /** Name */
+            name?: string | null;
+            /** Phone */
+            phone?: string | null;
+            /** Relationship */
+            relationship?: string | null;
+        };
+        /** ClientMedicalHistory */
+        ClientMedicalHistory: {
+            /** Blood Group */
+            blood_group?: string | null;
+            /** Allergies */
+            allergies?: string | null;
+            /** Medical Conditions */
+            medical_conditions?: string | null;
+            /** Medications */
+            medications?: string | null;
+            /**
+             * Records
+             * @default []
+             */
+            records: components["schemas"]["ClientMedicalRecord"][];
+        };
+        /** ClientMedicalRecord */
+        ClientMedicalRecord: {
+            /** Record Type */
+            record_type: string;
+            /** Title */
+            title: string;
+            /** Description */
+            description?: string | null;
+            /** Severity */
+            severity?: string | null;
+            /** Date Recorded */
+            date_recorded?: string | null;
+        };
+        /**
+         * ClientVital
+         * @description The newest reading of one vital type. No status: the backend does not rate readings.
+         */
+        ClientVital: {
+            /** Vital Type */
+            vital_type: string;
+            /** Value */
+            value: string;
+            /** Unit */
+            unit?: string | null;
+            /**
+             * Recorded At
+             * Format: date-time
+             */
+            recorded_at: string;
         };
         /**
          * ClinicalOut
@@ -7118,6 +7221,44 @@ export interface operations {
                 };
                 content: {
                     "application/json": components["schemas"]["CaregiverHome"];
+                };
+            };
+        };
+    };
+    get_client_profile_api_v1_caregiver_bookings__booking_id__client_get: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                booking_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["CaregiverClientProfile"];
+                };
+            };
+            /** @description The booking is not yours, is not accepted, on the way or in progress, or does not exist. One answer for all of these. */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
                 };
             };
         };

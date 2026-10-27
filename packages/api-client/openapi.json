@@ -1232,6 +1232,58 @@
         ]
       }
     },
+    "/api/v1/caregiver/bookings/{booking_id}/client": {
+      "get": {
+        "tags": [
+          "caregiver-clients"
+        ],
+        "summary": "Get Client Profile",
+        "description": "Who the visit is for: name, age, sex, emergency contact, medical history if stored, and the latest\nvitals when the vitals rule allows them. Health data: never cached.",
+        "operationId": "get_client_profile_api_v1_caregiver_bookings__booking_id__client_get",
+        "security": [
+          {
+            "OAuth2PasswordBearer": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "booking_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid",
+              "title": "Booking Id"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/CaregiverClientProfile"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "The booking is not yours, is not accepted, on the way or in progress, or does not exist. One answer for all of these."
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
     "/api/v1/devices/push-token": {
       "post": {
         "tags": [
@@ -1844,7 +1896,7 @@
           "Caregiver Location (Legacy REST)"
         ],
         "summary": "Update caregiver's real-time location (REST - Legacy)",
-        "description": "Update caregiver's current GPS location for real-time tracking and matching. **⚠️ DEPRECATED: Consider using WebSocket endpoint `/ws/caregiver/location` for better scalability and real-time performance.**",
+        "description": "Update caregiver's current GPS location for real-time tracking and matching. **\u26a0\ufe0f DEPRECATED: Consider using WebSocket endpoint `/ws/caregiver/location` for better scalability and real-time performance.**",
         "operationId": "update_caregiver_location_api_v1_booking_caregiver_location_post",
         "requestBody": {
           "content": {
@@ -11289,6 +11341,103 @@
         ],
         "title": "CaregiverBankAccountUpdate"
       },
+      "CaregiverClientProfile": {
+        "properties": {
+          "booking_id": {
+            "type": "string",
+            "format": "uuid",
+            "title": "Booking Id"
+          },
+          "patient_id": {
+            "type": "string",
+            "format": "uuid",
+            "title": "Patient Id"
+          },
+          "full_name": {
+            "type": "string",
+            "title": "Full Name"
+          },
+          "profile_image_url": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Profile Image Url"
+          },
+          "booking_for": {
+            "type": "string",
+            "title": "Booking For"
+          },
+          "age": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Age"
+          },
+          "gender": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Gender"
+          },
+          "emergency_contact": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/ClientEmergencyContact"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "medical_history": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/ClientMedicalHistory"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "latest_vitals": {
+            "anyOf": [
+              {
+                "items": {
+                  "$ref": "#/components/schemas/ClientVital"
+                },
+                "type": "array"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Latest Vitals"
+          }
+        },
+        "type": "object",
+        "required": [
+          "booking_id",
+          "patient_id",
+          "full_name",
+          "booking_for"
+        ],
+        "title": "CaregiverClientProfile"
+      },
       "CaregiverConsentData": {
         "properties": {
           "terms_accepted": {
@@ -12231,6 +12380,191 @@
           "created_at"
         ],
         "title": "ChatMessageResponse"
+      },
+      "ClientEmergencyContact": {
+        "properties": {
+          "name": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Name"
+          },
+          "phone": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Phone"
+          },
+          "relationship": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Relationship"
+          }
+        },
+        "type": "object",
+        "title": "ClientEmergencyContact"
+      },
+      "ClientMedicalHistory": {
+        "properties": {
+          "blood_group": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Blood Group"
+          },
+          "allergies": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Allergies"
+          },
+          "medical_conditions": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Medical Conditions"
+          },
+          "medications": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Medications"
+          },
+          "records": {
+            "items": {
+              "$ref": "#/components/schemas/ClientMedicalRecord"
+            },
+            "type": "array",
+            "title": "Records",
+            "default": []
+          }
+        },
+        "type": "object",
+        "title": "ClientMedicalHistory"
+      },
+      "ClientMedicalRecord": {
+        "properties": {
+          "record_type": {
+            "type": "string",
+            "title": "Record Type"
+          },
+          "title": {
+            "type": "string",
+            "title": "Title"
+          },
+          "description": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Description"
+          },
+          "severity": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Severity"
+          },
+          "date_recorded": {
+            "anyOf": [
+              {
+                "type": "string",
+                "format": "date"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Date Recorded"
+          }
+        },
+        "type": "object",
+        "required": [
+          "record_type",
+          "title"
+        ],
+        "title": "ClientMedicalRecord"
+      },
+      "ClientVital": {
+        "properties": {
+          "vital_type": {
+            "type": "string",
+            "title": "Vital Type"
+          },
+          "value": {
+            "type": "string",
+            "title": "Value"
+          },
+          "unit": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Unit"
+          },
+          "recorded_at": {
+            "type": "string",
+            "format": "date-time",
+            "title": "Recorded At"
+          }
+        },
+        "type": "object",
+        "required": [
+          "vital_type",
+          "value",
+          "recorded_at"
+        ],
+        "title": "ClientVital",
+        "description": "The newest reading of one vital type. No status: the backend does not rate readings."
       },
       "ClinicalOut": {
         "properties": {
