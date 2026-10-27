@@ -27,6 +27,8 @@ const TONES: Record<string, Tone> = {
   unmatched: "danger",
   address_check: "warning",
   sla_breached: "warning",
+  succeeded: "success",
+  needs_review: "danger",
 };
 
 /** Status as text plus a tone, so state is never conveyed by colour alone. */
