@@ -31,7 +31,12 @@ export const NAV: NavGroup[] = [
         anyOf: ["bookings.dispatch", "bookings.assign", "bookings.address"],
         available: true,
       },
-      { label: "Refunds", href: "/queues/refunds", anyOf: ["refunds.approve", "refunds.request"], available: false },
+      {
+        label: "Refunds",
+        href: "/queues/refunds",
+        anyOf: ["refunds.request", "refunds.approve", "payments.read"],
+        available: true,
+      },
       { label: "Support", href: "/queues/support", anyOf: ["support.inbox"], available: false },
       { label: "Exceptions", href: "/queues/exceptions", anyOf: ["payments.read"], available: false },
     ],

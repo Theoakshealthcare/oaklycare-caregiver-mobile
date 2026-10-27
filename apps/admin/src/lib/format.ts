@@ -44,6 +44,12 @@ export function formatNaira(kobo: number | null | undefined): string {
   }).format(naira)}`;
 }
 
+/** Naira (a JSON number, as the refunds API speaks it) to "₦44,000" or "₦14,545.45". Never kobo. */
+export function formatNairaValue(naira: number | null | undefined): string {
+  if (naira === null || naira === undefined || !Number.isFinite(naira)) return "—";
+  return formatNaira(Math.round(naira * 100));
+}
+
 /** "3 days" / "today" for queue ages. */
 export function formatAge(days: number | null | undefined): string {
   if (days === null || days === undefined) return "—";

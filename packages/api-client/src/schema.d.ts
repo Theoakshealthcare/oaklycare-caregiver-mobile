@@ -1526,7 +1526,7 @@ export interface paths {
         put?: never;
         /**
          * Request Refund
-         * @description Request a refund for a transaction
+         * @description Retired (Refunds v2): a refund is raised by Oakly staff or by a cancellation, never by the patient.
          */
         post: operations["request_refund_api_v1_patient_wallet_refund_request_post"];
         delete?: never;
@@ -1562,10 +1562,7 @@ export interface paths {
             path?: never;
             cookie?: never;
         };
-        /**
-         * Get All Refund Requests
-         * @description Get all refund requests (Admin only)
-         */
+        /** Get All Refund Requests */
         get: operations["get_all_refund_requests_api_v1_patient_admin_refund_requests_get"];
         put?: never;
         post?: never;
@@ -1583,10 +1580,7 @@ export interface paths {
             cookie?: never;
         };
         get?: never;
-        /**
-         * Process Refund Request
-         * @description Process refund request (Admin only)
-         */
+        /** Process Refund Request */
         put: operations["process_refund_request_api_v1_patient_admin_refund_requests__request_id__put"];
         post?: never;
         delete?: never;
@@ -2236,6 +2230,184 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/v1/admin/refunds": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** List Refunds */
+        get: operations["list_refunds_api_v1_admin_refunds_get"];
+        put?: never;
+        /**
+         * Request Refund
+         * @description Raise a refund by hand (a complaint, or anything else). It waits for someone else to approve it.
+         */
+        post: operations["request_refund_api_v1_admin_refunds_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/admin/refunds/{refund_id}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Get Refund */
+        get: operations["get_refund_api_v1_admin_refunds__refund_id__get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/admin/refunds/{refund_id}/approve": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Approve Refund
+         * @description Approve a pending refund. Above the Finance limit, or to the wallet, a Super Admin is needed.
+         */
+        post: operations["approve_refund_api_v1_admin_refunds__refund_id__approve_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/admin/refunds/{refund_id}/reject": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Reject Refund
+         * @description Reject a pending refund; it is finished and the booking can be refunded again.
+         */
+        post: operations["reject_refund_api_v1_admin_refunds__refund_id__reject_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/admin/refunds/{refund_id}/retry": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Retry Refund
+         * @description Send a failed refund again, once Paystack confirms the last attempt failed.
+         */
+        post: operations["retry_refund_api_v1_admin_refunds__refund_id__retry_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/admin/refunds/{refund_id}/bank-details": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Submit Bank Details
+         * @description Give Paystack the family's bank account for a refund that needs it. The account number is never stored.
+         */
+        post: operations["submit_bank_details_api_v1_admin_refunds__refund_id__bank_details_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/admin/refunds/{refund_id}/switch-to-wallet": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Switch To Wallet
+         * @description Pay a failed refund to the patient's Oakly wallet instead (Super Admin).
+         */
+        post: operations["switch_to_wallet_api_v1_admin_refunds__refund_id__switch_to_wallet_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/admin/refunds/{refund_id}/close": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Close Refund
+         * @description Give up on a failed refund: the money stays with Oakly and the booking can be refunded again.
+         */
+        post: operations["close_refund_api_v1_admin_refunds__refund_id__close_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/admin/refunds/{refund_id}/resolve": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Resolve Refund
+         * @description Settle a refund in review as succeeded or failed after checking the Paystack dashboard (Super Admin).
+         */
+        post: operations["resolve_refund_api_v1_admin_refunds__refund_id__resolve_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/v1/admin/auth/login": {
         parameters: {
             query?: never;
@@ -2651,25 +2823,6 @@ export interface components {
              */
             force: boolean;
         };
-        /** AttemptOut */
-        AttemptOut: {
-            /** Attempt */
-            attempt: number;
-            /** Reference */
-            reference: string;
-            /**
-             * Status
-             * @enum {string}
-             */
-            status: "pending" | "success" | "failed" | "reversed" | "refused";
-            /** Failure Reason */
-            failure_reason: string | null;
-            /**
-             * Created At
-             * Format: date-time
-             */
-            created_at: string;
-        };
         /** AuditEntry */
         AuditEntry: {
             /**
@@ -2971,7 +3124,7 @@ export interface components {
              * Payment Status
              * @enum {string}
              */
-            payment_status: "pending" | "paid" | "failed" | "refunded";
+            payment_status: "pending" | "paid" | "failed" | "partially_refunded" | "refunded";
             /** Dispatch State */
             dispatch_state?: ("dispatching" | "matched" | "unmatched") | null;
             /** Caregiver Id */
@@ -3003,6 +3156,42 @@ export interface components {
             reason?: string | null;
             /** Visit Code */
             visit_code?: string | null;
+        };
+        /** BookingContextOut */
+        BookingContextOut: {
+            /** Code */
+            code: string | null;
+            /** Status */
+            status: string;
+            /** Channel */
+            channel: string;
+            /** Cancel Fee Tier */
+            cancel_fee_tier: string | null;
+            /**
+             * Cancel Fee Naira
+             * @description Null when the booking has no policy copy to work it out from
+             */
+            cancel_fee_naira: number | null;
+            /** Caregiver Assigned */
+            caregiver_assigned: boolean;
+            /** Caregiver Arrived */
+            caregiver_arrived: boolean;
+            /** Completed */
+            completed: boolean;
+            /** Total Naira */
+            total_naira: number;
+            /**
+             * Paystack Fee Naira
+             * @description Null when Paystack's fee was never recorded (older bookings)
+             */
+            paystack_fee_naira: number | null;
+            /**
+             * Refunded Naira
+             * @description Committed to refunds of this booking (approved or further on, this one included)
+             */
+            refunded_naira: number;
+            /** Refundable Naira */
+            refundable_naira: number;
         };
         /** BookingCreate */
         BookingCreate: {
@@ -3203,7 +3392,7 @@ export interface components {
              * Payment Status
              * @enum {string}
              */
-            payment_status: "pending" | "paid" | "failed" | "refunded";
+            payment_status: "pending" | "paid" | "failed" | "partially_refunded" | "refunded";
             /** Dispatch State */
             dispatch_state?: ("dispatching" | "matched" | "unmatched") | null;
             /** Total Amount Kobo */
@@ -5182,18 +5371,6 @@ export interface components {
             /** Remaining Balance */
             remaining_balance: string;
         };
-        /** PatientRefundRequestCreate */
-        PatientRefundRequestCreate: {
-            /**
-             * Transaction Id
-             * Format: uuid
-             */
-            transaction_id: string;
-            /** Amount */
-            amount: number | string;
-            /** Reason */
-            reason: string;
-        };
         /** PatientRefundRequestOut */
         PatientRefundRequestOut: {
             /** Id */
@@ -5215,15 +5392,6 @@ export interface components {
             created_at: string;
             /** Processed At */
             processed_at?: string | null;
-        };
-        /** PatientRefundRequestResponse */
-        PatientRefundRequestResponse: {
-            /** Request Id */
-            request_id: string;
-            /** Status */
-            status: string;
-            /** Message */
-            message: string;
         };
         /** PatientTransactionOut */
         PatientTransactionOut: {
@@ -5369,7 +5537,7 @@ export interface components {
              * Status
              * @enum {string}
              */
-            status: "pending" | "paid" | "failed" | "refunded";
+            status: "pending" | "paid" | "failed" | "partially_refunded" | "refunded";
             /** Paystack Reference */
             paystack_reference?: string | null;
             /** Failure Reason */
@@ -5389,7 +5557,7 @@ export interface components {
          * PaymentStatus
          * @enum {string}
          */
-        PaymentStatus: "pending" | "paid" | "failed" | "refunded";
+        PaymentStatus: "pending" | "paid" | "failed" | "refunded" | "partially_refunded";
         /** PaymentVerificationRequest */
         PaymentVerificationRequest: {
             /** Reference */
@@ -5472,7 +5640,7 @@ export interface components {
              * Attempt History
              * @description Every send of this payout, oldest first, with its failure reason
              */
-            attempt_history: components["schemas"]["AttemptOut"][];
+            attempt_history: components["schemas"]["app__schemas__admin_payout__AttemptOut"][];
             /**
              * Shortfall Kobo
              * @description Paid out by Paystack but not recoverable from the caregiver's balance. Goes down only when an admin nets it off (resolve as failed), or at unfreeze, when it is debited from the caregiver's balance or written off
@@ -5810,6 +5978,244 @@ export interface components {
             /** Refresh Token */
             refresh_token: string;
         };
+        /** RefundApproveIn */
+        RefundApproveIn: {
+            /**
+             * Amount Naira
+             * @description Omit to approve the suggested amount
+             */
+            amount_naira?: number | string | null;
+            /**
+             * Destination
+             * @default original_method
+             * @enum {string}
+             */
+            destination: "original_method" | "wallet";
+            /**
+             * Take Back From Caregiver
+             * @default false
+             */
+            take_back_from_caregiver: boolean;
+            /** Take Back Reason */
+            take_back_reason?: string | null;
+            /** Note */
+            note?: string | null;
+        };
+        /** RefundBankDetailsIn */
+        RefundBankDetailsIn: {
+            /** Bank Code */
+            bank_code: string;
+            /**
+             * Account Number
+             * @description Sent to Paystack and never stored
+             */
+            account_number: string;
+        };
+        /** RefundDetail */
+        RefundDetail: {
+            /**
+             * Id
+             * Format: uuid
+             */
+            id: string;
+            /**
+             * Booking Id
+             * Format: uuid
+             */
+            booking_id: string;
+            /** Booking Code */
+            booking_code: string | null;
+            /**
+             * Status
+             * @enum {string}
+             */
+            status: "pending_approval" | "approved" | "processing" | "needs_attention" | "needs_review" | "failed" | "succeeded" | "rejected" | "closed";
+            /** Reason Code */
+            reason_code: string;
+            /**
+             * Origin
+             * @enum {string}
+             */
+            origin: "system" | "staff";
+            /** Suggested Amount Naira */
+            suggested_amount_naira: number | null;
+            /** Amount Naira */
+            amount_naira: number | null;
+            /** Destination */
+            destination: string | null;
+            /** Take Back From Caregiver */
+            take_back_from_caregiver: boolean;
+            /** Take Back Naira */
+            take_back_naira: number;
+            /** Failure Reason */
+            failure_reason: string | null;
+            /** Note */
+            note: string | null;
+            /** Rejected Reason */
+            rejected_reason: string | null;
+            /** Requested By */
+            requested_by: string | null;
+            /** Approved By */
+            approved_by: string | null;
+            /** Review Flagged At */
+            review_flagged_at: string | null;
+            /** Review Reason */
+            review_reason: string | null;
+            /**
+             * Created At
+             * Format: date-time
+             */
+            created_at: string;
+            /** Approved At */
+            approved_at: string | null;
+            /** Processed At */
+            processed_at: string | null;
+            /**
+             * Max Approvable Naira
+             * @description The most this caller may approve: what is left to refund and, without refunds.approve_above_limit, what is left under the Finance limit
+             */
+            max_approvable_naira: number;
+            /** Available Actions */
+            available_actions: ("approve" | "reject" | "retry" | "bank_details" | "switch_to_wallet" | "close" | "resolve")[];
+            booking: components["schemas"]["BookingContextOut"];
+            /** Suggestion Why */
+            suggestion_why: string;
+            /** Attempts */
+            attempts: components["schemas"]["app__schemas__admin_refunds__AttemptOut"][];
+            /** Take Back Reason */
+            take_back_reason: string | null;
+            /**
+             * Take Back Preview Naira
+             * @description What taking the caregiver's share back would be at this refund's amount; null once the refund is finished
+             */
+            take_back_preview_naira: number | null;
+            /** Take Back Debited Naira */
+            take_back_debited_naira: number | null;
+            /** Take Back Owed Naira */
+            take_back_owed_naira: number | null;
+            /**
+             * Needs Super Admin
+             * @description This refund's amount is more than this caller may approve (see max_approvable_naira)
+             */
+            needs_super_admin: boolean;
+            /** Limit Naira */
+            limit_naira: number;
+        };
+        /** RefundList */
+        RefundList: {
+            /** Items */
+            items: components["schemas"]["RefundOut"][];
+            /** Total */
+            total: number;
+            /** Limit */
+            limit: number;
+            /** Offset */
+            offset: number;
+        };
+        /** RefundOut */
+        RefundOut: {
+            /**
+             * Id
+             * Format: uuid
+             */
+            id: string;
+            /**
+             * Booking Id
+             * Format: uuid
+             */
+            booking_id: string;
+            /** Booking Code */
+            booking_code: string | null;
+            /**
+             * Status
+             * @enum {string}
+             */
+            status: "pending_approval" | "approved" | "processing" | "needs_attention" | "needs_review" | "failed" | "succeeded" | "rejected" | "closed";
+            /** Reason Code */
+            reason_code: string;
+            /**
+             * Origin
+             * @enum {string}
+             */
+            origin: "system" | "staff";
+            /** Suggested Amount Naira */
+            suggested_amount_naira: number | null;
+            /** Amount Naira */
+            amount_naira: number | null;
+            /** Destination */
+            destination: string | null;
+            /** Take Back From Caregiver */
+            take_back_from_caregiver: boolean;
+            /** Take Back Naira */
+            take_back_naira: number;
+            /** Failure Reason */
+            failure_reason: string | null;
+            /** Note */
+            note: string | null;
+            /** Rejected Reason */
+            rejected_reason: string | null;
+            /** Requested By */
+            requested_by: string | null;
+            /** Approved By */
+            approved_by: string | null;
+            /** Review Flagged At */
+            review_flagged_at: string | null;
+            /** Review Reason */
+            review_reason: string | null;
+            /**
+             * Created At
+             * Format: date-time
+             */
+            created_at: string;
+            /** Approved At */
+            approved_at: string | null;
+            /** Processed At */
+            processed_at: string | null;
+            /**
+             * Max Approvable Naira
+             * @description The most this caller may approve: what is left to refund and, without refunds.approve_above_limit, what is left under the Finance limit
+             */
+            max_approvable_naira: number;
+            /** Available Actions */
+            available_actions: ("approve" | "reject" | "retry" | "bank_details" | "switch_to_wallet" | "close" | "resolve")[];
+        };
+        /** RefundReasonIn */
+        RefundReasonIn: {
+            /** Reason */
+            reason: string;
+        };
+        /** RefundRequestIn */
+        RefundRequestIn: {
+            /**
+             * Booking Id
+             * Format: uuid
+             */
+            booking_id: string;
+            /** Amount Naira */
+            amount_naira: number | string;
+            /**
+             * Reason Code
+             * @enum {string}
+             */
+            reason_code: "cancelled_by_booker" | "caregiver_cancelled" | "no_caregiver_found" | "admin_cancelled" | "paid_after_expiry" | "paid_after_cancellation" | "complaint" | "other";
+            /** Note */
+            note?: string | null;
+        };
+        /** RefundResolveIn */
+        RefundResolveIn: {
+            /**
+             * Outcome
+             * @enum {string}
+             */
+            outcome: "succeeded" | "failed";
+            /** Note */
+            note: string;
+            /**
+             * Amount Naira
+             * @description Only to record a different amount than the refund's, when Paystack processed that amount (the 409 names it)
+             */
+            amount_naira?: number | string | null;
+        };
         /** RequestChangesIn */
         RequestChangesIn: {
             /** Items */
@@ -5943,7 +6349,7 @@ export interface components {
              * Payment Status
              * @enum {string}
              */
-            payment_status: "pending" | "paid" | "failed" | "refunded";
+            payment_status: "pending" | "paid" | "failed" | "partially_refunded" | "refunded";
             /** Dispatch State */
             dispatch_state?: ("dispatching" | "matched" | "unmatched") | null;
             /** Total Amount Kobo */
@@ -6211,6 +6617,52 @@ export interface components {
             expires_at: string;
             /** Notified Count */
             notified_count: number;
+        };
+        /** AttemptOut */
+        app__schemas__admin_payout__AttemptOut: {
+            /** Attempt */
+            attempt: number;
+            /** Reference */
+            reference: string;
+            /**
+             * Status
+             * @enum {string}
+             */
+            status: "pending" | "success" | "failed" | "reversed" | "refused";
+            /** Failure Reason */
+            failure_reason: string | null;
+            /**
+             * Created At
+             * Format: date-time
+             */
+            created_at: string;
+        };
+        /** AttemptOut */
+        app__schemas__admin_refunds__AttemptOut: {
+            /** Attempt */
+            attempt: number;
+            /** Status */
+            status: string;
+            /** Failure Reason */
+            failure_reason: string | null;
+            /** Paystack Refund Id */
+            paystack_refund_id: string | null;
+            /** Bank Code */
+            bank_code: string | null;
+            /**
+             * Account Last4
+             * @description The last 4 digits only; the full number is never stored
+             */
+            account_last4: string | null;
+            /** Account Name */
+            account_name: string | null;
+            /** Bank Details Submitted At */
+            bank_details_submitted_at: string | null;
+            /**
+             * Created At
+             * Format: date-time
+             */
+            created_at: string;
         };
     };
     responses: never;
@@ -9035,28 +9487,15 @@ export interface operations {
             path?: never;
             cookie?: never;
         };
-        requestBody: {
-            content: {
-                "application/json": components["schemas"]["PatientRefundRequestCreate"];
-            };
-        };
+        requestBody?: never;
         responses: {
             /** @description Successful Response */
-            200: {
+            410: {
                 headers: {
                     [name: string]: unknown;
                 };
                 content: {
-                    "application/json": components["schemas"]["PatientRefundRequestResponse"];
-                };
-            };
-            /** @description Validation Error */
-            422: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["HTTPValidationError"];
+                    "application/json": unknown;
                 };
             };
         };
@@ -9083,10 +9522,7 @@ export interface operations {
     };
     get_all_refund_requests_api_v1_patient_admin_refund_requests_get: {
         parameters: {
-            query?: {
-                /** @description Filter by status: pending, approved, rejected */
-                status_filter?: string | null;
-            };
+            query?: never;
             header?: never;
             path?: never;
             cookie?: never;
@@ -9094,21 +9530,12 @@ export interface operations {
         requestBody?: never;
         responses: {
             /** @description Successful Response */
-            200: {
+            410: {
                 headers: {
                     [name: string]: unknown;
                 };
                 content: {
                     "application/json": unknown;
-                };
-            };
-            /** @description Validation Error */
-            422: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["HTTPValidationError"];
                 };
             };
         };
@@ -9122,16 +9549,10 @@ export interface operations {
             };
             cookie?: never;
         };
-        requestBody: {
-            content: {
-                "application/json": {
-                    [key: string]: unknown;
-                };
-            };
-        };
+        requestBody?: never;
         responses: {
             /** @description Successful Response */
-            200: {
+            410: {
                 headers: {
                     [name: string]: unknown;
                 };
@@ -9527,7 +9948,7 @@ export interface operations {
                 /** @description booking code, patient or caregiver name, phone */
                 q?: string | null;
                 status?: ("pending" | "accepted" | "en_route" | "in_progress" | "completed" | "cancelled" | "declined") | null;
-                payment_status?: ("pending" | "paid" | "failed" | "refunded") | null;
+                payment_status?: ("pending" | "paid" | "failed" | "partially_refunded" | "refunded") | null;
                 dispatch_state?: ("dispatching" | "matched" | "unmatched") | null;
                 channel?: ("app" | "whatsapp" | "admin") | null;
                 city?: string | null;
@@ -10402,6 +10823,345 @@ export interface operations {
                 };
                 content: {
                     "application/json": components["schemas"]["UnfreezeOut"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    list_refunds_api_v1_admin_refunds_get: {
+        parameters: {
+            query?: {
+                /** @description Default: open (unfinished refunds, plus finished ones flagged for review). 'all' removes the filter. */
+                status?: ("open" | "all" | "pending_approval" | "approved" | "processing" | "needs_attention" | "needs_review" | "failed" | "succeeded" | "rejected" | "closed") | null;
+                reason_code?: ("cancelled_by_booker" | "caregiver_cancelled" | "no_caregiver_found" | "admin_cancelled" | "paid_after_expiry" | "paid_after_cancellation" | "complaint" | "other") | null;
+                booking_id?: string | null;
+                /** @description Only refunds whose booking's refunds total above (true) or within (false) the Finance limit */
+                above_limit?: boolean | null;
+                limit?: number;
+                offset?: number;
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["RefundList"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    request_refund_api_v1_admin_refunds_post: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["RefundRequestIn"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            201: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["RefundDetail"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    get_refund_api_v1_admin_refunds__refund_id__get: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                refund_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["RefundDetail"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    approve_refund_api_v1_admin_refunds__refund_id__approve_post: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                refund_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["RefundApproveIn"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["RefundDetail"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    reject_refund_api_v1_admin_refunds__refund_id__reject_post: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                refund_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["RefundReasonIn"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["RefundDetail"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    retry_refund_api_v1_admin_refunds__refund_id__retry_post: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                refund_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["RefundDetail"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    submit_bank_details_api_v1_admin_refunds__refund_id__bank_details_post: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                refund_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["RefundBankDetailsIn"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["RefundDetail"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    switch_to_wallet_api_v1_admin_refunds__refund_id__switch_to_wallet_post: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                refund_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["RefundDetail"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    close_refund_api_v1_admin_refunds__refund_id__close_post: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                refund_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["RefundReasonIn"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["RefundDetail"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    resolve_refund_api_v1_admin_refunds__refund_id__resolve_post: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                refund_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["RefundResolveIn"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["RefundDetail"];
                 };
             };
             /** @description Validation Error */

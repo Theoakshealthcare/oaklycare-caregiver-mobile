@@ -4094,36 +4094,14 @@
           "patient"
         ],
         "summary": "Request Refund",
-        "description": "Request a refund for a transaction",
+        "description": "Retired (Refunds v2): a refund is raised by Oakly staff or by a cancellation, never by the patient.",
         "operationId": "request_refund_api_v1_patient_wallet_refund_request_post",
-        "requestBody": {
-          "content": {
-            "application/json": {
-              "schema": {
-                "$ref": "#/components/schemas/PatientRefundRequestCreate"
-              }
-            }
-          },
-          "required": true
-        },
         "responses": {
-          "200": {
+          "410": {
             "description": "Successful Response",
             "content": {
               "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/PatientRefundRequestResponse"
-                }
-              }
-            }
-          },
-          "422": {
-            "description": "Validation Error",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/HTTPValidationError"
-                }
+                "schema": {}
               }
             }
           }
@@ -4172,53 +4150,22 @@
           "patient"
         ],
         "summary": "Get All Refund Requests",
-        "description": "Get all refund requests (Admin only)",
         "operationId": "get_all_refund_requests_api_v1_patient_admin_refund_requests_get",
-        "security": [
-          {
-            "AdminBearer": []
-          }
-        ],
-        "parameters": [
-          {
-            "name": "status_filter",
-            "in": "query",
-            "required": false,
-            "schema": {
-              "anyOf": [
-                {
-                  "type": "string"
-                },
-                {
-                  "type": "null"
-                }
-              ],
-              "description": "Filter by status: pending, approved, rejected",
-              "title": "Status Filter"
-            },
-            "description": "Filter by status: pending, approved, rejected"
-          }
-        ],
         "responses": {
-          "200": {
+          "410": {
             "description": "Successful Response",
             "content": {
               "application/json": {
                 "schema": {}
               }
             }
-          },
-          "422": {
-            "description": "Validation Error",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/HTTPValidationError"
-                }
-              }
-            }
           }
-        }
+        },
+        "security": [
+          {
+            "AdminBearer": []
+          }
+        ]
       }
     },
     "/api/v1/patient/admin/refund/requests/{request_id}": {
@@ -4227,7 +4174,6 @@
           "patient"
         ],
         "summary": "Process Refund Request",
-        "description": "Process refund request (Admin only)",
         "operationId": "process_refund_request_api_v1_patient_admin_refund_requests__request_id__put",
         "security": [
           {
@@ -4246,20 +4192,8 @@
             }
           }
         ],
-        "requestBody": {
-          "required": true,
-          "content": {
-            "application/json": {
-              "schema": {
-                "type": "object",
-                "additionalProperties": true,
-                "title": "Action Data"
-              }
-            }
-          }
-        },
         "responses": {
-          "200": {
+          "410": {
             "description": "Successful Response",
             "content": {
               "application/json": {
@@ -4977,6 +4911,7 @@
                     "pending",
                     "paid",
                     "failed",
+                    "partially_refunded",
                     "refunded"
                   ],
                   "type": "string"
@@ -6835,6 +6770,645 @@
         }
       }
     },
+    "/api/v1/admin/refunds": {
+      "get": {
+        "tags": [
+          "admin-refunds"
+        ],
+        "summary": "List Refunds",
+        "operationId": "list_refunds_api_v1_admin_refunds_get",
+        "security": [
+          {
+            "AdminBearer": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "status",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "enum": [
+                    "open",
+                    "all",
+                    "pending_approval",
+                    "approved",
+                    "processing",
+                    "needs_attention",
+                    "needs_review",
+                    "failed",
+                    "succeeded",
+                    "rejected",
+                    "closed"
+                  ],
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "description": "Default: open (unfinished refunds, plus finished ones flagged for review). 'all' removes the filter.",
+              "title": "Status"
+            },
+            "description": "Default: open (unfinished refunds, plus finished ones flagged for review). 'all' removes the filter."
+          },
+          {
+            "name": "reason_code",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "enum": [
+                    "cancelled_by_booker",
+                    "caregiver_cancelled",
+                    "no_caregiver_found",
+                    "admin_cancelled",
+                    "paid_after_expiry",
+                    "paid_after_cancellation",
+                    "complaint",
+                    "other"
+                  ],
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Reason Code"
+            }
+          },
+          {
+            "name": "booking_id",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string",
+                  "format": "uuid"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Booking Id"
+            }
+          },
+          {
+            "name": "above_limit",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "boolean"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "description": "Only refunds whose booking's refunds total above (true) or within (false) the Finance limit",
+              "title": "Above Limit"
+            },
+            "description": "Only refunds whose booking's refunds total above (true) or within (false) the Finance limit"
+          },
+          {
+            "name": "limit",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "integer",
+              "maximum": 200,
+              "minimum": 1,
+              "default": 50,
+              "title": "Limit"
+            }
+          },
+          {
+            "name": "offset",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "integer",
+              "minimum": 0,
+              "default": 0,
+              "title": "Offset"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/RefundList"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      },
+      "post": {
+        "tags": [
+          "admin-refunds"
+        ],
+        "summary": "Request Refund",
+        "description": "Raise a refund by hand (a complaint, or anything else). It waits for someone else to approve it.",
+        "operationId": "request_refund_api_v1_admin_refunds_post",
+        "security": [
+          {
+            "AdminBearer": []
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/RefundRequestIn"
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/RefundDetail"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/admin/refunds/{refund_id}": {
+      "get": {
+        "tags": [
+          "admin-refunds"
+        ],
+        "summary": "Get Refund",
+        "operationId": "get_refund_api_v1_admin_refunds__refund_id__get",
+        "security": [
+          {
+            "AdminBearer": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "refund_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid",
+              "title": "Refund Id"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/RefundDetail"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/admin/refunds/{refund_id}/approve": {
+      "post": {
+        "tags": [
+          "admin-refunds"
+        ],
+        "summary": "Approve Refund",
+        "description": "Approve a pending refund. Above the Finance limit, or to the wallet, a Super Admin is needed.",
+        "operationId": "approve_refund_api_v1_admin_refunds__refund_id__approve_post",
+        "security": [
+          {
+            "AdminBearer": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "refund_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid",
+              "title": "Refund Id"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/RefundApproveIn"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/RefundDetail"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/admin/refunds/{refund_id}/reject": {
+      "post": {
+        "tags": [
+          "admin-refunds"
+        ],
+        "summary": "Reject Refund",
+        "description": "Reject a pending refund; it is finished and the booking can be refunded again.",
+        "operationId": "reject_refund_api_v1_admin_refunds__refund_id__reject_post",
+        "security": [
+          {
+            "AdminBearer": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "refund_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid",
+              "title": "Refund Id"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/RefundReasonIn"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/RefundDetail"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/admin/refunds/{refund_id}/retry": {
+      "post": {
+        "tags": [
+          "admin-refunds"
+        ],
+        "summary": "Retry Refund",
+        "description": "Send a failed refund again, once Paystack confirms the last attempt failed.",
+        "operationId": "retry_refund_api_v1_admin_refunds__refund_id__retry_post",
+        "security": [
+          {
+            "AdminBearer": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "refund_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid",
+              "title": "Refund Id"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/RefundDetail"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/admin/refunds/{refund_id}/bank-details": {
+      "post": {
+        "tags": [
+          "admin-refunds"
+        ],
+        "summary": "Submit Bank Details",
+        "description": "Give Paystack the family's bank account for a refund that needs it. The account number is never stored.",
+        "operationId": "submit_bank_details_api_v1_admin_refunds__refund_id__bank_details_post",
+        "security": [
+          {
+            "AdminBearer": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "refund_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid",
+              "title": "Refund Id"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/RefundBankDetailsIn"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/RefundDetail"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/admin/refunds/{refund_id}/switch-to-wallet": {
+      "post": {
+        "tags": [
+          "admin-refunds"
+        ],
+        "summary": "Switch To Wallet",
+        "description": "Pay a failed refund to the patient's Oakly wallet instead (Super Admin).",
+        "operationId": "switch_to_wallet_api_v1_admin_refunds__refund_id__switch_to_wallet_post",
+        "security": [
+          {
+            "AdminBearer": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "refund_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid",
+              "title": "Refund Id"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/RefundDetail"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/admin/refunds/{refund_id}/close": {
+      "post": {
+        "tags": [
+          "admin-refunds"
+        ],
+        "summary": "Close Refund",
+        "description": "Give up on a failed refund: the money stays with Oakly and the booking can be refunded again.",
+        "operationId": "close_refund_api_v1_admin_refunds__refund_id__close_post",
+        "security": [
+          {
+            "AdminBearer": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "refund_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid",
+              "title": "Refund Id"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/RefundReasonIn"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/RefundDetail"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/admin/refunds/{refund_id}/resolve": {
+      "post": {
+        "tags": [
+          "admin-refunds"
+        ],
+        "summary": "Resolve Refund",
+        "description": "Settle a refund in review as succeeded or failed after checking the Paystack dashboard (Super Admin).",
+        "operationId": "resolve_refund_api_v1_admin_refunds__refund_id__resolve_post",
+        "security": [
+          {
+            "AdminBearer": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "refund_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid",
+              "title": "Refund Id"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/RefundResolveIn"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/RefundDetail"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
     "/api/v1/admin/auth/login": {
       "post": {
         "tags": [
@@ -8082,54 +8656,6 @@
         ],
         "title": "AssignIn"
       },
-      "AttemptOut": {
-        "properties": {
-          "attempt": {
-            "type": "integer",
-            "title": "Attempt"
-          },
-          "reference": {
-            "type": "string",
-            "title": "Reference"
-          },
-          "status": {
-            "type": "string",
-            "enum": [
-              "pending",
-              "success",
-              "failed",
-              "reversed",
-              "refused"
-            ],
-            "title": "Status"
-          },
-          "failure_reason": {
-            "anyOf": [
-              {
-                "type": "string"
-              },
-              {
-                "type": "null"
-              }
-            ],
-            "title": "Failure Reason"
-          },
-          "created_at": {
-            "type": "string",
-            "format": "date-time",
-            "title": "Created At"
-          }
-        },
-        "type": "object",
-        "required": [
-          "attempt",
-          "reference",
-          "status",
-          "failure_reason",
-          "created_at"
-        ],
-        "title": "AttemptOut"
-      },
       "AuditEntry": {
         "properties": {
           "id": {
@@ -8906,6 +9432,7 @@
               "pending",
               "paid",
               "failed",
+              "partially_refunded",
               "refunded"
             ],
             "title": "Payment Status"
@@ -9041,6 +9568,105 @@
           "action"
         ],
         "title": "BookingActionRequest"
+      },
+      "BookingContextOut": {
+        "properties": {
+          "code": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Code"
+          },
+          "status": {
+            "type": "string",
+            "title": "Status"
+          },
+          "channel": {
+            "type": "string",
+            "title": "Channel"
+          },
+          "cancel_fee_tier": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Cancel Fee Tier"
+          },
+          "cancel_fee_naira": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Cancel Fee Naira",
+            "description": "Null when the booking has no policy copy to work it out from"
+          },
+          "caregiver_assigned": {
+            "type": "boolean",
+            "title": "Caregiver Assigned"
+          },
+          "caregiver_arrived": {
+            "type": "boolean",
+            "title": "Caregiver Arrived"
+          },
+          "completed": {
+            "type": "boolean",
+            "title": "Completed"
+          },
+          "total_naira": {
+            "type": "number",
+            "title": "Total Naira"
+          },
+          "paystack_fee_naira": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Paystack Fee Naira",
+            "description": "Null when Paystack's fee was never recorded (older bookings)"
+          },
+          "refunded_naira": {
+            "type": "number",
+            "title": "Refunded Naira",
+            "description": "Committed to refunds of this booking (approved or further on, this one included)"
+          },
+          "refundable_naira": {
+            "type": "number",
+            "title": "Refundable Naira"
+          }
+        },
+        "type": "object",
+        "required": [
+          "code",
+          "status",
+          "channel",
+          "cancel_fee_tier",
+          "cancel_fee_naira",
+          "caregiver_assigned",
+          "caregiver_arrived",
+          "completed",
+          "total_naira",
+          "paystack_fee_naira",
+          "refunded_naira",
+          "refundable_naira"
+        ],
+        "title": "BookingContextOut"
       },
       "BookingCreate": {
         "properties": {
@@ -9473,6 +10099,7 @@
               "pending",
               "paid",
               "failed",
+              "partially_refunded",
               "refunded"
             ],
             "title": "Payment Status"
@@ -14364,38 +14991,6 @@
         ],
         "title": "PatientPaymentResponse"
       },
-      "PatientRefundRequestCreate": {
-        "properties": {
-          "transaction_id": {
-            "type": "string",
-            "format": "uuid",
-            "title": "Transaction Id"
-          },
-          "amount": {
-            "anyOf": [
-              {
-                "type": "number"
-              },
-              {
-                "type": "string",
-                "pattern": "^(?!^[-+.]*$)[+-]?0*\\d*\\.?\\d*$"
-              }
-            ],
-            "title": "Amount"
-          },
-          "reason": {
-            "type": "string",
-            "title": "Reason"
-          }
-        },
-        "type": "object",
-        "required": [
-          "transaction_id",
-          "amount",
-          "reason"
-        ],
-        "title": "PatientRefundRequestCreate"
-      },
       "PatientRefundRequestOut": {
         "properties": {
           "id": {
@@ -14458,29 +15053,6 @@
           "created_at"
         ],
         "title": "PatientRefundRequestOut"
-      },
-      "PatientRefundRequestResponse": {
-        "properties": {
-          "request_id": {
-            "type": "string",
-            "title": "Request Id"
-          },
-          "status": {
-            "type": "string",
-            "title": "Status"
-          },
-          "message": {
-            "type": "string",
-            "title": "Message"
-          }
-        },
-        "type": "object",
-        "required": [
-          "request_id",
-          "status",
-          "message"
-        ],
-        "title": "PatientRefundRequestResponse"
       },
       "PatientTransactionOut": {
         "properties": {
@@ -14866,6 +15438,7 @@
               "pending",
               "paid",
               "failed",
+              "partially_refunded",
               "refunded"
             ],
             "title": "Status"
@@ -14952,7 +15525,8 @@
           "pending",
           "paid",
           "failed",
-          "refunded"
+          "refunded",
+          "partially_refunded"
         ],
         "title": "PaymentStatus"
       },
@@ -15125,7 +15699,7 @@
           },
           "attempt_history": {
             "items": {
-              "$ref": "#/components/schemas/AttemptOut"
+              "$ref": "#/components/schemas/app__schemas__admin_payout__AttemptOut"
             },
             "type": "array",
             "title": "Attempt History",
@@ -16052,6 +16626,813 @@
         ],
         "title": "RefreshTokenRequest"
       },
+      "RefundApproveIn": {
+        "properties": {
+          "amount_naira": {
+            "anyOf": [
+              {
+                "type": "number",
+                "maximum": 1000000000,
+                "exclusiveMinimum": 0
+              },
+              {
+                "type": "string",
+                "pattern": "^(?!^[-+.]*$)[+-]?0*\\d*\\.?\\d{0,2}0*$"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Amount Naira",
+            "description": "Omit to approve the suggested amount"
+          },
+          "destination": {
+            "type": "string",
+            "enum": [
+              "original_method",
+              "wallet"
+            ],
+            "title": "Destination",
+            "default": "original_method"
+          },
+          "take_back_from_caregiver": {
+            "type": "boolean",
+            "title": "Take Back From Caregiver",
+            "default": false
+          },
+          "take_back_reason": {
+            "anyOf": [
+              {
+                "type": "string",
+                "maxLength": 2000
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Take Back Reason"
+          },
+          "note": {
+            "anyOf": [
+              {
+                "type": "string",
+                "maxLength": 2000
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Note"
+          }
+        },
+        "additionalProperties": false,
+        "type": "object",
+        "title": "RefundApproveIn"
+      },
+      "RefundBankDetailsIn": {
+        "properties": {
+          "bank_code": {
+            "type": "string",
+            "maxLength": 20,
+            "title": "Bank Code"
+          },
+          "account_number": {
+            "type": "string",
+            "pattern": "^\\d{10}$",
+            "title": "Account Number",
+            "description": "Sent to Paystack and never stored"
+          }
+        },
+        "additionalProperties": false,
+        "type": "object",
+        "required": [
+          "bank_code",
+          "account_number"
+        ],
+        "title": "RefundBankDetailsIn"
+      },
+      "RefundDetail": {
+        "properties": {
+          "id": {
+            "type": "string",
+            "format": "uuid",
+            "title": "Id"
+          },
+          "booking_id": {
+            "type": "string",
+            "format": "uuid",
+            "title": "Booking Id"
+          },
+          "booking_code": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Booking Code"
+          },
+          "status": {
+            "type": "string",
+            "enum": [
+              "pending_approval",
+              "approved",
+              "processing",
+              "needs_attention",
+              "needs_review",
+              "failed",
+              "succeeded",
+              "rejected",
+              "closed"
+            ],
+            "title": "Status"
+          },
+          "reason_code": {
+            "type": "string",
+            "title": "Reason Code"
+          },
+          "origin": {
+            "type": "string",
+            "enum": [
+              "system",
+              "staff"
+            ],
+            "title": "Origin"
+          },
+          "suggested_amount_naira": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Suggested Amount Naira"
+          },
+          "amount_naira": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Amount Naira"
+          },
+          "destination": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Destination"
+          },
+          "take_back_from_caregiver": {
+            "type": "boolean",
+            "title": "Take Back From Caregiver"
+          },
+          "take_back_naira": {
+            "type": "number",
+            "title": "Take Back Naira"
+          },
+          "failure_reason": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Failure Reason"
+          },
+          "note": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Note"
+          },
+          "rejected_reason": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Rejected Reason"
+          },
+          "requested_by": {
+            "anyOf": [
+              {
+                "type": "string",
+                "format": "uuid"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Requested By"
+          },
+          "approved_by": {
+            "anyOf": [
+              {
+                "type": "string",
+                "format": "uuid"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Approved By"
+          },
+          "review_flagged_at": {
+            "anyOf": [
+              {
+                "type": "string",
+                "format": "date-time"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Review Flagged At"
+          },
+          "review_reason": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Review Reason"
+          },
+          "created_at": {
+            "type": "string",
+            "format": "date-time",
+            "title": "Created At"
+          },
+          "approved_at": {
+            "anyOf": [
+              {
+                "type": "string",
+                "format": "date-time"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Approved At"
+          },
+          "processed_at": {
+            "anyOf": [
+              {
+                "type": "string",
+                "format": "date-time"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Processed At"
+          },
+          "max_approvable_naira": {
+            "type": "number",
+            "title": "Max Approvable Naira",
+            "description": "The most this caller may approve: what is left to refund and, without refunds.approve_above_limit, what is left under the Finance limit"
+          },
+          "available_actions": {
+            "items": {
+              "type": "string",
+              "enum": [
+                "approve",
+                "reject",
+                "retry",
+                "bank_details",
+                "switch_to_wallet",
+                "close",
+                "resolve"
+              ]
+            },
+            "type": "array",
+            "title": "Available Actions"
+          },
+          "booking": {
+            "$ref": "#/components/schemas/BookingContextOut"
+          },
+          "suggestion_why": {
+            "type": "string",
+            "title": "Suggestion Why"
+          },
+          "attempts": {
+            "items": {
+              "$ref": "#/components/schemas/app__schemas__admin_refunds__AttemptOut"
+            },
+            "type": "array",
+            "title": "Attempts"
+          },
+          "take_back_reason": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Take Back Reason"
+          },
+          "take_back_preview_naira": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Take Back Preview Naira",
+            "description": "What taking the caregiver's share back would be at this refund's amount; null once the refund is finished"
+          },
+          "take_back_debited_naira": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Take Back Debited Naira"
+          },
+          "take_back_owed_naira": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Take Back Owed Naira"
+          },
+          "needs_super_admin": {
+            "type": "boolean",
+            "title": "Needs Super Admin",
+            "description": "This refund's amount is more than this caller may approve (see max_approvable_naira)"
+          },
+          "limit_naira": {
+            "type": "number",
+            "title": "Limit Naira"
+          }
+        },
+        "type": "object",
+        "required": [
+          "id",
+          "booking_id",
+          "booking_code",
+          "status",
+          "reason_code",
+          "origin",
+          "suggested_amount_naira",
+          "amount_naira",
+          "destination",
+          "take_back_from_caregiver",
+          "take_back_naira",
+          "failure_reason",
+          "note",
+          "rejected_reason",
+          "requested_by",
+          "approved_by",
+          "review_flagged_at",
+          "review_reason",
+          "created_at",
+          "approved_at",
+          "processed_at",
+          "max_approvable_naira",
+          "available_actions",
+          "booking",
+          "suggestion_why",
+          "attempts",
+          "take_back_reason",
+          "take_back_preview_naira",
+          "take_back_debited_naira",
+          "take_back_owed_naira",
+          "needs_super_admin",
+          "limit_naira"
+        ],
+        "title": "RefundDetail"
+      },
+      "RefundList": {
+        "properties": {
+          "items": {
+            "items": {
+              "$ref": "#/components/schemas/RefundOut"
+            },
+            "type": "array",
+            "title": "Items"
+          },
+          "total": {
+            "type": "integer",
+            "title": "Total"
+          },
+          "limit": {
+            "type": "integer",
+            "title": "Limit"
+          },
+          "offset": {
+            "type": "integer",
+            "title": "Offset"
+          }
+        },
+        "type": "object",
+        "required": [
+          "items",
+          "total",
+          "limit",
+          "offset"
+        ],
+        "title": "RefundList"
+      },
+      "RefundOut": {
+        "properties": {
+          "id": {
+            "type": "string",
+            "format": "uuid",
+            "title": "Id"
+          },
+          "booking_id": {
+            "type": "string",
+            "format": "uuid",
+            "title": "Booking Id"
+          },
+          "booking_code": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Booking Code"
+          },
+          "status": {
+            "type": "string",
+            "enum": [
+              "pending_approval",
+              "approved",
+              "processing",
+              "needs_attention",
+              "needs_review",
+              "failed",
+              "succeeded",
+              "rejected",
+              "closed"
+            ],
+            "title": "Status"
+          },
+          "reason_code": {
+            "type": "string",
+            "title": "Reason Code"
+          },
+          "origin": {
+            "type": "string",
+            "enum": [
+              "system",
+              "staff"
+            ],
+            "title": "Origin"
+          },
+          "suggested_amount_naira": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Suggested Amount Naira"
+          },
+          "amount_naira": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Amount Naira"
+          },
+          "destination": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Destination"
+          },
+          "take_back_from_caregiver": {
+            "type": "boolean",
+            "title": "Take Back From Caregiver"
+          },
+          "take_back_naira": {
+            "type": "number",
+            "title": "Take Back Naira"
+          },
+          "failure_reason": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Failure Reason"
+          },
+          "note": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Note"
+          },
+          "rejected_reason": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Rejected Reason"
+          },
+          "requested_by": {
+            "anyOf": [
+              {
+                "type": "string",
+                "format": "uuid"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Requested By"
+          },
+          "approved_by": {
+            "anyOf": [
+              {
+                "type": "string",
+                "format": "uuid"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Approved By"
+          },
+          "review_flagged_at": {
+            "anyOf": [
+              {
+                "type": "string",
+                "format": "date-time"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Review Flagged At"
+          },
+          "review_reason": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Review Reason"
+          },
+          "created_at": {
+            "type": "string",
+            "format": "date-time",
+            "title": "Created At"
+          },
+          "approved_at": {
+            "anyOf": [
+              {
+                "type": "string",
+                "format": "date-time"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Approved At"
+          },
+          "processed_at": {
+            "anyOf": [
+              {
+                "type": "string",
+                "format": "date-time"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Processed At"
+          },
+          "max_approvable_naira": {
+            "type": "number",
+            "title": "Max Approvable Naira",
+            "description": "The most this caller may approve: what is left to refund and, without refunds.approve_above_limit, what is left under the Finance limit"
+          },
+          "available_actions": {
+            "items": {
+              "type": "string",
+              "enum": [
+                "approve",
+                "reject",
+                "retry",
+                "bank_details",
+                "switch_to_wallet",
+                "close",
+                "resolve"
+              ]
+            },
+            "type": "array",
+            "title": "Available Actions"
+          }
+        },
+        "type": "object",
+        "required": [
+          "id",
+          "booking_id",
+          "booking_code",
+          "status",
+          "reason_code",
+          "origin",
+          "suggested_amount_naira",
+          "amount_naira",
+          "destination",
+          "take_back_from_caregiver",
+          "take_back_naira",
+          "failure_reason",
+          "note",
+          "rejected_reason",
+          "requested_by",
+          "approved_by",
+          "review_flagged_at",
+          "review_reason",
+          "created_at",
+          "approved_at",
+          "processed_at",
+          "max_approvable_naira",
+          "available_actions"
+        ],
+        "title": "RefundOut"
+      },
+      "RefundReasonIn": {
+        "properties": {
+          "reason": {
+            "type": "string",
+            "maxLength": 2000,
+            "title": "Reason"
+          }
+        },
+        "additionalProperties": false,
+        "type": "object",
+        "required": [
+          "reason"
+        ],
+        "title": "RefundReasonIn"
+      },
+      "RefundRequestIn": {
+        "properties": {
+          "booking_id": {
+            "type": "string",
+            "format": "uuid",
+            "title": "Booking Id"
+          },
+          "amount_naira": {
+            "anyOf": [
+              {
+                "type": "number",
+                "maximum": 1000000000,
+                "exclusiveMinimum": 0
+              },
+              {
+                "type": "string",
+                "pattern": "^(?!^[-+.]*$)[+-]?0*\\d*\\.?\\d{0,2}0*$"
+              }
+            ],
+            "title": "Amount Naira"
+          },
+          "reason_code": {
+            "type": "string",
+            "enum": [
+              "cancelled_by_booker",
+              "caregiver_cancelled",
+              "no_caregiver_found",
+              "admin_cancelled",
+              "paid_after_expiry",
+              "paid_after_cancellation",
+              "complaint",
+              "other"
+            ],
+            "title": "Reason Code"
+          },
+          "note": {
+            "anyOf": [
+              {
+                "type": "string",
+                "maxLength": 2000
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Note"
+          }
+        },
+        "additionalProperties": false,
+        "type": "object",
+        "required": [
+          "booking_id",
+          "amount_naira",
+          "reason_code"
+        ],
+        "title": "RefundRequestIn"
+      },
+      "RefundResolveIn": {
+        "properties": {
+          "outcome": {
+            "type": "string",
+            "enum": [
+              "succeeded",
+              "failed"
+            ],
+            "title": "Outcome"
+          },
+          "note": {
+            "type": "string",
+            "maxLength": 2000,
+            "title": "Note"
+          },
+          "amount_naira": {
+            "anyOf": [
+              {
+                "type": "number",
+                "maximum": 1000000000,
+                "exclusiveMinimum": 0
+              },
+              {
+                "type": "string",
+                "pattern": "^(?!^[-+.]*$)[+-]?0*\\d*\\.?\\d{0,2}0*$"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Amount Naira",
+            "description": "Only to record a different amount than the refund's, when Paystack processed that amount (the 409 names it)"
+          }
+        },
+        "additionalProperties": false,
+        "type": "object",
+        "required": [
+          "outcome",
+          "note"
+        ],
+        "title": "RefundResolveIn"
+      },
       "RequestChangesIn": {
         "properties": {
           "items": {
@@ -16371,6 +17752,7 @@
               "pending",
               "paid",
               "failed",
+              "partially_refunded",
               "refunded"
             ],
             "title": "Payment Status"
@@ -17237,6 +18619,152 @@
           "notified_count"
         ],
         "title": "WaveOut"
+      },
+      "app__schemas__admin_payout__AttemptOut": {
+        "properties": {
+          "attempt": {
+            "type": "integer",
+            "title": "Attempt"
+          },
+          "reference": {
+            "type": "string",
+            "title": "Reference"
+          },
+          "status": {
+            "type": "string",
+            "enum": [
+              "pending",
+              "success",
+              "failed",
+              "reversed",
+              "refused"
+            ],
+            "title": "Status"
+          },
+          "failure_reason": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Failure Reason"
+          },
+          "created_at": {
+            "type": "string",
+            "format": "date-time",
+            "title": "Created At"
+          }
+        },
+        "type": "object",
+        "required": [
+          "attempt",
+          "reference",
+          "status",
+          "failure_reason",
+          "created_at"
+        ],
+        "title": "AttemptOut"
+      },
+      "app__schemas__admin_refunds__AttemptOut": {
+        "properties": {
+          "attempt": {
+            "type": "integer",
+            "title": "Attempt"
+          },
+          "status": {
+            "type": "string",
+            "title": "Status"
+          },
+          "failure_reason": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Failure Reason"
+          },
+          "paystack_refund_id": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Paystack Refund Id"
+          },
+          "bank_code": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Bank Code"
+          },
+          "account_last4": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Account Last4",
+            "description": "The last 4 digits only; the full number is never stored"
+          },
+          "account_name": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Account Name"
+          },
+          "bank_details_submitted_at": {
+            "anyOf": [
+              {
+                "type": "string",
+                "format": "date-time"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Bank Details Submitted At"
+          },
+          "created_at": {
+            "type": "string",
+            "format": "date-time",
+            "title": "Created At"
+          }
+        },
+        "type": "object",
+        "required": [
+          "attempt",
+          "status",
+          "failure_reason",
+          "paystack_refund_id",
+          "bank_code",
+          "account_last4",
+          "account_name",
+          "bank_details_submitted_at",
+          "created_at"
+        ],
+        "title": "AttemptOut"
       }
     },
     "securitySchemes": {

@@ -69,4 +69,13 @@ describe("permission-gated navigation", () => {
     expect(screen.getByRole("link", { name: "Bookings" })).toBeInTheDocument();
     expect(screen.queryByRole("link", { name: "Unmatched" })).not.toBeInTheDocument();
   });
+
+  it("shows Refunds to anyone who may read them, and to no one else", () => {
+    for (const permission of ["refunds.request", "refunds.approve", "payments.read"]) {
+      const labels = visibleNav([permission]).flatMap((g) => g.items.map((i) => i.label));
+      expect(labels).toContain("Refunds");
+    }
+    const labels = visibleNav(["dashboard.read", "caregivers.read", "clinical.read"]).flatMap((g) => g.items.map((i) => i.label));
+    expect(labels).not.toContain("Refunds");
+  });
 });

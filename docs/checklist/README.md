@@ -34,3 +34,15 @@ channel) lives in the backend repo: `docs/checklist/MASTER_CHECKLIST.md`. Update
 - [ ] Live browser pass against the local backend
 - [ ] Backend: cancel terms on the admin detail so the policy guide is exact
 - [ ] Booking-policy edit screen, audit log screen, Overview attention panel
+
+## Admin console: refunds (A3 slice 3 UI)
+- [x] Nav "Refunds" for `refunds.request` / `refunds.approve` / `payments.read` (2026-10-27, see docs/sop/2026-10-27-admin-refunds-console.md)
+- [x] Queue: default open, status filter, paging, total; raise a refund by booking id (`refunds.request`)
+- [x] Refund detail: amounts in naira, booking link, attempts (holder fields blank for roles without access), review flag, take-back preview and debited/owed
+- [x] Actions only from `available_actions`: approve (lower amount, never above `max_approvable_naira`, wallet for a Super Admin on app bookings, take-back with reason), reject, retry, bank details (10 digits, only last four shown), switch to wallet, close, resolve (different-amount second call)
+- [x] Rules shown as UI text (Finance cumulative limit, Super Admin above it or for wallet, staff-raised needs another approver); Vitest/RTL for every state and action
+- [ ] Live browser pass against the local backend
+- [ ] Playwright e2e for approve and bank details
+- [ ] Live Paystack account and real WhatsApp delivery (guide §12.12 captures use a local fake)
+- [ ] Backend: admin bank list for a picker, and admin names for `requested_by` / `approved_by`
+- [ ] "Raise a refund" from the booking detail; `above_limit` and `reason_code` queue filters
