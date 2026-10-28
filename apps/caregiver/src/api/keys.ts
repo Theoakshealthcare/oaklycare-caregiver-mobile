@@ -16,4 +16,12 @@ export const queryKeys = {
   notes: (bookingId: string) => ["notes", bookingId] as const,
   clientProfile: (bookingId: string) => ["client-profile", bookingId] as const,
   vitals: (patientId: string) => ["vitals", patientId] as const,
+  carePlans: (status: string, q: string) => ["care-plans", status, q] as const,
+  allCarePlans: ["care-plans"] as const,
+  carePlan: (planId: string) => ["care-plan", planId] as const,
+  visitCarePlan: (bookingId: string) => ["visit-care-plan", bookingId] as const,
+  allVisitCarePlans: ["visit-care-plan"] as const,
+  carePlanCandidates: ["care-plan-candidates"] as const,
+  carePlanTemplates: ["care-plan-templates"] as const,
+  carePlanTemplate: (templateId: string) => ["care-plan-template", templateId] as const,
 };

@@ -35,6 +35,18 @@ export type ScreenParamLists = {
   VitalDetail: { patientId: string; patientName?: string; kind: VitalKind };
   /** Manual vital entry for the patient on the current visit. */
   AddVitals: { patientId: string; patientName?: string };
+  /** Care plans hub (nurses): Assigned / Templates. With `bookingId` it was opened from that client's profile, so "Use template" skips the client picker. */
+  CarePlans: { tab?: "assigned" | "templates"; bookingId?: string } | undefined;
+  /** Read-only preview of a seeded template, with "Use template". */
+  CarePlanTemplate: { templateId: string; bookingId?: string };
+  /** Pick the client (a live visit with no active plan) to create a plan for. */
+  CarePlanClients: { templateId?: string } | undefined;
+  /** The create form for the client of `bookingId`, blank or pre-filled from `templateId`. */
+  CreateCarePlan: { bookingId: string; templateId?: string; clientName?: string };
+  /** The success screen shared by "plan created" and "goal added". */
+  CarePlanSuccess: { kind: "created" | "goal_added"; planId: string };
+  /** One plan: client profile, goals, allergies and special instructions. */
+  CarePlanDetails: { planId: string };
   /** accepted -> on my way -> visit code -> in progress -> complete, driven by the booking status. */
   VisitFlow: { bookingId: string };
 };

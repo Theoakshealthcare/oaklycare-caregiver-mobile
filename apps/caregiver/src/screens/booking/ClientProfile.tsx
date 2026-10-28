@@ -5,6 +5,7 @@ import type { StackScreenProps } from "@react-navigation/stack";
 
 import { ApiError } from "@/src/api/errors";
 import ScreenShell from "@/src/components/account/ScreenShell";
+import ClientCarePlanRow from "@/src/components/careplan/ClientCarePlanRow";
 import { EmptyState, ErrorState, LoadingState } from "@/src/components/account/StateViews";
 import Button from "@/src/components/ui/button";
 import Image from "@/src/components/ui/image";
@@ -140,6 +141,8 @@ const ClientProfile: React.FC<Props> = ({ route }) => {
             <Button title="Add notes" variant="outline" onPress={() => navigation.navigate("AINoteTaker", { bookingId })} style={{ flex: 1 }} />
           </View>
         </Card>
+
+        <ClientCarePlanRow bookingId={bookingId} clientName={profile.full_name} />
 
         <Section
           title="Latest vitals"

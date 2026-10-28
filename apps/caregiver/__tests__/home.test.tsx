@@ -74,6 +74,7 @@ const homeWithVisitAndOffer: CaregiverHome = {
   ],
   wallet_balance_naira: 125000.5,
   currency: "NGN",
+  can_author_care_plans: false,
 };
 
 const emptyHome: CaregiverHome = {
@@ -85,6 +86,7 @@ const emptyHome: CaregiverHome = {
   open_offers: [],
   wallet_balance_naira: 0,
   currency: "NGN",
+  can_author_care_plans: false,
 };
 
 const T0 = Date.parse("2026-10-06T08:30:00Z");
@@ -123,6 +125,11 @@ describe("mapHome", () => {
     expect(Object.keys(offer ?? {}).sort()).toEqual(
       ["area", "assistanceType", "durationHours", "id", "scheduledDate", "scheduledEndDate", "serviceType"].sort(),
     );
+  });
+
+  it("takes the care plan entry point from the server field, not from any skill", () => {
+    expect(mapHome({ ...emptyHome, can_author_care_plans: true }, T0).canAuthorCarePlans).toBe(true);
+    expect(mapHome({ ...emptyHome, can_author_care_plans: false }, T0).canAuthorCarePlans).toBe(false);
   });
 
   it("flags non-approved statuses so the switch and accept are disabled", () => {
@@ -305,6 +312,20 @@ describe("Home screen", () => {
     expect(mockNavigate).toHaveBeenCalledWith("Notifications");
     await fireEvent.press(screen.getByLabelText("Account"));
     expect(mockNavigate).toHaveBeenCalledWith("Profile");
+  });
+
+  it("shows the Care plans card only when the server says the caregiver can author plans", async () => {
+    jest.spyOn(locationService, "getHome").mockResolvedValue({ ...emptyHome, can_author_care_plans: true });
+    await renderHome();
+    await fireEvent.press(await screen.findByTestId("home-care-plans"));
+    expect(mockNavigate).toHaveBeenCalledWith("CarePlans");
+  });
+
+  it("hides the Care plans card for a caregiver who cannot author plans", async () => {
+    jest.spyOn(locationService, "getHome").mockResolvedValue(emptyHome);
+    await renderHome();
+    expect(await screen.findByText("No visits today")).toBeTruthy();
+    expect(screen.queryByTestId("home-care-plans")).toBeNull();
   });
 
   it("going unavailable only calls the switch", async () => {
