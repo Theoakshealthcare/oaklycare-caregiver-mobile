@@ -13,6 +13,15 @@ export type VisitCarePlan = Schemas["VisitCarePlan"];
 export type CarePlanTemplateItem = Schemas["TemplateListItem"];
 export type CarePlanTemplate = Schemas["TemplateDetail"];
 export type PlanCandidate = Schemas["Candidate"];
+export type TaskDay = Schemas["TaskDay"];
+export type DayTask = Schemas["DayTask"];
+export type TaskCompletion = Schemas["CompletionOut"];
+export type TaskWriteResult = Schemas["TaskWriteResult"];
+export type CarePlanNote = Schemas["ObservationOut"];
+export type CarePlanNotePage = Schemas["ObservationList"];
+export type CarePlanProgress = Schemas["Progress"];
+export type NoteCategory = Schemas["ObservationIn"]["category"];
+export type NewTask = Schemas["TaskIn"];
 
 export type PlanListStatus = "active" | "completed";
 export type GoalFrequency = Schemas["GoalIn"]["frequency"];
@@ -101,5 +110,56 @@ export const carePlansService = {
         body: { expected_version: expectedVersion, ...changes },
       }),
     );
+  },
+
+  /** The day view. No `date` means today, which the backend resolves in Africa/Lagos (the phone's clock is never used). */
+  getTaskDay(planId: string, date?: string) {
+    return unwrap(
+      api.GET("/api/v1/caregiver/care-plans/{plan_id}/tasks", {
+        params: { path: { plan_id: planId }, query: date ? { date } : {} },
+      }),
+    );
+  },
+
+  /** Adding never overwrites anything, so no `expected_version` is sent (the backend makes it optional). */
+  addTask(planId: string, task: NewTask) {
+    return unwrap(
+      api.POST("/api/v1/caregiver/care-plans/{plan_id}/tasks", { params: { path: { plan_id: planId } }, body: task }),
+    );
+  },
+
+  /** Idempotent: repeating it changes nothing. Today only, during the caller's own in-progress visit. */
+  setCompletion(taskId: string, date: string, done: boolean) {
+    return unwrap(
+      api.PUT("/api/v1/caregiver/care-plan-tasks/{task_id}/completion", {
+        params: { path: { task_id: taskId } },
+        body: { date, done },
+      }),
+    );
+  },
+
+  /** Newest first. Pass both halves of the previous page's cursor (`next_before`, `next_before_id`). */
+  listNotes(planId: string, category: NoteCategory, cursor?: { before: string; beforeId: string }) {
+    return unwrap(
+      api.GET("/api/v1/caregiver/care-plans/{plan_id}/observations", {
+        params: {
+          path: { plan_id: planId },
+          query: { category, ...(cursor ? { before: cursor.before, before_id: cursor.beforeId } : {}) },
+        },
+      }),
+    );
+  },
+
+  addNote(planId: string, body: string, category: NoteCategory) {
+    return unwrap(
+      api.POST("/api/v1/caregiver/care-plans/{plan_id}/observations", {
+        params: { path: { plan_id: planId } },
+        body: { body, category },
+      }),
+    );
+  },
+
+  getProgress(planId: string) {
+    return unwrap(api.GET("/api/v1/caregiver/care-plans/{plan_id}/progress", { params: { path: { plan_id: planId } } }));
   },
 };

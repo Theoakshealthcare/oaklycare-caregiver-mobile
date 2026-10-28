@@ -21,6 +21,7 @@ import BookingDetails from "../screens/booking/BookingDetails";
 import ClientProfile from "../screens/booking/ClientProfile";
 import CarePlanClients from "../screens/careplan/CarePlanClients";
 import CarePlanDetails from "../screens/careplan/CarePlanDetails";
+import CarePlanProgress from "../screens/careplan/CarePlanProgress";
 import CarePlanSuccess from "../screens/careplan/CarePlanSuccess";
 import CarePlanTemplate from "../screens/careplan/CarePlanTemplate";
 import CarePlans from "../screens/careplan/CarePlans";
@@ -146,6 +147,7 @@ const StackNavigator = () => {
             <Stack.Screen name="CreateCarePlan" component={CreateCarePlan} />
             <Stack.Screen name="CarePlanSuccess" component={CarePlanSuccess} />
             <Stack.Screen name="CarePlanDetails" component={CarePlanDetails} />
+            <Stack.Screen name="CarePlanProgress" component={CarePlanProgress} />
           </Stack.Navigator>
           {/* Location tracking, push-tap routing and the in-app banner: approved caregivers only. */}
           <AppRuntime />

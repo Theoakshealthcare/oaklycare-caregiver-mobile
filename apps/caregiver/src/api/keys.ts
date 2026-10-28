@@ -21,6 +21,12 @@ export const queryKeys = {
   carePlan: (planId: string) => ["care-plan", planId] as const,
   visitCarePlan: (bookingId: string) => ["visit-care-plan", bookingId] as const,
   allVisitCarePlans: ["visit-care-plan"] as const,
+  /** `date` is `"today"` for the default day (the backend's Lagos date), else `YYYY-MM-DD`. */
+  carePlanTasks: (planId: string, date: string) => ["care-plan-tasks", planId, date] as const,
+  allCarePlanTasks: (planId: string) => ["care-plan-tasks", planId] as const,
+  allCarePlanNotes: (planId: string) => ["care-plan-notes", planId] as const,
+  carePlanNotes: (planId: string, category: string) => ["care-plan-notes", planId, category] as const,
+  carePlanProgress: (planId: string) => ["care-plan-progress", planId] as const,
   carePlanCandidates: ["care-plan-candidates"] as const,
   carePlanTemplates: ["care-plan-templates"] as const,
   carePlanTemplate: (templateId: string) => ["care-plan-template", templateId] as const,

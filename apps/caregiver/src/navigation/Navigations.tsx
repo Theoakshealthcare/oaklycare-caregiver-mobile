@@ -43,10 +43,12 @@ export type ScreenParamLists = {
   CarePlanClients: { templateId?: string } | undefined;
   /** The create form for the client of `bookingId`, blank or pre-filled from `templateId`. */
   CreateCarePlan: { bookingId: string; templateId?: string; clientName?: string };
-  /** The success screen shared by "plan created" and "goal added". */
-  CarePlanSuccess: { kind: "created" | "goal_added"; planId: string };
-  /** One plan: client profile, goals, allergies and special instructions. */
-  CarePlanDetails: { planId: string };
+  /** The success screen shared by "plan created", "goal added" and "task added". */
+  CarePlanSuccess: { kind: "created" | "goal_added" | "task_added"; planId: string };
+  /** One plan: client profile, goals, daily tasks, notes, allergies and special instructions. `from: "clock_out"` opens tasks and notes first. */
+  CarePlanDetails: { planId: string; from?: "clock_out" };
+  /** View Progress for one plan (percent over visit days, day N of M, goal counts). */
+  CarePlanProgress: { planId: string; clientName?: string };
   /** accepted -> on my way -> visit code -> in progress -> complete, driven by the booking status. */
   VisitFlow: { bookingId: string };
 };

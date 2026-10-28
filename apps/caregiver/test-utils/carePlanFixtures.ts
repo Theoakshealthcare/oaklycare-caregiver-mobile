@@ -6,9 +6,14 @@ import { ApiError } from "../src/api/errors";
 import type {
   CarePlan,
   CarePlanListItem,
+  CarePlanNote,
+  CarePlanNotePage,
+  CarePlanProgress,
   CarePlanTemplate,
   CarePlanTemplateItem,
   PlanCandidate,
+  TaskCompletion,
+  TaskDay,
   VisitCarePlan,
 } from "../src/services/carePlans.service";
 
@@ -141,3 +146,83 @@ export const VALIDATION_DIAGNOSIS = new ApiError(
   { detail: [{ type: "string_too_short", loc: ["body", "diagnosis"], msg: "String should have at least 1 character" }] },
   "String should have at least 1 character",
 );
+
+// --- M2: day view, ticks, notes, progress (captures 230-238, guide 16.13 to 16.20) ------------------------------------
+
+export const TASK_A = "47f653e2-e9e1-4c75-ad77-14d85aa53b7c";
+export const TASK_B = "a1ae63c9-ee9b-4dd6-8297-b1799a30f5c5";
+
+/** Today in the capture (a Wednesday). */
+export const TODAY_DATE = "2026-10-28";
+
+export const dayView = (over: Partial<TaskDay> = {}): TaskDay => ({
+  date: TODAY_DATE,
+  is_today: true,
+  can_tick: true,
+  slots: [
+    {
+      slot: "morning",
+      time_of_day: "08:00",
+      tasks: [{ id: TASK_A, title: "Placeholder morning task", time_of_day: "08:00", done: false, done_by: null, done_at: null }],
+    },
+    {
+      slot: "evening",
+      time_of_day: null,
+      tasks: [{ id: TASK_B, title: "Placeholder evening task", time_of_day: null, done: false, done_by: null, done_at: null }],
+    },
+  ],
+  ...over,
+});
+
+export const tickedDay = (): TaskDay => {
+  const day = dayView();
+  day.slots[0].tasks[0] = { ...day.slots[0].tasks[0], done: true, done_by: "Placeholder Nurse", done_at: "2026-10-28T10:10:52.399709" };
+  return day;
+};
+
+export const completion = (over: Partial<TaskCompletion> = {}): TaskCompletion => ({
+  task_id: TASK_A,
+  date: TODAY_DATE,
+  done: true,
+  done_by: "Placeholder Nurse",
+  done_at: "2026-10-28T10:10:52.399709",
+  ...over,
+});
+
+export const note = (over: Partial<CarePlanNote> = {}): CarePlanNote => ({
+  id: "ffd9a4e0-fa3b-41c8-aaca-e9bb778a70b9",
+  category: "observation",
+  body: "Placeholder observation: ate well.",
+  author: { name: "Placeholder Nurse", kind: "caregiver" },
+  created_at: "2026-10-28T10:10:52.806793",
+  ...over,
+});
+
+export const notePage = (items: CarePlanNote[], next?: { before: string; id: string }): CarePlanNotePage => ({
+  items,
+  next_before: next?.before ?? null,
+  next_before_id: next?.id ?? null,
+});
+
+export const progress = (over: Partial<CarePlanProgress> = {}): CarePlanProgress => ({
+  overall_percent: 55,
+  scheduled: 11,
+  completed: 6,
+  visit_days: 4,
+  day: 9,
+  of_days: 30,
+  review_due_on: "2026-11-03",
+  by_day: [
+    { date: "2026-10-21", scheduled: 3, completed: 2 },
+    { date: "2026-10-28", scheduled: 3, completed: 1 },
+  ],
+  goals: { active: 1, achieved: 0, discontinued: 0 },
+  last_observation_at: "2026-10-28T10:10:52.834517",
+  ...over,
+});
+
+const refusal = (status: number, code: string, message: string) => new ApiError(status, { detail: { code, message } }, message);
+export const VISIT_NOT_IN_PROGRESS = refusal(409, "visit_not_in_progress", "Available during an active visit.");
+export const PLAN_NOT_EDITABLE = refusal(409, "plan_not_editable", "This care plan is completed or archived and can no longer be changed.");
+export const TASK_DATE_NOT_TODAY = refusal(422, "task_date_not_today", "Tasks can only be ticked for today.");
+export const TASK_NOT_SCHEDULED = refusal(422, "task_not_scheduled", "This task is not scheduled for that day.");

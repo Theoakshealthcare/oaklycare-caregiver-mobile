@@ -24,6 +24,11 @@ const COPY = {
     message: "The goal is now part of the client's care plan.",
     action: "View Care Goal",
   },
+  task_added: {
+    title: "New Daily Task added successfully",
+    message: "The task is now part of the client's care plan.",
+    action: "View Task",
+  },
 } as const;
 
 /** The shared success page ("plan created", "goal added"), built on the same `Done` badge as the account-created page. */
@@ -32,7 +37,7 @@ const CarePlanSuccess: React.FC<Props> = ({ route }) => {
   const { navigation } = useNavigation();
   const copy = COPY[kind];
 
-  // A new plan replaces this page with its details; a new goal returns to the details underneath.
+  // A new plan replaces this page with its details; a new goal or task returns to the details underneath.
   const view = () => (kind === "created" ? navigation.replace("CarePlanDetails", { planId }) : navigation.goBack());
 
   return (

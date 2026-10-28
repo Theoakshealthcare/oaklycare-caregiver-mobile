@@ -1,4 +1,4 @@
-import React, { useEffect, useState } from "react";
+import React, { useCallback, useEffect, useState } from "react";
 import { Alert, Pressable, RefreshControl, View } from "react-native";
 import { Feather } from "@expo/vector-icons";
 import type { StackScreenProps } from "@react-navigation/stack";
@@ -6,9 +6,12 @@ import type { StackScreenProps } from "@react-navigation/stack";
 import { messageForError } from "@/src/api/errors";
 import ScreenShell from "@/src/components/account/ScreenShell";
 import { ErrorState, LoadingState } from "@/src/components/account/StateViews";
+import DailyTasks from "@/src/components/careplan/DailyTasks";
 import EditPlanSheet from "@/src/components/careplan/EditPlanSheet";
 import GoalModal from "@/src/components/careplan/GoalModal";
 import ListEditModal, { type ListField } from "@/src/components/careplan/ListEditModal";
+import NotesSection from "@/src/components/careplan/NotesSection";
+import TaskModal from "@/src/components/careplan/TaskModal";
 import { Accordion, Card, CarePlanNotice, FieldHint, RiskBadge } from "@/src/components/careplan/parts";
 import Button from "@/src/components/ui/button";
 import Text from "@/src/components/ui/text";
@@ -154,17 +157,26 @@ const GoalRow: React.FC<{
 
 /** One care plan: header, then the sections the nurse and the other caregivers read (client, goals, allergies and instructions). */
 const CarePlanDetails: React.FC<Props> = ({ route }) => {
-  const { planId } = route.params;
+  const { planId, from } = route.params;
+  // Coming from the clock-out prompt: the tasks and the notes are what the caregiver came to finish.
+  const finishing = from === "clock_out";
   const { navigation } = useNavigation();
   const client = useQueryClient();
   const [lostAccess, setLostAccess] = useState(false);
   const query = useCarePlan(planId, !lostAccess);
-  const [sheet, setSheet] = useState<null | { kind: "plan" } | { kind: "goal"; goal?: CarePlanGoal } | { kind: "list"; field: ListField }>(null);
+  const [sheet, setSheet] = useState<
+    null | { kind: "plan" } | { kind: "goal"; goal?: CarePlanGoal } | { kind: "list"; field: ListField } | { kind: "task" }
+  >(null);
   const [goalError, setGoalError] = useState<string | null>(null);
+  const onNoAccess = useCallback(() => setLostAccess(true), []);
 
-  // Access ended mid-session: do not keep the client's plan in memory any longer than needed.
+  // Access ended mid-session: do not keep the client's plan, tasks, notes or progress in memory any longer than needed.
   useEffect(() => {
-    if (lostAccess) client.removeQueries({ queryKey: queryKeys.carePlan(planId) });
+    if (!lostAccess) return;
+    client.removeQueries({ queryKey: queryKeys.carePlan(planId) });
+    client.removeQueries({ queryKey: queryKeys.allCarePlanTasks(planId) });
+    client.removeQueries({ queryKey: queryKeys.allCarePlanNotes(planId) });
+    client.removeQueries({ queryKey: queryKeys.carePlanProgress(planId) });
   }, [lostAccess, client, planId]);
 
   const unavailable = (
@@ -228,6 +240,12 @@ const CarePlanDetails: React.FC<Props> = ({ route }) => {
             <Line label="Diagnosis" value={plan.diagnosis} />
             <RiskBadge risk={plan.risk_level} testID="details-risk" />
             <Line label="Plan" value={`Starts ${formatPlanDate(plan.start_date)} · ${planLength(plan.duration_days)}`} />
+            <Button
+              testID="details-progress"
+              title="View progress"
+              variant="outline"
+              onPress={() => navigation.navigate("CarePlanProgress", { planId: plan.id, clientName: plan.client.full_name })}
+            />
             <Text variant="small" color={theme.colors.textLight} testID="details-review">
               {reviewText(plan)}
             </Text>
@@ -278,7 +296,15 @@ const CarePlanDetails: React.FC<Props> = ({ route }) => {
             ) : null}
           </Accordion>
 
-          <Accordion testID="section-notes" title="Allergies and special instructions">
+          <Accordion testID="section-tasks" title="Daily care tasks" defaultOpen keepMounted>
+            <DailyTasks plan={plan} onNoAccess={onNoAccess} onAddTask={canEdit ? () => setSheet({ kind: "task" }) : undefined} />
+          </Accordion>
+
+          <Accordion testID="section-observations" title="Notes and observations" defaultOpen={finishing} keepMounted>
+            <NotesSection plan={plan} category="observation" onNoAccess={onNoAccess} />
+          </Accordion>
+
+          <Accordion testID="section-notes" title="Allergies and special instructions" keepMounted>
             <View testID="details-allergies" style={{ gap: theme.spacing.xs }}>
               <View style={{ flexDirection: "row", alignItems: "center", justifyContent: "space-between" }}>
                 <Text variant="small" weight="bold">
@@ -319,6 +345,12 @@ const CarePlanDetails: React.FC<Props> = ({ route }) => {
                 ))
               )}
             </View>
+            <View testID="details-special-notes" style={{ gap: theme.spacing.xs }}>
+              <Text variant="small" weight="bold">
+                Special notes
+              </Text>
+              <NotesSection plan={plan} category="special_note" onNoAccess={onNoAccess} />
+            </View>
           </Accordion>
         </View>
       </ScreenShell>
@@ -333,6 +365,17 @@ const CarePlanDetails: React.FC<Props> = ({ route }) => {
           onSaved={(kind) => {
             setSheet(null);
             if (kind === "added") navigation.navigate("CarePlanSuccess", { kind: "goal_added", planId: plan.id });
+          }}
+        />
+      ) : null}
+      {sheetOpen?.kind === "task" ? (
+        <TaskModal
+          plan={plan}
+          onClose={() => setSheet(null)}
+          onNoAccess={onNoAccess}
+          onSaved={() => {
+            setSheet(null);
+            navigation.navigate("CarePlanSuccess", { kind: "task_added", planId: plan.id });
           }}
         />
       ) : null}

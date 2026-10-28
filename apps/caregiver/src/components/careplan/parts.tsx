@@ -80,9 +80,12 @@ export const Accordion: React.FC<{
   testID: string;
   defaultOpen?: boolean;
   action?: React.ReactNode;
+  /** After the first open, closing only hides the content, so typed text and the chosen day survive; nothing loads before it is opened. */
+  keepMounted?: boolean;
   children: React.ReactNode;
-}> = ({ title, testID, defaultOpen = false, action, children }) => {
+}> = ({ title, testID, defaultOpen = false, action, keepMounted = false, children }) => {
   const [open, setOpen] = useState(defaultOpen);
+  const [everOpened, setEverOpened] = useState(defaultOpen);
   return (
     <View testID={testID} style={{ borderWidth: 1, borderColor: theme.colors.border, borderRadius: theme.borderRadius.xl, overflow: "hidden" }}>
       <View style={{ flexDirection: "row", alignItems: "center", paddingRight: theme.spacing.md }}>
@@ -90,7 +93,10 @@ export const Accordion: React.FC<{
           testID={`${testID}-toggle`}
           accessibilityRole="button"
           accessibilityState={{ expanded: open }}
-          onPress={() => setOpen((v) => !v)}
+          onPress={() => {
+            setEverOpened(true);
+            setOpen((v) => !v);
+          }}
           style={{ flex: 1, flexDirection: "row", alignItems: "center", justifyContent: "space-between", padding: theme.spacing.md }}
         >
           <Text variant="body" weight="bold">
@@ -100,7 +106,9 @@ export const Accordion: React.FC<{
         </Pressable>
         {action}
       </View>
-      {open ? <View style={{ padding: theme.spacing.md, paddingTop: 0, gap: theme.spacing.sm }}>{children}</View> : null}
+      {open || (keepMounted && everOpened) ? (
+        <View style={{ padding: theme.spacing.md, paddingTop: 0, gap: theme.spacing.sm, display: open ? "flex" : "none" }}>{children}</View>
+      ) : null}
     </View>
   );
 };
