@@ -34,7 +34,14 @@ channel) lives in the backend repo: `docs/checklist/MASTER_CHECKLIST.md`. Update
   - [x] Client profile "Care plan" row: Open / Create / Use a template; read-only for non-nurses
   - [x] Spec wording for 404, `client_not_identified`, `not_a_nurse`, `care_plan_exists`, `version_conflict`
   - [ ] Native date picker; task time in the create form; device pass
-- [ ] M2 Daily tasks, ticks, add task, notes and observations, View Progress (needs the merged B2 contract, already in `schema.d.ts`)
+- [x] M2 Daily tasks, ticks, add task, notes and observations, View Progress (2026-10-28, branch `feat/caregiver-care-plans-tasks`, stacked on M1, see docs/sop/2026-10-28-caregiver-care-plans-tasks.md; Jest only, **not device-verified**)
+  - [x] Daily care tasks section: Mon-Sun tabs around the server's "today", tasks by slot with times, "done by name, time"
+  - [x] Tick / untick: never optimistic, confirm before unticking, every refusal handled (visit not in progress, midnight, not scheduled, plan closed, 404)
+  - [x] Add New Task modal (nurses only) and the shared success page
+  - [x] Notes and observations, and special notes under Allergies: newest first, keyset paging, append-only wording, text kept on failure
+  - [x] View Progress screen (from the details header and the hub cards): "No visits yet" instead of 0%
+  - [x] "Add notes before you finish?" prompt before Complete visit; never blocks completing
+  - [ ] Edit / remove a task (nurse); native time picker; device pass
 - [ ] M3 Medications list and form with the "not clinical advice" banner (needs backend B3)
 - [ ] Clinical sign-off of seeded templates and copy (go-live gate)
 
