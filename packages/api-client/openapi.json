@@ -809,19 +809,49 @@
         }
       }
     },
-    "/api/v1/caregiver/identity-verification/result": {
+    "/api/v1/caregiver/identity-verification": {
+      "get": {
+        "tags": [
+          "caregiver"
+        ],
+        "summary": "Get Identity Verification",
+        "description": "Where the caregiver stands in identity verification. Never returns scores or the reason for a review.",
+        "operationId": "get_identity_verification_api_v1_caregiver_identity_verification_get",
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/IdentityVerificationStateOut"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "No caregiver profile, or (client-event) no such attempt of yours: VERIFICATION_NOT_FOUND."
+          }
+        },
+        "security": [
+          {
+            "OAuth2PasswordBearer": []
+          }
+        ]
+      }
+    },
+    "/api/v1/caregiver/identity-verification/sessions": {
       "post": {
         "tags": [
           "caregiver"
         ],
-        "summary": "Receive Verification Result",
-        "description": "Receive and store verification result from mobile app (Prembly)",
-        "operationId": "receive_verification_result_api_v1_caregiver_identity_verification_result_post",
+        "summary": "Create Identity Verification Session",
+        "description": "Record the separate identity consent and open an attempt (or resume the active one); returns the widget config.",
+        "operationId": "create_identity_verification_session_api_v1_caregiver_identity_verification_sessions_post",
         "requestBody": {
           "content": {
             "application/json": {
               "schema": {
-                "$ref": "#/components/schemas/VerificationResultRequest"
+                "$ref": "#/components/schemas/IdentityVerificationSessionRequest"
               }
             }
           },
@@ -829,16 +859,23 @@
         },
         "responses": {
           "200": {
+            "description": "The caregiver's active attempt, returned again."
+          },
+          "201": {
             "description": "Successful Response",
             "content": {
               "application/json": {
                 "schema": {
-                  "additionalProperties": true,
-                  "type": "object",
-                  "title": "Response Receive Verification Result Api V1 Caregiver Identity Verification Result Post"
+                  "$ref": "#/components/schemas/IdentityVerificationSessionOut"
                 }
               }
             }
+          },
+          "404": {
+            "description": "No caregiver profile, or (client-event) no such attempt of yours: VERIFICATION_NOT_FOUND."
+          },
+          "409": {
+            "description": "ALREADY_VERIFIED, UNDER_REVIEW, IDENTITY_REJECTED, PROFILE_INCOMPLETE, POLICY_VERSION_MISMATCH, ATTEMPTS_EXHAUSTED or PROVIDER_AVAILABLE."
           },
           "422": {
             "description": "Validation Error",
@@ -847,6 +884,132 @@
                 "schema": {
                   "$ref": "#/components/schemas/HTTPValidationError"
                 }
+              }
+            }
+          },
+          "503": {
+            "description": "PROVIDER_UNAVAILABLE: Prembly is flagged down or the widget is not configured."
+          }
+        },
+        "security": [
+          {
+            "OAuth2PasswordBearer": []
+          }
+        ]
+      }
+    },
+    "/api/v1/caregiver/identity-verification/defer": {
+      "post": {
+        "tags": [
+          "caregiver"
+        ],
+        "summary": "Defer Identity Verification",
+        "description": "Outage path: only while Prembly is flagged unavailable. Lets the caregiver carry on to consent; verifies nobody.",
+        "operationId": "defer_identity_verification_api_v1_caregiver_identity_verification_defer_post",
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/IdentityVerificationStateOut"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "No caregiver profile, or (client-event) no such attempt of yours: VERIFICATION_NOT_FOUND."
+          },
+          "409": {
+            "description": "ALREADY_VERIFIED, UNDER_REVIEW, IDENTITY_REJECTED, PROFILE_INCOMPLETE, POLICY_VERSION_MISMATCH, ATTEMPTS_EXHAUSTED or PROVIDER_AVAILABLE."
+          }
+        },
+        "security": [
+          {
+            "OAuth2PasswordBearer": []
+          }
+        ]
+      }
+    },
+    "/api/v1/caregiver/identity-verification/{verification_id}/client-event": {
+      "post": {
+        "tags": [
+          "caregiver"
+        ],
+        "summary": "Identity Verification Client Event",
+        "description": "A hint from the widget (opened, completed, closed, error). Non-authoritative: it can advance the caregiver's own\nattempt and remember the session id, and can never change the caregiver's identity status.",
+        "operationId": "identity_verification_client_event_api_v1_caregiver_identity_verification__verification_id__client_event_post",
+        "security": [
+          {
+            "OAuth2PasswordBearer": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "verification_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid",
+              "title": "Verification Id"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/IdentityVerificationClientEventRequest"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/IdentityVerificationStateOut"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "No caregiver profile, or (client-event) no such attempt of yours: VERIFICATION_NOT_FOUND."
+          },
+          "409": {
+            "description": "ALREADY_VERIFIED, UNDER_REVIEW, IDENTITY_REJECTED, PROFILE_INCOMPLETE, POLICY_VERSION_MISMATCH, ATTEMPTS_EXHAUSTED or PROVIDER_AVAILABLE."
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/caregiver/identity-verification/result": {
+      "post": {
+        "tags": [
+          "caregiver"
+        ],
+        "summary": "Receive Verification Result",
+        "description": "Removed. The verification result comes from the provider's signed webhook, not from the app. Kept as a clear 410 so an\nolder app version shows a message instead of an unexplained 404. Takes no body: nothing the app posts is read or stored.",
+        "operationId": "receive_verification_result_api_v1_caregiver_identity_verification_result_post",
+        "responses": {
+          "410": {
+            "description": "The client no longer reports verification results.",
+            "content": {
+              "application/json": {
+                "schema": {}
               }
             }
           }
@@ -1270,6 +1433,1171 @@
           },
           "404": {
             "description": "The booking is not yours, is not accepted, on the way or in progress, or does not exist. One answer for all of these."
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/caregiver/care-plan-templates": {
+      "get": {
+        "tags": [
+          "caregiver-care-plans"
+        ],
+        "summary": "List Templates",
+        "description": "The seeded templates for the Templates tab. Not yet clinically reviewed while ``clinical_review_status`` is pending.",
+        "operationId": "list_templates_api_v1_caregiver_care_plan_templates_get",
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/TemplateList"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "`not_a_nurse`: the caregiver has no nurse skill."
+          }
+        },
+        "security": [
+          {
+            "OAuth2PasswordBearer": []
+          }
+        ]
+      }
+    },
+    "/api/v1/caregiver/care-plan-templates/{template_id}": {
+      "get": {
+        "tags": [
+          "caregiver-care-plans"
+        ],
+        "summary": "Get Template",
+        "description": "Preview: the goals, tasks and special instructions a plan created from this template starts with.",
+        "operationId": "get_template_api_v1_caregiver_care_plan_templates__template_id__get",
+        "security": [
+          {
+            "OAuth2PasswordBearer": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "template_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid",
+              "title": "Template Id"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/TemplateDetail"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "`not_a_nurse`: the caregiver has no nurse skill."
+          },
+          "404": {
+            "description": "No such (active) template."
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/caregiver/care-plans": {
+      "get": {
+        "tags": [
+          "caregiver-care-plans"
+        ],
+        "summary": "List Care Plans",
+        "description": "The Assigned Care Plan tab: plans for the clients of my live visits (accepted, on the way or in progress).",
+        "operationId": "list_care_plans_api_v1_caregiver_care_plans_get",
+        "security": [
+          {
+            "OAuth2PasswordBearer": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "status",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "string",
+              "pattern": "^(active|completed)$",
+              "default": "active",
+              "title": "Status"
+            }
+          },
+          {
+            "name": "q",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string",
+                  "maxLength": 100
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "description": "Search by client name.",
+              "title": "Q"
+            },
+            "description": "Search by client name."
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/CarePlanList"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/caregiver/care-plans/candidates": {
+      "get": {
+        "tags": [
+          "caregiver-care-plans"
+        ],
+        "summary": "List Candidates",
+        "description": "The client picker for \"Use template\": clients of my live visits who have no active plan yet. Declared before\n``/care-plans/{plan_id}`` so the word is not read as an id.",
+        "operationId": "list_candidates_api_v1_caregiver_care_plans_candidates_get",
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/app__schemas__care_plan__CandidateList"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "`not_a_nurse`: the caregiver has no nurse skill."
+          }
+        },
+        "security": [
+          {
+            "OAuth2PasswordBearer": []
+          }
+        ]
+      }
+    },
+    "/api/v1/caregiver/bookings/{booking_id}/care-plan": {
+      "get": {
+        "tags": [
+          "caregiver-care-plans"
+        ],
+        "summary": "Get Visit Care Plan",
+        "description": "Care plan summary for one visit. 200 with ``plan: null`` means access is fine and the client has no active plan yet;\n``subject_ready: false`` means this visit's client cannot be identified (an app booking for someone else); 404 means no\naccess.",
+        "operationId": "get_visit_care_plan_api_v1_caregiver_bookings__booking_id__care_plan_get",
+        "security": [
+          {
+            "OAuth2PasswordBearer": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "booking_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid",
+              "title": "Booking Id"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/VisitCarePlan"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "No access of any kind (not your booking, not live, no such plan or client). One answer for all of these."
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      },
+      "post": {
+        "tags": [
+          "caregiver-care-plans"
+        ],
+        "summary": "Create Care Plan",
+        "description": "Create the client's plan, blank or from a template (the template only fills what the body leaves out).",
+        "operationId": "create_care_plan_api_v1_caregiver_bookings__booking_id__care_plan_post",
+        "security": [
+          {
+            "OAuth2PasswordBearer": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "booking_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid",
+              "title": "Booking Id"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/CarePlanCreate"
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/CarePlanOut"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "`not_a_nurse`: the caregiver has no nurse skill."
+          },
+          "404": {
+            "description": "No access of any kind (not your booking, not live, no such plan or client). One answer for all of these."
+          },
+          "409": {
+            "description": "`care_plan_exists` (body has `plan_id`) or `client_not_identified`."
+          },
+          "422": {
+            "description": "Validation, or `invalid_care_plan`."
+          }
+        }
+      }
+    },
+    "/api/v1/caregiver/care-plans/{plan_id}": {
+      "get": {
+        "tags": [
+          "caregiver-care-plans"
+        ],
+        "summary": "Get Care Plan",
+        "description": "The full plan, visible while any of my live visits is for this client. A completed or archived plan stays visible\nas history.",
+        "operationId": "get_care_plan_api_v1_caregiver_care_plans__plan_id__get",
+        "security": [
+          {
+            "OAuth2PasswordBearer": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "plan_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid",
+              "title": "Plan Id"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/CarePlanOut"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "No access of any kind (not your booking, not live, no such plan or client). One answer for all of these."
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      },
+      "patch": {
+        "tags": [
+          "caregiver-care-plans"
+        ],
+        "summary": "Update Care Plan",
+        "description": "Header fields, allergies, special instructions, and `status` to `completed` or `archived`. Needs the plan's\n`expected_version`.",
+        "operationId": "update_care_plan_api_v1_caregiver_care_plans__plan_id__patch",
+        "security": [
+          {
+            "OAuth2PasswordBearer": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "plan_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid",
+              "title": "Plan Id"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/CarePlanPatch"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/CarePlanOut"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "`not_a_nurse`: the caregiver has no nurse skill."
+          },
+          "404": {
+            "description": "No access of any kind (not your booking, not live, no such plan or client). One answer for all of these."
+          },
+          "409": {
+            "description": "`version_conflict` (body has the current `plan`) or `plan_not_editable`."
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/caregiver/care-plans/{plan_id}/goals": {
+      "post": {
+        "tags": [
+          "caregiver-care-plans"
+        ],
+        "summary": "Add Goal",
+        "description": "Add a goal. `expected_version` is optional here: adding never overwrites anything.",
+        "operationId": "add_goal_api_v1_caregiver_care_plans__plan_id__goals_post",
+        "security": [
+          {
+            "OAuth2PasswordBearer": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "plan_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid",
+              "title": "Plan Id"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/GoalCreate"
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/GoalWriteResult"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "`not_a_nurse`: the caregiver has no nurse skill."
+          },
+          "404": {
+            "description": "No access of any kind (not your booking, not live, no such plan or client). One answer for all of these."
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/caregiver/care-plan-goals/{goal_id}": {
+      "patch": {
+        "tags": [
+          "caregiver-care-plans"
+        ],
+        "summary": "Update Goal",
+        "description": "Edit a goal, or mark it achieved or discontinued. Needs the plan's `expected_version`.",
+        "operationId": "update_goal_api_v1_caregiver_care_plan_goals__goal_id__patch",
+        "security": [
+          {
+            "OAuth2PasswordBearer": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "goal_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid",
+              "title": "Goal Id"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/GoalPatch"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/GoalWriteResult"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "`not_a_nurse`: the caregiver has no nurse skill."
+          },
+          "404": {
+            "description": "No access of any kind (not your booking, not live, no such plan or client). One answer for all of these."
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      },
+      "delete": {
+        "tags": [
+          "caregiver-care-plans"
+        ],
+        "summary": "Remove Goal",
+        "description": "Remove a goal: it is marked `discontinued` and kept. Needs the plan's `expected_version` as a query parameter.",
+        "operationId": "remove_goal_api_v1_caregiver_care_plan_goals__goal_id__delete",
+        "security": [
+          {
+            "OAuth2PasswordBearer": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "goal_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid",
+              "title": "Goal Id"
+            }
+          },
+          {
+            "name": "expected_version",
+            "in": "query",
+            "required": true,
+            "schema": {
+              "type": "integer",
+              "minimum": 1,
+              "title": "Expected Version"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/GoalWriteResult"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "`not_a_nurse`: the caregiver has no nurse skill."
+          },
+          "404": {
+            "description": "No access of any kind (not your booking, not live, no such plan or client). One answer for all of these."
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/caregiver/care-plans/{plan_id}/tasks": {
+      "post": {
+        "tags": [
+          "caregiver-care-plans"
+        ],
+        "summary": "Add Task",
+        "description": "Add a daily task to the plan. `expected_version` is optional here: adding never overwrites anything. The task is\nscheduled from today on (it never appears on earlier days).",
+        "operationId": "add_task_api_v1_caregiver_care_plans__plan_id__tasks_post",
+        "security": [
+          {
+            "OAuth2PasswordBearer": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "plan_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid",
+              "title": "Plan Id"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/TaskCreate"
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/TaskWriteResult"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "`not_a_nurse`: the caregiver has no nurse skill."
+          },
+          "404": {
+            "description": "No access of any kind (not your booking, not live, no such plan or client). One answer for all of these."
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      },
+      "get": {
+        "tags": [
+          "caregiver-care-plans"
+        ],
+        "summary": "Get Task Day",
+        "description": "The day view: the tasks due that day, grouped by slot, with who ticked each. Any day can be read; only today can be\nticked (`can_tick`).",
+        "operationId": "get_task_day_api_v1_caregiver_care_plans__plan_id__tasks_get",
+        "security": [
+          {
+            "OAuth2PasswordBearer": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "plan_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid",
+              "title": "Plan Id"
+            }
+          },
+          {
+            "name": "date",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string",
+                  "format": "date"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "description": "YYYY-MM-DD; default today (Africa/Lagos).",
+              "title": "Date"
+            },
+            "description": "YYYY-MM-DD; default today (Africa/Lagos)."
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/TaskDay"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "No access of any kind (not your booking, not live, no such plan or client). One answer for all of these."
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/caregiver/care-plan-tasks/{task_id}": {
+      "patch": {
+        "tags": [
+          "caregiver-care-plans"
+        ],
+        "summary": "Update Task",
+        "description": "Edit a task: title, slot, display time or days. Needs the plan's `expected_version`. A removed task is 404.",
+        "operationId": "update_task_api_v1_caregiver_care_plan_tasks__task_id__patch",
+        "security": [
+          {
+            "OAuth2PasswordBearer": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "task_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid",
+              "title": "Task Id"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/TaskPatch"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/TaskWriteResult"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "`not_a_nurse`: the caregiver has no nurse skill."
+          },
+          "404": {
+            "description": "No access of any kind (not your booking, not live, no such plan or client). One answer for all of these."
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      },
+      "delete": {
+        "tags": [
+          "caregiver-care-plans"
+        ],
+        "summary": "Remove Task",
+        "description": "Remove a task from the plan: it stops being scheduled and leaves `tasks`; its ticks are kept. Needs the plan's\n`expected_version` as a query parameter.",
+        "operationId": "remove_task_api_v1_caregiver_care_plan_tasks__task_id__delete",
+        "security": [
+          {
+            "OAuth2PasswordBearer": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "task_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid",
+              "title": "Task Id"
+            }
+          },
+          {
+            "name": "expected_version",
+            "in": "query",
+            "required": true,
+            "schema": {
+              "type": "integer",
+              "minimum": 1,
+              "title": "Expected Version"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/TaskWriteResult"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "`not_a_nurse`: the caregiver has no nurse skill."
+          },
+          "404": {
+            "description": "No access of any kind (not your booking, not live, no such plan or client). One answer for all of these."
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/caregiver/care-plan-tasks/{task_id}/completion": {
+      "put": {
+        "tags": [
+          "caregiver-care-plans"
+        ],
+        "summary": "Set Completion",
+        "description": "Tick (`done: true`) or untick (`done: false`) a task. Idempotent: repeating a call changes nothing. Only for today\n(Africa/Lagos) and only during a visit of yours that is in progress. Any caregiver on the client may tick, not only a\nnurse. Unticking someone else's tick is allowed and recorded.",
+        "operationId": "set_completion_api_v1_caregiver_care_plan_tasks__task_id__completion_put",
+        "security": [
+          {
+            "OAuth2PasswordBearer": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "task_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid",
+              "title": "Task Id"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/CompletionIn"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/CompletionOut"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "No access of any kind (not your booking, not live, no such plan or client). One answer for all of these."
+          },
+          "409": {
+            "description": "`visit_not_in_progress` or `plan_not_editable` (completed/archived plan)."
+          },
+          "422": {
+            "description": "`task_date_not_today`, `task_not_scheduled`, or validation."
+          }
+        }
+      }
+    },
+    "/api/v1/caregiver/care-plans/{plan_id}/observations": {
+      "get": {
+        "tags": [
+          "caregiver-care-plans"
+        ],
+        "summary": "List Observations",
+        "description": "Visit notes, newest first. A completed plan keeps its notes as history.",
+        "operationId": "list_observations_api_v1_caregiver_care_plans__plan_id__observations_get",
+        "security": [
+          {
+            "OAuth2PasswordBearer": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "plan_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid",
+              "title": "Plan Id"
+            }
+          },
+          {
+            "name": "before",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string",
+                  "format": "date-time"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "description": "Return notes older than this timestamp (the previous page's `next_before`).",
+              "title": "Before"
+            },
+            "description": "Return notes older than this timestamp (the previous page's `next_before`)."
+          },
+          {
+            "name": "before_id",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string",
+                  "format": "uuid"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "description": "With `before`: the previous page's `next_before_id`.",
+              "title": "Before Id"
+            },
+            "description": "With `before`: the previous page's `next_before_id`."
+          },
+          {
+            "name": "limit",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "integer",
+              "maximum": 50,
+              "minimum": 1,
+              "default": 20,
+              "title": "Limit"
+            }
+          },
+          {
+            "name": "category",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "enum": [
+                    "observation",
+                    "special_note"
+                  ],
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "description": "Only this category.",
+              "title": "Category"
+            },
+            "description": "Only this category."
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ObservationList"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "No access of any kind (not your booking, not live, no such plan or client). One answer for all of these."
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      },
+      "post": {
+        "tags": [
+          "caregiver-care-plans"
+        ],
+        "summary": "Add Observation",
+        "description": "Add a note during a visit of yours that is in progress. Any caregiver on the client may, not only a nurse. Notes\ncannot be edited or deleted: a correction is a new note.",
+        "operationId": "add_observation_api_v1_caregiver_care_plans__plan_id__observations_post",
+        "security": [
+          {
+            "OAuth2PasswordBearer": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "plan_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid",
+              "title": "Plan Id"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/ObservationIn"
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ObservationOut"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "No access of any kind (not your booking, not live, no such plan or client). One answer for all of these."
+          },
+          "409": {
+            "description": "`visit_not_in_progress` or `plan_not_editable`."
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/caregiver/care-plans/{plan_id}/progress": {
+      "get": {
+        "tags": [
+          "caregiver-care-plans"
+        ],
+        "summary": "Get Progress",
+        "description": "View Progress: ticked / scheduled tasks over the days that had a visit for this client, day N of M, goal counts.",
+        "operationId": "get_progress_api_v1_caregiver_care_plans__plan_id__progress_get",
+        "security": [
+          {
+            "OAuth2PasswordBearer": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "plan_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid",
+              "title": "Plan Id"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Progress"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "No access of any kind (not your booking, not live, no such plan or client). One answer for all of these."
           },
           "422": {
             "description": "Validation Error",
@@ -1896,7 +3224,7 @@
           "Caregiver Location (Legacy REST)"
         ],
         "summary": "Update caregiver's real-time location (REST - Legacy)",
-        "description": "Update caregiver's current GPS location for real-time tracking and matching. **\u26a0\ufe0f DEPRECATED: Consider using WebSocket endpoint `/ws/caregiver/location` for better scalability and real-time performance.**",
+        "description": "Update caregiver's current GPS location for real-time tracking and matching. **⚠️ DEPRECATED: Consider using WebSocket endpoint `/ws/caregiver/location` for better scalability and real-time performance.**",
         "operationId": "update_caregiver_location_api_v1_booking_caregiver_location_post",
         "requestBody": {
           "content": {
@@ -5431,7 +6759,7 @@
             "content": {
               "application/json": {
                 "schema": {
-                  "$ref": "#/components/schemas/CandidateList"
+                  "$ref": "#/components/schemas/app__schemas__admin_booking__CandidateList"
                 }
               }
             }
@@ -8912,6 +10240,28 @@
         ],
         "title": "AuditPageOut"
       },
+      "AuthorOut": {
+        "properties": {
+          "name": {
+            "type": "string",
+            "title": "Name"
+          },
+          "kind": {
+            "type": "string",
+            "enum": [
+              "caregiver",
+              "admin"
+            ],
+            "title": "Kind"
+          }
+        },
+        "type": "object",
+        "required": [
+          "name",
+          "kind"
+        ],
+        "title": "AuthorOut"
+      },
       "AvailabilityRequest": {
         "properties": {
           "is_available": {
@@ -11414,21 +12764,34 @@
         ],
         "title": "CancelIn"
       },
-      "CandidateList": {
+      "Candidate": {
         "properties": {
-          "items": {
-            "items": {
-              "$ref": "#/components/schemas/CandidateOut"
-            },
-            "type": "array",
-            "title": "Items"
+          "booking_id": {
+            "type": "string",
+            "format": "uuid",
+            "title": "Booking Id"
+          },
+          "client": {
+            "$ref": "#/components/schemas/ClientOut"
+          },
+          "booking_status": {
+            "type": "string",
+            "title": "Booking Status"
+          },
+          "scheduled_date": {
+            "type": "string",
+            "format": "date-time",
+            "title": "Scheduled Date"
           }
         },
         "type": "object",
         "required": [
-          "items"
+          "booking_id",
+          "client",
+          "booking_status",
+          "scheduled_date"
         ],
-        "title": "CandidateList"
+        "title": "Candidate"
       },
       "CandidateOut": {
         "properties": {
@@ -11474,6 +12837,636 @@
           "match_score"
         ],
         "title": "CandidateOut"
+      },
+      "Capabilities": {
+        "properties": {
+          "can_edit_plan": {
+            "type": "boolean",
+            "title": "Can Edit Plan",
+            "description": "A nurse, and the plan is active."
+          },
+          "can_tick_tasks": {
+            "type": "boolean",
+            "title": "Can Tick Tasks",
+            "description": "The plan is active and the caller has a visit for this client in progress."
+          },
+          "can_add_observation": {
+            "type": "boolean",
+            "title": "Can Add Observation",
+            "description": "Same rule as `can_tick_tasks`."
+          }
+        },
+        "type": "object",
+        "required": [
+          "can_edit_plan",
+          "can_tick_tasks",
+          "can_add_observation"
+        ],
+        "title": "Capabilities"
+      },
+      "CarePlanCreate": {
+        "properties": {
+          "template_id": {
+            "anyOf": [
+              {
+                "type": "string",
+                "format": "uuid"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Template Id",
+            "description": "Copy goals, tasks, instructions and defaults from this template. Anything sent below wins over the template."
+          },
+          "diagnosis": {
+            "type": "string",
+            "maxLength": 200,
+            "minLength": 1,
+            "title": "Diagnosis"
+          },
+          "risk_level": {
+            "anyOf": [
+              {
+                "type": "string",
+                "enum": [
+                  "low",
+                  "medium",
+                  "high"
+                ]
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Risk Level",
+            "description": "Required unless the template supplies a default."
+          },
+          "start_date": {
+            "anyOf": [
+              {
+                "type": "string",
+                "format": "date"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Start Date",
+            "description": "Defaults to today (Africa/Lagos)."
+          },
+          "duration_days": {
+            "anyOf": [
+              {
+                "type": "integer",
+                "maximum": 365,
+                "minimum": 1
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Duration Days",
+            "description": "Defaults to the template's, else 30."
+          },
+          "review_every_days": {
+            "anyOf": [
+              {
+                "type": "integer",
+                "maximum": 90,
+                "minimum": 7
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Review Every Days"
+          },
+          "goals": {
+            "anyOf": [
+              {
+                "items": {
+                  "$ref": "#/components/schemas/GoalIn"
+                },
+                "type": "array",
+                "maxItems": 30
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Goals"
+          },
+          "tasks": {
+            "anyOf": [
+              {
+                "items": {
+                  "$ref": "#/components/schemas/TaskIn"
+                },
+                "type": "array",
+                "maxItems": 60
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Tasks"
+          },
+          "allergies": {
+            "anyOf": [
+              {
+                "items": {
+                  "type": "string",
+                  "maxLength": 1000,
+                  "minLength": 1
+                },
+                "type": "array",
+                "maxItems": 30
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Allergies"
+          },
+          "special_instructions": {
+            "anyOf": [
+              {
+                "items": {
+                  "type": "string",
+                  "maxLength": 1000,
+                  "minLength": 1
+                },
+                "type": "array",
+                "maxItems": 30
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Special Instructions"
+          }
+        },
+        "type": "object",
+        "required": [
+          "diagnosis"
+        ],
+        "title": "CarePlanCreate"
+      },
+      "CarePlanList": {
+        "properties": {
+          "items": {
+            "items": {
+              "$ref": "#/components/schemas/CarePlanListItem"
+            },
+            "type": "array",
+            "title": "Items"
+          }
+        },
+        "type": "object",
+        "required": [
+          "items"
+        ],
+        "title": "CarePlanList"
+      },
+      "CarePlanListItem": {
+        "properties": {
+          "id": {
+            "type": "string",
+            "format": "uuid",
+            "title": "Id"
+          },
+          "booking_id": {
+            "type": "string",
+            "format": "uuid",
+            "title": "Booking Id"
+          },
+          "client": {
+            "$ref": "#/components/schemas/ClientOut"
+          },
+          "diagnosis": {
+            "type": "string",
+            "title": "Diagnosis"
+          },
+          "risk_level": {
+            "type": "string",
+            "enum": [
+              "low",
+              "medium",
+              "high"
+            ],
+            "title": "Risk Level"
+          },
+          "status": {
+            "type": "string",
+            "enum": [
+              "active",
+              "completed",
+              "archived"
+            ],
+            "title": "Status"
+          },
+          "start_date": {
+            "type": "string",
+            "format": "date",
+            "title": "Start Date"
+          },
+          "progress_percent": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Progress Percent",
+            "description": "The plan's overall progress (see the progress call); null while there is nothing to measure."
+          }
+        },
+        "type": "object",
+        "required": [
+          "id",
+          "booking_id",
+          "client",
+          "diagnosis",
+          "risk_level",
+          "status",
+          "start_date"
+        ],
+        "title": "CarePlanListItem"
+      },
+      "CarePlanOut": {
+        "properties": {
+          "id": {
+            "type": "string",
+            "format": "uuid",
+            "title": "Id"
+          },
+          "version": {
+            "type": "integer",
+            "title": "Version"
+          },
+          "status": {
+            "type": "string",
+            "enum": [
+              "active",
+              "completed",
+              "archived"
+            ],
+            "title": "Status"
+          },
+          "booking_id": {
+            "type": "string",
+            "format": "uuid",
+            "title": "Booking Id",
+            "description": "The live booking that gives this caller access."
+          },
+          "client": {
+            "$ref": "#/components/schemas/ClientOut"
+          },
+          "diagnosis": {
+            "type": "string",
+            "title": "Diagnosis"
+          },
+          "risk_level": {
+            "type": "string",
+            "enum": [
+              "low",
+              "medium",
+              "high"
+            ],
+            "title": "Risk Level"
+          },
+          "start_date": {
+            "type": "string",
+            "format": "date",
+            "title": "Start Date"
+          },
+          "duration_days": {
+            "type": "integer",
+            "title": "Duration Days"
+          },
+          "review_every_days": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Review Every Days"
+          },
+          "review_due_on": {
+            "anyOf": [
+              {
+                "type": "string",
+                "format": "date"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Review Due On"
+          },
+          "template": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/TemplateRef"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "author": {
+            "$ref": "#/components/schemas/AuthorOut"
+          },
+          "allergies": {
+            "items": {
+              "type": "string"
+            },
+            "type": "array",
+            "title": "Allergies"
+          },
+          "special_instructions": {
+            "items": {
+              "type": "string"
+            },
+            "type": "array",
+            "title": "Special Instructions"
+          },
+          "goals": {
+            "items": {
+              "$ref": "#/components/schemas/GoalOut"
+            },
+            "type": "array",
+            "title": "Goals"
+          },
+          "tasks": {
+            "items": {
+              "$ref": "#/components/schemas/TaskOut"
+            },
+            "type": "array",
+            "title": "Tasks"
+          },
+          "capabilities": {
+            "$ref": "#/components/schemas/Capabilities"
+          },
+          "created_at": {
+            "type": "string",
+            "format": "date-time",
+            "title": "Created At"
+          },
+          "updated_at": {
+            "type": "string",
+            "format": "date-time",
+            "title": "Updated At"
+          }
+        },
+        "type": "object",
+        "required": [
+          "id",
+          "version",
+          "status",
+          "booking_id",
+          "client",
+          "diagnosis",
+          "risk_level",
+          "start_date",
+          "duration_days",
+          "author",
+          "allergies",
+          "special_instructions",
+          "goals",
+          "tasks",
+          "capabilities",
+          "created_at",
+          "updated_at"
+        ],
+        "title": "CarePlanOut"
+      },
+      "CarePlanPatch": {
+        "properties": {
+          "expected_version": {
+            "type": "integer",
+            "minimum": 1,
+            "title": "Expected Version"
+          },
+          "diagnosis": {
+            "anyOf": [
+              {
+                "type": "string",
+                "maxLength": 200,
+                "minLength": 1
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Diagnosis"
+          },
+          "risk_level": {
+            "anyOf": [
+              {
+                "type": "string",
+                "enum": [
+                  "low",
+                  "medium",
+                  "high"
+                ]
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Risk Level"
+          },
+          "start_date": {
+            "anyOf": [
+              {
+                "type": "string",
+                "format": "date"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Start Date"
+          },
+          "duration_days": {
+            "anyOf": [
+              {
+                "type": "integer",
+                "maximum": 365,
+                "minimum": 1
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Duration Days"
+          },
+          "review_every_days": {
+            "anyOf": [
+              {
+                "type": "integer",
+                "maximum": 90,
+                "minimum": 7
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Review Every Days"
+          },
+          "allergies": {
+            "anyOf": [
+              {
+                "items": {
+                  "type": "string",
+                  "maxLength": 1000,
+                  "minLength": 1
+                },
+                "type": "array",
+                "maxItems": 30
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Allergies"
+          },
+          "special_instructions": {
+            "anyOf": [
+              {
+                "items": {
+                  "type": "string",
+                  "maxLength": 1000,
+                  "minLength": 1
+                },
+                "type": "array",
+                "maxItems": 30
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Special Instructions"
+          },
+          "status": {
+            "anyOf": [
+              {
+                "type": "string",
+                "enum": [
+                  "completed",
+                  "archived"
+                ]
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Status",
+            "description": "Completing or archiving makes the plan read-only and frees the client for a new active plan."
+          }
+        },
+        "type": "object",
+        "required": [
+          "expected_version"
+        ],
+        "title": "CarePlanPatch",
+        "description": "Only the fields sent change. ``review_every_days``, ``allergies`` and ``special_instructions`` accept null to clear."
+      },
+      "CarePlanSummary": {
+        "properties": {
+          "id": {
+            "type": "string",
+            "format": "uuid",
+            "title": "Id"
+          },
+          "version": {
+            "type": "integer",
+            "title": "Version"
+          },
+          "status": {
+            "type": "string",
+            "enum": [
+              "active",
+              "completed",
+              "archived"
+            ],
+            "title": "Status"
+          },
+          "diagnosis": {
+            "type": "string",
+            "title": "Diagnosis"
+          },
+          "risk_level": {
+            "type": "string",
+            "enum": [
+              "low",
+              "medium",
+              "high"
+            ],
+            "title": "Risk Level"
+          },
+          "start_date": {
+            "type": "string",
+            "format": "date",
+            "title": "Start Date"
+          },
+          "duration_days": {
+            "type": "integer",
+            "title": "Duration Days"
+          },
+          "review_every_days": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Review Every Days"
+          },
+          "review_due_on": {
+            "anyOf": [
+              {
+                "type": "string",
+                "format": "date"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Review Due On"
+          },
+          "goal_count": {
+            "type": "integer",
+            "title": "Goal Count",
+            "description": "Goals that are not discontinued."
+          },
+          "task_count": {
+            "type": "integer",
+            "title": "Task Count"
+          }
+        },
+        "type": "object",
+        "required": [
+          "id",
+          "version",
+          "status",
+          "diagnosis",
+          "risk_level",
+          "start_date",
+          "duration_days",
+          "goal_count",
+          "task_count"
+        ],
+        "title": "CarePlanSummary"
       },
       "Caregiver": {
         "properties": {
@@ -12270,6 +14263,11 @@
             "title": "Wallet Balance Naira",
             "description": "Wallet balance in NAIRA (the /caregiver/wallet endpoint is kobo)."
           },
+          "can_author_care_plans": {
+            "type": "boolean",
+            "title": "Can Author Care Plans",
+            "description": "True for a caregiver with the admin-assigned nurse skill: show the Care plan entry points. The skill is not visible anywhere else in the app."
+          },
           "currency": {
             "type": "string",
             "title": "Currency"
@@ -12283,6 +14281,7 @@
           "upcoming_visits",
           "open_offers",
           "wallet_balance_naira",
+          "can_author_care_plans",
           "currency"
         ],
         "title": "CaregiverHome"
@@ -13157,6 +15156,41 @@
         ],
         "title": "ClientMedicalRecord"
       },
+      "ClientOut": {
+        "properties": {
+          "full_name": {
+            "type": "string",
+            "title": "Full Name"
+          },
+          "age": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Age"
+          },
+          "gender": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Gender"
+          }
+        },
+        "type": "object",
+        "required": [
+          "full_name"
+        ],
+        "title": "ClientOut"
+      },
       "ClientVital": {
         "properties": {
           "vital_type": {
@@ -13238,6 +15272,75 @@
         ],
         "title": "ClinicalOut",
         "description": "The condition and special instructions. Present only with clinical.read; reading them is audited."
+      },
+      "CompletionIn": {
+        "properties": {
+          "date": {
+            "type": "string",
+            "format": "date",
+            "title": "Date",
+            "description": "The day to tick, YYYY-MM-DD. Only today (Africa/Lagos) is accepted."
+          },
+          "done": {
+            "type": "boolean",
+            "title": "Done",
+            "description": "true ticks the task, false unticks it. Repeating a call changes nothing."
+          }
+        },
+        "type": "object",
+        "required": [
+          "date",
+          "done"
+        ],
+        "title": "CompletionIn"
+      },
+      "CompletionOut": {
+        "properties": {
+          "task_id": {
+            "type": "string",
+            "format": "uuid",
+            "title": "Task Id"
+          },
+          "date": {
+            "type": "string",
+            "format": "date",
+            "title": "Date"
+          },
+          "done": {
+            "type": "boolean",
+            "title": "Done"
+          },
+          "done_by": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Done By"
+          },
+          "done_at": {
+            "anyOf": [
+              {
+                "type": "string",
+                "format": "date-time"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Done At"
+          }
+        },
+        "type": "object",
+        "required": [
+          "task_id",
+          "date",
+          "done"
+        ],
+        "title": "CompletionOut"
       },
       "ConfirmAddressIn": {
         "properties": {
@@ -13335,6 +15438,105 @@
           "status"
         ],
         "title": "CorrectStatusIn"
+      },
+      "DaySlot": {
+        "properties": {
+          "slot": {
+            "type": "string",
+            "enum": [
+              "morning",
+              "afternoon",
+              "evening",
+              "night"
+            ],
+            "title": "Slot"
+          },
+          "time_of_day": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Time Of Day",
+            "description": "The earliest task time in this slot, for the heading."
+          },
+          "tasks": {
+            "items": {
+              "$ref": "#/components/schemas/DayTask"
+            },
+            "type": "array",
+            "title": "Tasks"
+          }
+        },
+        "type": "object",
+        "required": [
+          "slot",
+          "tasks"
+        ],
+        "title": "DaySlot"
+      },
+      "DayTask": {
+        "properties": {
+          "id": {
+            "type": "string",
+            "format": "uuid",
+            "title": "Id"
+          },
+          "title": {
+            "type": "string",
+            "title": "Title"
+          },
+          "time_of_day": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Time Of Day",
+            "description": "HH:MM"
+          },
+          "done": {
+            "type": "boolean",
+            "title": "Done"
+          },
+          "done_by": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Done By",
+            "description": "Name of the caregiver who ticked it; null when not done."
+          },
+          "done_at": {
+            "anyOf": [
+              {
+                "type": "string",
+                "format": "date-time"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Done At"
+          }
+        },
+        "type": "object",
+        "required": [
+          "id",
+          "title",
+          "done"
+        ],
+        "title": "DayTask"
       },
       "DecisionOut": {
         "properties": {
@@ -14176,6 +16378,263 @@
         ],
         "title": "FormOptionsOut"
       },
+      "GoalCounts": {
+        "properties": {
+          "active": {
+            "type": "integer",
+            "title": "Active"
+          },
+          "achieved": {
+            "type": "integer",
+            "title": "Achieved"
+          },
+          "discontinued": {
+            "type": "integer",
+            "title": "Discontinued"
+          }
+        },
+        "type": "object",
+        "required": [
+          "active",
+          "achieved",
+          "discontinued"
+        ],
+        "title": "GoalCounts"
+      },
+      "GoalCreate": {
+        "properties": {
+          "title": {
+            "type": "string",
+            "maxLength": 120,
+            "minLength": 1,
+            "title": "Title"
+          },
+          "target": {
+            "anyOf": [
+              {
+                "type": "string",
+                "maxLength": 200,
+                "minLength": 1
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Target"
+          },
+          "frequency": {
+            "type": "string",
+            "enum": [
+              "daily",
+              "weekly",
+              "ongoing",
+              "one_time"
+            ],
+            "title": "Frequency"
+          },
+          "expected_version": {
+            "anyOf": [
+              {
+                "type": "integer",
+                "minimum": 1
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Expected Version",
+            "description": "Optional: adding never overwrites anything."
+          }
+        },
+        "type": "object",
+        "required": [
+          "title",
+          "frequency"
+        ],
+        "title": "GoalCreate"
+      },
+      "GoalIn": {
+        "properties": {
+          "title": {
+            "type": "string",
+            "maxLength": 120,
+            "minLength": 1,
+            "title": "Title"
+          },
+          "target": {
+            "anyOf": [
+              {
+                "type": "string",
+                "maxLength": 200,
+                "minLength": 1
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Target"
+          },
+          "frequency": {
+            "type": "string",
+            "enum": [
+              "daily",
+              "weekly",
+              "ongoing",
+              "one_time"
+            ],
+            "title": "Frequency"
+          }
+        },
+        "type": "object",
+        "required": [
+          "title",
+          "frequency"
+        ],
+        "title": "GoalIn"
+      },
+      "GoalOut": {
+        "properties": {
+          "id": {
+            "type": "string",
+            "format": "uuid",
+            "title": "Id"
+          },
+          "title": {
+            "type": "string",
+            "title": "Title"
+          },
+          "target": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Target"
+          },
+          "frequency": {
+            "type": "string",
+            "enum": [
+              "daily",
+              "weekly",
+              "ongoing",
+              "one_time"
+            ],
+            "title": "Frequency"
+          },
+          "status": {
+            "type": "string",
+            "enum": [
+              "active",
+              "achieved",
+              "discontinued"
+            ],
+            "title": "Status"
+          }
+        },
+        "type": "object",
+        "required": [
+          "id",
+          "title",
+          "frequency",
+          "status"
+        ],
+        "title": "GoalOut"
+      },
+      "GoalPatch": {
+        "properties": {
+          "expected_version": {
+            "type": "integer",
+            "minimum": 1,
+            "title": "Expected Version"
+          },
+          "title": {
+            "anyOf": [
+              {
+                "type": "string",
+                "maxLength": 120,
+                "minLength": 1
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Title"
+          },
+          "target": {
+            "anyOf": [
+              {
+                "type": "string",
+                "maxLength": 200,
+                "minLength": 1
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Target",
+            "description": "null clears it."
+          },
+          "frequency": {
+            "anyOf": [
+              {
+                "type": "string",
+                "enum": [
+                  "daily",
+                  "weekly",
+                  "ongoing",
+                  "one_time"
+                ]
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Frequency"
+          },
+          "status": {
+            "anyOf": [
+              {
+                "type": "string",
+                "enum": [
+                  "active",
+                  "achieved",
+                  "discontinued"
+                ]
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Status"
+          }
+        },
+        "type": "object",
+        "required": [
+          "expected_version"
+        ],
+        "title": "GoalPatch"
+      },
+      "GoalWriteResult": {
+        "properties": {
+          "goal": {
+            "$ref": "#/components/schemas/GoalOut"
+          },
+          "plan_version": {
+            "type": "integer",
+            "title": "Plan Version",
+            "description": "The plan's version after this write; use it as the next expected_version."
+          }
+        },
+        "type": "object",
+        "required": [
+          "goal",
+          "plan_version"
+        ],
+        "title": "GoalWriteResult"
+      },
       "HTTPValidationError": {
         "properties": {
           "detail": {
@@ -14396,6 +16855,230 @@
           "status"
         ],
         "title": "IdentityOut"
+      },
+      "IdentityVerificationClientEventRequest": {
+        "properties": {
+          "event": {
+            "type": "string",
+            "enum": [
+              "opened",
+              "completed",
+              "closed",
+              "error"
+            ],
+            "title": "Event"
+          },
+          "session_id": {
+            "anyOf": [
+              {
+                "type": "string",
+                "pattern": "^[A-Za-z0-9_.-]{1,128}$"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Session Id"
+          }
+        },
+        "type": "object",
+        "required": [
+          "event"
+        ],
+        "title": "IdentityVerificationClientEventRequest",
+        "description": "A hint from the widget. Anything else the client sends is ignored, never stored."
+      },
+      "IdentityVerificationSessionOut": {
+        "properties": {
+          "verification_id": {
+            "type": "string",
+            "format": "uuid",
+            "title": "Verification Id"
+          },
+          "attempt_no": {
+            "type": "integer",
+            "title": "Attempt No"
+          },
+          "widget": {
+            "$ref": "#/components/schemas/IdentityWidgetConfig"
+          },
+          "state": {
+            "$ref": "#/components/schemas/IdentityVerificationStateOut"
+          }
+        },
+        "type": "object",
+        "required": [
+          "verification_id",
+          "attempt_no",
+          "widget",
+          "state"
+        ],
+        "title": "IdentityVerificationSessionOut"
+      },
+      "IdentityVerificationSessionRequest": {
+        "properties": {
+          "consent": {
+            "type": "boolean",
+            "const": true,
+            "title": "Consent"
+          },
+          "policy_version": {
+            "type": "string",
+            "maxLength": 64,
+            "title": "Policy Version"
+          }
+        },
+        "type": "object",
+        "required": [
+          "consent",
+          "policy_version"
+        ],
+        "title": "IdentityVerificationSessionRequest"
+      },
+      "IdentityVerificationStateOut": {
+        "properties": {
+          "status": {
+            "type": "string",
+            "enum": [
+              "pending",
+              "in_progress",
+              "needs_review",
+              "verified",
+              "failed"
+            ],
+            "title": "Status"
+          },
+          "attempts_used": {
+            "type": "integer",
+            "title": "Attempts Used"
+          },
+          "attempts_max": {
+            "type": "integer",
+            "title": "Attempts Max"
+          },
+          "active_verification_id": {
+            "anyOf": [
+              {
+                "type": "string",
+                "format": "uuid"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Active Verification Id"
+          },
+          "last_attempt_status": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Last Attempt Status"
+          },
+          "can_start": {
+            "type": "boolean",
+            "title": "Can Start"
+          },
+          "failure_hint": {
+            "anyOf": [
+              {
+                "type": "string",
+                "enum": [
+                  "lighting",
+                  "document",
+                  "mismatch_generic"
+                ]
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Failure Hint"
+          },
+          "provider_available": {
+            "type": "boolean",
+            "title": "Provider Available"
+          },
+          "review_eta_hours": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Review Eta Hours"
+          },
+          "policy_version": {
+            "type": "string",
+            "title": "Policy Version"
+          }
+        },
+        "type": "object",
+        "required": [
+          "status",
+          "attempts_used",
+          "attempts_max",
+          "can_start",
+          "provider_available",
+          "policy_version"
+        ],
+        "title": "IdentityVerificationStateOut"
+      },
+      "IdentityWidgetConfig": {
+        "properties": {
+          "widget_id": {
+            "type": "string",
+            "title": "Widget Id"
+          },
+          "widget_key": {
+            "type": "string",
+            "title": "Widget Key"
+          },
+          "email": {
+            "type": "string",
+            "title": "Email"
+          },
+          "first_name": {
+            "type": "string",
+            "title": "First Name"
+          },
+          "last_name": {
+            "type": "string",
+            "title": "Last Name"
+          },
+          "metadata": {
+            "$ref": "#/components/schemas/IdentityWidgetMetadata"
+          }
+        },
+        "type": "object",
+        "required": [
+          "widget_id",
+          "widget_key",
+          "email",
+          "first_name",
+          "last_name",
+          "metadata"
+        ],
+        "title": "IdentityWidgetConfig"
+      },
+      "IdentityWidgetMetadata": {
+        "properties": {
+          "oakly_ref": {
+            "type": "string",
+            "title": "Oakly Ref"
+          }
+        },
+        "type": "object",
+        "required": [
+          "oakly_ref"
+        ],
+        "title": "IdentityWidgetMetadata"
       },
       "InviteAcceptIn": {
         "properties": {
@@ -14655,6 +17338,111 @@
           "admin"
         ],
         "title": "MfaVerifyOut"
+      },
+      "ObservationIn": {
+        "properties": {
+          "body": {
+            "type": "string",
+            "maxLength": 2000,
+            "minLength": 1,
+            "title": "Body"
+          },
+          "category": {
+            "type": "string",
+            "enum": [
+              "observation",
+              "special_note"
+            ],
+            "title": "Category",
+            "description": "`special_note` shows under Allergies and Special Instructions; `observation` under Notes.",
+            "default": "observation"
+          }
+        },
+        "type": "object",
+        "required": [
+          "body"
+        ],
+        "title": "ObservationIn"
+      },
+      "ObservationList": {
+        "properties": {
+          "items": {
+            "items": {
+              "$ref": "#/components/schemas/ObservationOut"
+            },
+            "type": "array",
+            "title": "Items"
+          },
+          "next_before": {
+            "anyOf": [
+              {
+                "type": "string",
+                "format": "date-time"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Next Before",
+            "description": "Pass as `before` for the next (older) page; null on the last."
+          },
+          "next_before_id": {
+            "anyOf": [
+              {
+                "type": "string",
+                "format": "uuid"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Next Before Id",
+            "description": "Pass as `before_id` together with `before` (it breaks ties between notes with the same timestamp); null on the last."
+          }
+        },
+        "type": "object",
+        "required": [
+          "items"
+        ],
+        "title": "ObservationList"
+      },
+      "ObservationOut": {
+        "properties": {
+          "id": {
+            "type": "string",
+            "format": "uuid",
+            "title": "Id"
+          },
+          "category": {
+            "type": "string",
+            "enum": [
+              "observation",
+              "special_note"
+            ],
+            "title": "Category"
+          },
+          "body": {
+            "type": "string",
+            "title": "Body"
+          },
+          "author": {
+            "$ref": "#/components/schemas/AuthorOut"
+          },
+          "created_at": {
+            "type": "string",
+            "format": "date-time",
+            "title": "Created At"
+          }
+        },
+        "type": "object",
+        "required": [
+          "id",
+          "category",
+          "body",
+          "author",
+          "created_at"
+        ],
+        "title": "ObservationOut"
       },
       "OfferOut": {
         "properties": {
@@ -16806,6 +19594,113 @@
         ],
         "title": "PriceOut"
       },
+      "Progress": {
+        "properties": {
+          "overall_percent": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Overall Percent",
+            "description": "Ticked / scheduled task occurrences over visit days only; null when there is nothing to measure yet."
+          },
+          "scheduled": {
+            "type": "integer",
+            "title": "Scheduled"
+          },
+          "completed": {
+            "type": "integer",
+            "title": "Completed"
+          },
+          "visit_days": {
+            "type": "integer",
+            "title": "Visit Days"
+          },
+          "day": {
+            "type": "integer",
+            "title": "Day",
+            "description": "Day number of the plan, 0 before it starts, never above `of_days`."
+          },
+          "of_days": {
+            "type": "integer",
+            "title": "Of Days"
+          },
+          "review_due_on": {
+            "anyOf": [
+              {
+                "type": "string",
+                "format": "date"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Review Due On"
+          },
+          "by_day": {
+            "items": {
+              "$ref": "#/components/schemas/ProgressDay"
+            },
+            "type": "array",
+            "title": "By Day",
+            "description": "The last 14 visit days, oldest first."
+          },
+          "goals": {
+            "$ref": "#/components/schemas/GoalCounts"
+          },
+          "last_observation_at": {
+            "anyOf": [
+              {
+                "type": "string",
+                "format": "date-time"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Last Observation At"
+          }
+        },
+        "type": "object",
+        "required": [
+          "scheduled",
+          "completed",
+          "visit_days",
+          "day",
+          "of_days",
+          "by_day",
+          "goals"
+        ],
+        "title": "Progress"
+      },
+      "ProgressDay": {
+        "properties": {
+          "date": {
+            "type": "string",
+            "format": "date",
+            "title": "Date"
+          },
+          "scheduled": {
+            "type": "integer",
+            "title": "Scheduled"
+          },
+          "completed": {
+            "type": "integer",
+            "title": "Completed"
+          }
+        },
+        "type": "object",
+        "required": [
+          "date",
+          "scheduled",
+          "completed"
+        ],
+        "title": "ProgressDay"
+      },
       "PushTokenDelete": {
         "properties": {
           "token": {
@@ -17867,6 +20762,587 @@
         ],
         "title": "SkillsIn"
       },
+      "TaskCreate": {
+        "properties": {
+          "title": {
+            "type": "string",
+            "maxLength": 120,
+            "minLength": 1,
+            "title": "Title"
+          },
+          "time_slot": {
+            "type": "string",
+            "enum": [
+              "morning",
+              "afternoon",
+              "evening",
+              "night"
+            ],
+            "title": "Time Slot"
+          },
+          "time_of_day": {
+            "anyOf": [
+              {
+                "type": "string",
+                "pattern": "^([01]\\d|2[0-3]):[0-5]\\d$"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Time Of Day",
+            "description": "Display time, HH:MM.",
+            "examples": [
+              "08:00"
+            ]
+          },
+          "days_of_week": {
+            "items": {
+              "type": "integer"
+            },
+            "type": "array",
+            "maxItems": 7,
+            "minItems": 1,
+            "title": "Days Of Week",
+            "description": "1 = Monday .. 7 = Sunday."
+          },
+          "expected_version": {
+            "anyOf": [
+              {
+                "type": "integer",
+                "minimum": 1
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Expected Version",
+            "description": "Optional: adding never overwrites anything."
+          }
+        },
+        "type": "object",
+        "required": [
+          "title",
+          "time_slot",
+          "days_of_week"
+        ],
+        "title": "TaskCreate"
+      },
+      "TaskDay": {
+        "properties": {
+          "date": {
+            "type": "string",
+            "format": "date",
+            "title": "Date"
+          },
+          "is_today": {
+            "type": "boolean",
+            "title": "Is Today"
+          },
+          "can_tick": {
+            "type": "boolean",
+            "title": "Can Tick",
+            "description": "Today, the plan is active, and the caller has a visit for this client in progress."
+          },
+          "slots": {
+            "items": {
+              "$ref": "#/components/schemas/DaySlot"
+            },
+            "type": "array",
+            "title": "Slots",
+            "description": "Only slots that have a task that day, in day order."
+          }
+        },
+        "type": "object",
+        "required": [
+          "date",
+          "is_today",
+          "can_tick",
+          "slots"
+        ],
+        "title": "TaskDay"
+      },
+      "TaskIn": {
+        "properties": {
+          "title": {
+            "type": "string",
+            "maxLength": 120,
+            "minLength": 1,
+            "title": "Title"
+          },
+          "time_slot": {
+            "type": "string",
+            "enum": [
+              "morning",
+              "afternoon",
+              "evening",
+              "night"
+            ],
+            "title": "Time Slot"
+          },
+          "time_of_day": {
+            "anyOf": [
+              {
+                "type": "string",
+                "pattern": "^([01]\\d|2[0-3]):[0-5]\\d$"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Time Of Day",
+            "description": "Display time, HH:MM.",
+            "examples": [
+              "08:00"
+            ]
+          },
+          "days_of_week": {
+            "items": {
+              "type": "integer"
+            },
+            "type": "array",
+            "maxItems": 7,
+            "minItems": 1,
+            "title": "Days Of Week",
+            "description": "1 = Monday .. 7 = Sunday."
+          }
+        },
+        "type": "object",
+        "required": [
+          "title",
+          "time_slot",
+          "days_of_week"
+        ],
+        "title": "TaskIn"
+      },
+      "TaskOut": {
+        "properties": {
+          "id": {
+            "type": "string",
+            "format": "uuid",
+            "title": "Id"
+          },
+          "title": {
+            "type": "string",
+            "title": "Title"
+          },
+          "time_slot": {
+            "type": "string",
+            "enum": [
+              "morning",
+              "afternoon",
+              "evening",
+              "night"
+            ],
+            "title": "Time Slot"
+          },
+          "time_of_day": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Time Of Day",
+            "description": "HH:MM"
+          },
+          "days_of_week": {
+            "items": {
+              "type": "integer"
+            },
+            "type": "array",
+            "title": "Days Of Week"
+          }
+        },
+        "type": "object",
+        "required": [
+          "id",
+          "title",
+          "time_slot",
+          "days_of_week"
+        ],
+        "title": "TaskOut"
+      },
+      "TaskPatch": {
+        "properties": {
+          "expected_version": {
+            "type": "integer",
+            "minimum": 1,
+            "title": "Expected Version"
+          },
+          "title": {
+            "anyOf": [
+              {
+                "type": "string",
+                "maxLength": 120,
+                "minLength": 1
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Title"
+          },
+          "time_slot": {
+            "anyOf": [
+              {
+                "type": "string",
+                "enum": [
+                  "morning",
+                  "afternoon",
+                  "evening",
+                  "night"
+                ]
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Time Slot"
+          },
+          "time_of_day": {
+            "anyOf": [
+              {
+                "type": "string",
+                "pattern": "^([01]\\d|2[0-3]):[0-5]\\d$"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Time Of Day",
+            "description": "Display time, HH:MM. null clears it.",
+            "examples": [
+              "08:00"
+            ]
+          },
+          "days_of_week": {
+            "anyOf": [
+              {
+                "items": {
+                  "type": "integer"
+                },
+                "type": "array",
+                "maxItems": 7,
+                "minItems": 1
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Days Of Week",
+            "description": "1 = Monday .. 7 = Sunday."
+          }
+        },
+        "type": "object",
+        "required": [
+          "expected_version"
+        ],
+        "title": "TaskPatch",
+        "description": "Only the fields sent change. ``time_of_day`` accepts null to clear it. Editing the days or the slot applies to every\nday, including days already past (the plan keeps one definition of a task)."
+      },
+      "TaskWriteResult": {
+        "properties": {
+          "task": {
+            "$ref": "#/components/schemas/TaskOut"
+          },
+          "plan_version": {
+            "type": "integer",
+            "title": "Plan Version",
+            "description": "The plan's version after this write; use it as the next expected_version."
+          }
+        },
+        "type": "object",
+        "required": [
+          "task",
+          "plan_version"
+        ],
+        "title": "TaskWriteResult"
+      },
+      "TemplateDetail": {
+        "properties": {
+          "id": {
+            "type": "string",
+            "format": "uuid",
+            "title": "Id"
+          },
+          "key": {
+            "type": "string",
+            "title": "Key"
+          },
+          "name": {
+            "type": "string",
+            "title": "Name"
+          },
+          "summary": {
+            "type": "string",
+            "title": "Summary"
+          },
+          "duration_days": {
+            "type": "integer",
+            "title": "Duration Days"
+          },
+          "review_every_days": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Review Every Days"
+          },
+          "default_risk_level": {
+            "type": "string",
+            "enum": [
+              "low",
+              "medium",
+              "high"
+            ],
+            "title": "Default Risk Level"
+          },
+          "clinical_review_status": {
+            "type": "string",
+            "enum": [
+              "pending",
+              "approved"
+            ],
+            "title": "Clinical Review Status",
+            "description": "While pending, show 'Not yet clinically reviewed'."
+          },
+          "version": {
+            "type": "integer",
+            "title": "Version"
+          },
+          "goals": {
+            "items": {
+              "$ref": "#/components/schemas/TemplateGoal"
+            },
+            "type": "array",
+            "title": "Goals"
+          },
+          "tasks": {
+            "items": {
+              "$ref": "#/components/schemas/TemplateTask"
+            },
+            "type": "array",
+            "title": "Tasks"
+          },
+          "special_instructions": {
+            "items": {
+              "type": "string"
+            },
+            "type": "array",
+            "title": "Special Instructions"
+          }
+        },
+        "type": "object",
+        "required": [
+          "id",
+          "key",
+          "name",
+          "summary",
+          "duration_days",
+          "default_risk_level",
+          "clinical_review_status",
+          "version",
+          "goals",
+          "tasks",
+          "special_instructions"
+        ],
+        "title": "TemplateDetail"
+      },
+      "TemplateGoal": {
+        "properties": {
+          "title": {
+            "type": "string",
+            "title": "Title"
+          },
+          "target": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Target"
+          },
+          "frequency": {
+            "type": "string",
+            "enum": [
+              "daily",
+              "weekly",
+              "ongoing",
+              "one_time"
+            ],
+            "title": "Frequency"
+          }
+        },
+        "type": "object",
+        "required": [
+          "title",
+          "frequency"
+        ],
+        "title": "TemplateGoal"
+      },
+      "TemplateList": {
+        "properties": {
+          "items": {
+            "items": {
+              "$ref": "#/components/schemas/TemplateListItem"
+            },
+            "type": "array",
+            "title": "Items"
+          }
+        },
+        "type": "object",
+        "required": [
+          "items"
+        ],
+        "title": "TemplateList"
+      },
+      "TemplateListItem": {
+        "properties": {
+          "id": {
+            "type": "string",
+            "format": "uuid",
+            "title": "Id"
+          },
+          "key": {
+            "type": "string",
+            "title": "Key"
+          },
+          "name": {
+            "type": "string",
+            "title": "Name"
+          },
+          "summary": {
+            "type": "string",
+            "title": "Summary"
+          },
+          "duration_days": {
+            "type": "integer",
+            "title": "Duration Days"
+          },
+          "review_every_days": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Review Every Days"
+          },
+          "default_risk_level": {
+            "type": "string",
+            "enum": [
+              "low",
+              "medium",
+              "high"
+            ],
+            "title": "Default Risk Level"
+          },
+          "clinical_review_status": {
+            "type": "string",
+            "enum": [
+              "pending",
+              "approved"
+            ],
+            "title": "Clinical Review Status",
+            "description": "While pending, show 'Not yet clinically reviewed'."
+          },
+          "version": {
+            "type": "integer",
+            "title": "Version"
+          }
+        },
+        "type": "object",
+        "required": [
+          "id",
+          "key",
+          "name",
+          "summary",
+          "duration_days",
+          "default_risk_level",
+          "clinical_review_status",
+          "version"
+        ],
+        "title": "TemplateListItem"
+      },
+      "TemplateRef": {
+        "properties": {
+          "id": {
+            "type": "string",
+            "format": "uuid",
+            "title": "Id"
+          },
+          "name": {
+            "type": "string",
+            "title": "Name"
+          },
+          "version": {
+            "type": "integer",
+            "title": "Version"
+          }
+        },
+        "type": "object",
+        "required": [
+          "id",
+          "name",
+          "version"
+        ],
+        "title": "TemplateRef"
+      },
+      "TemplateTask": {
+        "properties": {
+          "title": {
+            "type": "string",
+            "title": "Title"
+          },
+          "time_slot": {
+            "type": "string",
+            "enum": [
+              "morning",
+              "afternoon",
+              "evening",
+              "night"
+            ],
+            "title": "Time Slot"
+          },
+          "time_of_day": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Time Of Day"
+          },
+          "days_of_week": {
+            "items": {
+              "type": "integer"
+            },
+            "type": "array",
+            "title": "Days Of Week"
+          }
+        },
+        "type": "object",
+        "required": [
+          "title",
+          "time_slot",
+          "days_of_week"
+        ],
+        "title": "TemplateTask"
+      },
       "TimelineEntry": {
         "properties": {
           "at": {
@@ -18820,29 +22296,6 @@
         ],
         "title": "ValidationError"
       },
-      "VerificationResultRequest": {
-        "properties": {
-          "type": {
-            "type": "string",
-            "enum": [
-              "document",
-              "face"
-            ],
-            "title": "Type"
-          },
-          "result": {
-            "additionalProperties": true,
-            "type": "object",
-            "title": "Result"
-          }
-        },
-        "type": "object",
-        "required": [
-          "type",
-          "result"
-        ],
-        "title": "VerificationResultRequest"
-      },
       "VerificationStatusOut": {
         "properties": {
           "profile_completion_step": {
@@ -18916,6 +22369,43 @@
         "type": "object",
         "title": "VerificationStatusOut"
       },
+      "VisitCarePlan": {
+        "properties": {
+          "booking_id": {
+            "type": "string",
+            "format": "uuid",
+            "title": "Booking Id"
+          },
+          "subject_ready": {
+            "type": "boolean",
+            "title": "Subject Ready",
+            "description": "false: an app booking for someone else, so there is no identifiable client and no care plan is possible."
+          },
+          "can_author": {
+            "type": "boolean",
+            "title": "Can Author",
+            "description": "A nurse, and a client who can have a plan."
+          },
+          "plan": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/CarePlanSummary"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "The client's active plan; null if there is none yet."
+          }
+        },
+        "type": "object",
+        "required": [
+          "booking_id",
+          "subject_ready",
+          "can_author"
+        ],
+        "title": "VisitCarePlan"
+      },
       "VitalSource": {
         "type": "string",
         "enum": [
@@ -18953,6 +22443,22 @@
           "notified_count"
         ],
         "title": "WaveOut"
+      },
+      "app__schemas__admin_booking__CandidateList": {
+        "properties": {
+          "items": {
+            "items": {
+              "$ref": "#/components/schemas/CandidateOut"
+            },
+            "type": "array",
+            "title": "Items"
+          }
+        },
+        "type": "object",
+        "required": [
+          "items"
+        ],
+        "title": "CandidateList"
       },
       "app__schemas__admin_payout__AttemptOut": {
         "properties": {
@@ -19099,6 +22605,22 @@
           "created_at"
         ],
         "title": "AttemptOut"
+      },
+      "app__schemas__care_plan__CandidateList": {
+        "properties": {
+          "items": {
+            "items": {
+              "$ref": "#/components/schemas/Candidate"
+            },
+            "type": "array",
+            "title": "Items"
+          }
+        },
+        "type": "object",
+        "required": [
+          "items"
+        ],
+        "title": "CandidateList"
       }
     },
     "securitySchemes": {
