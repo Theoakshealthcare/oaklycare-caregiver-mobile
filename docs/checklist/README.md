@@ -19,8 +19,24 @@ channel) lives in the backend repo: `docs/checklist/MASTER_CHECKLIST.md`. Update
 
 ## Caregiver client profile (Client care v1, part 2)
 - [x] Client profile screen from Job details (live visit only): name, age, sex, latest vitals, medical history if stored, emergency contact with call, Add notes (2026-10-27, see docs/sop/2026-10-27-caregiver-client-profile.md). Stacked on the Vitals tab PR; needs the backend endpoint
-- [ ] Care plan summary (care plans not built), FallGuard entry (no source)
-- [ ] Device pass; full `api:sync` after the refunds console PR
+- [x] Care plan summary row on the client profile (2026-10-28, care plans M1, see docs/sop/2026-10-28-caregiver-care-plans-hub.md)
+- [ ] FallGuard entry (no source)
+- [x] Full `api:sync` from backend `main` (2026-10-28, care plans M1)
+- [ ] Device pass
+
+## Caregiver care plans (backend B1/B2 merged; mobile M1-M3)
+- [x] M1 Hub, create, details, goals (2026-10-28, branch `feat/caregiver-care-plans-hub`, see docs/sop/2026-10-28-caregiver-care-plans-hub.md; Jest only, **not device-verified**)
+  - [x] Home "Care plans" card from the server field `can_author_care_plans`
+  - [x] Hub: Assigned / Templates tabs, search, Active / Completed filter, "Create New Care Plan"
+  - [x] Template preview and client picker; create form (pre-filled from a template) and success page
+  - [x] Care Plan Details accordions: client profile, goals (add / edit / achieve / discontinue), allergies and special instructions
+  - [x] Edit plan sheet (diagnosis, risk, dates, complete, archive) with `expected_version` and conflict recovery
+  - [x] Client profile "Care plan" row: Open / Create / Use a template; read-only for non-nurses
+  - [x] Spec wording for 404, `client_not_identified`, `not_a_nurse`, `care_plan_exists`, `version_conflict`
+  - [ ] Native date picker; task time in the create form; device pass
+- [ ] M2 Daily tasks, ticks, add task, notes and observations, View Progress (needs the merged B2 contract, already in `schema.d.ts`)
+- [ ] M3 Medications list and form with the "not clinical advice" banner (needs backend B3)
+- [ ] Clinical sign-off of seeded templates and copy (go-live gate)
 
 ## Caregiver bank account
 - [x] Payment details screen: bank picker, name confirmation, add/change, 24 h pause notice, legacy re-verify (2026-10-19, see docs/sop/2026-10-19-caregiver-bank-account.md)
