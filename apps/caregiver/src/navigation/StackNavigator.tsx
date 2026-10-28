@@ -19,6 +19,12 @@ import CallScreen from "../screens/chat/CallScreen";
 import ChatScreen from "../screens/chat/ChatScreen";
 import BookingDetails from "../screens/booking/BookingDetails";
 import ClientProfile from "../screens/booking/ClientProfile";
+import CarePlanClients from "../screens/careplan/CarePlanClients";
+import CarePlanDetails from "../screens/careplan/CarePlanDetails";
+import CarePlanSuccess from "../screens/careplan/CarePlanSuccess";
+import CarePlanTemplate from "../screens/careplan/CarePlanTemplate";
+import CarePlans from "../screens/careplan/CarePlans";
+import CreateCarePlan from "../screens/careplan/CreateCarePlan";
 import VisitFlow from "../screens/visit/VisitFlow";
 import AddVitals from "../screens/vitals/AddVitals";
 import VitalDetail from "../screens/vitals/VitalDetail";
@@ -134,6 +140,12 @@ const StackNavigator = () => {
             <Stack.Screen name="ClientProfile" component={ClientProfile} />
             <Stack.Screen name="VitalDetail" component={VitalDetail} />
             <Stack.Screen name="AddVitals" component={AddVitals} />
+            <Stack.Screen name="CarePlans" component={CarePlans} />
+            <Stack.Screen name="CarePlanTemplate" component={CarePlanTemplate} />
+            <Stack.Screen name="CarePlanClients" component={CarePlanClients} />
+            <Stack.Screen name="CreateCarePlan" component={CreateCarePlan} />
+            <Stack.Screen name="CarePlanSuccess" component={CarePlanSuccess} />
+            <Stack.Screen name="CarePlanDetails" component={CarePlanDetails} />
           </Stack.Navigator>
           {/* Location tracking, push-tap routing and the in-app banner: approved caregivers only. */}
           <AppRuntime />

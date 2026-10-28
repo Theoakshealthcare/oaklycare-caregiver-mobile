@@ -93,6 +93,8 @@ export interface HomeView {
   /** Offer view only: no patient fields exist on the type. */
   offers: Offer[];
   walletBalance: string;
+  /** Server-computed (the nurse skill is not in any response); shows the Care plans card. */
+  canAuthorCarePlans: boolean;
 }
 
 export function mapHome(home: Home, now: number): HomeView {
@@ -105,5 +107,6 @@ export function mapHome(home: Home, now: number): HomeView {
     upcomingVisits: home.upcoming_visits.map(toVisitView),
     offers: home.open_offers.map(homeOfferToOffer),
     walletBalance: formatNaira(home.wallet_balance_naira),
+    canAuthorCarePlans: home.can_author_care_plans === true,
   };
 }

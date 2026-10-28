@@ -264,6 +264,28 @@ const Home: React.FC = () => {
           )}
         </Section>
 
+        {view.canAuthorCarePlans ? (
+          <Section title="Care plans">
+            <TouchableOpacity
+              testID="home-care-plans"
+              accessibilityRole="button"
+              onPress={() => navigation.navigate("CarePlans")}
+              style={{ backgroundColor: theme.colors.white, borderRadius: 16, padding: 16, flexDirection: "row", alignItems: "center", gap: 12 }}
+            >
+              <Feather name="clipboard" size={24} color={theme.colors.primary} />
+              <View style={{ flex: 1 }}>
+                <Text variant="body" weight="bold">
+                  Care plans
+                </Text>
+                <Text variant="small" color={theme.colors.textLight}>
+                  Create and review plans for your clients.
+                </Text>
+              </View>
+              <Feather name="chevron-right" size={20} color={theme.colors.textLight} />
+            </TouchableOpacity>
+          </Section>
+        ) : null}
+
         <Section title="Wallet">
           <View style={{ backgroundColor: theme.colors.white, borderRadius: 16, padding: 16 }}>
             <Text variant="small" color={theme.colors.textLight}>

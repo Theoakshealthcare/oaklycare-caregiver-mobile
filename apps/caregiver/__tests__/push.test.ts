@@ -159,6 +159,7 @@ describe("resolveOffer (the offer view comes from home open_offers)", () => {
     upcoming_visits: [],
     open_offers: offers,
     wallet_balance_naira: 0,
+    can_author_care_plans: false,
     currency: "NGN",
   });
   const offer = {

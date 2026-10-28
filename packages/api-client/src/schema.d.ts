@@ -384,6 +384,87 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/v1/caregiver/identity-verification": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Get Identity Verification
+         * @description Where the caregiver stands in identity verification. Never returns scores or the reason for a review.
+         */
+        get: operations["get_identity_verification_api_v1_caregiver_identity_verification_get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/caregiver/identity-verification/sessions": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Create Identity Verification Session
+         * @description Record the separate identity consent and open an attempt (or resume the active one); returns the widget config.
+         */
+        post: operations["create_identity_verification_session_api_v1_caregiver_identity_verification_sessions_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/caregiver/identity-verification/defer": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Defer Identity Verification
+         * @description Outage path: only while Prembly is flagged unavailable. Lets the caregiver carry on to consent; verifies nobody.
+         */
+        post: operations["defer_identity_verification_api_v1_caregiver_identity_verification_defer_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/caregiver/identity-verification/{verification_id}/client-event": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Identity Verification Client Event
+         * @description A hint from the widget (opened, completed, closed, error). Non-authoritative: it can advance the caregiver's own
+         *     attempt and remember the session id, and can never change the caregiver's identity status.
+         */
+        post: operations["identity_verification_client_event_api_v1_caregiver_identity_verification__verification_id__client_event_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/v1/caregiver/identity-verification/result": {
         parameters: {
             query?: never;
@@ -395,7 +476,8 @@ export interface paths {
         put?: never;
         /**
          * Receive Verification Result
-         * @description Receive and store verification result from mobile app (Prembly)
+         * @description Removed. The verification result comes from the provider's signed webhook, not from the app. Kept as a clear 410 so an
+         *     older app version shows a message instead of an unexplained 404. Takes no body: nothing the app posts is read or stored.
          */
         post: operations["receive_verification_result_api_v1_caregiver_identity_verification_result_post"];
         delete?: never;
@@ -598,6 +680,301 @@ export interface paths {
          *     vitals when the vitals rule allows them. Health data: never cached.
          */
         get: operations["get_client_profile_api_v1_caregiver_bookings__booking_id__client_get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/caregiver/care-plan-templates": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * List Templates
+         * @description The seeded templates for the Templates tab. Not yet clinically reviewed while ``clinical_review_status`` is pending.
+         */
+        get: operations["list_templates_api_v1_caregiver_care_plan_templates_get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/caregiver/care-plan-templates/{template_id}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Get Template
+         * @description Preview: the goals, tasks and special instructions a plan created from this template starts with.
+         */
+        get: operations["get_template_api_v1_caregiver_care_plan_templates__template_id__get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/caregiver/care-plans": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * List Care Plans
+         * @description The Assigned Care Plan tab: plans for the clients of my live visits (accepted, on the way or in progress).
+         */
+        get: operations["list_care_plans_api_v1_caregiver_care_plans_get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/caregiver/care-plans/candidates": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * List Candidates
+         * @description The client picker for "Use template": clients of my live visits who have no active plan yet. Declared before
+         *     ``/care-plans/{plan_id}`` so the word is not read as an id.
+         */
+        get: operations["list_candidates_api_v1_caregiver_care_plans_candidates_get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/caregiver/bookings/{booking_id}/care-plan": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Get Visit Care Plan
+         * @description Care plan summary for one visit. 200 with ``plan: null`` means access is fine and the client has no active plan yet;
+         *     ``subject_ready: false`` means this visit's client cannot be identified (an app booking for someone else); 404 means no
+         *     access.
+         */
+        get: operations["get_visit_care_plan_api_v1_caregiver_bookings__booking_id__care_plan_get"];
+        put?: never;
+        /**
+         * Create Care Plan
+         * @description Create the client's plan, blank or from a template (the template only fills what the body leaves out).
+         */
+        post: operations["create_care_plan_api_v1_caregiver_bookings__booking_id__care_plan_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/caregiver/care-plans/{plan_id}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Get Care Plan
+         * @description The full plan, visible while any of my live visits is for this client. A completed or archived plan stays visible
+         *     as history.
+         */
+        get: operations["get_care_plan_api_v1_caregiver_care_plans__plan_id__get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        /**
+         * Update Care Plan
+         * @description Header fields, allergies, special instructions, and `status` to `completed` or `archived`. Needs the plan's
+         *     `expected_version`.
+         */
+        patch: operations["update_care_plan_api_v1_caregiver_care_plans__plan_id__patch"];
+        trace?: never;
+    };
+    "/api/v1/caregiver/care-plans/{plan_id}/goals": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Add Goal
+         * @description Add a goal. `expected_version` is optional here: adding never overwrites anything.
+         */
+        post: operations["add_goal_api_v1_caregiver_care_plans__plan_id__goals_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/caregiver/care-plan-goals/{goal_id}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post?: never;
+        /**
+         * Remove Goal
+         * @description Remove a goal: it is marked `discontinued` and kept. Needs the plan's `expected_version` as a query parameter.
+         */
+        delete: operations["remove_goal_api_v1_caregiver_care_plan_goals__goal_id__delete"];
+        options?: never;
+        head?: never;
+        /**
+         * Update Goal
+         * @description Edit a goal, or mark it achieved or discontinued. Needs the plan's `expected_version`.
+         */
+        patch: operations["update_goal_api_v1_caregiver_care_plan_goals__goal_id__patch"];
+        trace?: never;
+    };
+    "/api/v1/caregiver/care-plans/{plan_id}/tasks": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Get Task Day
+         * @description The day view: the tasks due that day, grouped by slot, with who ticked each. Any day can be read; only today can be
+         *     ticked (`can_tick`).
+         */
+        get: operations["get_task_day_api_v1_caregiver_care_plans__plan_id__tasks_get"];
+        put?: never;
+        /**
+         * Add Task
+         * @description Add a daily task to the plan. `expected_version` is optional here: adding never overwrites anything. The task is
+         *     scheduled from today on (it never appears on earlier days).
+         */
+        post: operations["add_task_api_v1_caregiver_care_plans__plan_id__tasks_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/caregiver/care-plan-tasks/{task_id}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post?: never;
+        /**
+         * Remove Task
+         * @description Remove a task from the plan: it stops being scheduled and leaves `tasks`; its ticks are kept. Needs the plan's
+         *     `expected_version` as a query parameter.
+         */
+        delete: operations["remove_task_api_v1_caregiver_care_plan_tasks__task_id__delete"];
+        options?: never;
+        head?: never;
+        /**
+         * Update Task
+         * @description Edit a task: title, slot, display time or days. Needs the plan's `expected_version`. A removed task is 404.
+         */
+        patch: operations["update_task_api_v1_caregiver_care_plan_tasks__task_id__patch"];
+        trace?: never;
+    };
+    "/api/v1/caregiver/care-plan-tasks/{task_id}/completion": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        /**
+         * Set Completion
+         * @description Tick (`done: true`) or untick (`done: false`) a task. Idempotent: repeating a call changes nothing. Only for today
+         *     (Africa/Lagos) and only during a visit of yours that is in progress. Any caregiver on the client may tick, not only a
+         *     nurse. Unticking someone else's tick is allowed and recorded.
+         */
+        put: operations["set_completion_api_v1_caregiver_care_plan_tasks__task_id__completion_put"];
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/caregiver/care-plans/{plan_id}/observations": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * List Observations
+         * @description Visit notes, newest first. A completed plan keeps its notes as history.
+         */
+        get: operations["list_observations_api_v1_caregiver_care_plans__plan_id__observations_get"];
+        put?: never;
+        /**
+         * Add Observation
+         * @description Add a note during a visit of yours that is in progress. Any caregiver on the client may, not only a nurse. Notes
+         *     cannot be edited or deleted: a correction is a new note.
+         */
+        post: operations["add_observation_api_v1_caregiver_care_plans__plan_id__observations_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/caregiver/care-plans/{plan_id}/progress": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Get Progress
+         * @description View Progress: ticked / scheduled tasks over the days that had a visit for this client, day N of M, goal counts.
+         */
+        get: operations["get_progress_api_v1_caregiver_care_plans__plan_id__progress_get"];
         put?: never;
         post?: never;
         delete?: never;
@@ -2921,6 +3298,16 @@ export interface components {
             /** Offset */
             offset: number;
         };
+        /** AuthorOut */
+        AuthorOut: {
+            /** Name */
+            name: string;
+            /**
+             * Kind
+             * @enum {string}
+             */
+            kind: "caregiver" | "admin";
+        };
         /** AvailabilityRequest */
         AvailabilityRequest: {
             /** Is Available */
@@ -3979,10 +4366,21 @@ export interface components {
             /** Refund Amount Kobo */
             refund_amount_kobo?: number | null;
         };
-        /** CandidateList */
-        CandidateList: {
-            /** Items */
-            items: components["schemas"]["CandidateOut"][];
+        /** Candidate */
+        Candidate: {
+            /**
+             * Booking Id
+             * Format: uuid
+             */
+            booking_id: string;
+            client: components["schemas"]["ClientOut"];
+            /** Booking Status */
+            booking_status: string;
+            /**
+             * Scheduled Date
+             * Format: date-time
+             */
+            scheduled_date: string;
         };
         /** CandidateOut */
         CandidateOut: {
@@ -4001,6 +4399,228 @@ export interface components {
             estimated_arrival_minutes: number;
             /** Match Score */
             match_score: number;
+        };
+        /** Capabilities */
+        Capabilities: {
+            /**
+             * Can Edit Plan
+             * @description A nurse, and the plan is active.
+             */
+            can_edit_plan: boolean;
+            /**
+             * Can Tick Tasks
+             * @description The plan is active and the caller has a visit for this client in progress.
+             */
+            can_tick_tasks: boolean;
+            /**
+             * Can Add Observation
+             * @description Same rule as `can_tick_tasks`.
+             */
+            can_add_observation: boolean;
+        };
+        /** CarePlanCreate */
+        CarePlanCreate: {
+            /**
+             * Template Id
+             * @description Copy goals, tasks, instructions and defaults from this template. Anything sent below wins over the template.
+             */
+            template_id?: string | null;
+            /** Diagnosis */
+            diagnosis: string;
+            /**
+             * Risk Level
+             * @description Required unless the template supplies a default.
+             */
+            risk_level?: ("low" | "medium" | "high") | null;
+            /**
+             * Start Date
+             * @description Defaults to today (Africa/Lagos).
+             */
+            start_date?: string | null;
+            /**
+             * Duration Days
+             * @description Defaults to the template's, else 30.
+             */
+            duration_days?: number | null;
+            /** Review Every Days */
+            review_every_days?: number | null;
+            /** Goals */
+            goals?: components["schemas"]["GoalIn"][] | null;
+            /** Tasks */
+            tasks?: components["schemas"]["TaskIn"][] | null;
+            /** Allergies */
+            allergies?: string[] | null;
+            /** Special Instructions */
+            special_instructions?: string[] | null;
+        };
+        /** CarePlanList */
+        CarePlanList: {
+            /** Items */
+            items: components["schemas"]["CarePlanListItem"][];
+        };
+        /** CarePlanListItem */
+        CarePlanListItem: {
+            /**
+             * Id
+             * Format: uuid
+             */
+            id: string;
+            /**
+             * Booking Id
+             * Format: uuid
+             */
+            booking_id: string;
+            client: components["schemas"]["ClientOut"];
+            /** Diagnosis */
+            diagnosis: string;
+            /**
+             * Risk Level
+             * @enum {string}
+             */
+            risk_level: "low" | "medium" | "high";
+            /**
+             * Status
+             * @enum {string}
+             */
+            status: "active" | "completed" | "archived";
+            /**
+             * Start Date
+             * Format: date
+             */
+            start_date: string;
+            /**
+             * Progress Percent
+             * @description The plan's overall progress (see the progress call); null while there is nothing to measure.
+             */
+            progress_percent?: number | null;
+        };
+        /** CarePlanOut */
+        CarePlanOut: {
+            /**
+             * Id
+             * Format: uuid
+             */
+            id: string;
+            /** Version */
+            version: number;
+            /**
+             * Status
+             * @enum {string}
+             */
+            status: "active" | "completed" | "archived";
+            /**
+             * Booking Id
+             * Format: uuid
+             * @description The live booking that gives this caller access.
+             */
+            booking_id: string;
+            client: components["schemas"]["ClientOut"];
+            /** Diagnosis */
+            diagnosis: string;
+            /**
+             * Risk Level
+             * @enum {string}
+             */
+            risk_level: "low" | "medium" | "high";
+            /**
+             * Start Date
+             * Format: date
+             */
+            start_date: string;
+            /** Duration Days */
+            duration_days: number;
+            /** Review Every Days */
+            review_every_days?: number | null;
+            /** Review Due On */
+            review_due_on?: string | null;
+            template?: components["schemas"]["TemplateRef"] | null;
+            author: components["schemas"]["AuthorOut"];
+            /** Allergies */
+            allergies: string[];
+            /** Special Instructions */
+            special_instructions: string[];
+            /** Goals */
+            goals: components["schemas"]["GoalOut"][];
+            /** Tasks */
+            tasks: components["schemas"]["TaskOut"][];
+            capabilities: components["schemas"]["Capabilities"];
+            /**
+             * Created At
+             * Format: date-time
+             */
+            created_at: string;
+            /**
+             * Updated At
+             * Format: date-time
+             */
+            updated_at: string;
+        };
+        /**
+         * CarePlanPatch
+         * @description Only the fields sent change. ``review_every_days``, ``allergies`` and ``special_instructions`` accept null to clear.
+         */
+        CarePlanPatch: {
+            /** Expected Version */
+            expected_version: number;
+            /** Diagnosis */
+            diagnosis?: string | null;
+            /** Risk Level */
+            risk_level?: ("low" | "medium" | "high") | null;
+            /** Start Date */
+            start_date?: string | null;
+            /** Duration Days */
+            duration_days?: number | null;
+            /** Review Every Days */
+            review_every_days?: number | null;
+            /** Allergies */
+            allergies?: string[] | null;
+            /** Special Instructions */
+            special_instructions?: string[] | null;
+            /**
+             * Status
+             * @description Completing or archiving makes the plan read-only and frees the client for a new active plan.
+             */
+            status?: ("completed" | "archived") | null;
+        };
+        /** CarePlanSummary */
+        CarePlanSummary: {
+            /**
+             * Id
+             * Format: uuid
+             */
+            id: string;
+            /** Version */
+            version: number;
+            /**
+             * Status
+             * @enum {string}
+             */
+            status: "active" | "completed" | "archived";
+            /** Diagnosis */
+            diagnosis: string;
+            /**
+             * Risk Level
+             * @enum {string}
+             */
+            risk_level: "low" | "medium" | "high";
+            /**
+             * Start Date
+             * Format: date
+             */
+            start_date: string;
+            /** Duration Days */
+            duration_days: number;
+            /** Review Every Days */
+            review_every_days?: number | null;
+            /** Review Due On */
+            review_due_on?: string | null;
+            /**
+             * Goal Count
+             * @description Goals that are not discontinued.
+             */
+            goal_count: number;
+            /** Task Count */
+            task_count: number;
         };
         /** Caregiver */
         Caregiver: {
@@ -4302,6 +4922,11 @@ export interface components {
              * @description Wallet balance in NAIRA (the /caregiver/wallet endpoint is kobo).
              */
             wallet_balance_naira: number;
+            /**
+             * Can Author Care Plans
+             * @description True for a caregiver with the admin-assigned nurse skill: show the Care plan entry points. The skill is not visible anywhere else in the app.
+             */
+            can_author_care_plans: boolean;
             /** Currency */
             currency: string;
         };
@@ -4626,6 +5251,15 @@ export interface components {
             /** Date Recorded */
             date_recorded?: string | null;
         };
+        /** ClientOut */
+        ClientOut: {
+            /** Full Name */
+            full_name: string;
+            /** Age */
+            age?: number | null;
+            /** Gender */
+            gender?: string | null;
+        };
         /**
          * ClientVital
          * @description The newest reading of one vital type. No status: the backend does not rate readings.
@@ -4659,6 +5293,39 @@ export interface components {
             /** Special Instructions */
             special_instructions?: string | null;
         };
+        /** CompletionIn */
+        CompletionIn: {
+            /**
+             * Date
+             * Format: date
+             * @description The day to tick, YYYY-MM-DD. Only today (Africa/Lagos) is accepted.
+             */
+            date: string;
+            /**
+             * Done
+             * @description true ticks the task, false unticks it. Repeating a call changes nothing.
+             */
+            done: boolean;
+        };
+        /** CompletionOut */
+        CompletionOut: {
+            /**
+             * Task Id
+             * Format: uuid
+             */
+            task_id: string;
+            /**
+             * Date
+             * Format: date
+             */
+            date: string;
+            /** Done */
+            done: boolean;
+            /** Done By */
+            done_by?: string | null;
+            /** Done At */
+            done_at?: string | null;
+        };
         /** ConfirmAddressIn */
         ConfirmAddressIn: {
             /** Reason */
@@ -4690,6 +5357,45 @@ export interface components {
              * @enum {string}
              */
             status: "en_route" | "in_progress" | "completed";
+        };
+        /** DaySlot */
+        DaySlot: {
+            /**
+             * Slot
+             * @enum {string}
+             */
+            slot: "morning" | "afternoon" | "evening" | "night";
+            /**
+             * Time Of Day
+             * @description The earliest task time in this slot, for the heading.
+             */
+            time_of_day?: string | null;
+            /** Tasks */
+            tasks: components["schemas"]["DayTask"][];
+        };
+        /** DayTask */
+        DayTask: {
+            /**
+             * Id
+             * Format: uuid
+             */
+            id: string;
+            /** Title */
+            title: string;
+            /**
+             * Time Of Day
+             * @description HH:MM
+             */
+            time_of_day?: string | null;
+            /** Done */
+            done: boolean;
+            /**
+             * Done By
+             * @description Name of the caregiver who ticked it; null when not done.
+             */
+            done_by?: string | null;
+            /** Done At */
+            done_at?: string | null;
         };
         /** DecisionOut */
         DecisionOut: {
@@ -4992,6 +5698,91 @@ export interface components {
             /** States */
             states: string[];
         };
+        /** GoalCounts */
+        GoalCounts: {
+            /** Active */
+            active: number;
+            /** Achieved */
+            achieved: number;
+            /** Discontinued */
+            discontinued: number;
+        };
+        /** GoalCreate */
+        GoalCreate: {
+            /** Title */
+            title: string;
+            /** Target */
+            target?: string | null;
+            /**
+             * Frequency
+             * @enum {string}
+             */
+            frequency: "daily" | "weekly" | "ongoing" | "one_time";
+            /**
+             * Expected Version
+             * @description Optional: adding never overwrites anything.
+             */
+            expected_version?: number | null;
+        };
+        /** GoalIn */
+        GoalIn: {
+            /** Title */
+            title: string;
+            /** Target */
+            target?: string | null;
+            /**
+             * Frequency
+             * @enum {string}
+             */
+            frequency: "daily" | "weekly" | "ongoing" | "one_time";
+        };
+        /** GoalOut */
+        GoalOut: {
+            /**
+             * Id
+             * Format: uuid
+             */
+            id: string;
+            /** Title */
+            title: string;
+            /** Target */
+            target?: string | null;
+            /**
+             * Frequency
+             * @enum {string}
+             */
+            frequency: "daily" | "weekly" | "ongoing" | "one_time";
+            /**
+             * Status
+             * @enum {string}
+             */
+            status: "active" | "achieved" | "discontinued";
+        };
+        /** GoalPatch */
+        GoalPatch: {
+            /** Expected Version */
+            expected_version: number;
+            /** Title */
+            title?: string | null;
+            /**
+             * Target
+             * @description null clears it.
+             */
+            target?: string | null;
+            /** Frequency */
+            frequency?: ("daily" | "weekly" | "ongoing" | "one_time") | null;
+            /** Status */
+            status?: ("active" | "achieved" | "discontinued") | null;
+        };
+        /** GoalWriteResult */
+        GoalWriteResult: {
+            goal: components["schemas"]["GoalOut"];
+            /**
+             * Plan Version
+             * @description The plan's version after this write; use it as the next expected_version.
+             */
+            plan_version: number;
+        };
         /** HTTPValidationError */
         HTTPValidationError: {
             /** Detail */
@@ -5089,6 +5880,86 @@ export interface components {
             face_verification_status?: string | null;
             /** Face Verification Result */
             face_verification_result?: unknown | null;
+        };
+        /**
+         * IdentityVerificationClientEventRequest
+         * @description A hint from the widget. Anything else the client sends is ignored, never stored.
+         */
+        IdentityVerificationClientEventRequest: {
+            /**
+             * Event
+             * @enum {string}
+             */
+            event: "opened" | "completed" | "closed" | "error";
+            /** Session Id */
+            session_id?: string | null;
+        };
+        /** IdentityVerificationSessionOut */
+        IdentityVerificationSessionOut: {
+            /**
+             * Verification Id
+             * Format: uuid
+             */
+            verification_id: string;
+            /** Attempt No */
+            attempt_no: number;
+            widget: components["schemas"]["IdentityWidgetConfig"];
+            state: components["schemas"]["IdentityVerificationStateOut"];
+        };
+        /** IdentityVerificationSessionRequest */
+        IdentityVerificationSessionRequest: {
+            /**
+             * Consent
+             * @constant
+             */
+            consent: true;
+            /** Policy Version */
+            policy_version: string;
+        };
+        /** IdentityVerificationStateOut */
+        IdentityVerificationStateOut: {
+            /**
+             * Status
+             * @enum {string}
+             */
+            status: "pending" | "in_progress" | "needs_review" | "verified" | "failed";
+            /** Attempts Used */
+            attempts_used: number;
+            /** Attempts Max */
+            attempts_max: number;
+            /** Active Verification Id */
+            active_verification_id?: string | null;
+            /** Last Attempt Status */
+            last_attempt_status?: string | null;
+            /** Can Start */
+            can_start: boolean;
+            /** Failure Hint */
+            failure_hint?: ("lighting" | "document" | "mismatch_generic") | null;
+            /** Provider Available */
+            provider_available: boolean;
+            /** Review Eta Hours */
+            review_eta_hours?: number | null;
+            /** Policy Version */
+            policy_version: string;
+        };
+        /** IdentityWidgetConfig */
+        IdentityWidgetConfig: {
+            /** Widget Id */
+            widget_id: string;
+            /** Widget Key */
+            widget_key: string;
+            /** Email */
+            email: string;
+            /** First Name */
+            first_name: string;
+            /** Last Name */
+            last_name: string;
+            metadata: components["schemas"]["IdentityWidgetMetadata"];
+        };
+        /** IdentityWidgetMetadata */
+        IdentityWidgetMetadata: {
+            /** Oakly Ref */
+            oakly_ref: string;
         };
         /** InviteAcceptIn */
         InviteAcceptIn: {
@@ -5223,6 +6094,54 @@ export interface components {
             /** Expires In */
             expires_in: number;
             admin: components["schemas"]["AdminOut"];
+        };
+        /** ObservationIn */
+        ObservationIn: {
+            /** Body */
+            body: string;
+            /**
+             * Category
+             * @description `special_note` shows under Allergies and Special Instructions; `observation` under Notes.
+             * @default observation
+             * @enum {string}
+             */
+            category: "observation" | "special_note";
+        };
+        /** ObservationList */
+        ObservationList: {
+            /** Items */
+            items: components["schemas"]["ObservationOut"][];
+            /**
+             * Next Before
+             * @description Pass as `before` for the next (older) page; null on the last.
+             */
+            next_before?: string | null;
+            /**
+             * Next Before Id
+             * @description Pass as `before_id` together with `before` (it breaks ties between notes with the same timestamp); null on the last.
+             */
+            next_before_id?: string | null;
+        };
+        /** ObservationOut */
+        ObservationOut: {
+            /**
+             * Id
+             * Format: uuid
+             */
+            id: string;
+            /**
+             * Category
+             * @enum {string}
+             */
+            category: "observation" | "special_note";
+            /** Body */
+            body: string;
+            author: components["schemas"]["AuthorOut"];
+            /**
+             * Created At
+             * Format: date-time
+             */
+            created_at: string;
         };
         /** OfferOut */
         OfferOut: {
@@ -6022,6 +6941,49 @@ export interface components {
             /** Platform Fee Kobo */
             platform_fee_kobo: number;
         };
+        /** Progress */
+        Progress: {
+            /**
+             * Overall Percent
+             * @description Ticked / scheduled task occurrences over visit days only; null when there is nothing to measure yet.
+             */
+            overall_percent?: number | null;
+            /** Scheduled */
+            scheduled: number;
+            /** Completed */
+            completed: number;
+            /** Visit Days */
+            visit_days: number;
+            /**
+             * Day
+             * @description Day number of the plan, 0 before it starts, never above `of_days`.
+             */
+            day: number;
+            /** Of Days */
+            of_days: number;
+            /** Review Due On */
+            review_due_on?: string | null;
+            /**
+             * By Day
+             * @description The last 14 visit days, oldest first.
+             */
+            by_day: components["schemas"]["ProgressDay"][];
+            goals: components["schemas"]["GoalCounts"];
+            /** Last Observation At */
+            last_observation_at?: string | null;
+        };
+        /** ProgressDay */
+        ProgressDay: {
+            /**
+             * Date
+             * Format: date
+             */
+            date: string;
+            /** Scheduled */
+            scheduled: number;
+            /** Completed */
+            completed: number;
+        };
         /** PushTokenDelete */
         PushTokenDelete: {
             /** Token */
@@ -6348,6 +7310,239 @@ export interface components {
             /** Skills */
             skills: components["schemas"]["SkillIn"][];
         };
+        /** TaskCreate */
+        TaskCreate: {
+            /** Title */
+            title: string;
+            /**
+             * Time Slot
+             * @enum {string}
+             */
+            time_slot: "morning" | "afternoon" | "evening" | "night";
+            /**
+             * Time Of Day
+             * @description Display time, HH:MM.
+             * @example 08:00
+             */
+            time_of_day?: string | null;
+            /**
+             * Days Of Week
+             * @description 1 = Monday .. 7 = Sunday.
+             */
+            days_of_week: number[];
+            /**
+             * Expected Version
+             * @description Optional: adding never overwrites anything.
+             */
+            expected_version?: number | null;
+        };
+        /** TaskDay */
+        TaskDay: {
+            /**
+             * Date
+             * Format: date
+             */
+            date: string;
+            /** Is Today */
+            is_today: boolean;
+            /**
+             * Can Tick
+             * @description Today, the plan is active, and the caller has a visit for this client in progress.
+             */
+            can_tick: boolean;
+            /**
+             * Slots
+             * @description Only slots that have a task that day, in day order.
+             */
+            slots: components["schemas"]["DaySlot"][];
+        };
+        /** TaskIn */
+        TaskIn: {
+            /** Title */
+            title: string;
+            /**
+             * Time Slot
+             * @enum {string}
+             */
+            time_slot: "morning" | "afternoon" | "evening" | "night";
+            /**
+             * Time Of Day
+             * @description Display time, HH:MM.
+             * @example 08:00
+             */
+            time_of_day?: string | null;
+            /**
+             * Days Of Week
+             * @description 1 = Monday .. 7 = Sunday.
+             */
+            days_of_week: number[];
+        };
+        /** TaskOut */
+        TaskOut: {
+            /**
+             * Id
+             * Format: uuid
+             */
+            id: string;
+            /** Title */
+            title: string;
+            /**
+             * Time Slot
+             * @enum {string}
+             */
+            time_slot: "morning" | "afternoon" | "evening" | "night";
+            /**
+             * Time Of Day
+             * @description HH:MM
+             */
+            time_of_day?: string | null;
+            /** Days Of Week */
+            days_of_week: number[];
+        };
+        /**
+         * TaskPatch
+         * @description Only the fields sent change. ``time_of_day`` accepts null to clear it. Editing the days or the slot applies to every
+         *     day, including days already past (the plan keeps one definition of a task).
+         */
+        TaskPatch: {
+            /** Expected Version */
+            expected_version: number;
+            /** Title */
+            title?: string | null;
+            /** Time Slot */
+            time_slot?: ("morning" | "afternoon" | "evening" | "night") | null;
+            /**
+             * Time Of Day
+             * @description Display time, HH:MM. null clears it.
+             * @example 08:00
+             */
+            time_of_day?: string | null;
+            /**
+             * Days Of Week
+             * @description 1 = Monday .. 7 = Sunday.
+             */
+            days_of_week?: number[] | null;
+        };
+        /** TaskWriteResult */
+        TaskWriteResult: {
+            task: components["schemas"]["TaskOut"];
+            /**
+             * Plan Version
+             * @description The plan's version after this write; use it as the next expected_version.
+             */
+            plan_version: number;
+        };
+        /** TemplateDetail */
+        TemplateDetail: {
+            /**
+             * Id
+             * Format: uuid
+             */
+            id: string;
+            /** Key */
+            key: string;
+            /** Name */
+            name: string;
+            /** Summary */
+            summary: string;
+            /** Duration Days */
+            duration_days: number;
+            /** Review Every Days */
+            review_every_days?: number | null;
+            /**
+             * Default Risk Level
+             * @enum {string}
+             */
+            default_risk_level: "low" | "medium" | "high";
+            /**
+             * Clinical Review Status
+             * @description While pending, show 'Not yet clinically reviewed'.
+             * @enum {string}
+             */
+            clinical_review_status: "pending" | "approved";
+            /** Version */
+            version: number;
+            /** Goals */
+            goals: components["schemas"]["TemplateGoal"][];
+            /** Tasks */
+            tasks: components["schemas"]["TemplateTask"][];
+            /** Special Instructions */
+            special_instructions: string[];
+        };
+        /** TemplateGoal */
+        TemplateGoal: {
+            /** Title */
+            title: string;
+            /** Target */
+            target?: string | null;
+            /**
+             * Frequency
+             * @enum {string}
+             */
+            frequency: "daily" | "weekly" | "ongoing" | "one_time";
+        };
+        /** TemplateList */
+        TemplateList: {
+            /** Items */
+            items: components["schemas"]["TemplateListItem"][];
+        };
+        /** TemplateListItem */
+        TemplateListItem: {
+            /**
+             * Id
+             * Format: uuid
+             */
+            id: string;
+            /** Key */
+            key: string;
+            /** Name */
+            name: string;
+            /** Summary */
+            summary: string;
+            /** Duration Days */
+            duration_days: number;
+            /** Review Every Days */
+            review_every_days?: number | null;
+            /**
+             * Default Risk Level
+             * @enum {string}
+             */
+            default_risk_level: "low" | "medium" | "high";
+            /**
+             * Clinical Review Status
+             * @description While pending, show 'Not yet clinically reviewed'.
+             * @enum {string}
+             */
+            clinical_review_status: "pending" | "approved";
+            /** Version */
+            version: number;
+        };
+        /** TemplateRef */
+        TemplateRef: {
+            /**
+             * Id
+             * Format: uuid
+             */
+            id: string;
+            /** Name */
+            name: string;
+            /** Version */
+            version: number;
+        };
+        /** TemplateTask */
+        TemplateTask: {
+            /** Title */
+            title: string;
+            /**
+             * Time Slot
+             * @enum {string}
+             */
+            time_slot: "morning" | "afternoon" | "evening" | "night";
+            /** Time Of Day */
+            time_of_day?: string | null;
+            /** Days Of Week */
+            days_of_week: number[];
+        };
         /** TimelineEntry */
         TimelineEntry: {
             /**
@@ -6670,18 +7865,6 @@ export interface components {
             /** Context */
             ctx?: Record<string, never>;
         };
-        /** VerificationResultRequest */
-        VerificationResultRequest: {
-            /**
-             * Type
-             * @enum {string}
-             */
-            type: "document" | "face";
-            /** Result */
-            result: {
-                [key: string]: unknown;
-            };
-        };
         /** VerificationStatusOut */
         VerificationStatusOut: {
             /** Profile Completion Step */
@@ -6698,6 +7881,26 @@ export interface components {
             changes_requested?: {
                 [key: string]: unknown;
             } | null;
+        };
+        /** VisitCarePlan */
+        VisitCarePlan: {
+            /**
+             * Booking Id
+             * Format: uuid
+             */
+            booking_id: string;
+            /**
+             * Subject Ready
+             * @description false: an app booking for someone else, so there is no identifiable client and no care plan is possible.
+             */
+            subject_ready: boolean;
+            /**
+             * Can Author
+             * @description A nurse, and a client who can have a plan.
+             */
+            can_author: boolean;
+            /** @description The client's active plan; null if there is none yet. */
+            plan?: components["schemas"]["CarePlanSummary"] | null;
         };
         /**
          * VitalSource
@@ -6720,6 +7923,11 @@ export interface components {
             expires_at: string;
             /** Notified Count */
             notified_count: number;
+        };
+        /** CandidateList */
+        app__schemas__admin_booking__CandidateList: {
+            /** Items */
+            items: components["schemas"]["CandidateOut"][];
         };
         /** AttemptOut */
         app__schemas__admin_payout__AttemptOut: {
@@ -6766,6 +7974,11 @@ export interface components {
              * Format: date-time
              */
             created_at: string;
+        };
+        /** CandidateList */
+        app__schemas__care_plan__CandidateList: {
+            /** Items */
+            items: components["schemas"]["Candidate"][];
         };
     };
     responses: never;
@@ -7379,7 +8592,34 @@ export interface operations {
             };
         };
     };
-    receive_verification_result_api_v1_caregiver_identity_verification_result_post: {
+    get_identity_verification_api_v1_caregiver_identity_verification_get: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["IdentityVerificationStateOut"];
+                };
+            };
+            /** @description No caregiver profile, or (client-event) no such attempt of yours: VERIFICATION_NOT_FOUND. */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+        };
+    };
+    create_identity_verification_session_api_v1_caregiver_identity_verification_sessions_post: {
         parameters: {
             query?: never;
             header?: never;
@@ -7388,7 +8628,104 @@ export interface operations {
         };
         requestBody: {
             content: {
-                "application/json": components["schemas"]["VerificationResultRequest"];
+                "application/json": components["schemas"]["IdentityVerificationSessionRequest"];
+            };
+        };
+        responses: {
+            /** @description The caregiver's active attempt, returned again. */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description Successful Response */
+            201: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["IdentityVerificationSessionOut"];
+                };
+            };
+            /** @description No caregiver profile, or (client-event) no such attempt of yours: VERIFICATION_NOT_FOUND. */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description ALREADY_VERIFIED, UNDER_REVIEW, IDENTITY_REJECTED, PROFILE_INCOMPLETE, POLICY_VERSION_MISMATCH, ATTEMPTS_EXHAUSTED or PROVIDER_AVAILABLE. */
+            409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+            /** @description PROVIDER_UNAVAILABLE: Prembly is flagged down or the widget is not configured. */
+            503: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+        };
+    };
+    defer_identity_verification_api_v1_caregiver_identity_verification_defer_post: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["IdentityVerificationStateOut"];
+                };
+            };
+            /** @description No caregiver profile, or (client-event) no such attempt of yours: VERIFICATION_NOT_FOUND. */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description ALREADY_VERIFIED, UNDER_REVIEW, IDENTITY_REJECTED, PROFILE_INCOMPLETE, POLICY_VERSION_MISMATCH, ATTEMPTS_EXHAUSTED or PROVIDER_AVAILABLE. */
+            409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+        };
+    };
+    identity_verification_client_event_api_v1_caregiver_identity_verification__verification_id__client_event_post: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                verification_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["IdentityVerificationClientEventRequest"];
             };
         };
         responses: {
@@ -7398,10 +8735,22 @@ export interface operations {
                     [name: string]: unknown;
                 };
                 content: {
-                    "application/json": {
-                        [key: string]: unknown;
-                    };
+                    "application/json": components["schemas"]["IdentityVerificationStateOut"];
                 };
+            };
+            /** @description No caregiver profile, or (client-event) no such attempt of yours: VERIFICATION_NOT_FOUND. */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description ALREADY_VERIFIED, UNDER_REVIEW, IDENTITY_REJECTED, PROFILE_INCOMPLETE, POLICY_VERSION_MISMATCH, ATTEMPTS_EXHAUSTED or PROVIDER_AVAILABLE. */
+            409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
             };
             /** @description Validation Error */
             422: {
@@ -7410,6 +8759,26 @@ export interface operations {
                 };
                 content: {
                     "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    receive_verification_result_api_v1_caregiver_identity_verification_result_post: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description The client no longer reports verification results. */
+            410: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": unknown;
                 };
             };
         };
@@ -7698,6 +9067,835 @@ export interface operations {
                 };
             };
             /** @description The booking is not yours, is not accepted, on the way or in progress, or does not exist. One answer for all of these. */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    list_templates_api_v1_caregiver_care_plan_templates_get: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["TemplateList"];
+                };
+            };
+            /** @description `not_a_nurse`: the caregiver has no nurse skill. */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+        };
+    };
+    get_template_api_v1_caregiver_care_plan_templates__template_id__get: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                template_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["TemplateDetail"];
+                };
+            };
+            /** @description `not_a_nurse`: the caregiver has no nurse skill. */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description No such (active) template. */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    list_care_plans_api_v1_caregiver_care_plans_get: {
+        parameters: {
+            query?: {
+                status?: string;
+                /** @description Search by client name. */
+                q?: string | null;
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["CarePlanList"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    list_candidates_api_v1_caregiver_care_plans_candidates_get: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["app__schemas__care_plan__CandidateList"];
+                };
+            };
+            /** @description `not_a_nurse`: the caregiver has no nurse skill. */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+        };
+    };
+    get_visit_care_plan_api_v1_caregiver_bookings__booking_id__care_plan_get: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                booking_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["VisitCarePlan"];
+                };
+            };
+            /** @description No access of any kind (not your booking, not live, no such plan or client). One answer for all of these. */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    create_care_plan_api_v1_caregiver_bookings__booking_id__care_plan_post: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                booking_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["CarePlanCreate"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            201: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["CarePlanOut"];
+                };
+            };
+            /** @description `not_a_nurse`: the caregiver has no nurse skill. */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description No access of any kind (not your booking, not live, no such plan or client). One answer for all of these. */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description `care_plan_exists` (body has `plan_id`) or `client_not_identified`. */
+            409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description Validation, or `invalid_care_plan`. */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+        };
+    };
+    get_care_plan_api_v1_caregiver_care_plans__plan_id__get: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                plan_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["CarePlanOut"];
+                };
+            };
+            /** @description No access of any kind (not your booking, not live, no such plan or client). One answer for all of these. */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    update_care_plan_api_v1_caregiver_care_plans__plan_id__patch: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                plan_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["CarePlanPatch"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["CarePlanOut"];
+                };
+            };
+            /** @description `not_a_nurse`: the caregiver has no nurse skill. */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description No access of any kind (not your booking, not live, no such plan or client). One answer for all of these. */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description `version_conflict` (body has the current `plan`) or `plan_not_editable`. */
+            409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    add_goal_api_v1_caregiver_care_plans__plan_id__goals_post: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                plan_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["GoalCreate"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            201: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["GoalWriteResult"];
+                };
+            };
+            /** @description `not_a_nurse`: the caregiver has no nurse skill. */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description No access of any kind (not your booking, not live, no such plan or client). One answer for all of these. */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    remove_goal_api_v1_caregiver_care_plan_goals__goal_id__delete: {
+        parameters: {
+            query: {
+                expected_version: number;
+            };
+            header?: never;
+            path: {
+                goal_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["GoalWriteResult"];
+                };
+            };
+            /** @description `not_a_nurse`: the caregiver has no nurse skill. */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description No access of any kind (not your booking, not live, no such plan or client). One answer for all of these. */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    update_goal_api_v1_caregiver_care_plan_goals__goal_id__patch: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                goal_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["GoalPatch"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["GoalWriteResult"];
+                };
+            };
+            /** @description `not_a_nurse`: the caregiver has no nurse skill. */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description No access of any kind (not your booking, not live, no such plan or client). One answer for all of these. */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    get_task_day_api_v1_caregiver_care_plans__plan_id__tasks_get: {
+        parameters: {
+            query?: {
+                /** @description YYYY-MM-DD; default today (Africa/Lagos). */
+                date?: string | null;
+            };
+            header?: never;
+            path: {
+                plan_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["TaskDay"];
+                };
+            };
+            /** @description No access of any kind (not your booking, not live, no such plan or client). One answer for all of these. */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    add_task_api_v1_caregiver_care_plans__plan_id__tasks_post: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                plan_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["TaskCreate"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            201: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["TaskWriteResult"];
+                };
+            };
+            /** @description `not_a_nurse`: the caregiver has no nurse skill. */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description No access of any kind (not your booking, not live, no such plan or client). One answer for all of these. */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    remove_task_api_v1_caregiver_care_plan_tasks__task_id__delete: {
+        parameters: {
+            query: {
+                expected_version: number;
+            };
+            header?: never;
+            path: {
+                task_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["TaskWriteResult"];
+                };
+            };
+            /** @description `not_a_nurse`: the caregiver has no nurse skill. */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description No access of any kind (not your booking, not live, no such plan or client). One answer for all of these. */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    update_task_api_v1_caregiver_care_plan_tasks__task_id__patch: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                task_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["TaskPatch"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["TaskWriteResult"];
+                };
+            };
+            /** @description `not_a_nurse`: the caregiver has no nurse skill. */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description No access of any kind (not your booking, not live, no such plan or client). One answer for all of these. */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    set_completion_api_v1_caregiver_care_plan_tasks__task_id__completion_put: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                task_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["CompletionIn"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["CompletionOut"];
+                };
+            };
+            /** @description No access of any kind (not your booking, not live, no such plan or client). One answer for all of these. */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description `visit_not_in_progress` or `plan_not_editable` (completed/archived plan). */
+            409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description `task_date_not_today`, `task_not_scheduled`, or validation. */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+        };
+    };
+    list_observations_api_v1_caregiver_care_plans__plan_id__observations_get: {
+        parameters: {
+            query?: {
+                /** @description Return notes older than this timestamp (the previous page's `next_before`). */
+                before?: string | null;
+                /** @description With `before`: the previous page's `next_before_id`. */
+                before_id?: string | null;
+                limit?: number;
+                /** @description Only this category. */
+                category?: ("observation" | "special_note") | null;
+            };
+            header?: never;
+            path: {
+                plan_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ObservationList"];
+                };
+            };
+            /** @description No access of any kind (not your booking, not live, no such plan or client). One answer for all of these. */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    add_observation_api_v1_caregiver_care_plans__plan_id__observations_post: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                plan_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["ObservationIn"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            201: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ObservationOut"];
+                };
+            };
+            /** @description No access of any kind (not your booking, not live, no such plan or client). One answer for all of these. */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description `visit_not_in_progress` or `plan_not_editable`. */
+            409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    get_progress_api_v1_caregiver_care_plans__plan_id__progress_get: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                plan_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Progress"];
+                };
+            };
+            /** @description No access of any kind (not your booking, not live, no such plan or client). One answer for all of these. */
             404: {
                 headers: {
                     [name: string]: unknown;
@@ -10216,7 +12414,7 @@ export interface operations {
                     [name: string]: unknown;
                 };
                 content: {
-                    "application/json": components["schemas"]["CandidateList"];
+                    "application/json": components["schemas"]["app__schemas__admin_booking__CandidateList"];
                 };
             };
             /** @description Validation Error */

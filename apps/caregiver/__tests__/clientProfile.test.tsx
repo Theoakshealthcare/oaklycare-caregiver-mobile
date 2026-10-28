@@ -8,7 +8,9 @@ import { session } from "../src/auth";
 import BookingDetails from "../src/screens/booking/BookingDetails";
 import ClientProfile from "../src/screens/booking/ClientProfile";
 import { bookingService, type Booking } from "../src/services/booking.service";
+import { carePlansService } from "../src/services/carePlans.service";
 import { clientsService, type ClientProfile as Profile } from "../src/services/clients.service";
+import { visitPlan } from "../test-utils/carePlanFixtures";
 
 const mockNavigate = jest.fn();
 jest.mock("../src/hooks/use-navigation", () => ({
@@ -63,6 +65,7 @@ let getSpy: jest.SpyInstance;
 beforeEach(async () => {
   await session.signIn({ accessToken: "access", refreshToken: "refresh" });
   getSpy = jest.spyOn(clientsService, "getClientProfile").mockResolvedValue(profile());
+  jest.spyOn(carePlansService, "getVisitPlan").mockResolvedValue(visitPlan());
 });
 afterEach(async () => {
   jest.restoreAllMocks();
@@ -84,6 +87,13 @@ describe("ClientProfile", () => {
     expect(screen.getByTestId("client-code")).toHaveTextContent("Booking OAK123");
     expect(getSpy).toHaveBeenCalledWith(BOOKING);
     expect(screen.queryByTestId("client-booked-by")).toBeNull();
+  });
+
+  it("shows the Care plan row for the visit under the client card", async () => {
+    await renderProfile();
+    expect(await screen.findByTestId("care-plan-row")).toBeTruthy();
+    expect(carePlansService.getVisitPlan).toHaveBeenCalledWith(BOOKING);
+    expect(await screen.findByTestId("care-plan-create")).toBeTruthy();
   });
 
   it("shows the latest vitals neutrally, only for the vitals the app knows", async () => {
@@ -113,13 +123,12 @@ describe("ClientProfile", () => {
     expect(mockNavigate).toHaveBeenCalledWith("AINoteTaker", { bookingId: BOOKING });
   });
 
-  it("shows medical history that is stored, with no care plan section", async () => {
+  it("shows medical history that is stored", async () => {
     await renderProfile();
     const history = await screen.findByTestId("client-history");
     for (const text of [/O\+/, /Type 2 diabetes/, /Penicillin/, /Metformin/, /Hypertension · medium severity/]) {
       expect(history).toHaveTextContent(text);
     }
-    expect(screen.queryByText(/care plan/i)).toBeNull();
   });
 
   it("leaves out medical history and emergency contact when none is on file", async () => {
