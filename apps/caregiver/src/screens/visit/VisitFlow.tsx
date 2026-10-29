@@ -10,7 +10,9 @@ import Button from "@/src/components/ui/button";
 import Text from "@/src/components/ui/text";
 import { globalStyles } from "@/src/constants/styles";
 import { theme } from "@/src/constants/theme";
+import { CLOCK_OUT_PROMPT, needsClockOutPrompt } from "@/src/careplan/carePlanModel";
 import { useBooking, useBookingAction } from "@/src/hooks/queries";
+import { useVisitCarePlan } from "@/src/hooks/useCarePlans";
 import type { ScreenParamLists } from "@/src/navigation/Navigations";
 import { bookingService } from "@/src/services/booking.service";
 import { ensureBackgroundLocation } from "@/src/supply/permissions";
@@ -29,6 +31,8 @@ const VisitFlow: React.FC<Props> = ({ route, navigation }) => {
   const client = useQueryClient();
   const { data: booking, isLoading, error, refetch } = useBooking(bookingId, true, VISIT_POLL_MS);
   const action = useBookingAction();
+  // Only asked once the visit is running; a failed or slow answer never blocks completing the visit.
+  const carePlan = useVisitCarePlan(bookingId, booking?.status === "in_progress");
 
   const [arrived, setArrived] = useState(false);
   const [codeBusy, setCodeBusy] = useState(false);
@@ -84,11 +88,22 @@ const VisitFlow: React.FC<Props> = ({ route, navigation }) => {
       },
     ]);
 
-  const confirmComplete = () =>
+  const confirmComplete = () => {
+    // A client with an active care plan: remind the caregiver that ticks and notes end with the visit.
+    const plan = carePlan.data?.plan;
+    if (plan && needsClockOutPrompt(carePlan.data)) {
+      Alert.alert(CLOCK_OUT_PROMPT.title, CLOCK_OUT_PROMPT.message, [
+        { text: CLOCK_OUT_PROMPT.cancel, style: "cancel" },
+        { text: CLOCK_OUT_PROMPT.review, onPress: () => navigation.navigate("CarePlanDetails", { planId: plan.id, from: "clock_out" }) },
+        { text: CLOCK_OUT_PROMPT.anyway, style: "destructive", onPress: () => run("complete") },
+      ]);
+      return;
+    }
     Alert.alert("Complete this visit?", "This ends the visit and stops sharing your location.", [
       { text: "Not yet", style: "cancel" },
       { text: "Complete", onPress: () => run("complete") },
     ]);
+  };
 
   const submitCode = async (code: string) => {
     setCodeBusy(true);

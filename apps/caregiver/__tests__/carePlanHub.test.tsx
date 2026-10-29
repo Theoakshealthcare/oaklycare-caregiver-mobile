@@ -79,6 +79,12 @@ describe("Care plans hub: Assigned tab", () => {
 
     await fireEvent.press(screen.getByTestId(`plan-${PLAN_ID}`));
     expect(mockNavigate).toHaveBeenCalledWith("CarePlanDetails", { planId: PLAN_ID });
+
+    // View progress sits on every card and opens the plan's progress, not its details.
+    mockNavigate.mockClear();
+    await fireEvent.press(screen.getByTestId(`plan-view-progress-${PLAN_ID}`));
+    expect(mockNavigate).toHaveBeenCalledWith("CarePlanProgress", { planId: PLAN_ID, clientName: "Placeholder Client" });
+    expect(mockNavigate).not.toHaveBeenCalledWith("CarePlanDetails", expect.anything());
   });
 
   it("searches by client name after typing stops, and switches to completed plans", async () => {

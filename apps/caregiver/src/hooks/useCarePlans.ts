@@ -68,12 +68,12 @@ export function usePlanCandidates(enabled = true) {
 }
 
 /** One visit's view of the client's plan: `plan: null` is "no plan yet", a 404 is "no access". */
-export function useVisitCarePlan(bookingId: string) {
+export function useVisitCarePlan(bookingId: string, enabled = true) {
   const signedIn = useSignedIn();
   return useQuery({
     queryKey: queryKeys.visitCarePlan(bookingId),
     queryFn: () => carePlansService.getVisitPlan(bookingId),
-    enabled: signedIn,
+    enabled: signedIn && enabled,
     gcTime: GC_TIME,
   });
 }
@@ -99,7 +99,7 @@ function refreshLists(client: QueryClient) {
  * A 409 `version_conflict` carries the current plan: keep it so the next save uses the right version.
  * A 409 `plan_not_editable` means it was completed or archived elsewhere: reload so the controls go away.
  */
-function keepConflictPlan(client: QueryClient, planId: string, error: unknown) {
+export function keepConflictPlan(client: QueryClient, planId: string, error: unknown) {
   const current = conflictPlan(error);
   if (current) client.setQueryData(queryKeys.carePlan(planId), current);
   else if (errorCode(error) === "plan_not_editable") void client.invalidateQueries({ queryKey: queryKeys.carePlan(planId) });

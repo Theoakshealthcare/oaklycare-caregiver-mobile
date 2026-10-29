@@ -7,11 +7,17 @@ import { ApiError } from "@/src/api/errors";
 import type {
   CarePlan,
   CarePlanCreateBody,
+  CarePlanProgress,
   CarePlanTemplate,
   GoalFrequency,
   GoalWriteResult,
   NewGoal,
+  NewTask,
+  TaskCompletion,
+  TaskDay,
+  TaskWriteResult,
 } from "@/src/services/carePlans.service";
+import { parseBackendDate } from "@/src/utils/dates";
 
 export type RiskLevel = CarePlan["risk_level"];
 export type TimeSlot = CarePlanTemplate["tasks"][number]["time_slot"];
@@ -340,3 +346,187 @@ export function matchesQuery(item: { name: string; summary: string }, query: str
   const q = query.trim().toLowerCase();
   return !q || item.name.toLowerCase().includes(q) || item.summary.toLowerCase().includes(q);
 }
+
+// --- M2: daily tasks, ticks, notes, progress (guide sections 16.13 to 16.19) -----------------------------------------
+
+export const VISIT_ONLY_HINT = "Available during an active visit.";
+export const PAST_DAY_HINT = "Only today's tasks can be ticked. Other days are read-only.";
+export const NOTE_PERMANENT_HINT = "A note can't be edited or deleted once you submit it. To correct one, add a new note.";
+export const TICK_DAY_CHANGED_HINT = "The day changed, so your tick was not saved. We've loaded today's tasks.";
+export const TICK_NOT_SCHEDULED_HINT = "That task is not scheduled for this day. We've refreshed the list.";
+export const NO_PROGRESS_YET = "No visits yet";
+
+/** Monday to Sunday in the order the day tabs show them (backend numbering: 1 = Monday .. 7 = Sunday). */
+export const WEEK_TABS = ["Mon", "Tue", "Wed", "Thu", "Fri", "Sat", "Sun"] as const;
+
+const isoOf = (ms: number): string => new Date(ms).toISOString().slice(0, 10);
+
+/**
+ * The Monday-to-Sunday week that contains `today` (a `YYYY-MM-DD` the backend resolved in Africa/Lagos). Pure
+ * calendar arithmetic in UTC: the phone's time zone and clock never decide which day is "today".
+ */
+export function weekOf(today: string): { date: string; label: string }[] {
+  const m = /^(\d{4})-(\d{2})-(\d{2})$/.exec(today);
+  if (!m) return [];
+  const base = Date.UTC(Number(m[1]), Number(m[2]) - 1, Number(m[3]));
+  const sinceMonday = (new Date(base).getUTCDay() + 6) % 7;
+  return WEEK_TABS.map((label, i) => ({ date: isoOf(base + (i - sinceMonday) * 86_400_000), label }));
+}
+
+/** "08:00" -> "8:00 AM", "18:00" -> "6:00 PM". Anything else is returned as it came. */
+export function clockLabel(time: string | null | undefined): string {
+  const m = /^(\d{1,2}):(\d{2})/.exec(time ?? "");
+  if (!m) return time ?? "";
+  const hour = Number(m[1]);
+  return `${hour % 12 === 0 ? 12 : hour % 12}:${m[2]} ${hour < 12 ? "AM" : "PM"}`;
+}
+
+/** "Morning (8:00 AM)", or just "Evening" when no task in the slot has a time. */
+export function slotHeading(slot: TimeSlot, time: string | null | undefined): string {
+  return time ? `${slotLabel(slot)} (${clockLabel(time)})` : slotLabel(slot);
+}
+
+/** `HH:MM` on a 24-hour clock, the format the backend stores. */
+export const isTimeOfDay = (text: string): boolean => /^([01]\d|2[0-3]):[0-5]\d$/.test(text.trim());
+
+export interface TaskDraft {
+  title: string;
+  slot: TimeSlot;
+  /** Blank = no time. */
+  time: string;
+  days: number[];
+}
+
+export const emptyTaskDraft = (): TaskDraft => ({ title: "", slot: "morning", time: "", days: [...DAILY] });
+
+export function validateTask(draft: TaskDraft): { title?: string; time?: string; days?: string } {
+  const errors: { title?: string; time?: string; days?: string } = {};
+  const title = draft.title.trim();
+  if (!title) errors.title = "Enter the task.";
+  else if (title.length > LIMITS.title) errors.title = `Keep the task to ${LIMITS.title} characters.`;
+  if (draft.time.trim() && !isTimeOfDay(draft.time)) errors.time = "Use the 24-hour format HH:MM, for example 08:00.";
+  if (draft.days.length === 0) errors.days = "Choose at least one day.";
+  return errors;
+}
+
+export function buildTaskBody(draft: TaskDraft): NewTask {
+  const time = draft.time.trim();
+  return {
+    title: draft.title.trim(),
+    time_slot: draft.slot,
+    ...(time ? { time_of_day: time } : {}),
+    days_of_week: [...draft.days].sort((a, b) => a - b),
+  };
+}
+
+/** A task write answers `{ task, plan_version }`: add the task to the plan we hold and take the new version. */
+export function applyTaskResult(plan: CarePlan, result: TaskWriteResult): CarePlan {
+  const exists = plan.tasks.some((t) => t.id === result.task.id);
+  return {
+    ...plan,
+    version: result.plan_version,
+    tasks: exists ? plan.tasks.map((t) => (t.id === result.task.id ? result.task : t)) : [...plan.tasks, result.task],
+  };
+}
+
+/** The server's answer to a tick is the truth (who, when), including when another caregiver ticked first. */
+export function applyCompletion(day: TaskDay, completion: TaskCompletion): TaskDay {
+  return {
+    ...day,
+    slots: day.slots.map((slot) => ({
+      ...slot,
+      tasks: slot.tasks.map((t) =>
+        t.id === completion.task_id
+          ? { ...t, done: completion.done, done_by: completion.done_by ?? null, done_at: completion.done_at ?? null }
+          : t,
+      ),
+    })),
+  };
+}
+
+export interface TickFailure {
+  message: string;
+  /** What to reload so the screen shows the truth again. */
+  reload: "day" | "plan" | "none";
+  noAccess: boolean;
+}
+
+/** What to tell the caregiver, and what to reload, when a tick is refused (guide 16.16). Never retried or queued. */
+export function tickFailure(error: unknown, fallback: string): TickFailure {
+  if (isNoAccess(error)) return { message: NOT_AVAILABLE_TITLE, reload: "none", noAccess: true };
+  switch (errorCode(error)) {
+    case "visit_not_in_progress":
+      return { message: VISIT_ONLY_HINT, reload: "plan", noAccess: false };
+    case "plan_not_editable":
+      return { message: "This plan is completed or archived and can't be changed.", reload: "plan", noAccess: false };
+    case "task_date_not_today":
+      return { message: TICK_DAY_CHANGED_HINT, reload: "day", noAccess: false };
+    case "task_not_scheduled":
+      return { message: TICK_NOT_SCHEDULED_HINT, reload: "day", noAccess: false };
+    default:
+      return { message: fallback, reload: "none", noAccess: false };
+  }
+}
+
+export const NOTE_MAX = 2000;
+
+/** The note box: 1 to 2000 characters after trimming (the backend trims too). */
+export function validateNote(text: string): string | null {
+  const body = text.trim();
+  if (!body) return "Write a note first.";
+  if (body.length > NOTE_MAX) return `Keep the note to ${NOTE_MAX} characters.`;
+  return null;
+}
+
+/** "28 Oct, 09:14" in the phone's own zone, from a backend UTC timestamp (no `Z`). Empty when it can't be read. */
+export function formatStamp(iso: string | null | undefined): string {
+  if (!iso) return "";
+  const date = parseBackendDate(iso);
+  if (Number.isNaN(date.getTime())) return "";
+  return date.toLocaleString("en-NG", { day: "numeric", month: "short", hour: "2-digit", minute: "2-digit", hour12: false });
+}
+
+/** "09:14" for the "Nurse Saliu, 09:14" line under a ticked task. */
+export function formatClock(iso: string | null | undefined): string {
+  if (!iso) return "";
+  const date = parseBackendDate(iso);
+  if (Number.isNaN(date.getTime())) return "";
+  return date.toLocaleTimeString("en-NG", { hour: "2-digit", minute: "2-digit", hour12: false });
+}
+
+/** "Done by Nurse Saliu, 09:14". */
+export const doneByText = (task: { done_by?: string | null; done_at?: string | null }): string => {
+  const who = task.done_by ?? "a caregiver";
+  const when = formatClock(task.done_at);
+  return when ? `Done by ${who}, ${when}` : `Done by ${who}`;
+};
+
+/** The headline of View Progress: a percentage, or "No visits yet" (never 0%) when nothing is measurable yet. */
+export const progressHeadline = (progress: Pick<CarePlanProgress, "overall_percent">): string =>
+  progress.overall_percent === null || progress.overall_percent === undefined ? NO_PROGRESS_YET : `${progress.overall_percent}%`;
+
+/** "Day 9 of 30", or "Starts soon" before the plan's first day. */
+export const dayOfPlan = (progress: Pick<CarePlanProgress, "day" | "of_days">): string =>
+  progress.day <= 0 ? "Not started yet" : `Day ${progress.day} of ${progress.of_days}`;
+
+/** "Mon 21 Oct" label for a bar of the per-day chart. */
+export function shortDate(isoDate: string): string {
+  const m = /^(\d{4})-(\d{2})-(\d{2})$/.exec(isoDate);
+  if (!m) return isoDate;
+  const dow = new Date(Date.UTC(Number(m[1]), Number(m[2]) - 1, Number(m[3]))).getUTCDay();
+  return `${WEEK_TABS[(dow + 6) % 7]} ${Number(m[3])} ${MONTHS[Number(m[2]) - 1] ?? ""}`;
+}
+
+// --- The prompt before "Complete visit" ----------------------------------------------------------------------------------
+
+export const CLOCK_OUT_PROMPT = {
+  title: "Add your notes before you finish?",
+  message:
+    "Once the visit is complete you can no longer tick tasks or add notes to this client's care plan. Check today's tasks and add a visit note first.",
+  review: "Review care plan",
+  anyway: "Complete visit",
+  cancel: "Not yet",
+} as const;
+
+/** Only a live plan that can still be ticked is worth a prompt; a missing, completed or archived plan is not. */
+export const needsClockOutPrompt = (visit: { plan?: { status: string } | null } | undefined): boolean => visit?.plan?.status === "active";

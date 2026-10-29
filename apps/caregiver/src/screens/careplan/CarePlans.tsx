@@ -43,7 +43,7 @@ const TabButton: React.FC<{ label: string; active: boolean; onPress: () => void;
   </Pressable>
 );
 
-const PlanCard: React.FC<{ plan: CarePlanListItem; onOpen: () => void }> = ({ plan, onOpen }) => {
+const PlanCard: React.FC<{ plan: CarePlanListItem; onOpen: () => void; onProgress: () => void }> = ({ plan, onOpen, onProgress }) => {
   const subtitle = ageAndSex(plan.client);
   return (
     <Pressable testID={`plan-${plan.id}`} accessibilityRole="button" onPress={onOpen}>
@@ -73,6 +73,7 @@ const PlanCard: React.FC<{ plan: CarePlanListItem; onOpen: () => void }> = ({ pl
             <Text variant="caption">{`${plan.progress_percent}% complete`}</Text>
           </View>
         ) : null}
+        <Button testID={`plan-view-progress-${plan.id}`} title="View progress" variant="outline" onPress={onProgress} />
       </Card>
     </Pressable>
   );
@@ -140,7 +141,12 @@ const CarePlans: React.FC<Props> = ({ route }) => {
     return (
       <View style={{ gap: theme.spacing.md }}>
         {plans.data.items.map((plan) => (
-          <PlanCard key={plan.id} plan={plan} onOpen={() => navigation.navigate("CarePlanDetails", { planId: plan.id })} />
+          <PlanCard
+            key={plan.id}
+            plan={plan}
+            onOpen={() => navigation.navigate("CarePlanDetails", { planId: plan.id })}
+            onProgress={() => navigation.navigate("CarePlanProgress", { planId: plan.id, clientName: plan.client.full_name })}
+          />
         ))}
       </View>
     );

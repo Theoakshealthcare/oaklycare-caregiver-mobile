@@ -8,7 +8,7 @@ import CarePlanDetails from "../src/screens/careplan/CarePlanDetails";
 import { carePlansService } from "../src/services/carePlans.service";
 import { clientsService, type ClientProfile } from "../src/services/clients.service";
 import { renderWithClient, routeProps } from "../test-utils/carePlanHarness";
-import { GOAL_ID, NOT_A_NURSE, NO_ACCESS, PLAN_ID, plan, readOnlyPlan, versionConflict } from "../test-utils/carePlanFixtures";
+import { GOAL_ID, NOT_A_NURSE, NO_ACCESS, PLAN_ID, dayView, notePage, plan, readOnlyPlan, versionConflict } from "../test-utils/carePlanFixtures";
 
 const mockNavigate = jest.fn();
 const mockGoBack = jest.fn();
@@ -37,6 +37,9 @@ const clientProfile = {
 
 beforeEach(async () => {
   await session.signIn({ accessToken: "access", refreshToken: "refresh" });
+  // The tasks section is part of this screen (M2); its own behaviour is tested in carePlanTasks.test.tsx.
+  jest.spyOn(carePlansService, "getTaskDay").mockResolvedValue(dayView());
+  jest.spyOn(carePlansService, "listNotes").mockResolvedValue(notePage([]));
 });
 afterEach(async () => {
   jest.restoreAllMocks();
