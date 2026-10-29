@@ -24,7 +24,7 @@ channel) lives in the backend repo: `docs/checklist/MASTER_CHECKLIST.md`. Update
 - [x] Full `api:sync` from backend `main` (2026-10-28, care plans M1)
 - [ ] Device pass
 
-## Caregiver care plans (backend B1/B2 merged; mobile M1-M3)
+## Caregiver care plans (backend B1-B4 merged; mobile M1-M3)
 - [x] M1 Hub, create, details, goals (2026-10-28, branch `feat/caregiver-care-plans-hub`, see docs/sop/2026-10-28-caregiver-care-plans-hub.md; Jest only, **not device-verified**)
   - [x] Home "Care plans" card from the server field `can_author_care_plans`
   - [x] Hub: Assigned / Templates tabs, search, Active / Completed filter, "Create New Care Plan"
@@ -42,7 +42,13 @@ channel) lives in the backend repo: `docs/checklist/MASTER_CHECKLIST.md`. Update
   - [x] View Progress screen (from the details header and the hub cards): "No visits yet" instead of 0%
   - [x] "Add notes before you finish?" prompt before Complete visit; never blocks completing
   - [ ] Edit / remove a task (nurse); native time picker; device pass
-- [ ] M3 Medications list and form with the "not clinical advice" banner (needs backend B3)
+- [x] M3 Medications: list, Add Medication form and success page, the "not clinical advice" notice (2026-10-29, branch `feat/caregiver-care-plans-meds`, see docs/sop/2026-10-29-caregiver-care-plans-medications.md; Jest only, **not device-verified**)
+  - [x] "Medication schedules" section on Care Plan Details, never collapsed so the notice is always on screen; active first, stopped greyed under "Stopped"
+  - [x] Add Medication (nurses only, from `can_edit_plan`): name, strength, dose, route, reason, prescriber, how often, times, dates, notes; checked before sending; success page
+  - [x] Record only: no reminders, no "given" ticks, no due or overdue, nothing calculated from a time (design D4)
+  - [x] A test pins the notice to the wording in the committed OpenAPI spec
+  - [ ] Edit and stop a medication (backend routes exist; not drawn in the design); native date and time pickers; device pass
+  - [ ] Clinician sign-off of the notice wording (go-live gate; one string, `MEDICATION_NOTICE`)
 - [ ] Clinical sign-off of seeded templates and copy (go-live gate)
 
 ## Caregiver bank account

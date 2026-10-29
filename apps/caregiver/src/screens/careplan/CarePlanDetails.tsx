@@ -10,6 +10,8 @@ import DailyTasks from "@/src/components/careplan/DailyTasks";
 import EditPlanSheet from "@/src/components/careplan/EditPlanSheet";
 import GoalModal from "@/src/components/careplan/GoalModal";
 import ListEditModal, { type ListField } from "@/src/components/careplan/ListEditModal";
+import MedicationModal from "@/src/components/careplan/MedicationModal";
+import MedicationsSection from "@/src/components/careplan/MedicationsSection";
 import NotesSection from "@/src/components/careplan/NotesSection";
 import TaskModal from "@/src/components/careplan/TaskModal";
 import { Accordion, Card, CarePlanNotice, FieldHint, RiskBadge } from "@/src/components/careplan/parts";
@@ -155,7 +157,7 @@ const GoalRow: React.FC<{
   );
 };
 
-/** One care plan: header, then the sections the nurse and the other caregivers read (client, goals, allergies and instructions). */
+/** One care plan: header, then the sections the nurse and the other caregivers read (client, goals, medications, tasks, notes, allergies and instructions). */
 const CarePlanDetails: React.FC<Props> = ({ route }) => {
   const { planId, from } = route.params;
   // Coming from the clock-out prompt: the tasks and the notes are what the caregiver came to finish.
@@ -165,7 +167,7 @@ const CarePlanDetails: React.FC<Props> = ({ route }) => {
   const [lostAccess, setLostAccess] = useState(false);
   const query = useCarePlan(planId, !lostAccess);
   const [sheet, setSheet] = useState<
-    null | { kind: "plan" } | { kind: "goal"; goal?: CarePlanGoal } | { kind: "list"; field: ListField } | { kind: "task" }
+    null | { kind: "plan" } | { kind: "goal"; goal?: CarePlanGoal } | { kind: "list"; field: ListField } | { kind: "task" } | { kind: "medication" }
   >(null);
   const [goalError, setGoalError] = useState<string | null>(null);
   const onNoAccess = useCallback(() => setLostAccess(true), []);
@@ -296,6 +298,8 @@ const CarePlanDetails: React.FC<Props> = ({ route }) => {
             ) : null}
           </Accordion>
 
+          <MedicationsSection plan={plan} onAdd={canEdit ? () => setSheet({ kind: "medication" }) : undefined} />
+
           <Accordion testID="section-tasks" title="Daily care tasks" defaultOpen keepMounted>
             <DailyTasks plan={plan} onNoAccess={onNoAccess} onAddTask={canEdit ? () => setSheet({ kind: "task" }) : undefined} />
           </Accordion>
@@ -376,6 +380,17 @@ const CarePlanDetails: React.FC<Props> = ({ route }) => {
           onSaved={() => {
             setSheet(null);
             navigation.navigate("CarePlanSuccess", { kind: "task_added", planId: plan.id });
+          }}
+        />
+      ) : null}
+      {sheetOpen?.kind === "medication" ? (
+        <MedicationModal
+          plan={plan}
+          onClose={() => setSheet(null)}
+          onNoAccess={onNoAccess}
+          onSaved={() => {
+            setSheet(null);
+            navigation.navigate("CarePlanSuccess", { kind: "medication_added", planId: plan.id });
           }}
         />
       ) : null}

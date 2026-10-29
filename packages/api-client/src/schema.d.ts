@@ -983,6 +983,72 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/v1/caregiver/care-plans/{plan_id}/medications": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Add Medication
+         * @description Record a medicine the prescriber ordered (nurses only). `expected_version` is optional here: adding never overwrites anything. At most 40 active medications per plan.
+         *
+         *     **Not clinical advice.** This is a record of what the prescriber ordered. Oakly does not check doses or interactions and does not remind anyone to give medicines. Follow the prescriber's instructions.
+         */
+        post: operations["add_medication_api_v1_caregiver_care_plans__plan_id__medications_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/caregiver/care-plan-medications/{medication_id}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        /**
+         * Update Medication
+         * @description Edit a medication (nurses only). Only the fields sent change; optional fields accept null to clear. Needs the plan's `expected_version`. A stopped medication cannot be edited.
+         *
+         *     **Not clinical advice.** This is a record of what the prescriber ordered. Oakly does not check doses or interactions and does not remind anyone to give medicines. Follow the prescriber's instructions.
+         */
+        patch: operations["update_medication_api_v1_caregiver_care_plan_medications__medication_id__patch"];
+        trace?: never;
+    };
+    "/api/v1/caregiver/care-plan-medications/{medication_id}/stop": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Stop Medication
+         * @description Stop a medication (nurses only): `status` becomes `stopped` and `stopped_at` is set. The medication stays on the plan as history and is never deleted. Needs the plan's `expected_version`. Stopping a stopped medication changes nothing.
+         *
+         *     **Not clinical advice.** This is a record of what the prescriber ordered. Oakly does not check doses or interactions and does not remind anyone to give medicines. Follow the prescriber's instructions.
+         */
+        post: operations["stop_medication_api_v1_caregiver_care_plan_medications__medication_id__stop_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/v1/devices/push-token": {
         parameters: {
             query?: never;
@@ -2977,6 +3043,277 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/v1/admin/care-plans": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * List Care Plans
+         * @description Plans across all clients, newest change first. The rows carry no plan text; open a plan for that.
+         */
+        get: operations["list_care_plans_api_v1_admin_care_plans_get"];
+        put?: never;
+        /**
+         * Create Care Plan
+         * @description Create a client's plan, blank or from a template (the template only fills what the body leaves out). Name the client
+         *     with exactly one of `patient_id` or `care_recipient_id`. Audited.
+         */
+        post: operations["create_care_plan_api_v1_admin_care_plans_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/admin/care-plans/{plan_id}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Get Care Plan
+         * @description The full plan, at any status. **Opening a plan is audited** (`care_plan.view`).
+         */
+        get: operations["get_care_plan_api_v1_admin_care_plans__plan_id__get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        /**
+         * Update Care Plan
+         * @description Header fields, allergies, special instructions, and `status` to `completed` or `archived`. Needs the plan's
+         *     `expected_version`. Audited.
+         */
+        patch: operations["update_care_plan_api_v1_admin_care_plans__plan_id__patch"];
+        trace?: never;
+    };
+    "/api/v1/admin/care-plans/{plan_id}/observations": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * List Observations
+         * @description Visit notes, newest first, from nurses and admins. **Reading them is audited** (`care_plan.observations_view`).
+         */
+        get: operations["list_observations_api_v1_admin_care_plans__plan_id__observations_get"];
+        put?: never;
+        /**
+         * Add Observation
+         * @description Add a note as the Clinical Reviewer (no visit needed; the plan must be active). Notes cannot be edited or deleted: a
+         *     correction is a new note. Does not change the plan's `version`. Audited.
+         */
+        post: operations["add_observation_api_v1_admin_care_plans__plan_id__observations_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/admin/care-plans/{plan_id}/goals": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Add Goal
+         * @description Add a goal. `expected_version` is optional here: adding never overwrites anything. Audited.
+         */
+        post: operations["add_goal_api_v1_admin_care_plans__plan_id__goals_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/admin/care-plan-goals/{goal_id}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post?: never;
+        /**
+         * Remove Goal
+         * @description Remove a goal: it is marked `discontinued` and kept. Needs the plan's `expected_version` as a query parameter. Audited.
+         */
+        delete: operations["remove_goal_api_v1_admin_care_plan_goals__goal_id__delete"];
+        options?: never;
+        head?: never;
+        /**
+         * Update Goal
+         * @description Edit a goal, or mark it achieved or discontinued. Needs the plan's `expected_version`. Audited.
+         */
+        patch: operations["update_goal_api_v1_admin_care_plan_goals__goal_id__patch"];
+        trace?: never;
+    };
+    "/api/v1/admin/care-plans/{plan_id}/tasks": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Add Task
+         * @description Add a daily task. `expected_version` is optional here. The task is scheduled from today on. Audited.
+         */
+        post: operations["add_task_api_v1_admin_care_plans__plan_id__tasks_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/admin/care-plan-tasks/{task_id}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post?: never;
+        /**
+         * Remove Task
+         * @description Remove a task: it stops being scheduled and leaves `tasks`; its ticks are kept. Needs `expected_version` as a query
+         *     parameter. Audited.
+         */
+        delete: operations["remove_task_api_v1_admin_care_plan_tasks__task_id__delete"];
+        options?: never;
+        head?: never;
+        /**
+         * Update Task
+         * @description Edit a task: title, slot, display time or days. Needs the plan's `expected_version`. A removed task is 404. Audited.
+         */
+        patch: operations["update_task_api_v1_admin_care_plan_tasks__task_id__patch"];
+        trace?: never;
+    };
+    "/api/v1/admin/care-plans/{plan_id}/medications": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Add Medication
+         * @description Record a medicine the prescriber ordered. `expected_version` is optional here. At most 40 active medications per plan. Audited.
+         *
+         *     **Not clinical advice.** This is a record of what the prescriber ordered. Oakly does not check doses or interactions and does not remind anyone to give medicines. Follow the prescriber's instructions.
+         */
+        post: operations["add_medication_api_v1_admin_care_plans__plan_id__medications_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/admin/care-plan-medications/{medication_id}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        /**
+         * Update Medication
+         * @description Edit a medication. Only the fields sent change; optional fields accept null to clear. Needs the plan's `expected_version`. A stopped medication cannot be edited. Audited.
+         *
+         *     **Not clinical advice.** This is a record of what the prescriber ordered. Oakly does not check doses or interactions and does not remind anyone to give medicines. Follow the prescriber's instructions.
+         */
+        patch: operations["update_medication_api_v1_admin_care_plan_medications__medication_id__patch"];
+        trace?: never;
+    };
+    "/api/v1/admin/care-plan-medications/{medication_id}/stop": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Stop Medication
+         * @description Stop a medication: `status` becomes `stopped` and `stopped_at` is set. It stays on the plan as history and is never deleted. Needs the plan's `expected_version`. Stopping a stopped medication changes nothing. Audited.
+         *
+         *     **Not clinical advice.** This is a record of what the prescriber ordered. Oakly does not check doses or interactions and does not remind anyone to give medicines. Follow the prescriber's instructions.
+         */
+        post: operations["stop_medication_api_v1_admin_care_plan_medications__medication_id__stop_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/admin/care-plan-templates": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * List Templates
+         * @description Every template (active or not) with its content and review state. Go-live gate: each seeded template is reviewed or
+         *     removed.
+         */
+        get: operations["list_templates_api_v1_admin_care_plan_templates_get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/admin/care-plan-templates/{template_id}/review": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Review Template
+         * @description Sign a template off (`approved`) or take the sign-off back (`pending`); records the reviewer and time. Audited.
+         */
+        post: operations["review_template_api_v1_admin_care_plan_templates__template_id__review_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/health": {
         parameters: {
             query?: never;
@@ -3017,6 +3354,176 @@ export interface components {
             longitude?: number | null;
             /** Needs Address Check */
             needs_address_check: boolean;
+        };
+        /**
+         * AdminCarePlanCreate
+         * @description The caregiver create body plus the client: exactly one of ``patient_id`` (an app patient, or a visit booked for
+         *     oneself) or ``care_recipient_id`` (a relative a booker made a visit for).
+         */
+        AdminCarePlanCreate: {
+            /**
+             * Template Id
+             * @description Copy goals, tasks, instructions and defaults from this template. Anything sent below wins over the template.
+             */
+            template_id?: string | null;
+            /** Diagnosis */
+            diagnosis: string;
+            /**
+             * Risk Level
+             * @description Required unless the template supplies a default.
+             */
+            risk_level?: ("low" | "medium" | "high") | null;
+            /**
+             * Start Date
+             * @description Defaults to today (Africa/Lagos).
+             */
+            start_date?: string | null;
+            /**
+             * Duration Days
+             * @description Defaults to the template's, else 30.
+             */
+            duration_days?: number | null;
+            /** Review Every Days */
+            review_every_days?: number | null;
+            /** Goals */
+            goals?: components["schemas"]["GoalIn"][] | null;
+            /** Tasks */
+            tasks?: components["schemas"]["TaskIn"][] | null;
+            /** Allergies */
+            allergies?: string[] | null;
+            /** Special Instructions */
+            special_instructions?: string[] | null;
+            /** Patient Id */
+            patient_id?: string | null;
+            /** Care Recipient Id */
+            care_recipient_id?: string | null;
+        };
+        /** AdminCarePlanList */
+        AdminCarePlanList: {
+            /** Items */
+            items: components["schemas"]["AdminCarePlanListItem"][];
+            /** Total */
+            total: number;
+            /** Limit */
+            limit: number;
+            /** Offset */
+            offset: number;
+        };
+        /**
+         * AdminCarePlanListItem
+         * @description A row of the list. No diagnosis or other plan text: open the plan for that (the open is audited).
+         */
+        AdminCarePlanListItem: {
+            /**
+             * Id
+             * Format: uuid
+             */
+            id: string;
+            /** Version */
+            version: number;
+            /**
+             * Status
+             * @enum {string}
+             */
+            status: "active" | "completed" | "archived";
+            subject: components["schemas"]["SubjectOut"];
+            client: components["schemas"]["ClientOut"];
+            /**
+             * Risk Level
+             * @enum {string}
+             */
+            risk_level: "low" | "medium" | "high";
+            /**
+             * Start Date
+             * Format: date
+             */
+            start_date: string;
+            /** Duration Days */
+            duration_days: number;
+            author: components["schemas"]["AuthorOut"];
+            /**
+             * Goal Count
+             * @description Goals that are not discontinued.
+             */
+            goal_count: number;
+            /**
+             * Task Count
+             * @description Active tasks.
+             */
+            task_count: number;
+            /**
+             * Medication Count
+             * @description Active medications.
+             */
+            medication_count: number;
+            /**
+             * Updated At
+             * Format: date-time
+             */
+            updated_at: string;
+        };
+        /** AdminCarePlanOut */
+        AdminCarePlanOut: {
+            /**
+             * Id
+             * Format: uuid
+             */
+            id: string;
+            /**
+             * Version
+             * @description Send as `expected_version` on the next write.
+             */
+            version: number;
+            /**
+             * Status
+             * @enum {string}
+             */
+            status: "active" | "completed" | "archived";
+            subject: components["schemas"]["SubjectOut"];
+            client: components["schemas"]["ClientOut"];
+            /** Diagnosis */
+            diagnosis: string;
+            /**
+             * Risk Level
+             * @enum {string}
+             */
+            risk_level: "low" | "medium" | "high";
+            /**
+             * Start Date
+             * Format: date
+             */
+            start_date: string;
+            /** Duration Days */
+            duration_days: number;
+            /** Review Every Days */
+            review_every_days?: number | null;
+            /** Review Due On */
+            review_due_on?: string | null;
+            template?: components["schemas"]["TemplateRef"] | null;
+            author: components["schemas"]["AuthorOut"];
+            /** Allergies */
+            allergies: string[];
+            /** Special Instructions */
+            special_instructions: string[];
+            /** Goals */
+            goals: components["schemas"]["GoalOut"][];
+            /**
+             * Medications
+             * @description Active ones first, then stopped ones (history). This is a record of what the prescriber ordered. Oakly does not check doses or interactions and does not remind anyone to give medicines. Follow the prescriber's instructions.
+             */
+            medications: components["schemas"]["MedicationOut"][];
+            /** Tasks */
+            tasks: components["schemas"]["TaskOut"][];
+            /**
+             * Created At
+             * Format: date-time
+             */
+            created_at: string;
+            /**
+             * Updated At
+             * Format: date-time
+             */
+            updated_at: string;
         };
         /** AdminInviteIn */
         AdminInviteIn: {
@@ -3122,6 +3629,63 @@ export interface components {
             roles?: string[] | null;
             /** Status */
             status?: ("active" | "disabled") | null;
+        };
+        /**
+         * AdminTemplate
+         * @description A template with its review state. ``clinical_review_status`` is inherited.
+         */
+        AdminTemplate: {
+            /**
+             * Id
+             * Format: uuid
+             */
+            id: string;
+            /** Key */
+            key: string;
+            /** Name */
+            name: string;
+            /** Summary */
+            summary: string;
+            /** Duration Days */
+            duration_days: number;
+            /** Review Every Days */
+            review_every_days?: number | null;
+            /**
+             * Default Risk Level
+             * @enum {string}
+             */
+            default_risk_level: "low" | "medium" | "high";
+            /**
+             * Clinical Review Status
+             * @description While pending, show 'Not yet clinically reviewed'.
+             * @enum {string}
+             */
+            clinical_review_status: "pending" | "approved";
+            /** Version */
+            version: number;
+            /** Goals */
+            goals: components["schemas"]["TemplateGoal"][];
+            /** Tasks */
+            tasks: components["schemas"]["TemplateTask"][];
+            /** Special Instructions */
+            special_instructions: string[];
+            /**
+             * Is Active
+             * @description Inactive templates are hidden from nurses.
+             */
+            is_active: boolean;
+            /**
+             * Reviewed By
+             * @description Name of the admin who last signed it off or reverted it.
+             */
+            reviewed_by?: string | null;
+            /** Reviewed At */
+            reviewed_at?: string | null;
+        };
+        /** AdminTemplateList */
+        AdminTemplateList: {
+            /** Items */
+            items: components["schemas"]["AdminTemplate"][];
         };
         /** ApplicationDetail */
         ApplicationDetail: {
@@ -4541,6 +5105,11 @@ export interface components {
             special_instructions: string[];
             /** Goals */
             goals: components["schemas"]["GoalOut"][];
+            /**
+             * Medications
+             * @description Active ones first, then stopped ones (history). This is a record of what the prescriber ordered. Oakly does not check doses or interactions and does not remind anyone to give medicines. Follow the prescriber's instructions.
+             */
+            medications: components["schemas"]["MedicationOut"][];
             /** Tasks */
             tasks: components["schemas"]["TaskOut"][];
             capabilities: components["schemas"]["Capabilities"];
@@ -6072,6 +6641,162 @@ export interface components {
             /** Secret */
             secret?: string | null;
         };
+        /** MedicationCreate */
+        MedicationCreate: {
+            /** Name */
+            name: string;
+            /**
+             * Strength
+             * @description The product's strength, as written.
+             * @example 500 mg
+             */
+            strength?: string | null;
+            /**
+             * Dose Amount
+             * @description Text, so '1/2' and '5' both fit.
+             * @example 1
+             */
+            dose_amount?: string | null;
+            /**
+             * Dose Unit
+             * @example tablet
+             */
+            dose_unit?: string | null;
+            /**
+             * Route
+             * @example oral
+             */
+            route?: string | null;
+            /** Reason */
+            reason?: string | null;
+            /** Prescribed By */
+            prescribed_by?: string | null;
+            /** Note */
+            note?: string | null;
+            /**
+             * Frequency
+             * @enum {string}
+             */
+            frequency: "once_daily" | "twice_daily" | "three_times_daily" | "four_times_daily" | "weekly" | "as_needed" | "other";
+            /**
+             * Times Of Day
+             * @description Display times, HH:MM. Empty for as_needed or other.
+             */
+            times_of_day?: string[];
+            /**
+             * Start Date
+             * @description Defaults to today (Africa/Lagos).
+             */
+            start_date?: string | null;
+            /**
+             * End Date
+             * @description Not before `start_date`; null while ongoing.
+             */
+            end_date?: string | null;
+            /**
+             * Expected Version
+             * @description Optional: adding never overwrites anything.
+             */
+            expected_version?: number | null;
+        };
+        /** MedicationOut */
+        MedicationOut: {
+            /**
+             * Id
+             * Format: uuid
+             */
+            id: string;
+            /** Name */
+            name: string;
+            /** Strength */
+            strength?: string | null;
+            /** Dose Amount */
+            dose_amount?: string | null;
+            /** Dose Unit */
+            dose_unit?: string | null;
+            /** Route */
+            route?: string | null;
+            /** Reason */
+            reason?: string | null;
+            /** Prescribed By */
+            prescribed_by?: string | null;
+            /** Note */
+            note?: string | null;
+            /**
+             * Frequency
+             * @enum {string}
+             */
+            frequency: "once_daily" | "twice_daily" | "three_times_daily" | "four_times_daily" | "weekly" | "as_needed" | "other";
+            /**
+             * Times Of Day
+             * @description HH:MM, earliest first; may be empty.
+             */
+            times_of_day: string[];
+            /**
+             * Start Date
+             * Format: date
+             */
+            start_date: string;
+            /** End Date */
+            end_date?: string | null;
+            /**
+             * Status
+             * @enum {string}
+             */
+            status: "active" | "stopped";
+            /**
+             * Stopped At
+             * @description Set when `status` is `stopped`, null otherwise.
+             */
+            stopped_at?: string | null;
+        };
+        /**
+         * MedicationPatch
+         * @description Only the fields sent change. Every optional field accepts null to clear it. A stopped medication cannot be edited:
+         *     record a new one.
+         */
+        MedicationPatch: {
+            /** Expected Version */
+            expected_version: number;
+            /** Name */
+            name?: string | null;
+            /** Strength */
+            strength?: string | null;
+            /** Dose Amount */
+            dose_amount?: string | null;
+            /** Dose Unit */
+            dose_unit?: string | null;
+            /** Route */
+            route?: string | null;
+            /** Reason */
+            reason?: string | null;
+            /** Prescribed By */
+            prescribed_by?: string | null;
+            /** Note */
+            note?: string | null;
+            /** Frequency */
+            frequency?: ("once_daily" | "twice_daily" | "three_times_daily" | "four_times_daily" | "weekly" | "as_needed" | "other") | null;
+            /** Times Of Day */
+            times_of_day?: string[] | null;
+            /** Start Date */
+            start_date?: string | null;
+            /** End Date */
+            end_date?: string | null;
+        };
+        /** MedicationStop */
+        MedicationStop: {
+            /** Expected Version */
+            expected_version: number;
+        };
+        /** MedicationWriteResult */
+        MedicationWriteResult: {
+            medication: components["schemas"]["MedicationOut"];
+            /**
+             * Plan Version
+             * @description The plan's version after this write; use it as the next expected_version.
+             */
+            plan_version: number;
+        };
         /** MfaVerifyIn */
         MfaVerifyIn: {
             /** Mfa Token */
@@ -7310,6 +8035,20 @@ export interface components {
             /** Skills */
             skills: components["schemas"]["SkillIn"][];
         };
+        /** SubjectOut */
+        SubjectOut: {
+            /**
+             * Kind
+             * @description Which table `id` is in: `patient` (patients) or `recipient` (care_recipients). Send it back as `patient_id` or `care_recipient_id` respectively.
+             * @enum {string}
+             */
+            kind: "patient" | "recipient";
+            /**
+             * Id
+             * Format: uuid
+             */
+            id: string;
+        };
         /** TaskCreate */
         TaskCreate: {
             /** Title */
@@ -7528,6 +8267,15 @@ export interface components {
             name: string;
             /** Version */
             version: number;
+        };
+        /** TemplateReviewIn */
+        TemplateReviewIn: {
+            /**
+             * Status
+             * @description `approved` after a clinician has read the content; `pending` takes the approval back. Either way the reviewer and time are recorded and the call is audited.
+             * @enum {string}
+             */
+            status: "approved" | "pending";
         };
         /** TemplateTask */
         TemplateTask: {
@@ -9897,6 +10645,170 @@ export interface operations {
             };
             /** @description No access of any kind (not your booking, not live, no such plan or client). One answer for all of these. */
             404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    add_medication_api_v1_caregiver_care_plans__plan_id__medications_post: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                plan_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["MedicationCreate"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            201: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["MedicationWriteResult"];
+                };
+            };
+            /** @description `not_a_nurse`: the caregiver has no nurse skill. */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description No access of any kind (not your booking, not live, no such plan or client). One answer for all of these. */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description `plan_not_editable` (completed or archived plan). */
+            409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description Validation, or `invalid_care_plan` (end before start, too many medications). */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+        };
+    };
+    update_medication_api_v1_caregiver_care_plan_medications__medication_id__patch: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                medication_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["MedicationPatch"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["MedicationWriteResult"];
+                };
+            };
+            /** @description `not_a_nurse`: the caregiver has no nurse skill. */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description No access of any kind (not your booking, not live, no such plan or client). One answer for all of these. */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description `version_conflict` (body has the current `plan`), `plan_not_editable` or `medication_stopped`. */
+            409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description Validation, or `invalid_care_plan` (end before start). */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+        };
+    };
+    stop_medication_api_v1_caregiver_care_plan_medications__medication_id__stop_post: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                medication_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["MedicationStop"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["MedicationWriteResult"];
+                };
+            };
+            /** @description `not_a_nurse`: the caregiver has no nurse skill. */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description No access of any kind (not your booking, not live, no such plan or client). One answer for all of these. */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description `version_conflict` (body has the current `plan`) or `plan_not_editable`. */
+            409: {
                 headers: {
                     [name: string]: unknown;
                 };
@@ -13844,6 +14756,747 @@ export interface operations {
                 content: {
                     "application/json": components["schemas"]["AuditPageOut"];
                 };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    list_care_plans_api_v1_admin_care_plans_get: {
+        parameters: {
+            query?: {
+                status?: ("active" | "completed" | "archived") | null;
+                /** @description Search by client name. */
+                q?: string | null;
+                limit?: number;
+                offset?: number;
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["AdminCarePlanList"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    create_care_plan_api_v1_admin_care_plans_post: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["AdminCarePlanCreate"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            201: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["AdminCarePlanOut"];
+                };
+            };
+            /** @description `client_not_found`. */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description `care_plan_exists` (body has `plan_id`): the client already has an active plan. */
+            409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description Validation, or `invalid_care_plan`. */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+        };
+    };
+    get_care_plan_api_v1_admin_care_plans__plan_id__get: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                plan_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["AdminCarePlanOut"];
+                };
+            };
+            /** @description No such plan. */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    update_care_plan_api_v1_admin_care_plans__plan_id__patch: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                plan_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["CarePlanPatch"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["AdminCarePlanOut"];
+                };
+            };
+            /** @description No such plan (or goal, task, medication). */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description `version_conflict` (body has the current `plan`), `plan_not_editable` (completed or archived plan), or for a stopped medication `medication_stopped`. */
+            409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description Validation, or `invalid_care_plan` (a limit, or end before start). */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+        };
+    };
+    list_observations_api_v1_admin_care_plans__plan_id__observations_get: {
+        parameters: {
+            query?: {
+                /** @description Return notes older than this timestamp (the previous page's `next_before`). */
+                before?: string | null;
+                /** @description With `before`: the previous page's `next_before_id`. */
+                before_id?: string | null;
+                limit?: number;
+                /** @description Only this category. */
+                category?: ("observation" | "special_note") | null;
+            };
+            header?: never;
+            path: {
+                plan_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ObservationList"];
+                };
+            };
+            /** @description No such plan. */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    add_observation_api_v1_admin_care_plans__plan_id__observations_post: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                plan_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["ObservationIn"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            201: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ObservationOut"];
+                };
+            };
+            /** @description No such plan. */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description `plan_not_editable`. */
+            409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    add_goal_api_v1_admin_care_plans__plan_id__goals_post: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                plan_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["GoalCreate"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            201: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["GoalWriteResult"];
+                };
+            };
+            /** @description No such plan (or goal, task, medication). */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description `version_conflict` (body has the current `plan`), `plan_not_editable` (completed or archived plan), or for a stopped medication `medication_stopped`. */
+            409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description Validation, or `invalid_care_plan` (a limit, or end before start). */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+        };
+    };
+    remove_goal_api_v1_admin_care_plan_goals__goal_id__delete: {
+        parameters: {
+            query: {
+                expected_version: number;
+            };
+            header?: never;
+            path: {
+                goal_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["GoalWriteResult"];
+                };
+            };
+            /** @description No such plan (or goal, task, medication). */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description `version_conflict` (body has the current `plan`), `plan_not_editable` (completed or archived plan), or for a stopped medication `medication_stopped`. */
+            409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description Validation, or `invalid_care_plan` (a limit, or end before start). */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+        };
+    };
+    update_goal_api_v1_admin_care_plan_goals__goal_id__patch: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                goal_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["GoalPatch"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["GoalWriteResult"];
+                };
+            };
+            /** @description No such plan (or goal, task, medication). */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description `version_conflict` (body has the current `plan`), `plan_not_editable` (completed or archived plan), or for a stopped medication `medication_stopped`. */
+            409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description Validation, or `invalid_care_plan` (a limit, or end before start). */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+        };
+    };
+    add_task_api_v1_admin_care_plans__plan_id__tasks_post: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                plan_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["TaskCreate"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            201: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["TaskWriteResult"];
+                };
+            };
+            /** @description No such plan (or goal, task, medication). */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description `version_conflict` (body has the current `plan`), `plan_not_editable` (completed or archived plan), or for a stopped medication `medication_stopped`. */
+            409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description Validation, or `invalid_care_plan` (a limit, or end before start). */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+        };
+    };
+    remove_task_api_v1_admin_care_plan_tasks__task_id__delete: {
+        parameters: {
+            query: {
+                expected_version: number;
+            };
+            header?: never;
+            path: {
+                task_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["TaskWriteResult"];
+                };
+            };
+            /** @description No such plan (or goal, task, medication). */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description `version_conflict` (body has the current `plan`), `plan_not_editable` (completed or archived plan), or for a stopped medication `medication_stopped`. */
+            409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description Validation, or `invalid_care_plan` (a limit, or end before start). */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+        };
+    };
+    update_task_api_v1_admin_care_plan_tasks__task_id__patch: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                task_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["TaskPatch"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["TaskWriteResult"];
+                };
+            };
+            /** @description No such plan (or goal, task, medication). */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description `version_conflict` (body has the current `plan`), `plan_not_editable` (completed or archived plan), or for a stopped medication `medication_stopped`. */
+            409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description Validation, or `invalid_care_plan` (a limit, or end before start). */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+        };
+    };
+    add_medication_api_v1_admin_care_plans__plan_id__medications_post: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                plan_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["MedicationCreate"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            201: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["MedicationWriteResult"];
+                };
+            };
+            /** @description No such plan (or goal, task, medication). */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description `version_conflict` (body has the current `plan`), `plan_not_editable` (completed or archived plan), or for a stopped medication `medication_stopped`. */
+            409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description Validation, or `invalid_care_plan` (a limit, or end before start). */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+        };
+    };
+    update_medication_api_v1_admin_care_plan_medications__medication_id__patch: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                medication_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["MedicationPatch"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["MedicationWriteResult"];
+                };
+            };
+            /** @description No such plan (or goal, task, medication). */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description `version_conflict` (body has the current `plan`), `plan_not_editable` (completed or archived plan), or for a stopped medication `medication_stopped`. */
+            409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description Validation, or `invalid_care_plan` (a limit, or end before start). */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+        };
+    };
+    stop_medication_api_v1_admin_care_plan_medications__medication_id__stop_post: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                medication_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["MedicationStop"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["MedicationWriteResult"];
+                };
+            };
+            /** @description No such plan (or goal, task, medication). */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description `version_conflict` (body has the current `plan`), `plan_not_editable` (completed or archived plan), or for a stopped medication `medication_stopped`. */
+            409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description Validation, or `invalid_care_plan` (a limit, or end before start). */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+        };
+    };
+    list_templates_api_v1_admin_care_plan_templates_get: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["AdminTemplateList"];
+                };
+            };
+        };
+    };
+    review_template_api_v1_admin_care_plan_templates__template_id__review_post: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                template_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["TemplateReviewIn"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["AdminTemplate"];
+                };
+            };
+            /** @description `template_not_found`. */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
             };
             /** @description Validation Error */
             422: {
