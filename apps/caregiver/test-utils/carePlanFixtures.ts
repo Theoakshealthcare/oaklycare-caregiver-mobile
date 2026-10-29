@@ -6,6 +6,7 @@ import { ApiError } from "../src/api/errors";
 import type {
   CarePlan,
   CarePlanListItem,
+  CarePlanMedication,
   CarePlanNote,
   CarePlanNotePage,
   CarePlanProgress,
@@ -40,6 +41,7 @@ export const plan = (over: Partial<CarePlan> = {}): CarePlan => ({
   special_instructions: ["Placeholder instruction"],
   goals: [{ id: GOAL_ID, title: "Placeholder goal", target: "Placeholder target", frequency: "daily", status: "active" }],
   tasks: [{ id: "b24a7f07-adf8-4417-a884-d6aeead43669", title: "Placeholder task", time_slot: "morning", time_of_day: "08:00", days_of_week: [1, 3, 5] }],
+  medications: [],
   capabilities: { can_edit_plan: true, can_tick_tasks: true, can_add_observation: true },
   created_at: "2026-10-28T10:10:50.058340",
   updated_at: "2026-10-28T10:10:50.058343",
@@ -226,3 +228,61 @@ export const VISIT_NOT_IN_PROGRESS = refusal(409, "visit_not_in_progress", "Avai
 export const PLAN_NOT_EDITABLE = refusal(409, "plan_not_editable", "This care plan is completed or archived and can no longer be changed.");
 export const TASK_DATE_NOT_TODAY = refusal(422, "task_date_not_today", "Tasks can only be ticked for today.");
 export const TASK_NOT_SCHEDULED = refusal(422, "task_not_scheduled", "This task is not scheduled for that day.");
+
+// --- M3: medications (captures 240-243, guide 16.21 to 16.25) ----------------------------------------------------------------
+
+export const MEDICATION_A = "61986564-03c8-4ffc-9fc9-75a5f60bbbe4";
+export const MEDICATION_B = "7664c137-38d2-4985-a672-d9676b42f4e2";
+
+/** The full capture (240-a response): every field filled. */
+export const medication = (over: Partial<CarePlanMedication> = {}): CarePlanMedication => ({
+  id: MEDICATION_A,
+  name: "Placeholder medicine A",
+  strength: "500 mg",
+  dose_amount: "1",
+  dose_unit: "tablet",
+  route: "oral",
+  reason: "Placeholder reason",
+  prescribed_by: "Placeholder prescriber",
+  note: "Placeholder note",
+  frequency: "twice_daily",
+  times_of_day: ["08:00", "20:00"],
+  start_date: "2026-10-28",
+  end_date: "2026-11-25",
+  status: "active",
+  stopped_at: null,
+  ...over,
+});
+
+/** The minimal capture (240-b response): only the required fields, unset text is null. */
+export const minimalMedication = (over: Partial<CarePlanMedication> = {}): CarePlanMedication => ({
+  id: MEDICATION_B,
+  name: "Placeholder medicine B",
+  strength: null,
+  dose_amount: null,
+  dose_unit: null,
+  route: null,
+  reason: null,
+  prescribed_by: null,
+  note: null,
+  frequency: "as_needed",
+  times_of_day: [],
+  start_date: "2026-10-28",
+  end_date: null,
+  status: "active",
+  stopped_at: null,
+  ...over,
+});
+
+/** The stopped one (242-a response). */
+export const stoppedMedication = (over: Partial<CarePlanMedication> = {}): CarePlanMedication =>
+  medication({ status: "stopped", stopped_at: "2026-10-28T12:55:01.667687", frequency: "once_daily", times_of_day: ["12:00"], ...over });
+
+export const PLAN_FULL = (): CarePlan => plan({ medications: [minimalMedication(), stoppedMedication()] });
+
+export const INVALID_END_DATE = refusal(422, "invalid_care_plan", "end_date cannot be before start_date");
+export const MEDICATION_VALIDATION_NAME = new ApiError(
+  422,
+  { detail: [{ type: "string_too_short", loc: ["body", "name"], msg: "String should have at least 1 character" }] },
+  "String should have at least 1 character",
+);

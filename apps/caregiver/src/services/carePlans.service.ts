@@ -22,6 +22,10 @@ export type CarePlanNotePage = Schemas["ObservationList"];
 export type CarePlanProgress = Schemas["Progress"];
 export type NoteCategory = Schemas["ObservationIn"]["category"];
 export type NewTask = Schemas["TaskIn"];
+export type CarePlanMedication = Schemas["MedicationOut"];
+export type MedicationWriteResult = Schemas["MedicationWriteResult"];
+export type NewMedication = Schemas["MedicationCreate"];
+export type MedicationFrequency = NewMedication["frequency"];
 
 export type PlanListStatus = "active" | "completed";
 export type GoalFrequency = Schemas["GoalIn"]["frequency"];
@@ -125,6 +129,19 @@ export const carePlansService = {
   addTask(planId: string, task: NewTask) {
     return unwrap(
       api.POST("/api/v1/caregiver/care-plans/{plan_id}/tasks", { params: { path: { plan_id: planId } }, body: task }),
+    );
+  },
+
+  /**
+   * Record a medicine the prescriber ordered (nurses). A record only: nothing here checks, reminds or counts doses.
+   * Adding never overwrites anything, so no `expected_version` is sent (the backend makes it optional).
+   */
+  addMedication(planId: string, medication: NewMedication) {
+    return unwrap(
+      api.POST("/api/v1/caregiver/care-plans/{plan_id}/medications", {
+        params: { path: { plan_id: planId } },
+        body: medication,
+      }),
     );
   },
 

@@ -7,11 +7,15 @@ import { ApiError } from "@/src/api/errors";
 import type {
   CarePlan,
   CarePlanCreateBody,
+  CarePlanMedication,
   CarePlanProgress,
   CarePlanTemplate,
   GoalFrequency,
   GoalWriteResult,
+  MedicationFrequency,
+  MedicationWriteResult,
   NewGoal,
+  NewMedication,
   NewTask,
   TaskCompletion,
   TaskDay,
@@ -530,3 +534,171 @@ export const CLOCK_OUT_PROMPT = {
 
 /** Only a live plan that can still be ticked is worth a prompt; a missing, completed or archived plan is not. */
 export const needsClockOutPrompt = (visit: { plan?: { status: string } | null } | undefined): boolean => visit?.plan?.status === "active";
+
+// --- Medications (a record of what the prescriber ordered; guide 16.21 to 16.25) -------------------------------------------
+
+/**
+ * The notice shown on the medications section, always. The backend serves these words only inside its OpenAPI
+ * descriptions (never in a response body), and the wording is pending clinical sign-off: it lives in this one string,
+ * and a test fails if it drifts from the committed spec (`packages/api-client/openapi.json`). Do not paraphrase it.
+ */
+export const MEDICATION_NOTICE =
+  "This is a record of what the prescriber ordered. Oakly does not check doses or interactions and does not remind anyone to give medicines. Follow the prescriber's instructions.";
+
+export const MEDICATION_FREQUENCIES: { value: MedicationFrequency; label: string }[] = [
+  { value: "once_daily", label: "Once daily" },
+  { value: "twice_daily", label: "Twice daily" },
+  { value: "three_times_daily", label: "Three times daily" },
+  { value: "four_times_daily", label: "Four times daily" },
+  { value: "weekly", label: "Weekly" },
+  { value: "as_needed", label: "As needed" },
+  { value: "other", label: "Other" },
+];
+
+export const medicationFrequencyLabel = (f: MedicationFrequency): string =>
+  MEDICATION_FREQUENCIES.find((x) => x.value === f)?.label ?? f;
+
+// Limits the backend enforces (guide 16.21 and 16.22).
+export const MEDICATION_LIMITS = { name: 120, short: 60, reason: 200, prescribedBy: 120, note: 1000, times: 12 } as const;
+
+export const MEDICATION_EMPTY = "No medications recorded yet.";
+export const STOPPED_HEADING = "Stopped";
+
+export interface MedicationDraft {
+  name: string;
+  strength: string;
+  doseAmount: string;
+  doseUnit: string;
+  route: string;
+  reason: string;
+  prescribedBy: string;
+  note: string;
+  frequency: MedicationFrequency;
+  /** `HH:MM` times separated by commas or spaces; optional. */
+  times: string;
+  /** Blank = the backend uses today (Africa/Lagos). */
+  startDate: string;
+  /** Blank = ongoing. */
+  endDate: string;
+}
+
+export const emptyMedicationDraft = (): MedicationDraft => ({
+  name: "",
+  strength: "",
+  doseAmount: "",
+  doseUnit: "",
+  route: "",
+  reason: "",
+  prescribedBy: "",
+  note: "",
+  frequency: "once_daily",
+  times: "",
+  startDate: "",
+  endDate: "",
+});
+
+/** "08:00, 20:00" or "08:00 20:00" -> ["08:00", "20:00"]: the pieces as typed, without blanks. */
+const timePieces = (text: string): string[] => text.split(/[\s,;]+/).filter(Boolean);
+
+export type MedicationErrors = Partial<
+  Record<"name" | "strength" | "doseAmount" | "doseUnit" | "route" | "reason" | "prescribedBy" | "note" | "times" | "startDate" | "endDate", string>
+>;
+
+export function validateMedication(draft: MedicationDraft): MedicationErrors {
+  const errors: MedicationErrors = {};
+  const name = draft.name.trim();
+  if (!name) errors.name = "Enter the name of the medicine.";
+  else if (name.length > MEDICATION_LIMITS.name) errors.name = `Keep the name to ${MEDICATION_LIMITS.name} characters.`;
+  const capped = (
+    key: "strength" | "doseAmount" | "doseUnit" | "route" | "reason" | "prescribedBy" | "note",
+    max: number,
+  ) => {
+    if (draft[key].trim().length > max) errors[key] = `Keep this to ${max} characters.`;
+  };
+  capped("strength", MEDICATION_LIMITS.short);
+  capped("doseAmount", MEDICATION_LIMITS.short);
+  capped("doseUnit", MEDICATION_LIMITS.short);
+  capped("route", MEDICATION_LIMITS.short);
+  capped("reason", MEDICATION_LIMITS.reason);
+  capped("prescribedBy", MEDICATION_LIMITS.prescribedBy);
+  capped("note", MEDICATION_LIMITS.note);
+
+  const times = timePieces(draft.times);
+  if (times.some((t) => !isTimeOfDay(t))) errors.times = "Use the 24-hour format HH:MM, for example 08:00, separated by commas.";
+  else if (new Set(times).size !== times.length) errors.times = "Each time can be listed once.";
+  else if (times.length > MEDICATION_LIMITS.times) errors.times = `List at most ${MEDICATION_LIMITS.times} times.`;
+
+  const start = draft.startDate.trim();
+  const end = draft.endDate.trim();
+  if (start && !isIsoDate(start)) errors.startDate = "Use the format YYYY-MM-DD, for example 2026-10-28.";
+  if (end && !isIsoDate(end)) errors.endDate = "Use the format YYYY-MM-DD, for example 2026-11-25.";
+  // ISO dates compare as text. With no start date the backend uses today and checks the end date itself.
+  else if (end && start && !errors.startDate && end < start) errors.endDate = "The end date can't be before the start date.";
+  return errors;
+}
+
+/** Only the filled-in fields are sent (an unset text is `null` on the server); the times go in earliest first. */
+export function buildMedicationBody(draft: MedicationDraft): NewMedication {
+  const text = (value: string) => value.trim() || undefined;
+  const times = [...new Set(timePieces(draft.times))].sort();
+  return {
+    name: draft.name.trim(),
+    frequency: draft.frequency,
+    ...(text(draft.strength) ? { strength: text(draft.strength) } : {}),
+    ...(text(draft.doseAmount) ? { dose_amount: text(draft.doseAmount) } : {}),
+    ...(text(draft.doseUnit) ? { dose_unit: text(draft.doseUnit) } : {}),
+    ...(text(draft.route) ? { route: text(draft.route) } : {}),
+    ...(text(draft.reason) ? { reason: text(draft.reason) } : {}),
+    ...(text(draft.prescribedBy) ? { prescribed_by: text(draft.prescribedBy) } : {}),
+    ...(text(draft.note) ? { note: text(draft.note) } : {}),
+    ...(times.length > 0 ? { times_of_day: times } : {}),
+    ...(text(draft.startDate) ? { start_date: text(draft.startDate) } : {}),
+    ...(text(draft.endDate) ? { end_date: text(draft.endDate) } : {}),
+  };
+}
+
+/** Active medicines first, then the stopped ones (history), each in the order the server sent them. */
+export function medicationGroups(plan: Pick<CarePlan, "medications">): { active: CarePlanMedication[]; stopped: CarePlanMedication[] } {
+  return {
+    active: plan.medications.filter((m) => m.status === "active"),
+    stopped: plan.medications.filter((m) => m.status !== "active"),
+  };
+}
+
+/** "500 mg · 1 tablet · oral": the strength, the dose and the route as the nurse wrote them. Never calculated. */
+export function medicationDoseLine(m: Pick<CarePlanMedication, "strength" | "dose_amount" | "dose_unit" | "route">): string {
+  const dose = [m.dose_amount, m.dose_unit].filter(Boolean).join(" ");
+  return [m.strength, dose, m.route].filter(Boolean).join(" · ");
+}
+
+/** "Twice daily · 8:00 AM, 8:00 PM". The times are what was written down; nothing is "due" or "overdue". */
+export function medicationScheduleLine(m: Pick<CarePlanMedication, "frequency" | "times_of_day">): string {
+  const times = m.times_of_day.map(clockLabel).join(", ");
+  return [medicationFrequencyLabel(m.frequency), times].filter(Boolean).join(" · ");
+}
+
+/** "From 28 Oct 2026 to 25 Nov 2026", or "From 28 Oct 2026" while it has no end date. */
+export function medicationDatesLine(m: Pick<CarePlanMedication, "start_date" | "end_date">): string {
+  const start = `From ${formatPlanDate(m.start_date)}`;
+  return m.end_date ? `${start} to ${formatPlanDate(m.end_date)}` : start;
+}
+
+/** "Stopped 28 Oct, 13:55" in the phone's own zone, from the backend's UTC `stopped_at`. */
+export const medicationStoppedLine = (m: Pick<CarePlanMedication, "stopped_at">): string => {
+  const when = formatStamp(m.stopped_at);
+  return when ? `Stopped ${when}` : "Stopped";
+};
+
+/**
+ * A medication write answers `{ medication, plan_version }`: put the medicine in the plan we hold (a new active one goes
+ * after the last active one, before the stopped history, as the server lists them) and take the new version.
+ */
+export function applyMedicationResult(plan: CarePlan, result: MedicationWriteResult): CarePlan {
+  const exists = plan.medications.some((m) => m.id === result.medication.id);
+  if (exists) {
+    return { ...plan, version: result.plan_version, medications: plan.medications.map((m) => (m.id === result.medication.id ? result.medication : m)) };
+  }
+  const { active, stopped } = medicationGroups(plan);
+  const medications = result.medication.status === "active" ? [...active, result.medication, ...stopped] : [...active, ...stopped, result.medication];
+  return { ...plan, version: result.plan_version, medications };
+}
