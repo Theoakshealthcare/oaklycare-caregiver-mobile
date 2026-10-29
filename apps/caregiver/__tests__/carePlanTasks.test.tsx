@@ -162,10 +162,14 @@ describe("Daily care tasks: ticking", () => {
 
   it("disables the other boxes while a tick is in flight, so its refusal is never lost", async () => {
     jest.spyOn(carePlansService, "getTaskDay").mockResolvedValue(dayView());
-    jest.spyOn(carePlansService, "setCompletion").mockReturnValue(new Promise(() => {}));
+    // The call must settle before the test ends: react-query re-arms a pending mutation's 2-minute gc timer
+    // forever, which keeps a single-worker Jest run (CI) alive.
+    let resolve: (value: ReturnType<typeof completion>) => void = () => {};
+    jest.spyOn(carePlansService, "setCompletion").mockReturnValue(new Promise((r) => (resolve = r)));
     await renderTasks();
     await fireEvent.press(await screen.findByTestId(`task-toggle-${TASK_A}`));
     expect(screen.getByTestId(`task-toggle-${TASK_B}`).props.accessibilityState.disabled).toBe(true);
+    await act(async () => resolve(completion()));
   });
 
   it("asks before unticking, and does nothing when the nurse keeps it", async () => {
