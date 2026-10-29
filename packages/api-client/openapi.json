@@ -2612,6 +2612,196 @@
         }
       }
     },
+    "/api/v1/caregiver/care-plans/{plan_id}/medications": {
+      "post": {
+        "tags": [
+          "caregiver-care-plans"
+        ],
+        "summary": "Add Medication",
+        "description": "Record a medicine the prescriber ordered (nurses only). `expected_version` is optional here: adding never overwrites anything. At most 40 active medications per plan.\n\n**Not clinical advice.** This is a record of what the prescriber ordered. Oakly does not check doses or interactions and does not remind anyone to give medicines. Follow the prescriber's instructions.",
+        "operationId": "add_medication_api_v1_caregiver_care_plans__plan_id__medications_post",
+        "security": [
+          {
+            "OAuth2PasswordBearer": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "plan_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid",
+              "title": "Plan Id"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/MedicationCreate"
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/MedicationWriteResult"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "`not_a_nurse`: the caregiver has no nurse skill."
+          },
+          "404": {
+            "description": "No access of any kind (not your booking, not live, no such plan or client). One answer for all of these."
+          },
+          "409": {
+            "description": "`plan_not_editable` (completed or archived plan)."
+          },
+          "422": {
+            "description": "Validation, or `invalid_care_plan` (end before start, too many medications)."
+          }
+        }
+      }
+    },
+    "/api/v1/caregiver/care-plan-medications/{medication_id}": {
+      "patch": {
+        "tags": [
+          "caregiver-care-plans"
+        ],
+        "summary": "Update Medication",
+        "description": "Edit a medication (nurses only). Only the fields sent change; optional fields accept null to clear. Needs the plan's `expected_version`. A stopped medication cannot be edited.\n\n**Not clinical advice.** This is a record of what the prescriber ordered. Oakly does not check doses or interactions and does not remind anyone to give medicines. Follow the prescriber's instructions.",
+        "operationId": "update_medication_api_v1_caregiver_care_plan_medications__medication_id__patch",
+        "security": [
+          {
+            "OAuth2PasswordBearer": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "medication_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid",
+              "title": "Medication Id"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/MedicationPatch"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/MedicationWriteResult"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "`not_a_nurse`: the caregiver has no nurse skill."
+          },
+          "404": {
+            "description": "No access of any kind (not your booking, not live, no such plan or client). One answer for all of these."
+          },
+          "409": {
+            "description": "`version_conflict` (body has the current `plan`), `plan_not_editable` or `medication_stopped`."
+          },
+          "422": {
+            "description": "Validation, or `invalid_care_plan` (end before start)."
+          }
+        }
+      }
+    },
+    "/api/v1/caregiver/care-plan-medications/{medication_id}/stop": {
+      "post": {
+        "tags": [
+          "caregiver-care-plans"
+        ],
+        "summary": "Stop Medication",
+        "description": "Stop a medication (nurses only): `status` becomes `stopped` and `stopped_at` is set. The medication stays on the plan as history and is never deleted. Needs the plan's `expected_version`. Stopping a stopped medication changes nothing.\n\n**Not clinical advice.** This is a record of what the prescriber ordered. Oakly does not check doses or interactions and does not remind anyone to give medicines. Follow the prescriber's instructions.",
+        "operationId": "stop_medication_api_v1_caregiver_care_plan_medications__medication_id__stop_post",
+        "security": [
+          {
+            "OAuth2PasswordBearer": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "medication_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid",
+              "title": "Medication Id"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/MedicationStop"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/MedicationWriteResult"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "`not_a_nurse`: the caregiver has no nurse skill."
+          },
+          "404": {
+            "description": "No access of any kind (not your booking, not live, no such plan or client). One answer for all of these."
+          },
+          "409": {
+            "description": "`version_conflict` (body has the current `plan`) or `plan_not_editable`."
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
     "/api/v1/devices/push-token": {
       "post": {
         "tags": [
@@ -9360,6 +9550,1054 @@
         }
       }
     },
+    "/api/v1/admin/care-plans": {
+      "get": {
+        "tags": [
+          "admin-care-plans"
+        ],
+        "summary": "List Care Plans",
+        "description": "Plans across all clients, newest change first. The rows carry no plan text; open a plan for that.",
+        "operationId": "list_care_plans_api_v1_admin_care_plans_get",
+        "security": [
+          {
+            "AdminBearer": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "status",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "enum": [
+                    "active",
+                    "completed",
+                    "archived"
+                  ],
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Status"
+            }
+          },
+          {
+            "name": "q",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string",
+                  "maxLength": 100
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "description": "Search by client name.",
+              "title": "Q"
+            },
+            "description": "Search by client name."
+          },
+          {
+            "name": "limit",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "integer",
+              "maximum": 200,
+              "minimum": 1,
+              "default": 50,
+              "title": "Limit"
+            }
+          },
+          {
+            "name": "offset",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "integer",
+              "minimum": 0,
+              "default": 0,
+              "title": "Offset"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/AdminCarePlanList"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      },
+      "post": {
+        "tags": [
+          "admin-care-plans"
+        ],
+        "summary": "Create Care Plan",
+        "description": "Create a client's plan, blank or from a template (the template only fills what the body leaves out). Name the client\nwith exactly one of `patient_id` or `care_recipient_id`. Audited.",
+        "operationId": "create_care_plan_api_v1_admin_care_plans_post",
+        "security": [
+          {
+            "AdminBearer": []
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/AdminCarePlanCreate"
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/AdminCarePlanOut"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "`client_not_found`."
+          },
+          "409": {
+            "description": "`care_plan_exists` (body has `plan_id`): the client already has an active plan."
+          },
+          "422": {
+            "description": "Validation, or `invalid_care_plan`."
+          }
+        }
+      }
+    },
+    "/api/v1/admin/care-plans/{plan_id}": {
+      "get": {
+        "tags": [
+          "admin-care-plans"
+        ],
+        "summary": "Get Care Plan",
+        "description": "The full plan, at any status. **Opening a plan is audited** (`care_plan.view`).",
+        "operationId": "get_care_plan_api_v1_admin_care_plans__plan_id__get",
+        "security": [
+          {
+            "AdminBearer": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "plan_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid",
+              "title": "Plan Id"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/AdminCarePlanOut"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "No such plan."
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      },
+      "patch": {
+        "tags": [
+          "admin-care-plans"
+        ],
+        "summary": "Update Care Plan",
+        "description": "Header fields, allergies, special instructions, and `status` to `completed` or `archived`. Needs the plan's\n`expected_version`. Audited.",
+        "operationId": "update_care_plan_api_v1_admin_care_plans__plan_id__patch",
+        "security": [
+          {
+            "AdminBearer": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "plan_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid",
+              "title": "Plan Id"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/CarePlanPatch"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/AdminCarePlanOut"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "No such plan (or goal, task, medication)."
+          },
+          "409": {
+            "description": "`version_conflict` (body has the current `plan`), `plan_not_editable` (completed or archived plan), or for a stopped medication `medication_stopped`."
+          },
+          "422": {
+            "description": "Validation, or `invalid_care_plan` (a limit, or end before start)."
+          }
+        }
+      }
+    },
+    "/api/v1/admin/care-plans/{plan_id}/observations": {
+      "get": {
+        "tags": [
+          "admin-care-plans"
+        ],
+        "summary": "List Observations",
+        "description": "Visit notes, newest first, from nurses and admins. **Reading them is audited** (`care_plan.observations_view`).",
+        "operationId": "list_observations_api_v1_admin_care_plans__plan_id__observations_get",
+        "security": [
+          {
+            "AdminBearer": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "plan_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid",
+              "title": "Plan Id"
+            }
+          },
+          {
+            "name": "before",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string",
+                  "format": "date-time"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "description": "Return notes older than this timestamp (the previous page's `next_before`).",
+              "title": "Before"
+            },
+            "description": "Return notes older than this timestamp (the previous page's `next_before`)."
+          },
+          {
+            "name": "before_id",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string",
+                  "format": "uuid"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "description": "With `before`: the previous page's `next_before_id`.",
+              "title": "Before Id"
+            },
+            "description": "With `before`: the previous page's `next_before_id`."
+          },
+          {
+            "name": "limit",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "integer",
+              "maximum": 50,
+              "minimum": 1,
+              "default": 20,
+              "title": "Limit"
+            }
+          },
+          {
+            "name": "category",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "enum": [
+                    "observation",
+                    "special_note"
+                  ],
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "description": "Only this category.",
+              "title": "Category"
+            },
+            "description": "Only this category."
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ObservationList"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "No such plan."
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      },
+      "post": {
+        "tags": [
+          "admin-care-plans"
+        ],
+        "summary": "Add Observation",
+        "description": "Add a note as the Clinical Reviewer (no visit needed; the plan must be active). Notes cannot be edited or deleted: a\ncorrection is a new note. Does not change the plan's `version`. Audited.",
+        "operationId": "add_observation_api_v1_admin_care_plans__plan_id__observations_post",
+        "security": [
+          {
+            "AdminBearer": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "plan_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid",
+              "title": "Plan Id"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/ObservationIn"
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ObservationOut"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "No such plan."
+          },
+          "409": {
+            "description": "`plan_not_editable`."
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/admin/care-plans/{plan_id}/goals": {
+      "post": {
+        "tags": [
+          "admin-care-plans"
+        ],
+        "summary": "Add Goal",
+        "description": "Add a goal. `expected_version` is optional here: adding never overwrites anything. Audited.",
+        "operationId": "add_goal_api_v1_admin_care_plans__plan_id__goals_post",
+        "security": [
+          {
+            "AdminBearer": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "plan_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid",
+              "title": "Plan Id"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/GoalCreate"
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/GoalWriteResult"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "No such plan (or goal, task, medication)."
+          },
+          "409": {
+            "description": "`version_conflict` (body has the current `plan`), `plan_not_editable` (completed or archived plan), or for a stopped medication `medication_stopped`."
+          },
+          "422": {
+            "description": "Validation, or `invalid_care_plan` (a limit, or end before start)."
+          }
+        }
+      }
+    },
+    "/api/v1/admin/care-plan-goals/{goal_id}": {
+      "patch": {
+        "tags": [
+          "admin-care-plans"
+        ],
+        "summary": "Update Goal",
+        "description": "Edit a goal, or mark it achieved or discontinued. Needs the plan's `expected_version`. Audited.",
+        "operationId": "update_goal_api_v1_admin_care_plan_goals__goal_id__patch",
+        "security": [
+          {
+            "AdminBearer": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "goal_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid",
+              "title": "Goal Id"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/GoalPatch"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/GoalWriteResult"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "No such plan (or goal, task, medication)."
+          },
+          "409": {
+            "description": "`version_conflict` (body has the current `plan`), `plan_not_editable` (completed or archived plan), or for a stopped medication `medication_stopped`."
+          },
+          "422": {
+            "description": "Validation, or `invalid_care_plan` (a limit, or end before start)."
+          }
+        }
+      },
+      "delete": {
+        "tags": [
+          "admin-care-plans"
+        ],
+        "summary": "Remove Goal",
+        "description": "Remove a goal: it is marked `discontinued` and kept. Needs the plan's `expected_version` as a query parameter. Audited.",
+        "operationId": "remove_goal_api_v1_admin_care_plan_goals__goal_id__delete",
+        "security": [
+          {
+            "AdminBearer": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "goal_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid",
+              "title": "Goal Id"
+            }
+          },
+          {
+            "name": "expected_version",
+            "in": "query",
+            "required": true,
+            "schema": {
+              "type": "integer",
+              "minimum": 1,
+              "title": "Expected Version"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/GoalWriteResult"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "No such plan (or goal, task, medication)."
+          },
+          "409": {
+            "description": "`version_conflict` (body has the current `plan`), `plan_not_editable` (completed or archived plan), or for a stopped medication `medication_stopped`."
+          },
+          "422": {
+            "description": "Validation, or `invalid_care_plan` (a limit, or end before start)."
+          }
+        }
+      }
+    },
+    "/api/v1/admin/care-plans/{plan_id}/tasks": {
+      "post": {
+        "tags": [
+          "admin-care-plans"
+        ],
+        "summary": "Add Task",
+        "description": "Add a daily task. `expected_version` is optional here. The task is scheduled from today on. Audited.",
+        "operationId": "add_task_api_v1_admin_care_plans__plan_id__tasks_post",
+        "security": [
+          {
+            "AdminBearer": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "plan_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid",
+              "title": "Plan Id"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/TaskCreate"
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/TaskWriteResult"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "No such plan (or goal, task, medication)."
+          },
+          "409": {
+            "description": "`version_conflict` (body has the current `plan`), `plan_not_editable` (completed or archived plan), or for a stopped medication `medication_stopped`."
+          },
+          "422": {
+            "description": "Validation, or `invalid_care_plan` (a limit, or end before start)."
+          }
+        }
+      }
+    },
+    "/api/v1/admin/care-plan-tasks/{task_id}": {
+      "patch": {
+        "tags": [
+          "admin-care-plans"
+        ],
+        "summary": "Update Task",
+        "description": "Edit a task: title, slot, display time or days. Needs the plan's `expected_version`. A removed task is 404. Audited.",
+        "operationId": "update_task_api_v1_admin_care_plan_tasks__task_id__patch",
+        "security": [
+          {
+            "AdminBearer": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "task_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid",
+              "title": "Task Id"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/TaskPatch"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/TaskWriteResult"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "No such plan (or goal, task, medication)."
+          },
+          "409": {
+            "description": "`version_conflict` (body has the current `plan`), `plan_not_editable` (completed or archived plan), or for a stopped medication `medication_stopped`."
+          },
+          "422": {
+            "description": "Validation, or `invalid_care_plan` (a limit, or end before start)."
+          }
+        }
+      },
+      "delete": {
+        "tags": [
+          "admin-care-plans"
+        ],
+        "summary": "Remove Task",
+        "description": "Remove a task: it stops being scheduled and leaves `tasks`; its ticks are kept. Needs `expected_version` as a query\nparameter. Audited.",
+        "operationId": "remove_task_api_v1_admin_care_plan_tasks__task_id__delete",
+        "security": [
+          {
+            "AdminBearer": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "task_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid",
+              "title": "Task Id"
+            }
+          },
+          {
+            "name": "expected_version",
+            "in": "query",
+            "required": true,
+            "schema": {
+              "type": "integer",
+              "minimum": 1,
+              "title": "Expected Version"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/TaskWriteResult"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "No such plan (or goal, task, medication)."
+          },
+          "409": {
+            "description": "`version_conflict` (body has the current `plan`), `plan_not_editable` (completed or archived plan), or for a stopped medication `medication_stopped`."
+          },
+          "422": {
+            "description": "Validation, or `invalid_care_plan` (a limit, or end before start)."
+          }
+        }
+      }
+    },
+    "/api/v1/admin/care-plans/{plan_id}/medications": {
+      "post": {
+        "tags": [
+          "admin-care-plans"
+        ],
+        "summary": "Add Medication",
+        "description": "Record a medicine the prescriber ordered. `expected_version` is optional here. At most 40 active medications per plan. Audited.\n\n**Not clinical advice.** This is a record of what the prescriber ordered. Oakly does not check doses or interactions and does not remind anyone to give medicines. Follow the prescriber's instructions.",
+        "operationId": "add_medication_api_v1_admin_care_plans__plan_id__medications_post",
+        "security": [
+          {
+            "AdminBearer": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "plan_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid",
+              "title": "Plan Id"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/MedicationCreate"
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/MedicationWriteResult"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "No such plan (or goal, task, medication)."
+          },
+          "409": {
+            "description": "`version_conflict` (body has the current `plan`), `plan_not_editable` (completed or archived plan), or for a stopped medication `medication_stopped`."
+          },
+          "422": {
+            "description": "Validation, or `invalid_care_plan` (a limit, or end before start)."
+          }
+        }
+      }
+    },
+    "/api/v1/admin/care-plan-medications/{medication_id}": {
+      "patch": {
+        "tags": [
+          "admin-care-plans"
+        ],
+        "summary": "Update Medication",
+        "description": "Edit a medication. Only the fields sent change; optional fields accept null to clear. Needs the plan's `expected_version`. A stopped medication cannot be edited. Audited.\n\n**Not clinical advice.** This is a record of what the prescriber ordered. Oakly does not check doses or interactions and does not remind anyone to give medicines. Follow the prescriber's instructions.",
+        "operationId": "update_medication_api_v1_admin_care_plan_medications__medication_id__patch",
+        "security": [
+          {
+            "AdminBearer": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "medication_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid",
+              "title": "Medication Id"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/MedicationPatch"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/MedicationWriteResult"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "No such plan (or goal, task, medication)."
+          },
+          "409": {
+            "description": "`version_conflict` (body has the current `plan`), `plan_not_editable` (completed or archived plan), or for a stopped medication `medication_stopped`."
+          },
+          "422": {
+            "description": "Validation, or `invalid_care_plan` (a limit, or end before start)."
+          }
+        }
+      }
+    },
+    "/api/v1/admin/care-plan-medications/{medication_id}/stop": {
+      "post": {
+        "tags": [
+          "admin-care-plans"
+        ],
+        "summary": "Stop Medication",
+        "description": "Stop a medication: `status` becomes `stopped` and `stopped_at` is set. It stays on the plan as history and is never deleted. Needs the plan's `expected_version`. Stopping a stopped medication changes nothing. Audited.\n\n**Not clinical advice.** This is a record of what the prescriber ordered. Oakly does not check doses or interactions and does not remind anyone to give medicines. Follow the prescriber's instructions.",
+        "operationId": "stop_medication_api_v1_admin_care_plan_medications__medication_id__stop_post",
+        "security": [
+          {
+            "AdminBearer": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "medication_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid",
+              "title": "Medication Id"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/MedicationStop"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/MedicationWriteResult"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "No such plan (or goal, task, medication)."
+          },
+          "409": {
+            "description": "`version_conflict` (body has the current `plan`), `plan_not_editable` (completed or archived plan), or for a stopped medication `medication_stopped`."
+          },
+          "422": {
+            "description": "Validation, or `invalid_care_plan` (a limit, or end before start)."
+          }
+        }
+      }
+    },
+    "/api/v1/admin/care-plan-templates": {
+      "get": {
+        "tags": [
+          "admin-care-plans"
+        ],
+        "summary": "List Templates",
+        "description": "Every template (active or not) with its content and review state. Go-live gate: each seeded template is reviewed or\nremoved.",
+        "operationId": "list_templates_api_v1_admin_care_plan_templates_get",
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/AdminTemplateList"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "AdminBearer": []
+          }
+        ]
+      }
+    },
+    "/api/v1/admin/care-plan-templates/{template_id}/review": {
+      "post": {
+        "tags": [
+          "admin-care-plans"
+        ],
+        "summary": "Review Template",
+        "description": "Sign a template off (`approved`) or take the sign-off back (`pending`); records the reviewer and time. Audited.",
+        "operationId": "review_template_api_v1_admin_care_plan_templates__template_id__review_post",
+        "security": [
+          {
+            "AdminBearer": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "template_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid",
+              "title": "Template Id"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/TemplateReviewIn"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/AdminTemplate"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "`template_not_found`."
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
     "/health": {
       "get": {
         "summary": "Health Check",
@@ -9442,6 +10680,452 @@
           "needs_address_check"
         ],
         "title": "AddressOut"
+      },
+      "AdminCarePlanCreate": {
+        "properties": {
+          "template_id": {
+            "anyOf": [
+              {
+                "type": "string",
+                "format": "uuid"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Template Id",
+            "description": "Copy goals, tasks, instructions and defaults from this template. Anything sent below wins over the template."
+          },
+          "diagnosis": {
+            "type": "string",
+            "maxLength": 200,
+            "minLength": 1,
+            "title": "Diagnosis"
+          },
+          "risk_level": {
+            "anyOf": [
+              {
+                "type": "string",
+                "enum": [
+                  "low",
+                  "medium",
+                  "high"
+                ]
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Risk Level",
+            "description": "Required unless the template supplies a default."
+          },
+          "start_date": {
+            "anyOf": [
+              {
+                "type": "string",
+                "format": "date"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Start Date",
+            "description": "Defaults to today (Africa/Lagos)."
+          },
+          "duration_days": {
+            "anyOf": [
+              {
+                "type": "integer",
+                "maximum": 365,
+                "minimum": 1
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Duration Days",
+            "description": "Defaults to the template's, else 30."
+          },
+          "review_every_days": {
+            "anyOf": [
+              {
+                "type": "integer",
+                "maximum": 90,
+                "minimum": 7
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Review Every Days"
+          },
+          "goals": {
+            "anyOf": [
+              {
+                "items": {
+                  "$ref": "#/components/schemas/GoalIn"
+                },
+                "type": "array",
+                "maxItems": 30
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Goals"
+          },
+          "tasks": {
+            "anyOf": [
+              {
+                "items": {
+                  "$ref": "#/components/schemas/TaskIn"
+                },
+                "type": "array",
+                "maxItems": 60
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Tasks"
+          },
+          "allergies": {
+            "anyOf": [
+              {
+                "items": {
+                  "type": "string",
+                  "maxLength": 1000,
+                  "minLength": 1
+                },
+                "type": "array",
+                "maxItems": 30
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Allergies"
+          },
+          "special_instructions": {
+            "anyOf": [
+              {
+                "items": {
+                  "type": "string",
+                  "maxLength": 1000,
+                  "minLength": 1
+                },
+                "type": "array",
+                "maxItems": 30
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Special Instructions"
+          },
+          "patient_id": {
+            "anyOf": [
+              {
+                "type": "string",
+                "format": "uuid"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Patient Id"
+          },
+          "care_recipient_id": {
+            "anyOf": [
+              {
+                "type": "string",
+                "format": "uuid"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Care Recipient Id"
+          }
+        },
+        "type": "object",
+        "required": [
+          "diagnosis"
+        ],
+        "title": "AdminCarePlanCreate",
+        "description": "The caregiver create body plus the client: exactly one of ``patient_id`` (an app patient, or a visit booked for\noneself) or ``care_recipient_id`` (a relative a booker made a visit for)."
+      },
+      "AdminCarePlanList": {
+        "properties": {
+          "items": {
+            "items": {
+              "$ref": "#/components/schemas/AdminCarePlanListItem"
+            },
+            "type": "array",
+            "title": "Items"
+          },
+          "total": {
+            "type": "integer",
+            "title": "Total"
+          },
+          "limit": {
+            "type": "integer",
+            "title": "Limit"
+          },
+          "offset": {
+            "type": "integer",
+            "title": "Offset"
+          }
+        },
+        "type": "object",
+        "required": [
+          "items",
+          "total",
+          "limit",
+          "offset"
+        ],
+        "title": "AdminCarePlanList"
+      },
+      "AdminCarePlanListItem": {
+        "properties": {
+          "id": {
+            "type": "string",
+            "format": "uuid",
+            "title": "Id"
+          },
+          "version": {
+            "type": "integer",
+            "title": "Version"
+          },
+          "status": {
+            "type": "string",
+            "enum": [
+              "active",
+              "completed",
+              "archived"
+            ],
+            "title": "Status"
+          },
+          "subject": {
+            "$ref": "#/components/schemas/SubjectOut"
+          },
+          "client": {
+            "$ref": "#/components/schemas/ClientOut"
+          },
+          "risk_level": {
+            "type": "string",
+            "enum": [
+              "low",
+              "medium",
+              "high"
+            ],
+            "title": "Risk Level"
+          },
+          "start_date": {
+            "type": "string",
+            "format": "date",
+            "title": "Start Date"
+          },
+          "duration_days": {
+            "type": "integer",
+            "title": "Duration Days"
+          },
+          "author": {
+            "$ref": "#/components/schemas/AuthorOut"
+          },
+          "goal_count": {
+            "type": "integer",
+            "title": "Goal Count",
+            "description": "Goals that are not discontinued."
+          },
+          "task_count": {
+            "type": "integer",
+            "title": "Task Count",
+            "description": "Active tasks."
+          },
+          "medication_count": {
+            "type": "integer",
+            "title": "Medication Count",
+            "description": "Active medications."
+          },
+          "updated_at": {
+            "type": "string",
+            "format": "date-time",
+            "title": "Updated At"
+          }
+        },
+        "type": "object",
+        "required": [
+          "id",
+          "version",
+          "status",
+          "subject",
+          "client",
+          "risk_level",
+          "start_date",
+          "duration_days",
+          "author",
+          "goal_count",
+          "task_count",
+          "medication_count",
+          "updated_at"
+        ],
+        "title": "AdminCarePlanListItem",
+        "description": "A row of the list. No diagnosis or other plan text: open the plan for that (the open is audited)."
+      },
+      "AdminCarePlanOut": {
+        "properties": {
+          "id": {
+            "type": "string",
+            "format": "uuid",
+            "title": "Id"
+          },
+          "version": {
+            "type": "integer",
+            "title": "Version",
+            "description": "Send as `expected_version` on the next write."
+          },
+          "status": {
+            "type": "string",
+            "enum": [
+              "active",
+              "completed",
+              "archived"
+            ],
+            "title": "Status"
+          },
+          "subject": {
+            "$ref": "#/components/schemas/SubjectOut"
+          },
+          "client": {
+            "$ref": "#/components/schemas/ClientOut"
+          },
+          "diagnosis": {
+            "type": "string",
+            "title": "Diagnosis"
+          },
+          "risk_level": {
+            "type": "string",
+            "enum": [
+              "low",
+              "medium",
+              "high"
+            ],
+            "title": "Risk Level"
+          },
+          "start_date": {
+            "type": "string",
+            "format": "date",
+            "title": "Start Date"
+          },
+          "duration_days": {
+            "type": "integer",
+            "title": "Duration Days"
+          },
+          "review_every_days": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Review Every Days"
+          },
+          "review_due_on": {
+            "anyOf": [
+              {
+                "type": "string",
+                "format": "date"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Review Due On"
+          },
+          "template": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/TemplateRef"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "author": {
+            "$ref": "#/components/schemas/AuthorOut"
+          },
+          "allergies": {
+            "items": {
+              "type": "string"
+            },
+            "type": "array",
+            "title": "Allergies"
+          },
+          "special_instructions": {
+            "items": {
+              "type": "string"
+            },
+            "type": "array",
+            "title": "Special Instructions"
+          },
+          "goals": {
+            "items": {
+              "$ref": "#/components/schemas/GoalOut"
+            },
+            "type": "array",
+            "title": "Goals"
+          },
+          "medications": {
+            "items": {
+              "$ref": "#/components/schemas/MedicationOut"
+            },
+            "type": "array",
+            "title": "Medications",
+            "description": "Active ones first, then stopped ones (history). This is a record of what the prescriber ordered. Oakly does not check doses or interactions and does not remind anyone to give medicines. Follow the prescriber's instructions."
+          },
+          "tasks": {
+            "items": {
+              "$ref": "#/components/schemas/TaskOut"
+            },
+            "type": "array",
+            "title": "Tasks"
+          },
+          "created_at": {
+            "type": "string",
+            "format": "date-time",
+            "title": "Created At"
+          },
+          "updated_at": {
+            "type": "string",
+            "format": "date-time",
+            "title": "Updated At"
+          }
+        },
+        "type": "object",
+        "required": [
+          "id",
+          "version",
+          "status",
+          "subject",
+          "client",
+          "diagnosis",
+          "risk_level",
+          "start_date",
+          "duration_days",
+          "author",
+          "allergies",
+          "special_instructions",
+          "goals",
+          "medications",
+          "tasks",
+          "created_at",
+          "updated_at"
+        ],
+        "title": "AdminCarePlanOut"
       },
       "AdminInviteIn": {
         "properties": {
@@ -9716,6 +11400,147 @@
         },
         "type": "object",
         "title": "AdminPatchIn"
+      },
+      "AdminTemplate": {
+        "properties": {
+          "id": {
+            "type": "string",
+            "format": "uuid",
+            "title": "Id"
+          },
+          "key": {
+            "type": "string",
+            "title": "Key"
+          },
+          "name": {
+            "type": "string",
+            "title": "Name"
+          },
+          "summary": {
+            "type": "string",
+            "title": "Summary"
+          },
+          "duration_days": {
+            "type": "integer",
+            "title": "Duration Days"
+          },
+          "review_every_days": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Review Every Days"
+          },
+          "default_risk_level": {
+            "type": "string",
+            "enum": [
+              "low",
+              "medium",
+              "high"
+            ],
+            "title": "Default Risk Level"
+          },
+          "clinical_review_status": {
+            "type": "string",
+            "enum": [
+              "pending",
+              "approved"
+            ],
+            "title": "Clinical Review Status",
+            "description": "While pending, show 'Not yet clinically reviewed'."
+          },
+          "version": {
+            "type": "integer",
+            "title": "Version"
+          },
+          "goals": {
+            "items": {
+              "$ref": "#/components/schemas/TemplateGoal"
+            },
+            "type": "array",
+            "title": "Goals"
+          },
+          "tasks": {
+            "items": {
+              "$ref": "#/components/schemas/TemplateTask"
+            },
+            "type": "array",
+            "title": "Tasks"
+          },
+          "special_instructions": {
+            "items": {
+              "type": "string"
+            },
+            "type": "array",
+            "title": "Special Instructions"
+          },
+          "is_active": {
+            "type": "boolean",
+            "title": "Is Active",
+            "description": "Inactive templates are hidden from nurses."
+          },
+          "reviewed_by": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Reviewed By",
+            "description": "Name of the admin who last signed it off or reverted it."
+          },
+          "reviewed_at": {
+            "anyOf": [
+              {
+                "type": "string",
+                "format": "date-time"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Reviewed At"
+          }
+        },
+        "type": "object",
+        "required": [
+          "id",
+          "key",
+          "name",
+          "summary",
+          "duration_days",
+          "default_risk_level",
+          "clinical_review_status",
+          "version",
+          "goals",
+          "tasks",
+          "special_instructions",
+          "is_active"
+        ],
+        "title": "AdminTemplate",
+        "description": "A template with its review state. ``clinical_review_status`` is inherited."
+      },
+      "AdminTemplateList": {
+        "properties": {
+          "items": {
+            "items": {
+              "$ref": "#/components/schemas/AdminTemplate"
+            },
+            "type": "array",
+            "title": "Items"
+          }
+        },
+        "type": "object",
+        "required": [
+          "items"
+        ],
+        "title": "AdminTemplateList"
       },
       "ApplicationDetail": {
         "properties": {
@@ -13204,6 +15029,14 @@
             "type": "array",
             "title": "Goals"
           },
+          "medications": {
+            "items": {
+              "$ref": "#/components/schemas/MedicationOut"
+            },
+            "type": "array",
+            "title": "Medications",
+            "description": "Active ones first, then stopped ones (history). This is a record of what the prescriber ordered. Oakly does not check doses or interactions and does not remind anyone to give medicines. Follow the prescriber's instructions."
+          },
           "tasks": {
             "items": {
               "$ref": "#/components/schemas/TaskOut"
@@ -13240,6 +15073,7 @@
           "allergies",
           "special_instructions",
           "goals",
+          "medications",
           "tasks",
           "capabilities",
           "created_at",
@@ -17284,6 +19118,565 @@
         "title": "LoginOut",
         "description": "One of two shapes: ``mfa_required`` (already enrolled) or ``mfa_enrollment_required`` plus the\nsecret to enrol with. Fields not in the shape are omitted from the response."
       },
+      "MedicationCreate": {
+        "properties": {
+          "name": {
+            "type": "string",
+            "maxLength": 120,
+            "minLength": 1,
+            "title": "Name"
+          },
+          "strength": {
+            "anyOf": [
+              {
+                "type": "string",
+                "maxLength": 60,
+                "minLength": 1
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Strength",
+            "description": "The product's strength, as written.",
+            "examples": [
+              "500 mg"
+            ]
+          },
+          "dose_amount": {
+            "anyOf": [
+              {
+                "type": "string",
+                "maxLength": 60,
+                "minLength": 1
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Dose Amount",
+            "description": "Text, so '1/2' and '5' both fit.",
+            "examples": [
+              "1"
+            ]
+          },
+          "dose_unit": {
+            "anyOf": [
+              {
+                "type": "string",
+                "maxLength": 60,
+                "minLength": 1
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Dose Unit",
+            "examples": [
+              "tablet"
+            ]
+          },
+          "route": {
+            "anyOf": [
+              {
+                "type": "string",
+                "maxLength": 60,
+                "minLength": 1
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Route",
+            "examples": [
+              "oral"
+            ]
+          },
+          "reason": {
+            "anyOf": [
+              {
+                "type": "string",
+                "maxLength": 200,
+                "minLength": 1
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Reason"
+          },
+          "prescribed_by": {
+            "anyOf": [
+              {
+                "type": "string",
+                "maxLength": 120,
+                "minLength": 1
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Prescribed By"
+          },
+          "note": {
+            "anyOf": [
+              {
+                "type": "string",
+                "maxLength": 1000,
+                "minLength": 1
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Note"
+          },
+          "frequency": {
+            "type": "string",
+            "enum": [
+              "once_daily",
+              "twice_daily",
+              "three_times_daily",
+              "four_times_daily",
+              "weekly",
+              "as_needed",
+              "other"
+            ],
+            "title": "Frequency"
+          },
+          "times_of_day": {
+            "items": {
+              "type": "string",
+              "pattern": "^([01][0-9]|2[0-3]):[0-5][0-9]$",
+              "examples": [
+                "08:00"
+              ]
+            },
+            "type": "array",
+            "maxItems": 12,
+            "title": "Times Of Day",
+            "description": "Display times, HH:MM. Empty for as_needed or other."
+          },
+          "start_date": {
+            "anyOf": [
+              {
+                "type": "string",
+                "format": "date"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Start Date",
+            "description": "Defaults to today (Africa/Lagos)."
+          },
+          "end_date": {
+            "anyOf": [
+              {
+                "type": "string",
+                "format": "date"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "End Date",
+            "description": "Not before `start_date`; null while ongoing."
+          },
+          "expected_version": {
+            "anyOf": [
+              {
+                "type": "integer",
+                "minimum": 1
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Expected Version",
+            "description": "Optional: adding never overwrites anything."
+          }
+        },
+        "type": "object",
+        "required": [
+          "name",
+          "frequency"
+        ],
+        "title": "MedicationCreate"
+      },
+      "MedicationOut": {
+        "properties": {
+          "id": {
+            "type": "string",
+            "format": "uuid",
+            "title": "Id"
+          },
+          "name": {
+            "type": "string",
+            "title": "Name"
+          },
+          "strength": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Strength"
+          },
+          "dose_amount": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Dose Amount"
+          },
+          "dose_unit": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Dose Unit"
+          },
+          "route": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Route"
+          },
+          "reason": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Reason"
+          },
+          "prescribed_by": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Prescribed By"
+          },
+          "note": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Note"
+          },
+          "frequency": {
+            "type": "string",
+            "enum": [
+              "once_daily",
+              "twice_daily",
+              "three_times_daily",
+              "four_times_daily",
+              "weekly",
+              "as_needed",
+              "other"
+            ],
+            "title": "Frequency"
+          },
+          "times_of_day": {
+            "items": {
+              "type": "string"
+            },
+            "type": "array",
+            "title": "Times Of Day",
+            "description": "HH:MM, earliest first; may be empty."
+          },
+          "start_date": {
+            "type": "string",
+            "format": "date",
+            "title": "Start Date"
+          },
+          "end_date": {
+            "anyOf": [
+              {
+                "type": "string",
+                "format": "date"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "End Date"
+          },
+          "status": {
+            "type": "string",
+            "enum": [
+              "active",
+              "stopped"
+            ],
+            "title": "Status"
+          },
+          "stopped_at": {
+            "anyOf": [
+              {
+                "type": "string",
+                "format": "date-time"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Stopped At",
+            "description": "Set when `status` is `stopped`, null otherwise."
+          }
+        },
+        "type": "object",
+        "required": [
+          "id",
+          "name",
+          "frequency",
+          "times_of_day",
+          "start_date",
+          "status"
+        ],
+        "title": "MedicationOut"
+      },
+      "MedicationPatch": {
+        "properties": {
+          "expected_version": {
+            "type": "integer",
+            "minimum": 1,
+            "title": "Expected Version"
+          },
+          "name": {
+            "anyOf": [
+              {
+                "type": "string",
+                "maxLength": 120,
+                "minLength": 1
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Name"
+          },
+          "strength": {
+            "anyOf": [
+              {
+                "type": "string",
+                "maxLength": 60,
+                "minLength": 1
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Strength"
+          },
+          "dose_amount": {
+            "anyOf": [
+              {
+                "type": "string",
+                "maxLength": 60,
+                "minLength": 1
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Dose Amount"
+          },
+          "dose_unit": {
+            "anyOf": [
+              {
+                "type": "string",
+                "maxLength": 60,
+                "minLength": 1
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Dose Unit"
+          },
+          "route": {
+            "anyOf": [
+              {
+                "type": "string",
+                "maxLength": 60,
+                "minLength": 1
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Route"
+          },
+          "reason": {
+            "anyOf": [
+              {
+                "type": "string",
+                "maxLength": 200,
+                "minLength": 1
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Reason"
+          },
+          "prescribed_by": {
+            "anyOf": [
+              {
+                "type": "string",
+                "maxLength": 120,
+                "minLength": 1
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Prescribed By"
+          },
+          "note": {
+            "anyOf": [
+              {
+                "type": "string",
+                "maxLength": 1000,
+                "minLength": 1
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Note"
+          },
+          "frequency": {
+            "anyOf": [
+              {
+                "type": "string",
+                "enum": [
+                  "once_daily",
+                  "twice_daily",
+                  "three_times_daily",
+                  "four_times_daily",
+                  "weekly",
+                  "as_needed",
+                  "other"
+                ]
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Frequency"
+          },
+          "times_of_day": {
+            "anyOf": [
+              {
+                "items": {
+                  "type": "string",
+                  "pattern": "^([01][0-9]|2[0-3]):[0-5][0-9]$",
+                  "examples": [
+                    "08:00"
+                  ]
+                },
+                "type": "array",
+                "maxItems": 12
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Times Of Day"
+          },
+          "start_date": {
+            "anyOf": [
+              {
+                "type": "string",
+                "format": "date"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Start Date"
+          },
+          "end_date": {
+            "anyOf": [
+              {
+                "type": "string",
+                "format": "date"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "End Date"
+          }
+        },
+        "type": "object",
+        "required": [
+          "expected_version"
+        ],
+        "title": "MedicationPatch",
+        "description": "Only the fields sent change. Every optional field accepts null to clear it. A stopped medication cannot be edited:\nrecord a new one."
+      },
+      "MedicationStop": {
+        "properties": {
+          "expected_version": {
+            "type": "integer",
+            "minimum": 1,
+            "title": "Expected Version"
+          }
+        },
+        "type": "object",
+        "required": [
+          "expected_version"
+        ],
+        "title": "MedicationStop"
+      },
+      "MedicationWriteResult": {
+        "properties": {
+          "medication": {
+            "$ref": "#/components/schemas/MedicationOut"
+          },
+          "plan_version": {
+            "type": "integer",
+            "title": "Plan Version",
+            "description": "The plan's version after this write; use it as the next expected_version."
+          }
+        },
+        "type": "object",
+        "required": [
+          "medication",
+          "plan_version"
+        ],
+        "title": "MedicationWriteResult"
+      },
       "MfaVerifyIn": {
         "properties": {
           "mfa_token": {
@@ -20762,6 +23155,30 @@
         ],
         "title": "SkillsIn"
       },
+      "SubjectOut": {
+        "properties": {
+          "kind": {
+            "type": "string",
+            "enum": [
+              "patient",
+              "recipient"
+            ],
+            "title": "Kind",
+            "description": "Which table `id` is in: `patient` (patients) or `recipient` (care_recipients). Send it back as `patient_id` or `care_recipient_id` respectively."
+          },
+          "id": {
+            "type": "string",
+            "format": "uuid",
+            "title": "Id"
+          }
+        },
+        "type": "object",
+        "required": [
+          "kind",
+          "id"
+        ],
+        "title": "SubjectOut"
+      },
       "TaskCreate": {
         "properties": {
           "title": {
@@ -21299,6 +23716,24 @@
           "version"
         ],
         "title": "TemplateRef"
+      },
+      "TemplateReviewIn": {
+        "properties": {
+          "status": {
+            "type": "string",
+            "enum": [
+              "approved",
+              "pending"
+            ],
+            "title": "Status",
+            "description": "`approved` after a clinician has read the content; `pending` takes the approval back. Either way the reviewer and time are recorded and the call is audited."
+          }
+        },
+        "type": "object",
+        "required": [
+          "status"
+        ],
+        "title": "TemplateReviewIn"
       },
       "TemplateTask": {
         "properties": {
