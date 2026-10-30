@@ -31,6 +31,11 @@ jest.mock("expo-audio", () => ({
   setAudioModeAsync: async () => {},
 }));
 
+// The expo-web-browser native module is not available under jest; tests that care set the result they need.
+jest.mock("expo-web-browser", () => ({
+  openAuthSessionAsync: jest.fn(async () => ({ type: "cancel" })),
+}));
+
 // Native modules the supply features touch. Tests that care override these with their own jest.mock.
 jest.mock("expo-device", () => ({ isDevice: true }));
 

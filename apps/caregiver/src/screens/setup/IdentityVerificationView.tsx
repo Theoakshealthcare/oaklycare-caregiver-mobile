@@ -9,6 +9,7 @@ import Text from "@/src/components/ui/text";
 import { globalStyles } from "@/src/constants/styles";
 import { theme } from "@/src/constants/theme";
 import {
+  STILL_CHECKING_TEXT,
   asksConsent,
   attemptLabel,
   canDefer,
@@ -32,9 +33,12 @@ export interface IdentityViewProps {
   banner?: string | null;
   consentChecked: boolean;
   onToggleConsent: () => void;
-  /** Two minutes of waiting / five minutes and polling stopped. */
+  /** One minute of waiting / five minutes and polling stopped. */
   slow?: boolean;
   stopped?: boolean;
+  /** The browser was dismissed before the return page and the server has not heard "completed". */
+  canContinueVerification?: boolean;
+  onContinueVerification?: () => void;
   onStart: () => void;
   onContinue: () => void;
   onDefer: () => void;
@@ -214,10 +218,22 @@ const IdentityVerificationView: React.FC<IdentityViewProps> = (props) => {
               </Text>
             ) : null}
             {props.slow ? (
-              <Body testID="identity-slow">This is taking longer. You can leave this screen; we&apos;ll notify you.</Body>
+              <Body testID="identity-slow">{STILL_CHECKING_TEXT}</Body>
             ) : (
               <Body>This usually takes about a minute.</Body>
             )}
+            {props.canContinueVerification ? (
+              <>
+                <Body testID="identity-dismissed-note">If you didn&apos;t finish in the verification window, you can open it again.</Body>
+                <Button
+                  testID="identity-continue-verification"
+                  title="Continue verification"
+                  variant="outline"
+                  onPress={props.onContinueVerification}
+                  style={{ alignSelf: "stretch" }}
+                />
+              </>
+            ) : null}
             {props.stopped ? (
               <Button testID="identity-check-again" title="Check again" variant="outline" onPress={props.onCheckAgain} style={{ alignSelf: "stretch" }} />
             ) : null}

@@ -97,7 +97,7 @@ describe("intro and consent (design 11.3, state 1)", () => {
 
     await waitFor(() => expect(open).toHaveBeenCalledTimes(1));
     expect(startSession).toHaveBeenCalledWith({ consent: true, policyVersion: "kyc-2026-10" });
-    expect(open).toHaveBeenCalledWith(session().widget);
+    expect(open).toHaveBeenCalledWith({ config: session().widget, widgetUrl: undefined });
     await waitFor(() => expect(sendClientEvent).toHaveBeenCalledWith(VERIFICATION_ID, "completed", "placeholder-session-001"));
     expect(sendClientEvent).toHaveBeenCalledWith(VERIFICATION_ID, "opened", undefined);
   });
@@ -137,18 +137,20 @@ describe("waiting for the result", () => {
     await waitFor(() => expect(mockNavigate).toHaveBeenCalledWith("ConsentScreen"));
   });
 
-  it("after two minutes says it is taking longer, and after five stops and offers Check again", async () => {
+  it("after a minute says it is still checking, and after five stops and offers Check again", async () => {
     current = checking();
     await renderScreen();
     await screen.findByTestId("identity-checking");
     await act(async () => {
-      await jest.advanceTimersByTimeAsync(125_000);
+      await jest.advanceTimersByTimeAsync(65_000);
     });
-    expect(screen.getByTestId("identity-slow")).toHaveTextContent("This is taking longer. You can leave this screen; we'll notify you.");
+    expect(screen.getByTestId("identity-slow")).toHaveTextContent(
+      "Still checking. This can take a few minutes. You can leave this screen; we will tell you when it is done.",
+    );
     expect(screen.queryByTestId("identity-check-again")).toBeNull();
 
     await act(async () => {
-      await jest.advanceTimersByTimeAsync(200_000);
+      await jest.advanceTimersByTimeAsync(260_000);
     });
     expect(screen.getByTestId("identity-check-again")).toBeTruthy();
     const reads = getState.mock.calls.length;

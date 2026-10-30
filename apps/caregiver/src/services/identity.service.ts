@@ -52,11 +52,14 @@ export function parseSession(raw: unknown): IdentitySession {
     last_name: text(widget.last_name),
     metadata: { oakly_ref: text(asRecord(widget.metadata).oakly_ref) },
   };
+  const widgetUrl = text(body.widget_url);
   return {
     verification_id: verificationId,
     attempt_no: typeof body.attempt_no === "number" ? body.attempt_no : 1,
     widget: config,
     state: body.state as IdentityState,
+    // TODO(K7b): read straight from the typed body once `api:sync` carries `widget_url` (backend slice KD2).
+    ...(widgetUrl ? { widget_url: widgetUrl } : {}),
   };
 }
 

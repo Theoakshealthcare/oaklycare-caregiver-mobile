@@ -2,7 +2,7 @@ import { ApiError } from "../src/api/errors";
 import { identityErrorCode } from "../src/identity/identityModel";
 import { createMockIdentityService, parseMockScenario } from "../src/identity/mockIdentityService";
 import { identityService, parseSession, setIdentityService } from "../src/services/identity.service";
-import { VERIFICATION_ID, session, started, tryAgain } from "../test-utils/identityFixtures";
+import { VERIFICATION_ID, WIDGET_URL, session, sessionWithUrl, started, tryAgain } from "../test-utils/identityFixtures";
 
 // The app's client captures `fetch` when it is created, so route it through a late-bound wrapper.
 jest.mock("../src/api/client", () => {
@@ -83,6 +83,14 @@ describe("real service: request wiring (against the backend's captured shapes)",
     expect(error.status).toBe(409);
     expect(identityErrorCode(error)).toBe("ATTEMPTS_EXHAUSTED");
     expect(error.message).toBe(detail.message);
+  });
+});
+
+describe("parseSession: the hosted page url (backend slice KD2)", () => {
+  it("carries widget_url through when the server sends it, and leaves it out when it does not", () => {
+    expect(parseSession(sessionWithUrl()).widget_url).toBe(WIDGET_URL);
+    expect("widget_url" in parseSession(session())).toBe(false);
+    expect("widget_url" in parseSession({ ...session(), widget_url: 42 })).toBe(false);
   });
 });
 

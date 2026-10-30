@@ -44,16 +44,16 @@ describe("useIdentityPolling", () => {
     expect(refetch).toHaveBeenCalledTimes(19);
   });
 
-  it("says it is taking longer after two minutes and stops after five, with no timer left", async () => {
+  it("says it is still checking after a minute and stops after five, with no timer left", async () => {
     const refetch = jest.fn().mockResolvedValue(undefined);
     const { result } = await renderHook(() => useIdentityPolling(true, refetch));
-    await advance(100_000);
+    await advance(50_000);
     expect(result.current.slow).toBe(false);
-    await advance(30_000);
+    await advance(20_000);
     expect(result.current.slow).toBe(true);
     expect(result.current.stopped).toBe(false);
 
-    await advance(180_000);
+    await advance(240_000);
     expect(result.current.stopped).toBe(true);
     const calls = refetch.mock.calls.length;
     await advance(120_000);

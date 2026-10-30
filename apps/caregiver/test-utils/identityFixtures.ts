@@ -91,4 +91,10 @@ export const session = (state: IdentityState = started()): IdentitySession => ({
   state,
 });
 
+/** A placeholder for the hosted page's URL (backend slice KD2, `widget_url`); not a real page. */
+export const WIDGET_URL = "https://api.example.test/kyc/widget/placeholder-token";
+
+/** The session body once KD2 adds `widget_url` (same shape as capture 203/204 plus that one field). */
+export const sessionWithUrl = (state: IdentityState = started()): IdentitySession => ({ ...session(state), widget_url: WIDGET_URL });
+
 export { VERIFICATION_ID };

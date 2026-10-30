@@ -26,7 +26,7 @@ export function useIdentityState() {
  * wait is scheduled only after the previous read finished, and the effect's cleanup clears it on unmount or when
  * `enabled` turns off. Nothing here can keep running after the screen is gone.
  *
- * `slow` turns true after two minutes ("taking longer, you can leave"); `stopped` once polling gave up. `restart`
+ * `slow` turns true after one minute ("still checking, you can leave"); `stopped` once polling gave up. `restart`
  * (the "Check again" button) begins a fresh five minutes.
  */
 export function useIdentityPolling(enabled: boolean, refetch: () => Promise<unknown>) {

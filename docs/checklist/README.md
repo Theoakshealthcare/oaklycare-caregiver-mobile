@@ -92,7 +92,12 @@ channel) lives in the backend repo: `docs/checklist/MASTER_CHECKLIST.md`. Update
 
 ## Caregiver KYC (Dojah, was Prembly until 2026-10-30)
 - [x] K7a Identity step: route after Step 2, intro + consent, checking / verified / try again / under review / unavailable / expired / error states, `setupRouteFor` + gate tests (2026-10-30, branch `feat/kyc-mobile-screens`, see docs/sop/2026-10-30-caregiver-kyc-screens.md; Jest only, mocked service, **not device-verified**, off by default behind `EXPO_PUBLIC_KYC_MODE`)
-- [ ] K7b Dojah widget in a dev build (`dojah-kyc-sdk-react-expo`, or react-native-webview as the fallback), camera permissions, server-minted reference, build recipe in the SOP (provider switched from Prembly to Dojah 2026-10-30; see backend `docs/plans/2026-10-30-caregiver-kyc-dojah-delta.md` once KD1 merges)
+- [x] K7b Launch the hosted Dojah page from the app (2026-10-30, branch `feat/kyc-mobile-launch`, see docs/sop/2026-10-30-caregiver-kyc-launch.md; Jest only, **not device-verified**, needs a new dev build with `expo-web-browser`; still off by default behind `EXPO_PUBLIC_KYC_MODE`). The app does **not** use Dojah's native SDK: it opens the page the backend hosts (`widget_url`, slice KD2) with `openAuthSessionAsync` and learns the result only by polling
+  - [x] Browser launcher (`src/identity/browserWidgetLauncher.ts`): https-only url, return `oaklycarecaregivermobile://kyc/return`, redirect = hint `completed`, cancel / dismiss / locked = `dismissed` (not a failure), native error = `error`
+  - [x] Checking state: "Still checking..." copy after a minute, polling cadence and 5-minute stop unchanged, "Continue verification" after a dismissal (same open attempt; never once the server has heard `completed`)
+  - [x] Prembly wording removed from the consent draft (names Dojah; text version unchanged until counsel signs off)
+  - [ ] `widget_url` from the generated api-client (hand-written type until the lead runs `pnpm api:sync` after KD2 merges)
+  - [ ] Device pass: camera inside the browser session on iOS and Android, the redirect back, Continue verification (K8)
 - [x] K6 Admin console: "Identity needs review" filter and badge, provider summary card, Verify / Fail, Allow another attempt (2026-10-30, branch `feat/kyc-admin-console`, see docs/sop/2026-10-30-admin-kyc-console.md; Vitest/RTL only, **no live browser pass**)
   - [x] `api:sync` from backend `6d7d315` (K5 merged); `identity` block, `needs_review_count` / `stuck_count`, `expected_status`, `identity-reset`
   - [x] Queue: chips Everyone / Identity needs review / stuck / failed (URL `identity=`), badges from the response counts, kept while another filter loads
