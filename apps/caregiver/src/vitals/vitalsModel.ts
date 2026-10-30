@@ -154,13 +154,25 @@ export function readingsInRange(readings: Reading[], range: ChartRange, now: Dat
 
 export interface ChartBar {
   id: string;
-  /** 0.15 to 1: bar height as a share of the chart, so the lowest reading is still visible. */
+  /** 0.15 to 1: bar height as a share of the chart, so the lowest reading is still visible. For blood pressure this is where the top (systolic) number sits. */
   height: number;
+  /** Blood pressure only: where the bottom (diastolic) number sits, 0 to 1, so the bar spans the two. */
+  low?: number;
   label: string;
+}
+
+/** The two numbers of a stored "138/85", or null when the value is not that shape. */
+export function parsePressure(value: string): { systolic: number; diastolic: number } | null {
+  const [top, bottom, ...rest] = value.split("/");
+  const systolic = Number(top?.trim());
+  const diastolic = Number(bottom?.trim());
+  if (rest.length > 0 || !top?.trim() || !bottom?.trim() || !Number.isFinite(systolic) || !Number.isFinite(diastolic)) return null;
+  return { systolic, diastolic };
 }
 
 /** Turns plottable readings into bar heights scaled between the lowest and highest value shown. */
 export function chartBars(readings: Reading[]): ChartBar[] {
+  if (readings.length > 0 && readings.every((r) => r.kind === "blood_pressure")) return pressureBars(readings);
   const points = readings.filter((r): r is Reading & { plot: number } => r.plot !== null);
   if (points.length === 0) return [];
   const values = points.map((p) => p.plot);
@@ -171,6 +183,47 @@ export function chartBars(readings: Reading[]): ChartBar[] {
     height: max === min ? 0.6 : 0.15 + ((p.plot - min) / (max - min)) * 0.85,
     label: p.value,
   }));
+}
+
+/** Blood pressure: one bar per reading, running from the diastolic to the systolic number on a shared scale. */
+function pressureBars(readings: Reading[]): ChartBar[] {
+  const points = readings.flatMap((r) => {
+    const pressure = parsePressure(r.value);
+    return pressure ? [{ id: r.id, label: r.value, ...pressure }] : [];
+  });
+  if (points.length === 0) return [];
+  const min = Math.min(...points.map((p) => p.diastolic));
+  const max = Math.max(...points.map((p) => p.systolic));
+  const scale = (n: number) => (max === min ? 0.5 : 0.1 + ((n - min) / (max - min)) * 0.8);
+  return points.map((p) => ({
+    id: p.id,
+    height: max === min ? 0.6 : scale(p.systolic),
+    low: max === min ? 0.4 : scale(p.diastolic),
+    label: p.label,
+  }));
+}
+
+/** Readings (already newest first) grouped under "Today", "Yesterday" or the date, keeping their order. */
+export function groupReadingsByDay(readings: Reading[], now: Date = new Date(), locale = "en-NG"): { title: string; readings: Reading[] }[] {
+  const yesterday = new Date(now.getTime() - 24 * HOUR);
+  const groups: { title: string; readings: Reading[] }[] = [];
+  for (const r of readings) {
+    const title =
+      r.recordedAt.toDateString() === now.toDateString()
+        ? "Today"
+        : r.recordedAt.toDateString() === yesterday.toDateString()
+          ? "Yesterday"
+          : r.recordedAt.toLocaleDateString(locale, { weekday: "short", day: "numeric", month: "short", year: "numeric" });
+    const last = groups[groups.length - 1];
+    if (last && last.title === title) last.readings.push(r);
+    else groups.push({ title, readings: [r] });
+  }
+  return groups;
+}
+
+/** The clock time of a reading, "10:45 am". */
+export function formatTime(date: Date, locale = "en-NG"): string {
+  return date.toLocaleTimeString(locale, { hour: "numeric", minute: "2-digit" });
 }
 
 // --- Manual entry ----------------------------------------------------------------------------

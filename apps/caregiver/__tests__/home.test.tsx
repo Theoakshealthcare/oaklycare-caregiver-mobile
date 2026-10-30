@@ -16,6 +16,7 @@ import {
 } from "../src/home/homeModel";
 import Home from "../src/screens/home/Home";
 import { authService } from "../src/services/auth.service";
+import { walletService, type WalletSummary } from "../src/services/wallet.service";
 import { session } from "../src/auth";
 import { locationService, type CaregiverHome } from "../src/supply/locationService";
 
@@ -88,6 +89,25 @@ const emptyHome: CaregiverHome = {
   currency: "NGN",
   can_author_care_plans: false,
 };
+
+// GET /caregiver/wallet speaks integer kobo.
+const walletSummary = (over: Partial<WalletSummary>): WalletSummary => ({
+  balance: 12_500_050,
+  total_earned: 12_500_050,
+  total_withdrawn: 0,
+  currency: "NGN",
+  available_balance: 12_500_050,
+  pending_balance: 0,
+  held_balance: 0,
+  total_pending: 0,
+  next_available_at: null,
+  payout_cadence: "weekly",
+  payout_min_kobo: 500_000,
+  next_payout_on: null,
+  payout_in_progress_kobo: 0,
+  payouts_blocked_until: null,
+  ...over,
+});
 
 const T0 = Date.parse("2026-10-06T08:30:00Z");
 
@@ -193,6 +213,7 @@ describe("home helpers", () => {
 describe("Home screen", () => {
   let getHome: jest.SpyInstance;
   let alertSpy: jest.SpyInstance;
+  let walletSpy: jest.SpyInstance;
   const order: string[] = [];
 
   async function renderHome() {
@@ -218,6 +239,7 @@ describe("Home screen", () => {
       updated_at: "2026-10-01T00:00:00",
     });
     alertSpy = jest.spyOn(Alert, "alert").mockImplementation(() => undefined);
+    walletSpy = jest.spyOn(walletService, "getWallet").mockResolvedValue(walletSummary({}));
     mockEnsureForeground.mockImplementation(async () => {
       order.push("permission");
       return true;
@@ -253,6 +275,35 @@ describe("Home screen", () => {
     expect(screen.getByText("Accept")).toBeTruthy(); // the offer card
     expect(screen.getByText("You're available")).toBeTruthy();
     expect(getHome).toHaveBeenCalled();
+  });
+
+  it("shows where each visit is, from the patient address on the response", async () => {
+    getHome = jest.spyOn(locationService, "getHome").mockResolvedValue(homeWithVisitAndOffer);
+    await renderHome();
+    expect(await screen.findByTestId("visit-address")).toHaveTextContent("12 Placeholder Street, Lekki, Lagos");
+  });
+
+  it("opens the wallet from the balance card and shows earnings still pending", async () => {
+    getHome = jest.spyOn(locationService, "getHome").mockResolvedValue(homeWithVisitAndOffer);
+    walletSpy.mockResolvedValue(walletSummary({ pending_balance: 4_500_000 }));
+    await renderHome();
+    expect(await screen.findByTestId("wallet-pending")).toHaveTextContent("₦45,000.00 pending");
+    await fireEvent.press(screen.getByTestId("home-wallet"));
+    expect(mockNavigate).toHaveBeenCalledWith("Wallet");
+  });
+
+  it("shows no pending line when nothing is pending, or when the wallet cannot be read", async () => {
+    getHome = jest.spyOn(locationService, "getHome").mockResolvedValue(homeWithVisitAndOffer);
+    const first = await renderHome();
+    expect(await screen.findByTestId("wallet-balance")).toBeTruthy();
+    await waitFor(() => expect(walletSpy).toHaveBeenCalled());
+    expect(screen.queryByTestId("wallet-pending")).toBeNull();
+    await first.unmount();
+
+    walletSpy.mockRejectedValue(new ApiError(0, null, "offline"));
+    await renderHome();
+    expect(await screen.findByTestId("wallet-balance")).toBeTruthy();
+    expect(screen.queryByTestId("wallet-pending")).toBeNull();
   });
 
   it("shows empty states and the approval gate for an unapproved caregiver", async () => {

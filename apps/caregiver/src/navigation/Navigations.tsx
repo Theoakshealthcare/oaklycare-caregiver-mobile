@@ -35,6 +35,8 @@ export type ScreenParamLists = {
   ClientProfile: { bookingId: string; bookingCode?: string };
   /** One vital of the patient on the current visit: chart and history. */
   VitalDetail: { patientId: string; patientName?: string; kind: VitalKind };
+  /** Every reading of one vital on record, grouped by day. */
+  VitalHistory: { patientId: string; patientName?: string; kind: VitalKind };
   /** Manual vital entry for the patient on the current visit. */
   AddVitals: { patientId: string; patientName?: string };
   /** Care plans hub (nurses): Assigned / Templates. With `bookingId` it was opened from that client's profile, so "Use template" skips the client picker. */

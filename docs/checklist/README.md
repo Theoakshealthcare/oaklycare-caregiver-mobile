@@ -12,6 +12,9 @@ channel) lives in the backend repo: `docs/checklist/MASTER_CHECKLIST.md`. Update
 - [x] Vitals tab: six-vital grid for the patient on the in-progress visit; "available during an active visit" on 403 or before the visit starts (2026-10-27, see docs/sop/2026-10-27-caregiver-vitals-tab.md)
 - [x] Per-vital chart (Day / Week / Month) and history; manual entry for all six (glucose mg/dL / mmol/L with RBS / FBS / PP); report download then native share, temp file deleted
 - [x] No blank tab: each tab carries its page; Fall tab says "coming soon"
+- [x] Vitals polish (2026-10-30, see docs/sop/2026-10-30-caregiver-vitals-home-polish.md): blood pressure chart as bars from the bottom to the top number; "View all History" screen (every reading on record, grouped by day); sleep entry and chart confirmed already shipped
+- [x] Home polish (2026-10-30): visit address on each visit row; wallet card opens Wallet and shows pending earnings
+- [ ] Home gaps that need backend or a design answer: week strip ("Weekly Availability"), weekly earnings summary
 - [ ] Critical / Normal chips (needs clinical sign-off and a status in the API)
 - [ ] Insights (clinical and privacy sign-off)
 - [ ] Live check against the backend and a device pass (share sheet, entry modal keyboard)

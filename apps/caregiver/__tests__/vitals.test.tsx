@@ -7,6 +7,7 @@ import { ApiError } from "../src/api/errors";
 import { session } from "../src/auth";
 import AddVitals from "../src/screens/vitals/AddVitals";
 import VitalDetail from "../src/screens/vitals/VitalDetail";
+import VitalHistory from "../src/screens/vitals/VitalHistory";
 import Vitals from "../src/screens/vitals/Vitals";
 import { authService } from "../src/services/auth.service";
 import { bookingService, type Booking } from "../src/services/booking.service";
@@ -243,6 +244,89 @@ describe("VitalDetail", () => {
 
     listSpy.mockRejectedValue(new ApiError(0, null, "offline"));
     await renderWith(<VitalDetail route={route()} navigation={nav} />);
+    expect(await screen.findByText("Try again")).toBeTruthy();
+  });
+});
+
+describe("VitalDetail: blood pressure and sleep", () => {
+  const route = (kind: string) =>
+    ({ params: { patientId: PATIENT, patientName: "Placeholder Patient", kind } }) as unknown as React.ComponentProps<typeof VitalDetail>["route"];
+  const nav = {} as React.ComponentProps<typeof VitalDetail>["navigation"];
+
+  it("charts blood pressure as bars from the bottom number to the top number, with a hint", async () => {
+    listSpy.mockResolvedValue([
+      vital({ id: "bp1", vital_type: "blood_pressure", value: "138/85", unit: "mmHg", recorded_at: iso(1) }),
+      vital({ id: "bp2", vital_type: "blood_pressure", value: "120/78", unit: "mmHg", recorded_at: iso(30) }),
+      vital({ id: "hr", value: "84" }),
+    ]);
+    await renderWith(<VitalDetail route={route("blood_pressure")} navigation={nav} />);
+    expect(await screen.findByTestId("vital-chart")).toBeTruthy();
+    expect(screen.getAllByTestId("chart-bar")).toHaveLength(2);
+    expect(screen.getByLabelText("138/85")).toBeTruthy();
+    expect(screen.getByTestId("chart-pressure-hint")).toBeTruthy();
+    expect(screen.getByTestId("vital-detail-current")).toHaveTextContent("138/85 mmHg");
+  });
+
+  it("does not show the pressure hint on other charts", async () => {
+    listSpy.mockResolvedValue([vital({ id: "hr" })]);
+    await renderWith(<VitalDetail route={route("heart_rate")} navigation={nav} />);
+    await screen.findByTestId("vital-chart");
+    expect(screen.queryByTestId("chart-pressure-hint")).toBeNull();
+  });
+
+  it("charts sleep in hours", async () => {
+    listSpy.mockResolvedValue([vital({ id: "s", vital_type: "sleep_duration", value: "6.5", unit: "hrs" })]);
+    await renderWith(<VitalDetail route={route("sleep_duration")} navigation={nav} />);
+    expect(await screen.findByTestId("vital-detail-current")).toHaveTextContent("6.5 hrs");
+    expect(screen.getAllByTestId("chart-bar")).toHaveLength(1);
+  });
+
+  it("opens the full history of this vital", async () => {
+    await renderWith(<VitalDetail route={route("blood_pressure")} navigation={nav} />);
+    await fireEvent.press(await screen.findByTestId("view-all-history"));
+    expect(mockNavigate).toHaveBeenCalledWith("VitalHistory", { patientId: PATIENT, patientName: "Placeholder Patient", kind: "blood_pressure" });
+  });
+});
+
+describe("VitalHistory (view all history)", () => {
+  const route = (kind = "heart_rate") =>
+    ({ params: { patientId: PATIENT, patientName: "Placeholder Patient", kind } }) as unknown as React.ComponentProps<typeof VitalHistory>["route"];
+  const nav = {} as React.ComponentProps<typeof VitalHistory>["navigation"];
+
+  it("asks for every reading, not just the last 30 days, and lists this vital grouped by day", async () => {
+    listSpy.mockResolvedValue([
+      vital({ id: "a", value: "84", recorded_at: iso(1) }),
+      vital({ id: "b", value: "76", recorded_at: iso(2) }),
+      vital({ id: "old", value: "90", recorded_at: iso(24 * 90) }),
+      vital({ id: "bp", vital_type: "blood_pressure", value: "138/85", unit: "mmHg" }),
+    ]);
+    await renderWith(<VitalHistory route={route()} navigation={nav} />);
+    expect(await screen.findAllByTestId("history-row")).toHaveLength(3);
+    expect(listSpy).toHaveBeenCalledWith(PATIENT);
+    expect(screen.getAllByTestId("history-day").length).toBeGreaterThanOrEqual(2);
+    expect(screen.getByText("90 bpm")).toBeTruthy();
+    expect(screen.queryByText("138/85 mmHg")).toBeNull();
+    expect(screen.getByText("Heart Rate history")).toBeTruthy();
+  });
+
+  it("shows the glucose context on its readings", async () => {
+    listSpy.mockResolvedValue([vital({ vital_type: "blood_glucose", value: "110", unit: "mg/dL", notes: "FBS" })]);
+    await renderWith(<VitalHistory route={route("blood_glucose")} navigation={nav} />);
+    expect(await screen.findByText("Fasting")).toBeTruthy();
+  });
+
+  it("says so when there are no readings, and handles 403 and other errors", async () => {
+    const empty = await renderWith(<VitalHistory route={route()} navigation={nav} />);
+    expect(await screen.findByText("No readings yet")).toBeTruthy();
+    await empty.unmount();
+
+    listSpy.mockRejectedValue(ACCESS_DENIED);
+    const denied = await renderWith(<VitalHistory route={route()} navigation={nav} />);
+    expect(await screen.findByText("Available during an active visit")).toBeTruthy();
+    await denied.unmount();
+
+    listSpy.mockRejectedValue(new ApiError(0, null, "offline"));
+    await renderWith(<VitalHistory route={route()} navigation={nav} />);
     expect(await screen.findByText("Try again")).toBeTruthy();
   });
 });
