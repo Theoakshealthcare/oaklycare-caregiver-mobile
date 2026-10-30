@@ -124,6 +124,7 @@ const Profile: React.FC = () => {
           </View>
 
           <MenuRow icon="user" label="Edit personal information" onPress={() => navigation.navigate("EditProfile")} />
+          <MenuRow icon="lock" label="Change password" onPress={() => navigation.navigate("ChangePassword")} />
           <MenuRow icon="credit-card" label="Payment & earnings" onPress={() => navigation.navigate("Wallet")} />
           <MenuRow icon="info" label="About us" onPress={() => void Linking.openURL(ABOUT_URL)} />
           <MenuRow icon="help-circle" label="FAQs" onPress={() => void Linking.openURL(FAQ_URL)} />

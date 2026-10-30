@@ -28,6 +28,7 @@ export type ScreenParamLists = {
   Notifications: undefined;
   Profile: undefined;
   EditProfile: undefined;
+  ChangePassword: undefined;
   Wallet: undefined;
   BankDetails: undefined;
   Contact: undefined;

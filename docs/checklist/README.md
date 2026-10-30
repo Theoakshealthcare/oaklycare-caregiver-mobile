@@ -54,6 +54,10 @@ channel) lives in the backend repo: `docs/checklist/MASTER_CHECKLIST.md`. Update
   - [ ] Clinician sign-off of the notice wording (go-live gate; one string, `MEDICATION_NOTICE`)
 - [ ] Clinical sign-off of seeded templates and copy (go-live gate)
 
+## Caregiver change password
+- [x] Change password screen from Profile settings: current / new / confirm, inline errors per backend code, Retry-After countdown, stays signed in on the returned tokens (2026-10-30, branch `feature/change-password-screen`, see docs/sop/2026-10-30-caregiver-change-password.md; Jest only, **not device-verified**; backend endpoint is backend#37)
+- [ ] Device pass; pause the query client during the change (tiny in-flight 401 window, see the SOP follow-ups)
+
 ## Caregiver bank account
 - [x] Payment details screen: bank picker, name confirmation, add/change, 24 h pause notice, legacy re-verify (2026-10-19, see docs/sop/2026-10-19-caregiver-bank-account.md)
 - [x] Wallet shows "payouts paused until ..."
