@@ -888,7 +888,7 @@
             }
           },
           "503": {
-            "description": "PROVIDER_UNAVAILABLE: Prembly is flagged down or the widget is not configured."
+            "description": "PROVIDER_UNAVAILABLE: Dojah is flagged down or the widget is not configured."
           }
         },
         "security": [
@@ -904,7 +904,7 @@
           "caregiver"
         ],
         "summary": "Defer Identity Verification",
-        "description": "Outage path: only while Prembly is flagged unavailable. Lets the caregiver carry on to consent; verifies nobody.",
+        "description": "Outage path: only while Dojah is flagged unavailable. Lets the caregiver carry on to consent; verifies nobody.",
         "operationId": "defer_identity_verification_api_v1_caregiver_identity_verification_defer_post",
         "responses": {
           "200": {
@@ -937,7 +937,7 @@
           "caregiver"
         ],
         "summary": "Identity Verification Client Event",
-        "description": "A hint from the widget (opened, completed, closed, error). Non-authoritative: it can advance the caregiver's own\nattempt and remember the session id, and can never change the caregiver's identity status.",
+        "description": "A hint from the widget (opened, completed, closed, error). Non-authoritative: it can advance the caregiver's own\nattempt, and can never change the caregiver's identity status.",
         "operationId": "identity_verification_client_event_api_v1_caregiver_identity_verification__verification_id__client_event_post",
         "security": [
           {
@@ -18991,18 +18991,6 @@
               "error"
             ],
             "title": "Event"
-          },
-          "session_id": {
-            "anyOf": [
-              {
-                "type": "string",
-                "pattern": "^[A-Za-z0-9_.-]{1,128}$"
-              },
-              {
-                "type": "null"
-              }
-            ],
-            "title": "Session Id"
           }
         },
         "type": "object",
@@ -19010,7 +18998,7 @@
           "event"
         ],
         "title": "IdentityVerificationClientEventRequest",
-        "description": "A hint from the widget. Anything else the client sends is ignored, never stored."
+        "description": "A hint from the widget. Anything else the client sends (a reference, a session id) is ignored, never stored."
       },
       "IdentityVerificationSessionOut": {
         "properties": {
@@ -19028,6 +19016,10 @@
           },
           "state": {
             "$ref": "#/components/schemas/IdentityVerificationStateOut"
+          },
+          "widget_url": {
+            "type": "string",
+            "title": "Widget Url"
           }
         },
         "type": "object",
@@ -19035,7 +19027,8 @@
           "verification_id",
           "attempt_no",
           "widget",
-          "state"
+          "state",
+          "widget_url"
         ],
         "title": "IdentityVerificationSessionOut"
       },
@@ -19156,13 +19149,21 @@
       },
       "IdentityWidgetConfig": {
         "properties": {
+          "app_id": {
+            "type": "string",
+            "title": "App Id"
+          },
+          "public_key": {
+            "type": "string",
+            "title": "Public Key"
+          },
           "widget_id": {
             "type": "string",
             "title": "Widget Id"
           },
-          "widget_key": {
+          "reference_id": {
             "type": "string",
-            "title": "Widget Key"
+            "title": "Reference Id"
           },
           "email": {
             "type": "string",
@@ -19176,33 +19177,31 @@
             "type": "string",
             "title": "Last Name"
           },
-          "metadata": {
-            "$ref": "#/components/schemas/IdentityWidgetMetadata"
+          "date_of_birth": {
+            "anyOf": [
+              {
+                "type": "string",
+                "format": "date"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Date Of Birth"
           }
         },
         "type": "object",
         "required": [
+          "app_id",
+          "public_key",
           "widget_id",
-          "widget_key",
+          "reference_id",
           "email",
           "first_name",
-          "last_name",
-          "metadata"
+          "last_name"
         ],
-        "title": "IdentityWidgetConfig"
-      },
-      "IdentityWidgetMetadata": {
-        "properties": {
-          "oakly_ref": {
-            "type": "string",
-            "title": "Oakly Ref"
-          }
-        },
-        "type": "object",
-        "required": [
-          "oakly_ref"
-        ],
-        "title": "IdentityWidgetMetadata"
+        "title": "IdentityWidgetConfig",
+        "description": "Everything the app passes to Dojah's widget SDK. ``reference_id`` is minted by the server (``OKL-<uuid4 hex>``) and is the\nonly key the webhook and the pull use. App id and public key are public (they ship in the app bundle); no secret is returned."
       },
       "InviteAcceptIn": {
         "properties": {

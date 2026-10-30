@@ -76,19 +76,25 @@ export const expired = (): IdentityState => ({ ...base, status: "in_progress", l
 /** assumed: an attempt that errored on our side does not count */
 export const errored = (): IdentityState => ({ ...base, status: "in_progress", last_attempt_status: "error" });
 
-/** capture 204 / 203 (placeholder widget values) */
+/** Placeholder for the hosted page's URL; shaped like capture 203's `widget_url`, not a real page. */
+export const WIDGET_URL = "https://api.example.test/api/v1/kyc/widget/placeholder-token";
+
+/** capture 203 / 204 (placeholder values, incl. the `OKL-` reference and the `widget_url` backend slice KD2 added) */
 export const session = (state: IdentityState = started()): IdentitySession => ({
   verification_id: VERIFICATION_ID,
   attempt_no: 1,
   widget: {
-    widget_id: "placeholder-widget-id",
-    widget_key: "placeholder-widget-key",
-    email: "caregiver-616524d402@example.com",
+    app_id: "test-dojah-app-id-placeholder",
+    public_key: "test-dojah-public-key-placeholder",
+    widget_id: "test-dojah-widget-id-placeholder",
+    reference_id: "OKL-398736a517294506853e65e573f31663",
+    email: "caregiver-415f8d977a@example.com",
     first_name: "Placeholder",
     last_name: "Caregiver",
-    metadata: { oakly_ref: "a0fbe750-b549-4a8a-95ae-512fbe35358c" },
+    date_of_birth: "1990-04-12",
   },
   state,
+  widget_url: WIDGET_URL,
 });
 
 export { VERIFICATION_ID };

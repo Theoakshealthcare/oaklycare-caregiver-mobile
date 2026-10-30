@@ -164,14 +164,16 @@ export function createMockIdentityService(options: MockOptions = {}): IdentityVe
         verification_id: state.active_verification_id!,
         attempt_no: state.attempts_used,
         widget: {
+          app_id: "mock-app-id",
+          public_key: "mock-public-key",
           widget_id: "mock-widget-id",
-          widget_key: "mock-widget-key",
+          reference_id: `OKL-mock-${state.attempts_used}`,
           email: "caregiver@example.com",
           first_name: "Placeholder",
           last_name: "Caregiver",
-          metadata: { oakly_ref: `mock-ref-${state.attempts_used}` },
         },
         state: snapshot(),
+        widget_url: `https://mock.invalid/kyc/widget/${state.attempts_used}`,
       };
     },
 
@@ -203,7 +205,7 @@ export function createMockWidgetLauncher(outcomes: WidgetOutcome[] = []): Identi
   const queue = [...outcomes];
   return {
     async open() {
-      return queue.shift() ?? { kind: "completed", sessionId: "mock-session-001" };
+      return queue.shift() ?? { kind: "completed" };
     },
   };
 }

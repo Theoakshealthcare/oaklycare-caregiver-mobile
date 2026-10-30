@@ -2,6 +2,8 @@ import { ApiError } from "../src/api/errors";
 import { parseKycMode, kycEnabled } from "../src/identity/config";
 import {
   CONSENT_BODY,
+  STILL_CHECKING_TEXT,
+  canContinueVerification,
   CONSENT_TEXT_VERSION,
   POLL_DELAY_MS,
   asksConsent,
@@ -179,9 +181,9 @@ describe("polling cadence", () => {
     expect(POLL_DELAY_MS[pollStageAt(300_000)]).toBe(false);
   });
 
-  it("calls it slow from two minutes", () => {
-    expect(isSlow(119_999)).toBe(false);
-    expect(isSlow(120_000)).toBe(true);
+  it("calls it slow from one minute", () => {
+    expect(isSlow(59_999)).toBe(false);
+    expect(isSlow(60_000)).toBe(true);
   });
 });
 
@@ -201,5 +203,37 @@ describe("consent copy and the feature switch", () => {
     expect(kycEnabled("off")).toBe(false);
     expect(kycEnabled("mock")).toBe(true);
     expect(kycEnabled("api")).toBe(true);
+  });
+});
+
+describe("Continue verification (after the browser was dismissed)", () => {
+  it("is offered only after a dismissal, with the attempt still open and not yet heard as completed", () => {
+    expect(canContinueVerification(started(), { kind: "submitted", dismissed: true })).toBe(true);
+    // came back through the return page, or never launched
+    expect(canContinueVerification(started(), { kind: "submitted" })).toBe(false);
+    expect(canContinueVerification(started(), { kind: "idle" })).toBe(false);
+    // the server has "completed": a second run under one reference is ambiguous
+    expect(canContinueVerification(checking(), { kind: "submitted", dismissed: true })).toBe(false);
+    // no open attempt any more (expired, failed, decided)
+    expect(canContinueVerification(fresh(), { kind: "submitted", dismissed: true })).toBe(false);
+    expect(canContinueVerification(undefined, { kind: "submitted", dismissed: true })).toBe(false);
+  });
+
+  it("waits on the server after a dismissal: Checking while the attempt is open, otherwise the server's own screen", () => {
+    const phase = { kind: "submitted", dismissed: true } as const;
+    expect(resolveIdentityScreen({ state: started(), phase })).toBe("checking");
+    expect(resolveIdentityScreen({ state: tryAgain(), phase })).toBe("tryAgain");
+    expect(resolveIdentityScreen({ state: expired(), phase })).toBe("expired");
+    expect(resolveIdentityScreen({ state: verified(), phase })).toBe("verified");
+  });
+});
+
+describe("copy", () => {
+  it("promises nothing a failure would, and names no retired provider", () => {
+    expect(STILL_CHECKING_TEXT).toBe(
+      "Still checking. This can take a few minutes. You can leave this screen; we will tell you when it is done.",
+    );
+    expect(CONSENT_BODY).toContain("Dojah");
+    expect(CONSENT_BODY).not.toMatch(/prembly/i);
   });
 });

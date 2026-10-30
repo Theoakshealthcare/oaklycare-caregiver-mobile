@@ -11,6 +11,7 @@ import type { Schemas } from "@oakly/api-client";
 import { ApiError } from "../api/errors";
 
 export type IdentityState = Schemas["IdentityVerificationStateOut"];
+/** Carries `widget_url`: the absolute https URL of the page the backend hosts (valid 30 minutes; backend KD2). */
 export type IdentitySession = Schemas["IdentityVerificationSessionOut"];
 export type IdentityWidgetConfig = Schemas["IdentityWidgetConfig"];
 export type IdentityClientEvent = Schemas["IdentityVerificationClientEventRequest"]["event"];
@@ -28,8 +29,11 @@ export const CONSENT_TEXT_VERSION = "kyc-2026-10";
  * Design 10.2, word for word; the "[Privacy Policy]" link has no destination decided yet.
  */
 export const CONSENT_TITLE = "Verify your identity";
-/** The provider is not final (design section 15); changing it means new words and a new `CONSENT_TEXT_VERSION`. */
-export const VERIFICATION_PARTNER_NAME = "Prembly";
+/**
+ * The processor named to the caregiver. Changing it means new words and a new `CONSENT_TEXT_VERSION`; the draft text is
+ * still awaiting counsel, so the version stays equal to the backend's `KYC_POLICY_VERSION` until the final text is set.
+ */
+export const VERIFICATION_PARTNER_NAME = "Dojah";
 export const CONSENT_BODY =
   `To keep patients safe, Oakly checks that you are who you say you are. With your agreement, our verification partner ${VERIFICATION_PARTNER_NAME} will check your National ID (NIN or BVN) or ID document against government records and compare a live photo of your face with the record. ${VERIFICATION_PARTNER_NAME} handles your ID details and photo. Oakly keeps only the result of the check and a reference, not your ID or your photo. You can ask us to delete your data at any time. If the check can't confirm you, a member of our team reviews it.`;
 export const CONSENT_LABEL = "I agree to this identity check.";
@@ -41,8 +45,11 @@ export type IdentityPhase =
   | { kind: "starting" }
   /** The widget is open. */
   | { kind: "widget" }
-  /** The widget said it finished; waiting for the partner's answer (a hint, never a result). */
-  | { kind: "submitted" }
+  /**
+   * The browser closed (any way) and the answer is awaited (a hint, never a result). `dismissed` means the person left
+   * without reaching the return page, so they may not have finished: "Continue verification" is offered meanwhile.
+   */
+  | { kind: "submitted"; dismissed?: boolean }
   | { kind: "closed" }
   | { kind: "widgetError" }
   | { kind: "permissionDenied" }
@@ -193,7 +200,7 @@ export function reviewEtaText(hours: number | null | undefined): string {
 
 /**
  * Polling while a result is awaited: 3 s, then 5 s after 30 s, then 10 s after 60 s (design 6 and the guide:
- * "3 s backing off to 10 s"). After 2 minutes the screen says it is taking longer and the caregiver may leave; after
+ * "3 s backing off to 10 s"). After a minute the screen says it is still checking and the caregiver may leave; after
  * 5 minutes polling stops (no never-ending timer) and "Check again" restarts it.
  */
 export type PollStage = "fast" | "mid" | "slow" | "stopped";
@@ -218,10 +225,28 @@ export function pollStageAt(elapsedMs: number): PollStage {
   return stage;
 }
 
-/** True from 2 minutes on: show "This is taking longer. You can leave this screen; we'll notify you." */
-export const SLOW_AFTER_MS = 120_000;
+/**
+ * True from one minute on: show `STILL_CHECKING_TEXT`. The partner's webhook can go missing; the server's reconcile job
+ * then settles the attempt about six minutes after it (observed live), so a wait past a minute is normal.
+ */
+export const SLOW_AFTER_MS = 60_000;
+export const STILL_CHECKING_TEXT =
+  "Still checking. This can take a few minutes. You can leave this screen; we will tell you when it is done.";
 export function isSlow(elapsedMs: number): boolean {
   return elapsedMs >= SLOW_AFTER_MS;
+}
+
+/**
+ * "Continue verification" next to the checking screen: only after the browser was dismissed, and only while the server
+ * has not heard `completed` (`awaiting_result`): a second run under one reference would be ambiguous and could be billed twice.
+ */
+export function canContinueVerification(state: IdentityState | undefined, phase: IdentityPhase): boolean {
+  return (
+    phase.kind === "submitted" &&
+    phase.dismissed === true &&
+    !!state?.active_verification_id &&
+    state.last_attempt_status !== "awaiting_result"
+  );
 }
 
 /** Whether the screen waits for the partner's answer (and so polls). */

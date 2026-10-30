@@ -435,7 +435,7 @@ export interface paths {
         put?: never;
         /**
          * Defer Identity Verification
-         * @description Outage path: only while Prembly is flagged unavailable. Lets the caregiver carry on to consent; verifies nobody.
+         * @description Outage path: only while Dojah is flagged unavailable. Lets the caregiver carry on to consent; verifies nobody.
          */
         post: operations["defer_identity_verification_api_v1_caregiver_identity_verification_defer_post"];
         delete?: never;
@@ -456,7 +456,7 @@ export interface paths {
         /**
          * Identity Verification Client Event
          * @description A hint from the widget (opened, completed, closed, error). Non-authoritative: it can advance the caregiver's own
-         *     attempt and remember the session id, and can never change the caregiver's identity status.
+         *     attempt, and can never change the caregiver's identity status.
          */
         post: operations["identity_verification_client_event_api_v1_caregiver_identity_verification__verification_id__client_event_post"];
         delete?: never;
@@ -6528,7 +6528,7 @@ export interface components {
         };
         /**
          * IdentityVerificationClientEventRequest
-         * @description A hint from the widget. Anything else the client sends is ignored, never stored.
+         * @description A hint from the widget. Anything else the client sends (a reference, a session id) is ignored, never stored.
          */
         IdentityVerificationClientEventRequest: {
             /**
@@ -6536,8 +6536,6 @@ export interface components {
              * @enum {string}
              */
             event: "opened" | "completed" | "closed" | "error";
-            /** Session Id */
-            session_id?: string | null;
         };
         /** IdentityVerificationSessionOut */
         IdentityVerificationSessionOut: {
@@ -6550,6 +6548,8 @@ export interface components {
             attempt_no: number;
             widget: components["schemas"]["IdentityWidgetConfig"];
             state: components["schemas"]["IdentityVerificationStateOut"];
+            /** Widget Url */
+            widget_url: string;
         };
         /** IdentityVerificationSessionRequest */
         IdentityVerificationSessionRequest: {
@@ -6587,24 +6587,28 @@ export interface components {
             /** Policy Version */
             policy_version: string;
         };
-        /** IdentityWidgetConfig */
+        /**
+         * IdentityWidgetConfig
+         * @description Everything the app passes to Dojah's widget SDK. ``reference_id`` is minted by the server (``OKL-<uuid4 hex>``) and is the
+         *     only key the webhook and the pull use. App id and public key are public (they ship in the app bundle); no secret is returned.
+         */
         IdentityWidgetConfig: {
+            /** App Id */
+            app_id: string;
+            /** Public Key */
+            public_key: string;
             /** Widget Id */
             widget_id: string;
-            /** Widget Key */
-            widget_key: string;
+            /** Reference Id */
+            reference_id: string;
             /** Email */
             email: string;
             /** First Name */
             first_name: string;
             /** Last Name */
             last_name: string;
-            metadata: components["schemas"]["IdentityWidgetMetadata"];
-        };
-        /** IdentityWidgetMetadata */
-        IdentityWidgetMetadata: {
-            /** Oakly Ref */
-            oakly_ref: string;
+            /** Date Of Birth */
+            date_of_birth?: string | null;
         };
         /** InviteAcceptIn */
         InviteAcceptIn: {
@@ -9495,7 +9499,7 @@ export interface operations {
                     "application/json": components["schemas"]["HTTPValidationError"];
                 };
             };
-            /** @description PROVIDER_UNAVAILABLE: Prembly is flagged down or the widget is not configured. */
+            /** @description PROVIDER_UNAVAILABLE: Dojah is flagged down or the widget is not configured. */
             503: {
                 headers: {
                     [name: string]: unknown;

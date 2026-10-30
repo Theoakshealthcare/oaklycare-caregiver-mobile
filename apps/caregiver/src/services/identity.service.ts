@@ -19,7 +19,7 @@ export interface IdentityVerificationService {
   /** POST .../sessions: records the separate consent, opens or resumes the attempt, returns the widget config. */
   startSession(input: { consent: true; policyVersion: string }): Promise<IdentitySession>;
   /** POST .../{id}/client-event: a hint from the widget. It never changes the identity status. */
-  sendClientEvent(verificationId: string, event: IdentityClientEvent, sessionId?: string): Promise<IdentityState>;
+  sendClientEvent(verificationId: string, event: IdentityClientEvent): Promise<IdentityState>;
   /** POST .../defer: "Continue without for now"; only while verification is unavailable. */
   defer(): Promise<IdentityState>;
 }
@@ -41,22 +41,26 @@ export function parseSession(raw: unknown): IdentitySession {
   const body = asRecord(raw);
   const widget = asRecord(body.widget);
   const verificationId = text(body.verification_id);
-  if (!verificationId || !text(widget.widget_id) || !text(widget.widget_key)) {
+  const widgetUrl = text(body.widget_url);
+  if (!verificationId || !widgetUrl || !text(widget.reference_id)) {
     throw new Error("Unexpected identity session response");
   }
   const config: IdentityWidgetConfig = {
+    app_id: text(widget.app_id),
+    public_key: text(widget.public_key),
     widget_id: text(widget.widget_id),
-    widget_key: text(widget.widget_key),
+    reference_id: text(widget.reference_id),
     email: text(widget.email),
     first_name: text(widget.first_name),
     last_name: text(widget.last_name),
-    metadata: { oakly_ref: text(asRecord(widget.metadata).oakly_ref) },
+    ...(typeof widget.date_of_birth === "string" ? { date_of_birth: widget.date_of_birth } : {}),
   };
   return {
     verification_id: verificationId,
     attempt_no: typeof body.attempt_no === "number" ? body.attempt_no : 1,
     widget: config,
     state: body.state as IdentityState,
+    widget_url: widgetUrl,
   };
 }
 
@@ -75,11 +79,11 @@ const apiIdentityService: IdentityVerificationService = {
     );
   },
 
-  sendClientEvent(verificationId, event, sessionId) {
+  sendClientEvent(verificationId, event) {
     return unwrap(
       api.POST("/api/v1/caregiver/identity-verification/{verification_id}/client-event", {
         params: { path: { verification_id: verificationId } },
-        body: sessionId ? { event, session_id: sessionId } : { event },
+        body: { event },
       }),
     );
   },
@@ -101,6 +105,6 @@ export function setIdentityService(next: IdentityVerificationService): void {
 export const identityService: IdentityVerificationService = {
   getState: () => active.getState(),
   startSession: (input) => active.startSession(input),
-  sendClientEvent: (id, event, sessionId) => active.sendClientEvent(id, event, sessionId),
+  sendClientEvent: (id, event) => active.sendClientEvent(id, event),
   defer: () => active.defer(),
 };

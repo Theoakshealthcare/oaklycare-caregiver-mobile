@@ -10,6 +10,7 @@ import Navigation from "@/src/hooks/use-navigation";
 import {
   CONSENT_TEXT_VERSION,
   SELF_EXPLAINING_CODES,
+  canContinueVerification,
   identityErrorCode,
   identityErrorMessage,
   nextRouteAfterIdentity,
@@ -23,7 +24,7 @@ import IdentityVerificationView from "./IdentityVerificationView";
 
 /**
  * The identity step of onboarding (design 11.3). Reads the server state, starts or resumes an attempt, opens the
- * widget behind `getWidgetLauncher()`, forwards what it reports as hints, and waits for the server to say the
+ * hosted verification page behind `getWidgetLauncher()`, forwards what it reports as hints, and waits for the server to say the
  * result. Nothing here sets a verified state: the screen reads `status` from the backend.
  */
 const IdentityVerification: React.FC = () => {
@@ -78,12 +79,12 @@ const IdentityVerification: React.FC = () => {
     setPhase({ kind: "widget" });
 
     // Hints are best effort: a failed one never blocks the caregiver and never decides anything.
-    const hint = (event: "opened" | "completed" | "closed" | "error", sessionId?: string) =>
-      identityService.sendClientEvent(session.verification_id, event, sessionId).catch(() => undefined);
+    const hint = (event: "opened" | "completed" | "closed" | "error") =>
+      identityService.sendClientEvent(session.verification_id, event).catch(() => undefined);
     void hint("opened");
     let outcome;
     try {
-      outcome = await getWidgetLauncher().open(session.widget);
+      outcome = await getWidgetLauncher().open({ config: session.widget, widgetUrl: session.widget_url });
     } catch {
       outcome = { kind: "error" as const };
     }
@@ -91,7 +92,7 @@ const IdentityVerification: React.FC = () => {
 
     switch (outcome.kind) {
       case "completed":
-        await hint("completed", outcome.sessionId);
+        await hint("completed");
         if (!mounted.current) return;
         // Show "Checking..." immediately, then let the server state take over.
         setPhase({ kind: "submitted" });
@@ -100,6 +101,13 @@ const IdentityVerification: React.FC = () => {
       case "closed":
         void hint("closed");
         setPhase({ kind: "closed" });
+        return;
+      case "dismissed":
+        // Not a failure: the person may have finished (or finished on another device). Wait for the server, and offer
+        // to continue if they did not. "closed" is only a hint and changes nothing on the server.
+        void hint("closed");
+        setPhase({ kind: "submitted", dismissed: true });
+        void refreshState();
         return;
       case "permissionDenied":
         setPhase({ kind: "permissionDenied" });
@@ -138,6 +146,8 @@ const IdentityVerification: React.FC = () => {
       onToggleConsent={() => setConsentChecked((v) => !v)}
       slow={polling.slow}
       stopped={polling.stopped}
+      canContinueVerification={canContinueVerification(identity.data, phase)}
+      onContinueVerification={() => void start()}
       onStart={() => void start()}
       onContinue={() => void goNext()}
       onDefer={() => defer.mutate()}

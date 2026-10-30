@@ -93,7 +93,8 @@
         {
           "photosPermission": "Oakly uses your photos so you can choose a profile picture."
         }
-      ]
+      ],
+      "expo-web-browser"
     ]
   }
 }

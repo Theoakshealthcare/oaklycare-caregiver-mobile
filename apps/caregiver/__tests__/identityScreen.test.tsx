@@ -63,7 +63,7 @@ beforeEach(async () => {
   });
   sendClientEvent = jest.spyOn(identityService, "sendClientEvent").mockImplementation(async () => current);
   defer = jest.spyOn(identityService, "defer").mockImplementation(async () => current);
-  setWidgetLauncher(widget({ kind: "completed", sessionId: "placeholder-session-001" }));
+  setWidgetLauncher(widget({ kind: "completed" }));
 });
 afterEach(async () => {
   jest.restoreAllMocks();
@@ -97,9 +97,9 @@ describe("intro and consent (design 11.3, state 1)", () => {
 
     await waitFor(() => expect(open).toHaveBeenCalledTimes(1));
     expect(startSession).toHaveBeenCalledWith({ consent: true, policyVersion: "kyc-2026-10" });
-    expect(open).toHaveBeenCalledWith(session().widget);
-    await waitFor(() => expect(sendClientEvent).toHaveBeenCalledWith(VERIFICATION_ID, "completed", "placeholder-session-001"));
-    expect(sendClientEvent).toHaveBeenCalledWith(VERIFICATION_ID, "opened", undefined);
+    expect(open).toHaveBeenCalledWith({ config: session().widget, widgetUrl: session().widget_url });
+    await waitFor(() => expect(sendClientEvent).toHaveBeenCalledWith(VERIFICATION_ID, "completed"));
+    expect(sendClientEvent).toHaveBeenCalledWith(VERIFICATION_ID, "opened");
   });
 
   it("shows 'Checking...' after the widget finishes and never calls the widget's word 'verified'", async () => {
@@ -137,18 +137,20 @@ describe("waiting for the result", () => {
     await waitFor(() => expect(mockNavigate).toHaveBeenCalledWith("ConsentScreen"));
   });
 
-  it("after two minutes says it is taking longer, and after five stops and offers Check again", async () => {
+  it("after a minute says it is still checking, and after five stops and offers Check again", async () => {
     current = checking();
     await renderScreen();
     await screen.findByTestId("identity-checking");
     await act(async () => {
-      await jest.advanceTimersByTimeAsync(125_000);
+      await jest.advanceTimersByTimeAsync(65_000);
     });
-    expect(screen.getByTestId("identity-slow")).toHaveTextContent("This is taking longer. You can leave this screen; we'll notify you.");
+    expect(screen.getByTestId("identity-slow")).toHaveTextContent(
+      "Still checking. This can take a few minutes. You can leave this screen; we will tell you when it is done.",
+    );
     expect(screen.queryByTestId("identity-check-again")).toBeNull();
 
     await act(async () => {
-      await jest.advanceTimersByTimeAsync(200_000);
+      await jest.advanceTimersByTimeAsync(260_000);
     });
     expect(screen.getByTestId("identity-check-again")).toBeTruthy();
     const reads = getState.mock.calls.length;
@@ -283,7 +285,7 @@ describe("the widget closes, fails or is refused", () => {
     await press("identity-start");
     expect(await screen.findByTestId("identity-closed")).toBeTruthy();
     expect(screen.getByText("You closed verification before finishing")).toBeTruthy();
-    expect(sendClientEvent).toHaveBeenCalledWith(VERIFICATION_ID, "closed", undefined);
+    expect(sendClientEvent).toHaveBeenCalledWith(VERIFICATION_ID, "closed");
 
     await press("identity-start");
     await waitFor(() => expect(startSession).toHaveBeenCalledTimes(2));
@@ -295,7 +297,7 @@ describe("the widget closes, fails or is refused", () => {
     await tick();
     await press("identity-start");
     expect(await screen.findByTestId("identity-widget-error")).toBeTruthy();
-    expect(sendClientEvent).toHaveBeenCalledWith(VERIFICATION_ID, "error", undefined);
+    expect(sendClientEvent).toHaveBeenCalledWith(VERIFICATION_ID, "error");
     expect(screen.getByText(/didn't use up an attempt/)).toBeTruthy();
   });
 

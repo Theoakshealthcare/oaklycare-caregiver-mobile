@@ -2,7 +2,7 @@ import { ApiError } from "../src/api/errors";
 import { identityErrorCode } from "../src/identity/identityModel";
 import { createMockIdentityService, parseMockScenario } from "../src/identity/mockIdentityService";
 import { identityService, parseSession, setIdentityService } from "../src/services/identity.service";
-import { VERIFICATION_ID, session, started, tryAgain } from "../test-utils/identityFixtures";
+import { VERIFICATION_ID, WIDGET_URL, session, started, tryAgain } from "../test-utils/identityFixtures";
 
 // The app's client captures `fetch` when it is created, so route it through a late-bound wrapper.
 jest.mock("../src/api/client", () => {
@@ -40,7 +40,8 @@ describe("real service: request wiring (against the backend's captured shapes)",
     fetchMock.mockImplementation(async () => json(session(), 201));
     const result = await identityService.startSession({ consent: true, policyVersion: "kyc-2026-10" });
     expect(result.verification_id).toBe(VERIFICATION_ID);
-    expect(result.widget.metadata.oakly_ref).toBe("a0fbe750-b549-4a8a-95ae-512fbe35358c");
+    expect(result.widget.reference_id).toBe("OKL-398736a517294506853e65e573f31663");
+    expect(result.widget_url).toBe(WIDGET_URL);
     expect(lastRequest().method).toBe("POST");
     expect(lastRequest().url).toBe("http://test.local/api/v1/caregiver/identity-verification/sessions");
     expect(await lastRequest().clone().json()).toEqual({ consent: true, policy_version: "kyc-2026-10" });
@@ -61,8 +62,8 @@ describe("real service: request wiring (against the backend's captured shapes)",
     );
     expect(await lastRequest().clone().json()).toEqual({ event: "opened" });
 
-    await identityService.sendClientEvent(VERIFICATION_ID, "completed", "placeholder-session-001");
-    expect(await lastRequest().clone().json()).toEqual({ event: "completed", session_id: "placeholder-session-001" });
+    await identityService.sendClientEvent(VERIFICATION_ID, "completed");
+    expect(await lastRequest().clone().json()).toEqual({ event: "completed" });
   });
 
   it("defers with no body", async () => {
@@ -83,6 +84,14 @@ describe("real service: request wiring (against the backend's captured shapes)",
     expect(error.status).toBe(409);
     expect(identityErrorCode(error)).toBe("ATTEMPTS_EXHAUSTED");
     expect(error.message).toBe(detail.message);
+  });
+});
+
+describe("parseSession: the hosted page url (backend slice KD2)", () => {
+  it("carries widget_url, and refuses a response without it (the page is the only way to verify)", () => {
+    expect(parseSession(session()).widget_url).toBe(WIDGET_URL);
+    expect(() => parseSession({ ...session(), widget_url: undefined })).toThrow("Unexpected identity session response");
+    expect(() => parseSession({ ...session(), widget_url: 42 })).toThrow();
   });
 });
 
@@ -112,7 +121,7 @@ describe("mock service plays the server's part", () => {
   async function runAttempt(service: ReturnType<typeof createMockIdentityService>) {
     const created = await service.startSession(consent);
     await service.sendClientEvent(created.verification_id, "opened");
-    await service.sendClientEvent(created.verification_id, "completed", "mock-session-001");
+    await service.sendClientEvent(created.verification_id, "completed");
     expect(service.peek().last_attempt_status).toBe("awaiting_result");
     return service.getState();
   }
@@ -126,7 +135,7 @@ describe("mock service plays the server's part", () => {
   it("pass: a hint never verifies; only the simulated answer does", async () => {
     const service = createMockIdentityService({ scenario: "pass", pollsToResolve: 2 });
     const created = await service.startSession(consent);
-    const afterCompleted = await service.sendClientEvent(created.verification_id, "completed", "x");
+    const afterCompleted = await service.sendClientEvent(created.verification_id, "completed");
     expect(afterCompleted.status).toBe("in_progress");
     expect((await service.getState()).status).toBe("in_progress");
     expect((await service.getState()).status).toBe("verified");
