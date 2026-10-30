@@ -90,7 +90,7 @@ channel) lives in the backend repo: `docs/checklist/MASTER_CHECKLIST.md`. Update
 - [ ] Backend: admin bank list for a picker, and admin names for `requested_by` / `approved_by`
 - [ ] "Raise a refund" from the booking detail; `above_limit` and `reason_code` queue filters
 
-## Caregiver KYC (Prembly)
+## Caregiver KYC (Dojah, was Prembly until 2026-10-30)
 - [x] K7a Identity step: route after Step 2, intro + consent, checking / verified / try again / under review / unavailable / expired / error states, `setupRouteFor` + gate tests (2026-10-30, branch `feat/kyc-mobile-screens`, see docs/sop/2026-10-30-caregiver-kyc-screens.md; Jest only, mocked service, **not device-verified**, off by default behind `EXPO_PUBLIC_KYC_MODE`)
 - [ ] K7b Dojah widget in a dev build (`dojah-kyc-sdk-react-expo`, or react-native-webview as the fallback), camera permissions, server-minted reference, build recipe in the SOP (provider switched from Prembly to Dojah 2026-10-30; see backend `docs/plans/2026-10-30-caregiver-kyc-dojah-delta.md` once KD1 merges)
 - [x] K6 Admin console: "Identity needs review" filter and badge, provider summary card, Verify / Fail, Allow another attempt (2026-10-30, branch `feat/kyc-admin-console`, see docs/sop/2026-10-30-admin-kyc-console.md; Vitest/RTL only, **no live browser pass**)
