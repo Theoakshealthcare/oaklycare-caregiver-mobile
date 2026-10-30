@@ -21,6 +21,7 @@ import {
 import { useFormOptions } from "@/src/hooks/queries"
 import { messageForError } from "@/src/api/errors"
 import { queryKeys } from "@/src/api/keys"
+import { kycEnabled } from "@/src/identity/config"
 
 const CaregiverSetupStep2 = () => {
   const { navigation } = Navigation()
@@ -41,10 +42,11 @@ const CaregiverSetupStep2 = () => {
     mutationFn: (payload: CaregiverProfileStep2) => caregiverService.updateProfileStep2(payload),
     onSuccess: async () => {
       await queryClient.invalidateQueries({ queryKey: queryKeys.verificationStatus })
-      // Onboarding goes on to consent; when an admin asked for changes there is no consent step in
-      // this stack, the caregiver returns to the status screen to resubmit.
+      // Onboarding goes on to identity verification (when it is switched on) and then to consent; when an
+      // admin asked for changes there is no consent step in this stack, the caregiver returns to the status
+      // screen to resubmit.
       const hasConsent = navigation.getState()?.routeNames.includes("ConsentScreen")
-      navigation.navigate(hasConsent ? "ConsentScreen" : "VerificationStatus")
+      navigation.navigate(hasConsent ? (kycEnabled() ? "IdentityVerification" : "ConsentScreen") : "VerificationStatus")
     },
     onError: (error) => Alert.alert("Error", messageForError(error)),
   })

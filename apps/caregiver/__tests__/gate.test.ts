@@ -135,3 +135,41 @@ describe("verification status", () => {
     expect(new Set(titles).size).toBe(4);
   });
 });
+
+describe("identity step in the gate (KYC K7a)", () => {
+  it("sends step 2 to the identity step when it is on, and to consent when it is off (as before)", () => {
+    expect(setupRouteFor(2, true)).toBe("IdentityVerification");
+    expect(setupRouteFor(2, false)).toBe("ConsentScreen");
+    expect(setupRouteFor(2)).toBe("ConsentScreen");
+  });
+
+  it("never moves the other steps: 0 and 1 are the same, 3 and up go to consent", () => {
+    for (const on of [true, false]) {
+      expect(setupRouteFor(-1, on)).toBe("CaregiverSetupStep1");
+      expect(setupRouteFor(0, on)).toBe("CaregiverSetupStep1");
+      expect(setupRouteFor(1, on)).toBe("CaregiverSetupStep2");
+      expect(setupRouteFor(3, on)).toBe("ConsentScreen");
+      expect(setupRouteFor(9, on)).toBe("ConsentScreen");
+    }
+  });
+
+  it("resumes an incomplete caregiver at the identity step only when it is on", () => {
+    const at2 = { data: status("incomplete", 2), isError: false };
+    expect(resolveGate(input({ status: at2, kycEnabled: true }))).toEqual({ kind: "setup", initialRoute: "IdentityVerification" });
+    expect(resolveGate(input({ status: at2, kycEnabled: false }))).toEqual({ kind: "setup", initialRoute: "ConsentScreen" });
+    expect(resolveGate(input({ status: at2 }))).toEqual({ kind: "setup", initialRoute: "ConsentScreen" });
+  });
+
+  it("after the server moves the step to 3 (result, or 'continue without for now') the caregiver resumes at consent", () => {
+    const at3 = { data: status("incomplete", 3), isError: false };
+    expect(resolveGate(input({ status: at3, kycEnabled: true }))).toEqual({ kind: "setup", initialRoute: "ConsentScreen" });
+  });
+
+  it("does not change what a submitted, approved or blocked caregiver sees", () => {
+    expect(resolveGate(input({ kycEnabled: true }))).toEqual({ kind: "app" });
+    expect(resolveGate(input({ status: { data: status("under_review", 3), isError: false }, kycEnabled: true }))).toEqual({
+      kind: "status",
+      status: "under_review",
+    });
+  });
+});

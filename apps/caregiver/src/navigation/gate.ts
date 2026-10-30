@@ -7,14 +7,15 @@
  *   signed in, a request failed          -> error (retry / sign out)
  *   not a caregiver account              -> wrongAccount
  *   email not verified                   -> verifyEmail
- *   profile_status incomplete            -> setup (resume at the right step)
+ *   profile_status incomplete            -> setup (resume at the right step; the identity step sits between
+ *                                           Step 2 and Consent while it is switched on, see identity/config.ts)
  *   under_review / changes_requested / rejected / suspended -> status
  *   approved                             -> app
  */
 import type { SessionStatus } from "../auth/session";
 import type { ProfileStatus, VerificationStatus } from "../services/caregiver.service";
 
-export type SetupRoute = "CaregiverSetupStep1" | "CaregiverSetupStep2" | "ConsentScreen";
+export type SetupRoute = "CaregiverSetupStep1" | "CaregiverSetupStep2" | "IdentityVerification" | "ConsentScreen";
 
 export type Gate =
   | { kind: "loading" }
@@ -35,15 +36,23 @@ export interface GateInput {
   session: SessionStatus;
   me: QueryLike<{ user_type: string; is_verified: boolean; email?: string | null }>;
   status: QueryLike<VerificationStatus>;
+  /** Whether the identity step is part of onboarding (`kycEnabled()`); off keeps Step 2 -> Consent. */
+  kycEnabled?: boolean;
 }
 
-export function setupRouteFor(completionStep: number): SetupRoute {
+/**
+ * Step 2 done (`completionStep` 2) goes to the identity step; the backend sets step 3 when a result arrives or the
+ * caregiver continues during an outage (design 11.3), and 3 and up go to Consent. With the identity step off, Step 2
+ * goes straight to Consent, as before.
+ */
+export function setupRouteFor(completionStep: number, kycEnabled = false): SetupRoute {
   if (completionStep <= 0) return "CaregiverSetupStep1";
   if (completionStep === 1) return "CaregiverSetupStep2";
+  if (completionStep === 2 && kycEnabled) return "IdentityVerification";
   return "ConsentScreen";
 }
 
-export function resolveGate({ session, me, status }: GateInput): Gate {
+export function resolveGate({ session, me, status, kycEnabled = false }: GateInput): Gate {
   if (session === "restoring") return { kind: "loading" };
   if (session === "signedOut") return { kind: "signedOut" };
 
@@ -55,7 +64,7 @@ export function resolveGate({ session, me, status }: GateInput): Gate {
 
   switch (status.data.profileStatus) {
     case "incomplete":
-      return { kind: "setup", initialRoute: setupRouteFor(status.data.profileCompletionStep) };
+      return { kind: "setup", initialRoute: setupRouteFor(status.data.profileCompletionStep, kycEnabled) };
     case "approved":
       return { kind: "app" };
     default:

@@ -34,11 +34,13 @@ import OnboardingScreen from "../screens/onboarding-screen";
 import CaregiverSetupStep1 from "../screens/setup/CaregiverSetupStep1";
 import CaregiverSetupStep2 from "../screens/setup/CaregiverSetupStep2";
 import ConsentScreen from "../screens/setup/ConsentScreen";
+import IdentityVerification from "../screens/setup/IdentityVerification";
 import VerificationStatusScreen from "../screens/setup/VerificationStatus";
 import SplashScreen from "../screens/splash-screen";
 import { authService } from "../services/auth.service";
 import AppRuntime from "./AppRuntime";
 import BottomNavigation from "./BottomNavigation";
+import { kycEnabled } from "../identity/config";
 import { resolveGate, type Gate } from "./gate";
 import type { ScreenParamLists } from "./Navigations";
 
@@ -53,6 +55,7 @@ function useGate(): { gate: Gate; retry: () => void } {
     session: sessionStatus,
     me: { data: me.data, isError: me.isError },
     status: { data: status.data, isError: status.isError },
+    kycEnabled: kycEnabled(),
   });
   return {
     gate,
@@ -110,6 +113,7 @@ const StackNavigator = () => {
         <Stack.Navigator key="setup" screenOptions={{ headerShown: false }} initialRouteName={gate.initialRoute}>
           <Stack.Screen name="CaregiverSetupStep1" component={CaregiverSetupStep1} />
           <Stack.Screen name="CaregiverSetupStep2" component={CaregiverSetupStep2} />
+          <Stack.Screen name="IdentityVerification" component={IdentityVerification} />
           <Stack.Screen name="ConsentScreen" component={ConsentScreen} />
         </Stack.Navigator>
       );
@@ -120,6 +124,8 @@ const StackNavigator = () => {
           {/* When an admin asks for changes the caregiver edits their details, then resubmits consent. */}
           <Stack.Screen name="CaregiverSetupStep1" component={CaregiverSetupStep1} />
           <Stack.Screen name="CaregiverSetupStep2" component={CaregiverSetupStep2} />
+          {/* Reached from the status screen when identity is still to do (design 11.3, last paragraph). */}
+          <Stack.Screen name="IdentityVerification" component={IdentityVerification} />
         </Stack.Navigator>
       );
     case "app":
