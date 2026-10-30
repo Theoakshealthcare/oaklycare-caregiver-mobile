@@ -10,12 +10,13 @@ import Text from "@/src/components/ui/text";
 import { theme } from "@/src/constants/theme";
 import { greeting, mapHome, type HomeView, type VisitView } from "@/src/home/homeModel";
 import { useAvailability } from "@/src/hooks/useAvailability";
-import { useCaregiverHome, useMe } from "@/src/hooks/queries";
+import { useCaregiverHome, useMe, useWallet } from "@/src/hooks/queries";
 import useNavigation from "@/src/hooks/use-navigation";
 import { useOfferActions } from "@/src/hooks/useOfferActions";
 import { ensureBackgroundLocation } from "@/src/supply/permissions";
 import { useLocationPermissions } from "@/src/supply/permissionState";
 import { hasActiveVisit } from "@/src/supply/tracking";
+import { walletBalances } from "@/src/wallet/walletModel";
 
 const Section: React.FC<{ title: string; children: React.ReactNode }> = ({ title, children }) => (
   <View style={{ paddingHorizontal: 20, marginBottom: 16 }}>
@@ -61,6 +62,11 @@ const VisitRow: React.FC<{ visit: VisitView; onOpen: () => void }> = ({ visit, o
       <Text variant="small" color={theme.colors.textLight}>
         {visit.patientName}
       </Text>
+      {visit.address ? (
+        <Text variant="small" color={theme.colors.textLight} testID="visit-address">
+          {visit.address}
+        </Text>
+      ) : null}
       <Text variant="small" color={theme.colors.textLight}>
         {visit.when} {"•"} {visit.duration}
       </Text>
@@ -170,6 +176,7 @@ const Home: React.FC = () => {
   const me = useMe();
   const home = useCaregiverHome();
   const availability = useAvailability();
+  const wallet = useWallet();
   const permissions = useLocationPermissions();
 
   // Back on this screen from a visit or an offer: show the latest right away.
@@ -187,6 +194,8 @@ const Home: React.FC = () => {
   // Staleness is judged as of the moment the data was fetched (home is polled at least every 60 s).
   const { data, dataUpdatedAt } = home;
   const view = useMemo(() => (data ? mapHome(data, dataUpdatedAt) : null), [data, dataUpdatedAt]);
+  // Earnings still being cleared come from the wallet summary; Home works without it.
+  const pending = wallet.data ? walletBalances(wallet.data).pending : null;
 
   const confirmDecline = (bookingId: string) =>
     Alert.alert("Decline this job?", "It will be offered to other caregivers.", [
@@ -287,14 +296,28 @@ const Home: React.FC = () => {
         ) : null}
 
         <Section title="Wallet">
-          <View style={{ backgroundColor: theme.colors.white, borderRadius: 16, padding: 16 }}>
-            <Text variant="small" color={theme.colors.textLight}>
-              Balance
-            </Text>
-            <Text variant="h2" weight="bold" color={theme.colors.primary} testID="wallet-balance">
-              {view.walletBalance}
-            </Text>
-          </View>
+          <TouchableOpacity
+            testID="home-wallet"
+            accessibilityRole="button"
+            accessibilityLabel="Wallet, open"
+            onPress={() => navigation.navigate("Wallet")}
+            style={{ backgroundColor: theme.colors.white, borderRadius: 16, padding: 16, flexDirection: "row", alignItems: "center", gap: 12 }}
+          >
+            <View style={{ flex: 1 }}>
+              <Text variant="small" color={theme.colors.textLight}>
+                Balance
+              </Text>
+              <Text variant="h2" weight="bold" color={theme.colors.primary} testID="wallet-balance">
+                {view.walletBalance}
+              </Text>
+              {pending ? (
+                <Text variant="small" color={theme.colors.textLight} testID="wallet-pending">
+                  {pending.amount} pending
+                </Text>
+              ) : null}
+            </View>
+            <Feather name="chevron-right" size={20} color={theme.colors.textLight} />
+          </TouchableOpacity>
         </Section>
       </>
     );

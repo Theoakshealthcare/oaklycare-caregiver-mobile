@@ -190,6 +190,16 @@ export function useVitals(patientId: string | undefined, enabled = true) {
   });
 }
 
+/** Every reading the patient has on record (the "View all history" list), fetched only while that screen is open. */
+export function useVitalHistory(patientId: string | undefined) {
+  return useQuery({
+    queryKey: queryKeys.vitalsAll(patientId ?? ""),
+    queryFn: () => vitalsService.list(patientId as string),
+    enabled: !!patientId,
+    gcTime: 2 * 60_000,
+  });
+}
+
 export function useCreateVital() {
   const client = useQueryClient();
   return useMutation({

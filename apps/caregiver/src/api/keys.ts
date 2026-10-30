@@ -17,6 +17,8 @@ export const queryKeys = {
   notes: (bookingId: string) => ["notes", bookingId] as const,
   clientProfile: (bookingId: string) => ["client-profile", bookingId] as const,
   vitals: (patientId: string) => ["vitals", patientId] as const,
+  /** Every reading on record, not just the last 30 days; under the `vitals` prefix so a new reading refreshes it too. */
+  vitalsAll: (patientId: string) => ["vitals", patientId, "all"] as const,
   carePlans: (status: string, q: string) => ["care-plans", status, q] as const,
   allCarePlans: ["care-plans"] as const,
   carePlan: (planId: string) => ["care-plan", planId] as const,

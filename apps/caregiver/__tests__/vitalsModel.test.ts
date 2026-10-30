@@ -5,6 +5,8 @@ import {
   VITAL_KINDS,
   buildVitalInput,
   chartBars,
+  groupReadingsByDay,
+  parsePressure,
   formatReading,
   formatUpdated,
   historyStart,
@@ -130,6 +132,60 @@ describe("chart range", () => {
     const same = chartBars(toReadings([vital({ id: "a" }), vital({ id: "b", recorded_at: "2026-10-27T11:00:00" })]));
     expect(same.map((b) => b.height)).toEqual([0.6, 0.6]);
     expect(chartBars([])).toEqual([]);
+  });
+
+  it("draws a blood pressure bar from the bottom number to the top number on one shared scale", () => {
+    const bars = chartBars(
+      toReadings([
+        vital({ id: "a", vital_type: "blood_pressure", value: "120/80", unit: "mmHg", recorded_at: "2026-10-27T08:00:00" }),
+        vital({ id: "b", vital_type: "blood_pressure", value: "160/100", unit: "mmHg", recorded_at: "2026-10-27T09:00:00" }),
+        vital({ id: "bad", vital_type: "blood_pressure", value: "high", unit: "mmHg", recorded_at: "2026-10-27T10:00:00" }),
+      ]).reverse(),
+    );
+    expect(bars.map((b) => b.id)).toEqual(["a", "b"]);
+    expect(bars[0].low).toBeCloseTo(0.1);
+    expect(bars[1].height).toBeCloseTo(0.9);
+    expect(bars[0].height).toBeGreaterThan(bars[0].low as number);
+    expect(bars[1].low).toBeGreaterThan(bars[0].low as number);
+    expect(bars.map((b) => b.label)).toEqual(["120/80", "160/100"]);
+  });
+
+  it("keeps a single blood pressure reading visible, and no valid reading as no bars", () => {
+    const [only] = chartBars(toReadings([vital({ vital_type: "blood_pressure", value: "138/85", unit: "mmHg" })]));
+    expect(only.height).toBeCloseTo(0.9);
+    expect(only.low).toBeCloseTo(0.1);
+    const [flat] = chartBars(toReadings([vital({ vital_type: "blood_pressure", value: "90/90", unit: "mmHg" })]));
+    expect([flat.height, flat.low]).toEqual([0.6, 0.4]);
+    expect(chartBars(toReadings([vital({ vital_type: "blood_pressure", value: "n/a", unit: "mmHg" })]))).toEqual([]);
+  });
+
+  it("leaves other vitals without a lower edge", () => {
+    expect(chartBars(toReadings([vital({})]))[0].low).toBeUndefined();
+  });
+});
+
+describe("parsePressure", () => {
+  it("reads 'systolic/diastolic' and refuses anything else", () => {
+    expect(parsePressure("138/85")).toEqual({ systolic: 138, diastolic: 85 });
+    expect(parsePressure(" 120 / 80 ")).toEqual({ systolic: 120, diastolic: 80 });
+    for (const bad of ["138", "138/", "/85", "a/b", "1/2/3", ""]) expect(parsePressure(bad)).toBeNull();
+  });
+});
+
+describe("groupReadingsByDay", () => {
+  it("groups newest-first readings under Today, Yesterday and the date, keeping their order", () => {
+    const readings = toReadings([
+      vital({ id: "t2", recorded_at: "2026-10-27T11:00:00" }),
+      vital({ id: "t1", recorded_at: "2026-10-27T08:00:00" }),
+      vital({ id: "y", recorded_at: "2026-10-26T10:00:00" }),
+      vital({ id: "old", recorded_at: "2026-10-01T10:00:00" }),
+    ]);
+    const groups = groupReadingsByDay(readings, NOW);
+    expect(groups.map((g) => g.readings.map((r) => r.id))).toEqual([["t2", "t1"], ["y"], ["old"]]);
+    expect(groups[0].title).toBe("Today");
+    expect(groups[1].title).toBe("Yesterday");
+    expect(groups[2].title).toMatch(/1 Oct 2026/);
+    expect(groupReadingsByDay([], NOW)).toEqual([]);
   });
 });
 

@@ -30,6 +30,7 @@ import CreateCarePlan from "../screens/careplan/CreateCarePlan";
 import VisitFlow from "../screens/visit/VisitFlow";
 import AddVitals from "../screens/vitals/AddVitals";
 import VitalDetail from "../screens/vitals/VitalDetail";
+import VitalHistory from "../screens/vitals/VitalHistory";
 import GateMessage from "../screens/GateMessage";
 import OnboardingScreen from "../screens/onboarding-screen";
 import CaregiverSetupStep1 from "../screens/setup/CaregiverSetupStep1";
@@ -147,6 +148,7 @@ const StackNavigator = () => {
             <Stack.Screen name="Contact" component={Contact} />
             <Stack.Screen name="ClientProfile" component={ClientProfile} />
             <Stack.Screen name="VitalDetail" component={VitalDetail} />
+            <Stack.Screen name="VitalHistory" component={VitalHistory} />
             <Stack.Screen name="AddVitals" component={AddVitals} />
             <Stack.Screen name="CarePlans" component={CarePlans} />
             <Stack.Screen name="CarePlanTemplate" component={CarePlanTemplate} />
