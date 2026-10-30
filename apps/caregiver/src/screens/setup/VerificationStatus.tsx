@@ -9,6 +9,7 @@ import Text from "@/src/components/ui/text";
 import { globalStyles } from "@/src/constants/styles";
 import { theme } from "@/src/constants/theme";
 import { useVerificationStatus } from "@/src/hooks/queries";
+import { kycEnabled } from "@/src/identity/config";
 import Navigation from "@/src/hooks/use-navigation";
 import { authService } from "@/src/services/auth.service";
 import { caregiverService, type VerificationStatus } from "@/src/services/caregiver.service";
@@ -56,6 +57,36 @@ export function statusCopy(status: VerificationStatus): Copy {
   }
 }
 
+export interface IdentityEntry {
+  /** One plain line about the identity check. */
+  line: string;
+  /** Whether to offer the button that opens the identity step. */
+  canOpen: boolean;
+}
+
+/**
+ * The identity line on the status screen (design 11.3, last paragraph). A caregiver who skipped the check during an
+ * outage ("Continue without for now") or was reset can open it from here; one whose case is with a person, or who was
+ * turned down by a person, only reads a line. Never says why. `enabled` is the identity feature switch.
+ */
+export function identityEntry(status: VerificationStatus, enabled: boolean = kycEnabled()): IdentityEntry | null {
+  if (!enabled) return null;
+  const open = status.profileStatus === "under_review" || status.profileStatus === "changes_requested";
+  switch (status.identityVerificationStatus) {
+    case "pending":
+    case "in_progress":
+      return open
+        ? { line: "Your identity isn't verified yet. You can't be approved until it is.", canOpen: true }
+        : null;
+    case "needs_review":
+      return { line: "Your identity check is with our team.", canOpen: false };
+    case "failed":
+      return { line: "Our team couldn't confirm your identity. Please contact Oakly support.", canOpen: false };
+    default:
+      return null;
+  }
+}
+
 const TONE_COLOR: Record<Copy["tone"], string> = {
   info: theme.colors.primary,
   warning: theme.colors.warningText,
@@ -75,6 +106,7 @@ const VerificationStatusScreen: React.FC = () => {
 
   if (!data) return null;
   const copy = statusCopy(data);
+  const identity = identityEntry(data);
 
   return (
     <View style={{ flex: 1, backgroundColor: theme.colors.white }}>
@@ -102,6 +134,19 @@ const VerificationStatusScreen: React.FC = () => {
                 <Text variant="small" color={theme.colors.textLight}>
                   {data.changesRequested.note}
                 </Text>
+              ) : null}
+            </View>
+          ) : null}
+
+          {identity ? (
+            <View testID="status-identity" style={{ gap: 12, backgroundColor: theme.colors.background, padding: 16, borderRadius: 12 }}>
+              <Text variant="body">{identity.line}</Text>
+              {identity.canOpen ? (
+                <Button
+                  testID="status-identity-open"
+                  title="Verify your identity"
+                  onPress={() => navigation.navigate("IdentityVerification")}
+                />
               ) : null}
             </View>
           ) : null}

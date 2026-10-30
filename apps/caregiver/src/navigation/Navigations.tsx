@@ -13,6 +13,8 @@ export type ScreenParamLists = {
   // Signed in, profile not approved yet
   CaregiverSetupStep1: undefined;
   CaregiverSetupStep2: undefined;
+  /** After Step 2: intro and separate consent, then the check and its result (KYC). Also opened from the status screen. */
+  IdentityVerification: undefined;
   ConsentScreen: undefined;
   VerificationStatus: undefined;
   // Signed in and approved

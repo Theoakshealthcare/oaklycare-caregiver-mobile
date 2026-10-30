@@ -89,3 +89,9 @@ channel) lives in the backend repo: `docs/checklist/MASTER_CHECKLIST.md`. Update
 - [ ] Live Paystack account and real WhatsApp delivery (guide §12.12 captures use a local fake)
 - [ ] Backend: admin bank list for a picker, and admin names for `requested_by` / `approved_by`
 - [ ] "Raise a refund" from the booking detail; `above_limit` and `reason_code` queue filters
+
+## Caregiver KYC (Prembly)
+- [x] K7a Identity step: route after Step 2, intro + consent, checking / verified / try again / under review / unavailable / expired / error states, `setupRouteFor` + gate tests (2026-10-30, branch `feat/kyc-mobile-screens`, see docs/sop/2026-10-30-caregiver-kyc-screens.md; Jest only, mocked service, **not device-verified**, off by default behind `EXPO_PUBLIC_KYC_MODE`)
+- [ ] K7b Prembly widget in a dev build (react-native-webview, camera permissions), client-event forwarding, build recipe in the SOP
+- [ ] K6 Admin console: "Identity needs review" filter and badge, provider summary card, Verify / Fail, Allow another attempt
+- [ ] K8 Device pass against sandbox keys (and one live-key check)
