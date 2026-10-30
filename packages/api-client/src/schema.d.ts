@@ -2121,6 +2121,23 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/v1/admin/caregivers/{caregiver_id}/identity-reset": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** Identity Reset */
+        post: operations["identity_reset_api_v1_admin_caregivers__caregiver_id__identity_reset_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/v1/admin/caregivers/{caregiver_id}/background-check-decision": {
         parameters: {
             query?: never;
@@ -3741,6 +3758,10 @@ export interface components {
             limit: number;
             /** Offset */
             offset: number;
+            /** Needs Review Count */
+            needs_review_count: number;
+            /** Stuck Count */
+            stuck_count: number;
         };
         /** ApplicationListItem */
         ApplicationListItem: {
@@ -6429,6 +6450,48 @@ export interface components {
             /** Patient State */
             patient_state: string;
         };
+        /**
+         * IdentityAttemptOut
+         * @description One verification attempt. Scores, yes/no results and reason codes only: no ID number, image or provider payload exists here.
+         */
+        IdentityAttemptOut: {
+            /**
+             * Id
+             * Format: uuid
+             */
+            id: string;
+            /** Attempt No */
+            attempt_no: number;
+            /** Status */
+            status: string;
+            /**
+             * Created At
+             * Format: date-time
+             */
+            created_at: string;
+            /** Started At */
+            started_at?: string | null;
+            /** Completed At */
+            completed_at?: string | null;
+            /** Id Type */
+            id_type?: string | null;
+            /** Face Confidence */
+            face_confidence?: number | null;
+            /** Liveness Confidence */
+            liveness_confidence?: number | null;
+            /** Face Threshold */
+            face_threshold?: number | null;
+            /** Name Match */
+            name_match?: boolean | null;
+            /** Dob Match */
+            dob_match?: boolean | null;
+            /** Reason Codes */
+            reason_codes: string[];
+            /** Provider Reference */
+            provider_reference?: string | null;
+            /** Decided Via */
+            decided_via?: string | null;
+        };
         /** IdentityDecision */
         IdentityDecision: {
             /**
@@ -6438,17 +6501,30 @@ export interface components {
             decision: "verified" | "failed";
             /** Notes */
             notes: string;
+            /** Expected Status */
+            expected_status?: ("pending" | "in_progress" | "needs_review" | "verified" | "failed") | null;
         };
         /** IdentityOut */
         IdentityOut: {
             /** Status */
             status: string;
-            /** Document Verification Result */
-            document_verification_result?: unknown | null;
-            /** Face Verification Status */
-            face_verification_status?: string | null;
-            /** Face Verification Result */
-            face_verification_result?: unknown | null;
+            /** Review Reason */
+            review_reason?: string | null;
+            /** Attempts Used */
+            attempts_used: number;
+            /** Attempts Max */
+            attempts_max: number;
+            /** Can Reset */
+            can_reset: boolean;
+            /** Attempts */
+            attempts: components["schemas"]["IdentityAttemptOut"][];
+            /** Duplicate Of Caregiver Id */
+            duplicate_of_caregiver_id?: string | null;
+        };
+        /** IdentityReset */
+        IdentityReset: {
+            /** Notes */
+            notes: string;
         };
         /**
          * IdentityVerificationClientEventRequest
@@ -12826,6 +12902,7 @@ export interface operations {
         parameters: {
             query?: {
                 profile_status?: "incomplete" | "under_review" | "changes_requested" | "approved" | "rejected" | "suspended";
+                identity?: ("needs_review" | "stuck" | "failed") | null;
                 limit?: number;
                 offset?: number;
             };
@@ -12933,6 +13010,41 @@ export interface operations {
         requestBody: {
             content: {
                 "application/json": components["schemas"]["IdentityDecision"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": unknown;
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    identity_reset_api_v1_admin_caregivers__caregiver_id__identity_reset_post: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                caregiver_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["IdentityReset"];
             };
         };
         responses: {

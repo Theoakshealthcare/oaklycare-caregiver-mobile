@@ -5816,6 +5816,27 @@
             }
           },
           {
+            "name": "identity",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "enum": [
+                    "needs_review",
+                    "stuck",
+                    "failed"
+                  ],
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Identity"
+            }
+          },
+          {
             "name": "limit",
             "in": "query",
             "required": false,
@@ -6010,6 +6031,64 @@
               "application/json": {
                 "schema": {
                   "title": "Response Identity Decision Api V1 Admin Caregivers  Caregiver Id  Identity Decision Post"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/admin/caregivers/{caregiver_id}/identity-reset": {
+      "post": {
+        "tags": [
+          "admin-caregivers"
+        ],
+        "summary": "Identity Reset",
+        "operationId": "identity_reset_api_v1_admin_caregivers__caregiver_id__identity_reset_post",
+        "security": [
+          {
+            "AdminBearer": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "caregiver_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid",
+              "title": "Caregiver Id"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/IdentityReset"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "title": "Response Identity Reset Api V1 Admin Caregivers  Caregiver Id  Identity Reset Post"
                 }
               }
             }
@@ -11729,6 +11808,14 @@
           "offset": {
             "type": "integer",
             "title": "Offset"
+          },
+          "needs_review_count": {
+            "type": "integer",
+            "title": "Needs Review Count"
+          },
+          "stuck_count": {
+            "type": "integer",
+            "title": "Stuck Count"
           }
         },
         "type": "object",
@@ -11736,7 +11823,9 @@
           "items",
           "total",
           "limit",
-          "offset"
+          "offset",
+          "needs_review_count",
+          "stuck_count"
         ],
         "title": "ApplicationList"
       },
@@ -18624,6 +18713,157 @@
         "title": "HomeVisit",
         "description": "A visit assigned to the caregiver (accepted, en_route or in_progress)."
       },
+      "IdentityAttemptOut": {
+        "properties": {
+          "id": {
+            "type": "string",
+            "format": "uuid",
+            "title": "Id"
+          },
+          "attempt_no": {
+            "type": "integer",
+            "title": "Attempt No"
+          },
+          "status": {
+            "type": "string",
+            "title": "Status"
+          },
+          "created_at": {
+            "type": "string",
+            "format": "date-time",
+            "title": "Created At"
+          },
+          "started_at": {
+            "anyOf": [
+              {
+                "type": "string",
+                "format": "date-time"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Started At"
+          },
+          "completed_at": {
+            "anyOf": [
+              {
+                "type": "string",
+                "format": "date-time"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Completed At"
+          },
+          "id_type": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Id Type"
+          },
+          "face_confidence": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Face Confidence"
+          },
+          "liveness_confidence": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Liveness Confidence"
+          },
+          "face_threshold": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Face Threshold"
+          },
+          "name_match": {
+            "anyOf": [
+              {
+                "type": "boolean"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Name Match"
+          },
+          "dob_match": {
+            "anyOf": [
+              {
+                "type": "boolean"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Dob Match"
+          },
+          "reason_codes": {
+            "items": {
+              "type": "string"
+            },
+            "type": "array",
+            "title": "Reason Codes"
+          },
+          "provider_reference": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Provider Reference"
+          },
+          "decided_via": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Decided Via"
+          }
+        },
+        "type": "object",
+        "required": [
+          "id",
+          "attempt_no",
+          "status",
+          "created_at",
+          "reason_codes"
+        ],
+        "title": "IdentityAttemptOut",
+        "description": "One verification attempt. Scores, yes/no results and reason codes only: no ID number, image or provider payload exists here."
+      },
       "IdentityDecision": {
         "properties": {
           "decision": {
@@ -18638,6 +18878,24 @@
             "type": "string",
             "maxLength": 4000,
             "title": "Notes"
+          },
+          "expected_status": {
+            "anyOf": [
+              {
+                "type": "string",
+                "enum": [
+                  "pending",
+                  "in_progress",
+                  "needs_review",
+                  "verified",
+                  "failed"
+                ]
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Expected Status"
           }
         },
         "additionalProperties": false,
@@ -18654,16 +18912,7 @@
             "type": "string",
             "title": "Status"
           },
-          "document_verification_result": {
-            "anyOf": [
-              {},
-              {
-                "type": "null"
-              }
-            ],
-            "title": "Document Verification Result"
-          },
-          "face_verification_status": {
+          "review_reason": {
             "anyOf": [
               {
                 "type": "string"
@@ -18672,23 +18921,64 @@
                 "type": "null"
               }
             ],
-            "title": "Face Verification Status"
+            "title": "Review Reason"
           },
-          "face_verification_result": {
+          "attempts_used": {
+            "type": "integer",
+            "title": "Attempts Used"
+          },
+          "attempts_max": {
+            "type": "integer",
+            "title": "Attempts Max"
+          },
+          "can_reset": {
+            "type": "boolean",
+            "title": "Can Reset"
+          },
+          "attempts": {
+            "items": {
+              "$ref": "#/components/schemas/IdentityAttemptOut"
+            },
+            "type": "array",
+            "title": "Attempts"
+          },
+          "duplicate_of_caregiver_id": {
             "anyOf": [
-              {},
+              {
+                "type": "string",
+                "format": "uuid"
+              },
               {
                 "type": "null"
               }
             ],
-            "title": "Face Verification Result"
+            "title": "Duplicate Of Caregiver Id"
           }
         },
         "type": "object",
         "required": [
-          "status"
+          "status",
+          "attempts_used",
+          "attempts_max",
+          "can_reset",
+          "attempts"
         ],
         "title": "IdentityOut"
+      },
+      "IdentityReset": {
+        "properties": {
+          "notes": {
+            "type": "string",
+            "maxLength": 4000,
+            "title": "Notes"
+          }
+        },
+        "additionalProperties": false,
+        "type": "object",
+        "required": [
+          "notes"
+        ],
+        "title": "IdentityReset"
       },
       "IdentityVerificationClientEventRequest": {
         "properties": {

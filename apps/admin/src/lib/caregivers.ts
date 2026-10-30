@@ -45,7 +45,17 @@ export interface ApplicationList {
   total: number;
   limit: number;
   offset: number;
+  /** Badge counts: per profile-status tab and independent of the `identity` filter (K5). */
+  needs_review_count: number;
+  stuck_count: number;
 }
+
+/** The `identity` query filter on the queue; `null` means everyone on the tab. */
+export type IdentityFilter = "needs_review" | "stuck" | "failed";
+export const IDENTITY_FILTERS: IdentityFilter[] = ["needs_review", "stuck", "failed"];
+
+export type IdentityBlock = Schemas["IdentityOut"];
+export type IdentityAttempt = Schemas["IdentityAttemptOut"];
 
 export interface DocumentRow {
   id: string;
@@ -104,12 +114,7 @@ export interface ApplicationDetail {
     consent_date: string | null;
   };
   documents: DocumentRow[];
-  identity: {
-    status: string;
-    document_verification_result: unknown;
-    face_verification_status: string | null;
-    face_verification_result: unknown;
-  };
+  identity: IdentityBlock;
   background_check: {
     status: string;
     evidence: unknown;
@@ -133,7 +138,7 @@ export interface Unmet {
   message: string;
 }
 
-/** The 409 from approve/reinstate: `{"detail": {"message", "unmet": [{"code","message"}]}}`. */
+/** The 409 from approve/reinstate, and from the identity routes (`IDENTITY_CASE_CHANGED`, `IDENTITY_RESET_NOT_ALLOWED`): `{"detail": {"message", "unmet": [{"code","message"}]}}`. */
 export function unmetFromError(error: unknown): { message: string; unmet: Unmet[] } | null {
   if (!(error instanceof ApiError) || error.status !== 409) return null;
   const detail = (error.body as { detail?: unknown } | null)?.detail;
@@ -150,9 +155,10 @@ export async function listApplications(
   profile_status: ProfileStatus,
   limit: number,
   offset: number,
+  identity: IdentityFilter | null = null,
 ): Promise<ApplicationList> {
   const result = await getApi().GET("/api/v1/admin/caregivers", {
-    params: { query: { profile_status, limit, offset } },
+    params: { query: { profile_status, limit, offset, ...(identity ? { identity } : {}) } },
   });
   return unwrap(result) as ApplicationList;
 }
@@ -180,6 +186,15 @@ export async function decideIdentity(id: string, body: Schemas["IdentityDecision
       body,
     }),
   );
+}
+
+export async function resetIdentity(id: string, body: Schemas["IdentityReset"]) {
+  return unwrap(
+    await getApi().POST("/api/v1/admin/caregivers/{caregiver_id}/identity-reset", {
+      params: { path: { caregiver_id: id } },
+      body,
+    }),
+  ) as { attempts_used: number; attempts_max: number } | null;
 }
 
 export async function decideBackgroundCheck(id: string, body: Schemas["BackgroundCheckDecision"]) {

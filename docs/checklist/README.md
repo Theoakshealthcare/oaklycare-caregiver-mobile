@@ -92,6 +92,12 @@ channel) lives in the backend repo: `docs/checklist/MASTER_CHECKLIST.md`. Update
 
 ## Caregiver KYC (Prembly)
 - [x] K7a Identity step: route after Step 2, intro + consent, checking / verified / try again / under review / unavailable / expired / error states, `setupRouteFor` + gate tests (2026-10-30, branch `feat/kyc-mobile-screens`, see docs/sop/2026-10-30-caregiver-kyc-screens.md; Jest only, mocked service, **not device-verified**, off by default behind `EXPO_PUBLIC_KYC_MODE`)
-- [ ] K7b Prembly widget in a dev build (react-native-webview, camera permissions), client-event forwarding, build recipe in the SOP
-- [ ] K6 Admin console: "Identity needs review" filter and badge, provider summary card, Verify / Fail, Allow another attempt
+- [ ] K7b Dojah widget in a dev build (`dojah-kyc-sdk-react-expo`, or react-native-webview as the fallback), camera permissions, server-minted reference, build recipe in the SOP (provider switched from Prembly to Dojah 2026-10-30; see backend `docs/plans/2026-10-30-caregiver-kyc-dojah-delta.md` once KD1 merges)
+- [x] K6 Admin console: "Identity needs review" filter and badge, provider summary card, Verify / Fail, Allow another attempt (2026-10-30, branch `feat/kyc-admin-console`, see docs/sop/2026-10-30-admin-kyc-console.md; Vitest/RTL only, **no live browser pass**)
+  - [x] `api:sync` from backend `6d7d315` (K5 merged); `identity` block, `needs_review_count` / `stuck_count`, `expected_status`, `identity-reset`
+  - [x] Queue: chips Everyone / Identity needs review / stuck / failed (URL `identity=`), badges from the response counts, kept while another filter loads
+  - [x] Detail Identity card: status, review reason in words, attempts used of max, attempts newest first (scores with pass mark, name / DOB match, ID type, reason codes in words, provider reference), link to the other caregiver
+  - [x] Mark verified / Mark failed with required notes and `expected_status`; `IDENTITY_CASE_CHANGED` reloads and says so; Allow another attempt (only when `can_reset`, confirm + notes), `IDENTITY_RESET_NOT_ALLOWED` handled
+  - [x] Read = `caregivers.read`, decide / reset = `caregivers.approve`
+  - [ ] Live browser pass against a local backend; Playwright flow for review and reset
 - [ ] K8 Device pass against sandbox keys (and one live-key check)
