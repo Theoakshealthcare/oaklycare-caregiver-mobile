@@ -9,6 +9,7 @@ import { ApplicationActions } from "@/components/application-actions";
 import { useAuth } from "@/components/auth-provider";
 import { DecisionControl } from "@/components/decision-control";
 import { DocumentCard } from "@/components/document-card";
+import { IdentityCard } from "@/components/identity-card";
 import { SkillsEditor } from "@/components/skills-editor";
 import { StatusBadge } from "@/components/status-badge";
 import { EmptyState, ErrorState, Skeleton } from "@/components/ui/states";
@@ -19,8 +20,11 @@ import {
   decideDocument,
   decideIdentity,
   getApplication,
+  resetIdentity,
   saveSkills,
+  unmetFromError,
 } from "@/lib/caregivers";
+import { asIdentityStatus } from "@/lib/identity";
 import { formatWat, formatWatDate, humanize } from "@/lib/format";
 
 export function ApplicationDetailView({ id }: { id: string }) {
@@ -82,6 +86,26 @@ export function ApplicationDetailView({ id }: { id: string }) {
     }
     refresh();
   };
+
+  /**
+   * Run an identity write. When the server says the case moved (`IDENTITY_CASE_CHANGED`) or a reset
+   * is no longer allowed, nothing was changed: reload, close the dialog and say so, so the admin looks
+   * at the new state instead of confirming again blind.
+   */
+  async function settleIdentity(write: () => Promise<void>) {
+    try {
+      await write();
+    } catch (error) {
+      const conflict = unmetFromError(error);
+      const code = conflict?.unmet[0]?.code;
+      if (conflict && (code === "IDENTITY_CASE_CHANGED" || code === "IDENTITY_RESET_NOT_ALLOWED")) {
+        setNotice([conflict.message, ...conflict.unmet.map((u) => u.message)].join(". ") + ". The page was reloaded.");
+        refresh();
+        return;
+      }
+      throw error;
+    }
+  }
 
   return (
     <div className="grid max-w-5xl gap-6">
@@ -156,22 +180,23 @@ export function ApplicationDetailView({ id }: { id: string }) {
 
       <Section title="Verification checks">
         <div className="grid gap-3">
-          <DecisionControl
-            title="Identity"
-            status={detail.identity.status}
-            positive={{ decision: "verified", label: "Mark verified" }}
-            negative={{ decision: "failed", label: "Mark failed" }}
-            positiveSideEffects="Records that you checked this caregiver's identity. Required for approval."
-            negativeSideEffects={
-              profile.profile_status === "approved"
-                ? "This caregiver is approved. A failed identity check suspends them immediately and emails them."
-                : "Records a failed identity check. The caregiver can't be approved until it is verified."
-            }
+          <IdentityCard
+            identity={detail.identity}
+            profileStatus={profile.profile_status}
             canDecide={canDecide}
-            onDecide={async (decision, notes) => {
-              const res = await decideIdentity(id, { decision: decision as "verified" | "failed", notes });
-              report(res, `Identity marked ${decision}.`);
-            }}
+            onDecide={(decision, notes) =>
+              settleIdentity(async () => {
+                // expected_status makes the server refuse if the case moved since this page loaded.
+                const res = await decideIdentity(id, { decision, notes, expected_status: asIdentityStatus(detail.identity.status) });
+                report(res, `Identity marked ${decision}.`);
+              })
+            }
+            onReset={(notes) =>
+              settleIdentity(async () => {
+                const res = await resetIdentity(id, { notes });
+                report(res, `Another attempt allowed. ${profile.full_name} can start the identity check again.`);
+              })
+            }
           />
           <DecisionControl
             title="Background check"

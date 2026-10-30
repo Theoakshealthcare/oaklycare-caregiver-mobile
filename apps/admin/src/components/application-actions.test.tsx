@@ -45,7 +45,7 @@ function detail(status: ProfileStatus): ApplicationDetail {
     },
     consents: { terms_accepted: true, privacy_policy_accepted: true, background_check_consent: true, consent_date: null },
     documents: [],
-    identity: { status: "pending", document_verification_result: null, face_verification_status: null, face_verification_result: null },
+    identity: { status: "pending", review_reason: null, attempts_used: 0, attempts_max: 3, can_reset: false, attempts: [], duplicate_of_caregiver_id: null },
     background_check: { status: "pending", evidence: null, decided_by: null, decided_at: null },
     decision: { approved_by: null, approved_at: null, suspended_at: null, suspension_reason: null, rejection_reason: null, changes_requested: null },
     skills: [],
