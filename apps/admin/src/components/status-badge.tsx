@@ -28,6 +28,7 @@ const TONES: Record<string, Tone> = {
   address_check: "warning",
   sla_breached: "warning",
   succeeded: "success",
+  passed: "success",
   needs_review: "danger",
 };
 

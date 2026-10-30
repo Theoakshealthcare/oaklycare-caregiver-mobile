@@ -1,6 +1,6 @@
 "use client";
 
-import { useQuery } from "@tanstack/react-query";
+import { keepPreviousData, useQuery } from "@tanstack/react-query";
 import Link from "next/link";
 import { usePathname, useRouter, useSearchParams } from "next/navigation";
 import * as React from "react";
@@ -9,7 +9,7 @@ import { StatusBadge } from "@/components/status-badge";
 import { Button } from "@/components/ui/button";
 import { Input, Select } from "@/components/ui/input";
 import { EmptyState, ErrorState, Skeleton } from "@/components/ui/states";
-import { type ProfileStatus, PROFILE_STATUSES, listApplications } from "@/lib/caregivers";
+import { IDENTITY_FILTERS, type IdentityFilter, type ProfileStatus, PROFILE_STATUSES, listApplications } from "@/lib/caregivers";
 import { errorMessage } from "@/lib/api";
 import { formatAge, formatWat, humanize } from "@/lib/format";
 
@@ -19,25 +19,42 @@ function parseStatus(value: string | null): ProfileStatus {
   return (PROFILE_STATUSES as string[]).includes(value ?? "") ? (value as ProfileStatus) : "under_review";
 }
 
+function parseIdentity(value: string | null): IdentityFilter | null {
+  return (IDENTITY_FILTERS as string[]).includes(value ?? "") ? (value as IdentityFilter) : null;
+}
+
+const IDENTITY_LABELS: Record<IdentityFilter, string> = {
+  needs_review: "Identity needs review",
+  stuck: "Identity stuck",
+  failed: "Identity failed",
+};
+
 export function ApplicationsQueue() {
   const router = useRouter();
   const pathname = usePathname();
   const params = useSearchParams();
   const status = parseStatus(params.get("status"));
+  const identity = parseIdentity(params.get("identity"));
   const page = Math.max(0, Number(params.get("page") ?? 0) || 0);
   const [search, setSearch] = React.useState("");
   const tbody = React.useRef<HTMLTableSectionElement>(null);
 
   const query = useQuery({
-    queryKey: ["caregiver-applications", status, page],
-    queryFn: () => listApplications(status, PAGE_SIZE, page * PAGE_SIZE),
+    queryKey: ["caregiver-applications", status, identity, page],
+    queryFn: () => listApplications(status, PAGE_SIZE, page * PAGE_SIZE, identity),
+    // Keep the badge counts on screen while another filter loads.
+    placeholderData: keepPreviousData,
     // The queue is a work list: keep it fresh while someone is looking at it.
     refetchInterval: 60_000,
   });
 
-  function setParams(next: { status?: ProfileStatus; page?: number }) {
+  function setParams(next: { status?: ProfileStatus; identity?: IdentityFilter | null; page?: number }) {
     const sp = new URLSearchParams(params.toString());
     if (next.status) sp.set("status", next.status);
+    if (next.identity !== undefined) {
+      if (next.identity) sp.set("identity", next.identity);
+      else sp.delete("identity");
+    }
     if (next.page !== undefined) sp.set("page", String(next.page));
     router.replace(`${pathname}?${sp.toString()}`);
   }
@@ -84,6 +101,29 @@ export function ApplicationsQueue() {
           </label>
           <Input id="queue-search" type="search" placeholder="Name or state" value={search} onChange={(e) => setSearch(e.target.value)} className="w-64" />
         </div>
+        <div className="grid gap-1">
+          <span id="identity-filter-label" className="text-sm font-medium">
+            Identity check
+          </span>
+          <div role="group" aria-labelledby="identity-filter-label" className="flex flex-wrap gap-2">
+            <Button size="sm" variant={identity === null ? "default" : "outline"} aria-pressed={identity === null} onClick={() => setParams({ identity: null, page: 0 })}>
+              Everyone
+            </Button>
+            {IDENTITY_FILTERS.map((f) => {
+              const count = f === "needs_review" ? query.data?.needs_review_count : f === "stuck" ? query.data?.stuck_count : undefined;
+              return (
+                <Button key={f} size="sm" variant={identity === f ? "default" : "outline"} aria-pressed={identity === f} onClick={() => setParams({ identity: f, page: 0 })}>
+                  {IDENTITY_LABELS[f]}
+                  {count !== undefined ? (
+                    <span className="ml-1 rounded-full bg-muted px-1.5 text-xs font-medium text-foreground" aria-label={`${count} ${count === 1 ? "caregiver" : "caregivers"}`}>
+                      {count}
+                    </span>
+                  ) : null}
+                </Button>
+              );
+            })}
+          </div>
+        </div>
         {query.data ? (
           <p className="ml-auto text-sm text-muted-foreground" aria-live="polite">
             {total} {total === 1 ? "application" : "applications"}
@@ -103,7 +143,10 @@ export function ApplicationsQueue() {
         search ? (
           <EmptyState title="No one on this page matches" hint="Clear the search to see everyone on this page." action={<Button variant="outline" onClick={() => setSearch("")}>Clear search</Button>} />
         ) : (
-          <EmptyState title={`No ${humanize(status).toLowerCase()} applications`} hint={status === "under_review" ? "New submissions will show up here." : "Try another status."} />
+          <EmptyState
+            title={identity ? `No ${humanize(status).toLowerCase()} applications with "${IDENTITY_LABELS[identity].toLowerCase()}"` : `No ${humanize(status).toLowerCase()} applications`}
+            hint={identity ? "Choose Everyone to see the whole tab." : status === "under_review" ? "New submissions will show up here." : "Try another status."}
+          />
         )
       ) : (
         <div className="overflow-x-auto rounded-lg border bg-card">

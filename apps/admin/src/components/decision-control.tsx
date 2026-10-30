@@ -19,6 +19,8 @@ interface Props {
   canDecide: boolean;
   /** Offer an optional "provider reference" field (background checks). */
   withProviderReference?: boolean;
+  /** Extra buttons next to the two decisions (e.g. "Allow another attempt"); shown only to deciders. */
+  extraActions?: React.ReactNode;
   onDecide: (decision: string, notes: string, providerReference: string | null) => Promise<void>;
 }
 
@@ -32,6 +34,7 @@ export function DecisionControl({
   negativeSideEffects,
   canDecide,
   withProviderReference,
+  extraActions,
   onDecide,
 }: Props) {
   const [open, setOpen] = React.useState<"positive" | "negative" | null>(null);
@@ -44,13 +47,14 @@ export function DecisionControl({
         <StatusBadge value={status} />
       </div>
       {canDecide ? (
-        <div className="flex gap-2">
+        <div className="flex flex-wrap gap-2">
           <Button size="sm" variant="outline" onClick={() => setOpen("positive")}>
             {positive.label}
           </Button>
           <Button size="sm" variant="outline" onClick={() => setOpen("negative")}>
             {negative.label}
           </Button>
+          {extraActions}
         </div>
       ) : null}
 
