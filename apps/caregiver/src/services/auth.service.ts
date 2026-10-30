@@ -50,6 +50,19 @@ export const authService = {
     return unwrap(api.POST("/api/v1/auth/reset-password", { body: { token, new_password: newPassword } }));
   },
 
+  /**
+   * POST /auth/change-password. The backend ends every session issued before the change, this device's included, and
+   * answers with a new pair: it is stored here, at once, so the caregiver stays signed in (other devices are signed out).
+   */
+  async changePassword(currentPassword: string, newPassword: string): Promise<void> {
+    const tokens = await unwrap(
+      api.POST("/api/v1/auth/change-password", {
+        body: { current_password: currentPassword, new_password: newPassword },
+      }),
+    );
+    await session.signIn({ accessToken: tokens.access_token, refreshToken: tokens.refresh_token });
+  },
+
   getMe() {
     return unwrap(api.GET("/api/v1/auth/me"));
   },

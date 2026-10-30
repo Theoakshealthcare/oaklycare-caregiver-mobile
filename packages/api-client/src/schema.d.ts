@@ -184,6 +184,29 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/v1/auth/change-password": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Change Password
+         * @description Change the signed-in user's password. Every token issued before this call stops working (other devices are
+         *     signed out); the response carries a new pair, so the caller stays signed in. 400 with
+         *     ``detail = {"code", "message"}`` for ``wrong_current_password``, ``weak_password`` and ``same_password``;
+         *     429 ``too_many_attempts`` (with Retry-After) after repeated wrong current passwords.
+         */
+        post: operations["change_password_api_v1_auth_change_password_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/v1/auth/profile": {
         parameters: {
             query?: never;
@@ -5760,6 +5783,27 @@ export interface components {
             /** Payouts Blocked Until */
             payouts_blocked_until?: string | null;
         };
+        /** ChangePasswordRequest */
+        ChangePasswordRequest: {
+            /** Current Password */
+            current_password: string;
+            /** New Password */
+            new_password: string;
+        };
+        /**
+         * ChangePasswordResponse
+         * @description The caller's replacement tokens: every token issued before the change is dead, this pair is the one to keep.
+         */
+        ChangePasswordResponse: {
+            /** Access Token */
+            access_token: string;
+            /** Refresh Token */
+            refresh_token: string;
+            /** Token Type */
+            token_type: string;
+            /** Detail */
+            detail: string;
+        };
         /** ChatMessageCreate */
         ChatMessageCreate: {
             /** Message */
@@ -9096,6 +9140,39 @@ export interface operations {
                     "application/json": {
                         [key: string]: unknown;
                     };
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    change_password_api_v1_auth_change_password_post: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["ChangePasswordRequest"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ChangePasswordResponse"];
                 };
             };
             /** @description Validation Error */
