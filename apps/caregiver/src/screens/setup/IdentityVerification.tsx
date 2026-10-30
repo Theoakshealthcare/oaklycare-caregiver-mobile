@@ -79,8 +79,8 @@ const IdentityVerification: React.FC = () => {
     setPhase({ kind: "widget" });
 
     // Hints are best effort: a failed one never blocks the caregiver and never decides anything.
-    const hint = (event: "opened" | "completed" | "closed" | "error", sessionId?: string) =>
-      identityService.sendClientEvent(session.verification_id, event, sessionId).catch(() => undefined);
+    const hint = (event: "opened" | "completed" | "closed" | "error") =>
+      identityService.sendClientEvent(session.verification_id, event).catch(() => undefined);
     void hint("opened");
     let outcome;
     try {
@@ -92,7 +92,7 @@ const IdentityVerification: React.FC = () => {
 
     switch (outcome.kind) {
       case "completed":
-        await hint("completed", outcome.sessionId);
+        await hint("completed");
         if (!mounted.current) return;
         // Show "Checking..." immediately, then let the server state take over.
         setPhase({ kind: "submitted" });

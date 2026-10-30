@@ -11,12 +11,8 @@ import type { Schemas } from "@oakly/api-client";
 import { ApiError } from "../api/errors";
 
 export type IdentityState = Schemas["IdentityVerificationStateOut"];
-/**
- * TODO(K7b): `widget_url` is the one field backend slice KD2 adds to `POST .../sessions` (absolute https URL of the page
- * the backend hosts, valid 30 minutes). It is hand-written here until `pnpm api:sync` carries it into the generated
- * schema; then delete the intersection (and make the field required if the schema does).
- */
-export type IdentitySession = Schemas["IdentityVerificationSessionOut"] & { widget_url?: string };
+/** Carries `widget_url`: the absolute https URL of the page the backend hosts (valid 30 minutes; backend KD2). */
+export type IdentitySession = Schemas["IdentityVerificationSessionOut"];
 export type IdentityWidgetConfig = Schemas["IdentityWidgetConfig"];
 export type IdentityClientEvent = Schemas["IdentityVerificationClientEventRequest"]["event"];
 export type IdentityFailureHint = NonNullable<IdentityState["failure_hint"]>;

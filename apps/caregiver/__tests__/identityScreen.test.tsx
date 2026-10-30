@@ -63,7 +63,7 @@ beforeEach(async () => {
   });
   sendClientEvent = jest.spyOn(identityService, "sendClientEvent").mockImplementation(async () => current);
   defer = jest.spyOn(identityService, "defer").mockImplementation(async () => current);
-  setWidgetLauncher(widget({ kind: "completed", sessionId: "placeholder-session-001" }));
+  setWidgetLauncher(widget({ kind: "completed" }));
 });
 afterEach(async () => {
   jest.restoreAllMocks();
@@ -97,9 +97,9 @@ describe("intro and consent (design 11.3, state 1)", () => {
 
     await waitFor(() => expect(open).toHaveBeenCalledTimes(1));
     expect(startSession).toHaveBeenCalledWith({ consent: true, policyVersion: "kyc-2026-10" });
-    expect(open).toHaveBeenCalledWith({ config: session().widget, widgetUrl: undefined });
-    await waitFor(() => expect(sendClientEvent).toHaveBeenCalledWith(VERIFICATION_ID, "completed", "placeholder-session-001"));
-    expect(sendClientEvent).toHaveBeenCalledWith(VERIFICATION_ID, "opened", undefined);
+    expect(open).toHaveBeenCalledWith({ config: session().widget, widgetUrl: session().widget_url });
+    await waitFor(() => expect(sendClientEvent).toHaveBeenCalledWith(VERIFICATION_ID, "completed"));
+    expect(sendClientEvent).toHaveBeenCalledWith(VERIFICATION_ID, "opened");
   });
 
   it("shows 'Checking...' after the widget finishes and never calls the widget's word 'verified'", async () => {
@@ -285,7 +285,7 @@ describe("the widget closes, fails or is refused", () => {
     await press("identity-start");
     expect(await screen.findByTestId("identity-closed")).toBeTruthy();
     expect(screen.getByText("You closed verification before finishing")).toBeTruthy();
-    expect(sendClientEvent).toHaveBeenCalledWith(VERIFICATION_ID, "closed", undefined);
+    expect(sendClientEvent).toHaveBeenCalledWith(VERIFICATION_ID, "closed");
 
     await press("identity-start");
     await waitFor(() => expect(startSession).toHaveBeenCalledTimes(2));
@@ -297,7 +297,7 @@ describe("the widget closes, fails or is refused", () => {
     await tick();
     await press("identity-start");
     expect(await screen.findByTestId("identity-widget-error")).toBeTruthy();
-    expect(sendClientEvent).toHaveBeenCalledWith(VERIFICATION_ID, "error", undefined);
+    expect(sendClientEvent).toHaveBeenCalledWith(VERIFICATION_ID, "error");
     expect(screen.getByText(/didn't use up an attempt/)).toBeTruthy();
   });
 

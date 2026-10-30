@@ -11,7 +11,7 @@ import { createBrowserWidgetLauncher } from "./browserWidgetLauncher";
 import { createMockWidgetLauncher } from "./mockIdentityService";
 
 export type WidgetOutcome =
-  | { kind: "completed"; sessionId?: string }
+  | { kind: "completed" }
   | { kind: "closed" }
   /**
    * The person left the browser without reaching the return page (cancel, dismiss or another browser already open).
@@ -22,10 +22,10 @@ export type WidgetOutcome =
   /** The camera permission was refused (design 11.3, state 2). */
   | { kind: "permissionDenied" };
 
-/** What the server gave for one attempt: the widget block, and the hosted page's URL (absent on an older backend). */
+/** What the server gave for one attempt: the widget block, and the hosted page's URL. */
 export interface IdentityWidgetLaunch {
   config: IdentityWidgetConfig;
-  widgetUrl?: string;
+  widgetUrl: string;
 }
 
 export interface IdentityWidgetLauncher {

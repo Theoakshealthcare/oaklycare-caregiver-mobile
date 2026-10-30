@@ -4,8 +4,8 @@
 |---|---|
 | **Date** | 2026-10-30 |
 | **Branch / PR** | `feat/kyc-mobile-launch`, cut from `oakly/main` `f14a9a3` (K7a merged). Not pushed; the lead session pushes and opens the PR. |
-| **Depends on** | Backend K2 (merged) and **backend slice KD2** (in progress when this was written): `POST /caregiver/identity-verification/sessions` gains `widget_url`, and the backend serves the page. Provider: Dojah (switched from Prembly 2026-10-30); backend `docs/sop/2026-10-30-kyc-dojah-adapter.md` ("Live sandbox pass"). |
-| **Device status** | **NOT device-verified.** Jest only, with a mocked `expo-web-browser`, a faked server behind `fetch`, and a hand-written `widget_url` type. Needs the owner's phone and a **new dev build**. Nothing here has opened a real browser, a camera or Dojah. |
+| **Depends on** | Backend K2 and **backend KD2 (merged, backend #36, `780563f`)**: `POST /caregiver/identity-verification/sessions` returns `widget_url`, and the backend serves the page. `packages/api-client` was regenerated from that backend (`pnpm api:sync`) in this branch. Provider: Dojah (switched from Prembly 2026-10-30); backend `docs/sop/2026-10-30-kyc-dojah-adapter.md` ("Live sandbox pass"). |
+| **Device status** | **NOT device-verified.** Jest only, with a mocked `expo-web-browser` and a faked server behind `fetch` whose bodies follow backend captures `203`/`204`/`205`/`206`. Needs the owner's phone and a **new dev build**. Nothing here has opened a real browser, a camera or Dojah. |
 
 ## What shipped
 The identity step can now run end to end in the app, behind the same switch as K7a. In `api` mode the app asks the backend for a session, opens the page the backend hosts (`widget_url`) in the system browser session, and when that closes, **however it closes**, shows "Checking" and polls the server. The app never decides the result.
@@ -34,19 +34,19 @@ Two facts from the live sandbox pass shaped the states: the widget's own callbac
 | Polling | **Cadence and cleanup unchanged** (one chain of `setTimeout`s, 3 s / 5 s / 10 s, stop at 5 minutes, "Check again", cleared on unmount and when no longer awaited). Only the "slow" threshold moved from 2 minutes to 1 minute, with the new copy. Note the reconcile job can settle at about 6 minutes, i.e. after the 5-minute stop: the person sees "Check again" (or the push) rather than an endless timer. |
 | Consent text version unchanged | The draft now says Dojah. `CONSENT_TEXT_VERSION` stays `kyc-2026-10` because it must equal the backend's `KYC_POLICY_VERSION`, no consent has been recorded for this draft (the switch is off), and counsel has not signed the text. **Set the final text and both versions together** (K7a follow-up). |
 | Return URL | `KYC_RETURN_URL` in `src/identity/config.ts` = `oaklycarecaregivermobile://kyc/return`. The scheme is `expo.scheme` in `app.json`. **The brief said `oaklycaregiver://kyc/return`; the app's real scheme is `oaklycarecaregivermobile`**, so the backend setting `KYC_RETURN_URL` must be `oaklycarecaregivermobile://kyc/return` (a test pins the constant to `app.json`). |
-| Types | `IdentitySession = Schemas[...] & { widget_url?: string }` in `identityModel.ts`, marked TODO, and `parseSession` reads the field from the untyped body. After KD2 merges and the lead runs `OAKLY_BACKEND_DIR=<backend> pnpm api:sync`, delete the intersection and the spread in `parseSession` (the field is optional so an older backend still works: no url -> widget error, never a result). |
+| Types (after `api:sync`) | `widget_url` is now a required string on the generated `IdentityVerificationSessionOut`; the hand-written type is gone. The sync also reshaped the widget block to `{app_id, public_key, widget_id, reference_id, email, first_name, last_name, date_of_birth?}` (the old `widget_key` and `metadata.oakly_ref` are gone) and **removed `session_id` from the client-event body**. The app follows: `parseSession` requires `verification_id`, `widget_url` and `widget.reference_id` (a response without them is refused with a banner, nothing opens), `sendClientEvent(id, event)` no longer takes a session id, and the launcher outcome `completed` carries none. The app uses none of the provider keys: they are passed through untouched. |
 
 ## What's involved
 | Area | Paths (under `apps/caregiver` unless noted) |
 |---|---|
 | Launcher and seam | `src/identity/browserWidgetLauncher.ts` (new), `src/identity/widget.ts` (`IdentityWidgetLaunch`, `dismissed`, `api` mode uses the browser launcher), `src/identity/config.ts` (`KYC_RETURN_URL`, how to turn it on) |
 | Model and copy | `src/identity/identityModel.ts` (`widget_url` type, `submitted.dismissed`, `canContinueVerification`, `STILL_CHECKING_TEXT`, `SLOW_AFTER_MS` 60 s, partner name) |
-| Service | `src/services/identity.service.ts` (`parseSession` carries `widget_url`) |
+| Service | `src/services/identity.service.ts` (`parseSession` for the new shape, `sendClientEvent` without a session id), `packages/api-client/openapi.json` and `src/schema.d.ts` (regenerated) |
 | Screens | `src/screens/setup/IdentityVerification.tsx` (opens with `{ config, widgetUrl }`, handles `dismissed`), `IdentityVerificationView.tsx` (slow copy, Continue verification), `src/hooks/useIdentityVerification.ts` (comment only) |
 | Dependency | `expo-web-browser ~57.0.3` in `package.json`, `pnpm-lock.yaml`, config plugin added to `app.json` by `expo install`. **Native module: needs a new dev build / production build** (a JS-only update is not enough). |
 | Tests | `__tests__/identityBrowserLauncher.test.ts` (new), `__tests__/identityLaunchFlow.test.tsx` (new), additions to `identityModel`, `identityService`; slow-copy edits in `identityScreen`, `identityPolling`; fixtures `sessionWithUrl`, `WIDGET_URL` in `test-utils/identityFixtures.ts`; a default `expo-web-browser` mock in `jest.setup.ts` |
 
-No backend, `apps/admin` or `packages/api-client` change; no migration.
+No backend or `apps/admin` change; no migration. `packages/api-client` changed only by the regeneration above (it also carries other backend changes since the last sync: Prembly -> Dojah wording in descriptions).
 
 ## Verification
 Local, in the worktree, as CI runs them: `pnpm install --frozen-lockfile`; `pnpm api:generate` then `git diff --exit-code packages/api-client/src/schema.d.ts` (clean: the schema is unchanged until the sync); `pnpm typecheck` (clean, all workspaces); ESLint on every new and changed file (0 errors; the one repo-wide error, `BankDetails.tsx:186`, is pre-existing on `oakly/main` and untouched); `jest --runInBand` for the whole caregiver app, **48 suites, 726 tests** (up from 46 / 690), exit 0, the process exits on its own (38 s), no `--forceExit`. The admin build and the rest of CI are left to CI.
@@ -60,7 +60,7 @@ What the new tests prove:
 - That the page loads, the Dojah widget runs, and **the camera works inside the browser session**. This is the main risk: `ASWebAuthenticationSession` is built for sign-in, and I could not confirm from documentation that it grants `getUserMedia` to a web page. If it does not, the fallback to evaluate is `WebBrowser.openBrowserAsync` (a Safari view controller / Custom Tab) plus a `Linking` listener for the return URL; the launcher is the only file that changes.
 - That the redirect to `oaklycarecaregivermobile://kyc/return` closes the session on iOS and Android and what a stray tap on the system "Cancel" returns.
 - That the device's Dojah finishing produces a result the backend settles (backend K8), and the `~6 minute` reconcile case in the app.
-- The real `widget_url` response (hand-written type until the sync) and the KD2 page copy ("Done, return to the app").
+- The KD2 page itself on a phone (copy, "Done, return to the app", the 30-minute token): shapes follow the backend captures, not a live run.
 - Layout of the new text and button on small screens and with large text.
 
 **What I checked about camera permissions:** `app.json` already carries the `expo-camera` plugin (iOS `NSCameraUsageDescription`: "Oakly uses your camera to capture your identity and credential documents.") and Android `CAMERA`, from the document-photo feature. The capture here does not use the app's camera: it runs in a Safari-engine / Chrome session that asks for the site's camera access itself, so **no new Info.plist string or Android permission is added** and none is needed for this flow. K7a's `permissionDenied` screen (Open Settings) is not reachable from the browser launcher, which cannot see a denial; a denied camera shows up as the page's own message and a dismissal. The existing string would be shown only if something in the app asked for the camera.
@@ -73,10 +73,9 @@ What the new tests prove:
 ## Follow-ups
 | Item | Owner / slice |
 |---|---|
-| `pnpm api:sync` after KD2 merges; then drop the hand-written `widget_url` type and the spread in `parseSession`, make the field required if the schema does | lead (told when) |
 | Device pass: camera in the browser session on iOS and Android, redirect back, Continue verification, large text (K8) | owner |
 | If the camera fails in `ASWebAuthenticationSession`: switch the launcher to `openBrowserAsync` + a `Linking` return listener | K7b follow-up |
-| Ask KD2 whether the return URL can say how the page ended (for example a query value); today a quit-then-"Done" looks like `completed` | KD2 / lead |
+| Ask the backend whether the return URL can say how the page ended (for example a query value); today a quit-then-"Done" looks like `completed` | KD2 / lead |
 | The 5-minute polling stop is shorter than the ~6-minute reconcile case; consider 8 minutes, or polling again when the app comes to the foreground / on the push (the delta plan suggests polling from app launch) | lead / next slice |
 | Final consent text with counsel, then text and `KYC_POLICY_VERSION` change together | owner / counsel |
 | The "Verification is open" placeholder and K7a's `permissionDenied` screen are now only reachable with another launcher; keep or remove after the device pass | later |

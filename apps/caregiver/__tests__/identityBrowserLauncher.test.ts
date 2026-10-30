@@ -2,10 +2,10 @@ import * as WebBrowser from "expo-web-browser";
 
 import { createBrowserWidgetLauncher, isOpenableWidgetUrl, outcomeFromBrowserResult } from "../src/identity/browserWidgetLauncher";
 import { KYC_RETURN_URL } from "../src/identity/config";
-import { session, sessionWithUrl, WIDGET_URL } from "../test-utils/identityFixtures";
+import { session, WIDGET_URL } from "../test-utils/identityFixtures";
 
 const openAuthSession = WebBrowser.openAuthSessionAsync as jest.Mock;
-const launch = (widgetUrl: string | undefined) => ({ config: session().widget, widgetUrl });
+const launch = (widgetUrl: string | undefined) => ({ config: session().widget, widgetUrl: widgetUrl as string });
 
 beforeEach(() => openAuthSession.mockReset());
 
@@ -65,6 +65,6 @@ describe("browser launcher: how the browser ended", () => {
   });
 
   it("the fixture session carries the hosted url", () => {
-    expect(sessionWithUrl().widget_url).toBe(WIDGET_URL);
+    expect(session().widget_url).toBe(WIDGET_URL);
   });
 });

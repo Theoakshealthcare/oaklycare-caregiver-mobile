@@ -9,7 +9,7 @@ import type { IdentityState } from "../src/identity/identityModel";
 import { setWidgetLauncher, unavailableWidgetLauncher } from "../src/identity/widget";
 import IdentityVerification from "../src/screens/setup/IdentityVerification";
 import { renderWithClient } from "../test-utils/carePlanHarness";
-import { WIDGET_URL, checking, expired, fresh, sessionWithUrl, started, tryAgain, underReview, verified } from "../test-utils/identityFixtures";
+import { WIDGET_URL, checking, expired, fresh, session, started, tryAgain, underReview, verified } from "../test-utils/identityFixtures";
 
 /**
  * The launch flow end to end: the REAL service (against a faked server behind `fetch`), the REAL browser launcher
@@ -56,7 +56,7 @@ async function serve(input: RequestInfo | URL): Promise<Response> {
   if (path === "/sessions") {
     const resumed = !!server.active_verification_id;
     if (!resumed) server = started();
-    return json(sessionWithUrl(server), resumed ? 200 : 201);
+    return json(session(server), resumed ? 200 : 201);
   }
   if (path.endsWith("/client-event")) {
     if ((body as { event?: string } | null)?.event === "completed") server = checking();
@@ -225,7 +225,7 @@ describe("the browser is dismissed before the return page", () => {
 });
 
 describe("the page cannot be opened", () => {
-  it("a session without widget_url (older backend) ends as a widget error, never as a result", async () => {
+  it("a session response without widget_url is refused: nothing opens, a banner shows, and the server's state decides the screen", async () => {
     fetchMock.mockImplementation(async (input: RequestInfo | URL) => {
       const res = await serve(input);
       const req = input as Request;
@@ -239,8 +239,10 @@ describe("the page cannot be opened", () => {
     await render();
     await startFromIntro();
     expect(openAuthSession).not.toHaveBeenCalled();
-    expect(screen.getByTestId("identity-widget-error")).toBeTruthy();
-    expect(sent("error")).toHaveLength(1);
+    expect(screen.getByTestId("identity-banner")).toBeTruthy();
+    expect(screen.queryByTestId("identity-verified")).toBeNull();
+    // The attempt exists on the server, so the open attempt can be continued.
+    expect(screen.getByTestId("identity-resume")).toBeTruthy();
   });
 
   it("a native browser error ends as a widget error", async () => {

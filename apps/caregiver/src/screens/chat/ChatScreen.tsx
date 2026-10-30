@@ -12,6 +12,7 @@ import { globalStyles } from "@/src/constants/styles"
 import Navigation from "@/src/hooks/use-navigation"
 import { useChatMessages, useMe, useSendChatMessage } from "@/src/hooks/queries"
 import { messageForError } from "@/src/api/errors"
+import { CALLING_ENABLED } from "@/src/config/calling"
 import { parseBackendDate } from "@/src/utils/dates"
 import type { ChatMessage } from "@/src/services/booking.service"
 import type { ScreenParamLists } from "@/src/navigation/Navigations"
@@ -120,14 +121,16 @@ const ChatScreen: React.FC<StackScreenProps<ScreenParamLists, "ChatScreen">> = (
                 </View>
               </View>
             </View>
-            <View style={[globalStyles.row, { gap: 16 }]}>
-              <TouchableOpacity onPress={handleCall}>
-                <Feather name="phone" size={24} color={theme.colors.primary} />
-              </TouchableOpacity>
-              <TouchableOpacity onPress={handleVideoCall}>
-                <Feather name="video" size={24} color={theme.colors.primary} />
-              </TouchableOpacity>
-            </View>
+            {CALLING_ENABLED ? (
+              <View style={[globalStyles.row, { gap: 16 }]}>
+                <TouchableOpacity testID="chat-call" onPress={handleCall}>
+                  <Feather name="phone" size={24} color={theme.colors.primary} />
+                </TouchableOpacity>
+                <TouchableOpacity testID="chat-video-call" onPress={handleVideoCall}>
+                  <Feather name="video" size={24} color={theme.colors.primary} />
+                </TouchableOpacity>
+              </View>
+            ) : null}
           </View>
         </View>
 

@@ -16,6 +16,7 @@ import ResetPassword from "../screens/auth/ResetPassword";
 import VerifyEmail from "../screens/auth/VerifyEmail";
 import AINoteTaker from "../screens/chat/AINoteTaker";
 import CallScreen from "../screens/chat/CallScreen";
+import { CALLING_ENABLED } from "../config/calling";
 import ChatScreen from "../screens/chat/ChatScreen";
 import BookingDetails from "../screens/booking/BookingDetails";
 import ClientProfile from "../screens/booking/ClientProfile";
@@ -136,7 +137,7 @@ const StackNavigator = () => {
             <Stack.Screen name="BookingDetails" component={BookingDetails} />
             <Stack.Screen name="VisitFlow" component={VisitFlow} />
             <Stack.Screen name="ChatScreen" component={ChatScreen} />
-            <Stack.Screen name="CallScreen" component={CallScreen} />
+            {CALLING_ENABLED ? <Stack.Screen name="CallScreen" component={CallScreen} /> : null}
             <Stack.Screen name="AINoteTaker" component={AINoteTaker} />
             <Stack.Screen name="Notifications" component={Notifications} />
             <Stack.Screen name="Profile" component={Profile} />
