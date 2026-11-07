@@ -31,7 +31,14 @@
           "resizeMode": "contain",
           "backgroundColor": "#ffffff"
         }
-      ]
+      ],
+      [
+        "expo-location",
+        {
+          "locationWhenInUsePermission": "Oakly uses your location once, to find caregivers near the address you are booking a visit for."
+        }
+      ],
+      "expo-web-browser"
     ]
   }
 }
