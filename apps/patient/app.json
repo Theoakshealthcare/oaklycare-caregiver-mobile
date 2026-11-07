@@ -40,6 +40,12 @@
         }
       ],
       "expo-web-browser"
-    ]
+    ],
+    "extra": {
+      "eas": {
+        "projectId": "9c6657c3-1e24-4e89-9b44-1a471ae80e1e"
+      }
+    },
+    "owner": "innodev"
   }
 }
