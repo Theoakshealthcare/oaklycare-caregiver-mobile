@@ -17,6 +17,7 @@ import FallAssessment from "@/src/screens/fall/FallAssessment";
 import FallResult from "@/src/screens/fall/FallResult";
 import Notifications from "@/src/screens/home/Notifications";
 import AccountData from "@/src/screens/profile/AccountData";
+import ChangePassword from "@/src/screens/profile/ChangePassword";
 import Contact from "@/src/screens/profile/Contact";
 import EditProfile from "@/src/screens/profile/EditProfile";
 import Profile from "@/src/screens/profile/Profile";
@@ -58,6 +59,7 @@ export const APP_SCREENS: ScreenDef[] = [
   { name: "Notifications", component: Notifications },
   { name: "Profile", component: Profile },
   { name: "EditProfile", component: EditProfile },
+  { name: "ChangePassword", component: ChangePassword },
   { name: "Contact", component: Contact },
   { name: "AccountData", component: AccountData },
   { name: "BookingStep1", component: BookingStep1 },

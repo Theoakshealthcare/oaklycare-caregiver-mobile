@@ -55,6 +55,32 @@ export const authService = {
     return unwrap(api.POST("/api/v1/auth/reset-password", { body: { token: code, new_password: newPassword } }));
   },
 
+  /**
+   * POST /auth/change-password. The backend ends every session issued before the change, this device's included, and
+   * answers with a NEW token pair: it is stored here at once, so the person stays signed in (other devices are signed out).
+   * 400 `detail = { code, message }` for `wrong_current_password` / `weak_password` / `same_password`; 429
+   * `too_many_attempts` with `Retry-After`.
+   */
+  async changePassword(currentPassword: string, newPassword: string): Promise<void> {
+    const tokens = await unwrap(
+      api.POST("/api/v1/auth/change-password", { body: { current_password: currentPassword, new_password: newPassword } }),
+    );
+    await session.signIn({ accessToken: tokens.access_token, refreshToken: tokens.refresh_token });
+  },
+
+  /**
+   * PUT /auth/profile, then a fresh GET /auth/me. The PUT answers with the flat profile, which has NO `patient` object:
+   * storing it as the user (what the old app did) dropped `user.patient`, and every vitals call lost the patient id.
+   * The re-read is what goes into the cache. Returns the fresh user so the caller can check what was really saved.
+   * The backend ignores blank values and does not persist `full_name` / `phone_number` today (see the SOP).
+   */
+  async updateProfile(fields: Schemas["UserProfileUpdate"]): Promise<User> {
+    await unwrap(api.PUT("/api/v1/auth/profile", { body: fields }));
+    const fresh = await authService.getMe();
+    queryClient.setQueryData(queryKeys.me, fresh);
+    return fresh;
+  },
+
   getMe() {
     return unwrap(api.GET("/api/v1/auth/me"));
   },
