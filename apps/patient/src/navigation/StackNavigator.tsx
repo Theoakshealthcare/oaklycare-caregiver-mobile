@@ -1,25 +1,37 @@
 import { createStackNavigator } from "@react-navigation/stack";
+import { useState } from "react";
 
 import { useSession } from "../auth";
+import { useOnboarding } from "../auth/onboarding";
 import { useMe } from "../hooks/queries";
 import GateMessage from "../screens/GateMessage";
-import Home from "../screens/Home";
-import Login from "../screens/Login";
 import Splash from "../screens/Splash";
 import { authService } from "../services/auth.service";
 import { resolveGate } from "./gate";
-
-type ScreenParamLists = {
-  Login: undefined;
-  Home: undefined;
-};
+import type { ScreenParamLists } from "./Navigations";
+import { APP_SCREENS, AUTH_SCREENS, VERIFY_SCREENS, type ScreenDef } from "./routes";
 
 const Stack = createStackNavigator<ScreenParamLists>();
 
 const signOut = () => void authService.logout();
 
+const screens = (defs: ScreenDef[]) =>
+  defs.map((def) => <Stack.Screen key={def.name} name={def.name} component={def.component} />);
+
+/** The signed-out stack opens on the intro slides once per install, else on Login. Fixed when the stack first mounts. */
+const SignedOutStack = () => {
+  const onboarding = useOnboarding((s) => s.status);
+  const [initial] = useState<"Onboarding" | "Login">(onboarding === "unseen" ? "Onboarding" : "Login");
+  return (
+    <Stack.Navigator key="signedOut" initialRouteName={initial} screenOptions={{ headerShown: false }}>
+      {screens(AUTH_SCREENS)}
+    </Stack.Navigator>
+  );
+};
+
 const StackNavigator = () => {
   const sessionStatus = useSession((s) => s.status);
+  const onboarding = useOnboarding((s) => s.status);
   const me = useMe();
   const gate = resolveGate({ session: sessionStatus, me: { data: me.data, isError: me.isError } });
 
@@ -46,22 +58,23 @@ const StackNavigator = () => {
       );
     case "verifyEmail":
       return (
-        <GateMessage
-          title="Verify your email"
-          message={`Email verification isn't available in the app yet${gate.email ? ` (${gate.email})` : ""}. It arrives in the next update.`}
-          onSignOut={signOut}
-        />
-      );
-    case "signedOut":
-      return (
-        <Stack.Navigator key="signedOut" screenOptions={{ headerShown: false }}>
-          <Stack.Screen name="Login" component={Login} />
+        <Stack.Navigator
+          key="verifyEmail"
+          initialRouteName="GateVerifyEmail"
+          screenOptions={{ headerShown: false }}
+        >
+          {VERIFY_SCREENS.map((def) => (
+            <Stack.Screen key={def.name} name={def.name} component={def.component} initialParams={{ email: gate.email }} />
+          ))}
         </Stack.Navigator>
       );
+    case "signedOut":
+      // Wait for the stored "intro seen" flag so the first frame is the right one.
+      return onboarding === "unknown" ? <Splash /> : <SignedOutStack />;
     case "app":
       return (
-        <Stack.Navigator key="app" screenOptions={{ headerShown: false }}>
-          <Stack.Screen name="Home" component={Home} />
+        <Stack.Navigator key="app" initialRouteName="Tabs" screenOptions={{ headerShown: false }}>
+          {screens(APP_SCREENS)}
         </Stack.Navigator>
       );
   }

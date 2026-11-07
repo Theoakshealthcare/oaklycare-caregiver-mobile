@@ -6,7 +6,7 @@
  *   signed in, /auth/me loading           -> loading
  *   signed in, /auth/me failed (first load) -> error (retry / sign out)
  *   not a patient account                 -> wrongAccount
- *   email not verified                    -> verifyEmail (placeholder until the verify screen is ported)
+ *   email not verified                    -> verifyEmail (the verify screen, with resend and sign out)
  *   otherwise                             -> app
  */
 import type { SessionStatus } from "../auth/session";

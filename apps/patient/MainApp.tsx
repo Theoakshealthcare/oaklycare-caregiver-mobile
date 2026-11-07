@@ -3,13 +3,15 @@ import { useEffect } from "react";
 import { SafeAreaView } from "react-native-safe-area-context";
 
 import { session } from "./src/auth";
+import { useOnboarding } from "./src/auth/onboarding";
 import { theme } from "./src/constants/theme";
 import StackNavigator from "./src/navigation/StackNavigator";
 
 const MainApp = () => {
-  // Restore the stored session once on launch; the navigator shows the splash until it is known.
+  // Restore the stored session and the "intro seen" flag once on launch; the navigator shows the splash until they are known.
   useEffect(() => {
     void session.restore();
+    void useOnboarding.getState().restore();
   }, []);
 
   return (

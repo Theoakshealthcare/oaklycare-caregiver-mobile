@@ -140,9 +140,20 @@ Owner decisions (2026-11-07): move the old app into the monorepo on SDK 57, copi
   - [x] RNTL tests: gate table, session state machine, App boot / login / wrong account / logout, refresh failure through the real client
   - [x] No MMKV, no hard-coded key, no `android/`, no keystore, no `.env`; CI covers the new app through `pnpm -r`
   - [ ] Device pass (iOS and Android) of login / home / logout
-- [ ] P1b Port the UI kit, navigation and the live screens from the old app as-is (delete the 4.4k dead lines; one generic FallGuard question screen), against the designs
+- [x] P1b Port the UI kit, navigation and the v1 screens (2026-11-07, branch `feature/patient-ui-port-auth`, see docs/sop/2026-11-07-patient-app-ui-port-and-auth.md; Jest only, **not device-verified**, not pushed)
+  - [x] UI kit on the caregiver tokens and type scale; stack + custom floating tab bar (Home, Booking, Vitals, Fall); one route list pinned by a test, nothing out of v1 reachable
+  - [x] Screens: intro, auth (6), home, notifications, bookings tabs, booking details with the **visit code**, cancel with the fee tier shown first, booking steps 1 and 2 and summary, payment result, track, chat, vitals (tiles, entry, detail, history, who can see), FallGuard (intro, one generic question screen, result), profile (menu, edit, contact, account and data)
+  - [x] Design mistakes fixed (units, typos, currency, no scores, no Critical chips); dead code not carried (24 FallGuard files, wallet, prescriptions, call, AI note taker)
+  - [x] Every screen reads one `useXxx` hook over sample data and draws a "shows sample information" notice; the wiring slices below delete the notice
+  - [ ] Still to wire, per slice: booking + payment (P5, needs backend #39 and a Paystack WebView), tracking map and chat (P9), vitals (P6), FallGuard (P7), notifications (P8), profile edit and change password, FAQs / About copy, Terms / Privacy links
+  - [ ] Device pass: layouts, fonts, the keyboard helpers on a phone, intro slides
 - [ ] P2 Security: archive the old repo and rotate the old upload key (owner: was `com.oakly.oaklypatient` ever published, is the old repo public?); full logout also unregisters push
-- [ ] P3 Auth correctness: register (email only), verify email, forgot to reset with a deep link (decide link vs OTP and the scheme in the reset email), change password, delete account with the 409 text, profile edit refetches `/auth/me`
+- [ ] P3 Auth correctness (partly done 2026-11-07, same branch and SOP as P1b; Jest only, **not device-verified**)
+  - [x] Register (email path; the backend's real 400 duplicate-email and 422 messages), verify email with the 5-digit code (auto-submit, 400 shown, boxes clear), resend with a 30 s cooldown and a `Retry-After` path, unverified login lands on the verify step, forgot password (same 200 for any email), delete account with the backend's 409 text
+  - [x] Reset password: 5-box code UI and `resetPassword({ code, newPassword })` adapter in `auth.service.ts` that sends the code as today's `token`
+  - [ ] **Reset cannot finish live** until the backend reset-by-code slice lands (today's route takes the long emailed token, a 5-digit code gets 400 `Invalid token`); then edit only the adapter
+  - [ ] Change password screen; profile edit refetches `/auth/me`; deep link scheme for the emailed link
+  - [ ] Live capture of register / verify / resend / forgot / delete against the running backend (owed; the FE guide rule), device pass
 - [ ] P4-BE Backend: `GET cancel-terms` + `POST cancel` with fee tiers, cancel/refund state on the booking, FE guide with live captures
 - [ ] P5 Booking complete: booking detail with the **visit code**, all statuses and `dispatch_state`, cancel with fee confirm, payment polling cap and resume
 - [ ] P6 / P6-BE Vitals fix: insights shape, caregiver access list/grant/revoke (backend patient-id vs user-id bug at `vitals.py:151,164,180`)
