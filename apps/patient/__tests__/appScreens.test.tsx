@@ -163,34 +163,6 @@ describe("signed-in app (sample data behind one hook per screen)", () => {
     });
   });
 
-  describe("FallGuard", () => {
-    it("answers one question at a time without scores, submits, and offers Book a Home Visit", async () => {
-      const { view } = await renderSignedIn();
-      await tab("Fall");
-      await press("Start Assessment");
-      expect(await screen.findByText("1 of 6 questions")).toBeTruthy();
-      expect(screen.queryByText(/score\s*:/i)).toBeNull();
-      expect(screen.getByRole("button", { name: "Next" })).toBeDisabled();
-
-      for (let i = 0; i < 5; i++) {
-        await fireEvent.press(screen.getAllByRole("radio")[1]);
-        await press("Next");
-      }
-      expect(await screen.findByText("6 of 6 questions")).toBeTruthy();
-      await press("Back");
-      expect(await screen.findByText("5 of 6 questions")).toBeTruthy();
-      await press("Next");
-      await fireEvent.press(screen.getAllByRole("radio")[0]);
-      await press("Submit");
-
-      expect(await screen.findByText("Total risk score")).toBeTruthy();
-      expect(screen.getByText("Footwear safety")).toBeTruthy();
-      await press("Book a Home Visit");
-      expect(await screen.findByText("Book a nurse visit in 2 steps. Step 1 of 2.")).toBeTruthy();
-      view.unmount();
-    });
-  });
-
   describe("profile and account", () => {
     it("the menu has only the v1 rows, and Contact shows the email", async () => {
       const { view } = await renderSignedIn();

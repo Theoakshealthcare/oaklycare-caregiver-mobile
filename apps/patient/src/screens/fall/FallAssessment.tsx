@@ -7,7 +7,7 @@ import Button from "@/src/components/ui/button";
 import { EmptyState } from "@/src/components/ui/card";
 import ErrorDialog from "@/src/components/ui/ErrorDialog";
 import Icon from "@/src/components/ui/icon";
-import SampleNotice from "@/src/components/ui/sample-notice";
+import QueryError from "@/src/components/ui/query-error";
 import Screen from "@/src/components/ui/screen";
 import Text from "@/src/components/ui/text";
 import { theme } from "@/src/constants/theme";
@@ -28,7 +28,15 @@ const FallAssessment: React.FC = () => {
   const question = list[index];
 
   if (!question) {
-    return <Screen title="FallGuard">{questions.isLoading ? null : <EmptyState title="No questions available right now" message="Please try again later." />}</Screen>;
+    return (
+      <Screen title="FallGuard">
+        {questions.isError ? (
+          <QueryError what="the questions" error={questions.error} onRetry={() => void questions.refetch()} />
+        ) : questions.isLoading ? null : (
+          <EmptyState title="No questions available right now" message="Please try again later." />
+        )}
+      </Screen>
+    );
   }
 
   const last = index === list.length - 1;
@@ -36,7 +44,7 @@ const FallAssessment: React.FC = () => {
 
   const next = () => {
     if (!last) return setIndex(index + 1);
-    submit.mutate(answers, {
+    submit.mutate({ questions: list, answers }, {
       onSuccess: (result) => navigation.replace("FallResult", { result }),
       onError: (e) => setDialog(messageForError(e)),
     });
@@ -44,7 +52,6 @@ const FallAssessment: React.FC = () => {
 
   return (
     <Screen title="FallGuard assessment" scroll>
-      <SampleNotice what="These questions" />
       <Text variant="small" color={theme.colors.textLight}>{`${index + 1} of ${list.length} questions`}</Text>
       <Text variant="h3" weight="bold">
         {question.prompt}
