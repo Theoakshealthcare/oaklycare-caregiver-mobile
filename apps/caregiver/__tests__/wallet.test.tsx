@@ -18,6 +18,7 @@ jest.mock("../src/hooks/use-navigation", () => ({
 jest.mock("@react-navigation/native", () => ({
   ...jest.requireActual("@react-navigation/native"),
   useNavigation: () => ({ canGoBack: () => true, goBack: jest.fn() }),
+  useNavigationState: (select: (state: { index: number }) => unknown) => select({ index: 1 }),
   useFocusEffect: jest.fn(),
 }));
 const mockSharePayslip = jest.fn();
@@ -178,22 +179,46 @@ describe("Wallet screen", () => {
     ).toBeTruthy();
   });
 
-  it("downloads the payslip for the selected month through the share sheet", async () => {
+  it("shares the payslip of the selected month, built from the payments the screen shows", async () => {
+    const rows = [tx({ id: "t9", type: "earning", status: "held", amount: 4000000, narration: "Visit HELD0003", reference: null })];
     jest.spyOn(walletService, "getWallet").mockResolvedValue(wallet);
-    jest.spyOn(walletService, "getTransactions").mockResolvedValue([]);
+    jest.spyOn(walletService, "getTransactions").mockResolvedValue(rows);
     mockSharePayslip.mockResolvedValue(undefined);
     await renderWith(<Wallet />);
+    await screen.findByText("Visit HELD0003");
     await fireEvent.press(await screen.findByText("Download payslip"));
-    await waitFor(() => expect(mockSharePayslip).toHaveBeenCalledWith(currentMonth()));
+    await waitFor(() => expect(mockSharePayslip).toHaveBeenCalledWith(currentMonth(), rows));
   });
 
-  it("tells the caregiver when the payslip could not be downloaded", async () => {
+  it("says so, before sharing anything, when the month has no payments", async () => {
     jest.spyOn(walletService, "getWallet").mockResolvedValue(wallet);
     jest.spyOn(walletService, "getTransactions").mockResolvedValue([]);
+    await renderWith(<Wallet />);
+    await screen.findByText("No payments this month");
+    await fireEvent.press(await screen.findByText("Download payslip"));
+    expect(alertSpy).toHaveBeenCalledWith(expect.stringMatching(/^No earnings in /), expect.stringContaining("nothing to put in a payslip"));
+    expect(mockSharePayslip).not.toHaveBeenCalled();
+  });
+
+  it("tells the caregiver when the payslip could not be shared", async () => {
+    jest.spyOn(walletService, "getWallet").mockResolvedValue(wallet);
+    jest.spyOn(walletService, "getTransactions").mockResolvedValue([tx({ type: "earning", status: "successful" })]);
     mockSharePayslip.mockRejectedValue(new ApiError(0, null, "x"));
     await renderWith(<Wallet />);
+    await screen.findByText("Placeholder");
     await fireEvent.press(await screen.findByText("Download payslip"));
     await waitFor(() => expect(alertSpy).toHaveBeenCalledWith("Couldn't get your payslip", expect.stringContaining("Can't reach Oakly")));
+  });
+
+  it("words the totals as earned and paid out to the bank, not as a patient wallet's paid in/out", async () => {
+    jest.spyOn(walletService, "getWallet").mockResolvedValue(wallet);
+    jest.spyOn(walletService, "getTransactions").mockResolvedValue([]);
+    await renderWith(<Wallet />);
+    await screen.findByTestId("wallet-balance");
+    expect(screen.getByText("Total earned")).toBeTruthy();
+    expect(screen.getByText("Paid out to your bank")).toBeTruthy();
+    expect(screen.queryByText("Total amount paid in")).toBeNull();
+    expect(screen.queryByText("Total paid out")).toBeNull();
   });
 
   it("shows the saved bank account and opens the payment details screen", async () => {
@@ -223,6 +248,15 @@ describe("Wallet screen: payouts paused", () => {
     jest.spyOn(walletService, "getTransactions").mockResolvedValue([]);
     await renderWith(<Wallet />);
     expect(await screen.findByTestId("wallet-paused")).toHaveTextContent(/Payouts are paused until .* because your bank account was added or changed\./);
+  });
+
+  it("is ONE banner while paused: the pause and the weekly rule together, not two stacked", async () => {
+    const until = new Date(Date.now() + 20 * 3600 * 1000).toISOString().replace("Z", "");
+    jest.spyOn(walletService, "getWallet").mockResolvedValue({ ...wallet, payouts_blocked_until: until });
+    jest.spyOn(walletService, "getTransactions").mockResolvedValue([]);
+    await renderWith(<Wallet />);
+    expect(await screen.findByTestId("wallet-paused")).toHaveTextContent(/After that they are sent weekly once your available balance is at least ₦5,000\./);
+    expect(screen.queryByText(/^Payouts are sent weekly to your bank account/)).toBeNull();
   });
 
   it("hides the notice once the pause has passed", async () => {

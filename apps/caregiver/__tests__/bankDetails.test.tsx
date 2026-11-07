@@ -1,5 +1,5 @@
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
-import { act, fireEvent, render, screen } from "@testing-library/react-native";
+import { act, waitFor, fireEvent, render, screen } from "@testing-library/react-native";
 import React from "react";
 import { Keyboard, StyleSheet } from "react-native";
 
@@ -16,6 +16,7 @@ jest.mock("../src/hooks/use-navigation", () => ({
 jest.mock("@react-navigation/native", () => ({
   ...jest.requireActual("@react-navigation/native"),
   useNavigation: () => ({ canGoBack: () => true, goBack: jest.fn() }),
+  useNavigationState: (select: (state: { index: number }) => unknown) => select({ index: 1 }),
   useFocusEffect: jest.fn(),
 }));
 
@@ -62,6 +63,19 @@ afterEach(async () => {
   jest.restoreAllMocks();
   await act(async () => {
     await session.signOut();
+  });
+});
+
+describe("bank picker modal (DP2-06)", () => {
+  it("has a Back link that closes the list, and starts below the top inset", async () => {
+    await renderScreen();
+    await fireEvent.press(await screen.findByLabelText("Choose your bank"));
+    expect(await screen.findByPlaceholderText("Search banks")).toBeTruthy();
+    expect(screen.getAllByText("Back")).toHaveLength(2); // the screen's own Back behind the list, and the list's
+    // jest's safe-area mock has a zero top inset: the padding is the inset plus 12, never the old fixed 56.
+    expect(screen.getByTestId("bank-picker").props.style.paddingTop).toBe(12);
+    await fireEvent.press(screen.getByLabelText("Close bank list"));
+    await waitFor(() => expect(screen.queryByPlaceholderText("Search banks")).toBeNull());
   });
 });
 

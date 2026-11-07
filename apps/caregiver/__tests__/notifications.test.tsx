@@ -15,6 +15,7 @@ jest.mock("../src/hooks/use-navigation", () => ({
 jest.mock("@react-navigation/native", () => ({
   ...jest.requireActual("@react-navigation/native"),
   useNavigation: () => ({ canGoBack: () => true, goBack: jest.fn() }),
+  useNavigationState: (select: (state: { index: number }) => unknown) => select({ index: 1 }),
 }));
 
 // Shaped after capture 074 in the backend guide (an offer view: no caregiver assigned yet).

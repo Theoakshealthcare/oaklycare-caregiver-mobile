@@ -342,12 +342,21 @@ describe("Home screen", () => {
     expect(mockNavigate).toHaveBeenCalledWith("Wallet");
   });
 
+  it("also shows the amount on hold for review, as the Wallet screen does (DP2-03)", async () => {
+    getHome = jest.spyOn(locationService, "getHome").mockResolvedValue(homeWithVisitAndOffer);
+    walletSpy.mockResolvedValue(walletSummary({ pending_balance: 8_000_000, held_balance: 4_000_000 }));
+    await renderHome();
+    expect(await screen.findByTestId("wallet-held")).toHaveTextContent("₦40,000.00 on hold (under review)");
+    expect(screen.getByTestId("wallet-pending")).toHaveTextContent("₦80,000.00 pending");
+  });
+
   it("shows no pending line when nothing is pending, or when the wallet cannot be read", async () => {
     getHome = jest.spyOn(locationService, "getHome").mockResolvedValue(homeWithVisitAndOffer);
     const first = await renderHome();
     expect(await screen.findByTestId("wallet-balance")).toBeTruthy();
     await waitFor(() => expect(walletSpy).toHaveBeenCalled());
     expect(screen.queryByTestId("wallet-pending")).toBeNull();
+    expect(screen.queryByTestId("wallet-held")).toBeNull();
     await first.unmount();
 
     walletSpy.mockRejectedValue(new ApiError(0, null, "offline"));

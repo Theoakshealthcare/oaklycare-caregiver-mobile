@@ -145,6 +145,13 @@ export function currentMonth(now: Date = new Date()): string {
   return monthValue(d.getUTCFullYear(), d.getUTCMonth());
 }
 
+/** "November 2026" for a YYYY-MM month value (the value itself when it is not one). */
+export function monthLabel(value: string): string {
+  const m = /^(\d{4})-(\d{2})$/.exec(value);
+  const name = m ? MONTHS[Number(m[2]) - 1] : undefined;
+  return m && name ? `${name} ${m[1]}` : value;
+}
+
 export function monthOptions(now: Date = new Date(), count = 6): { value: string; label: string }[] {
   const d = lagos(now);
   const options: { value: string; label: string }[] = [];

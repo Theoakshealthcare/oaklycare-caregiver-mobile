@@ -218,6 +218,7 @@ const Home: React.FC = () => {
   const view = useMemo(() => (data ? mapHome(data, dataUpdatedAt) : null), [data, dataUpdatedAt]);
   // Earnings still being cleared come from the wallet summary; Home works without it.
   const pending = wallet.data ? walletBalances(wallet.data).pending : null;
+  const held = wallet.data ? walletBalances(wallet.data).held : null;
 
   const confirmDecline = (bookingId: string) =>
     Alert.alert("Decline this job?", "It will be offered to other caregivers.", [
@@ -341,6 +342,11 @@ const Home: React.FC = () => {
               {pending ? (
                 <Text variant="small" color={theme.colors.textLight} testID="wallet-pending">
                   {pending.amount} pending
+                </Text>
+              ) : null}
+              {held ? (
+                <Text variant="small" color={theme.colors.textLight} testID="wallet-held">
+                  {held.amount} on hold (under review)
                 </Text>
               ) : null}
             </View>

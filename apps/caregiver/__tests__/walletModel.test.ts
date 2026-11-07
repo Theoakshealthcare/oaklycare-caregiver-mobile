@@ -5,6 +5,7 @@ import {
   groupTransactions,
   MIN_PAYOUT_NAIRA_TEXT,
   availableFromText,
+  monthLabel,
   monthOptions,
   transactionView,
   walletBalances,
@@ -161,6 +162,12 @@ describe("groupTransactions", () => {
 });
 
 describe("months", () => {
+  it("monthLabel names a YYYY-MM month and leaves anything else alone", () => {
+    expect(monthLabel("2026-11")).toBe("November 2026");
+    expect(monthLabel("2026-01")).toBe("January 2026");
+    expect(monthLabel("soon")).toBe("soon");
+  });
+
   it("currentMonth is YYYY-MM", () => {
     expect(currentMonth(new Date("2026-10-06T12:00:00Z"))).toBe("2026-10");
   });

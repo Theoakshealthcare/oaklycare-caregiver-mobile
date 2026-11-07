@@ -8,6 +8,7 @@ import type { Offer } from "../src/services/booking.service";
 jest.mock("@react-navigation/native", () => ({
   ...jest.requireActual("@react-navigation/native"),
   useNavigation: () => ({ canGoBack: () => true, goBack: jest.fn() }),
+  useNavigationState: (select: (state: { index: number }) => unknown) => select({ index: 1 }),
 }));
 
 const offer: Offer = {
