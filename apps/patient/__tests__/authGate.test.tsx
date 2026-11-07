@@ -1,9 +1,16 @@
 import { fireEvent, render, screen } from "@testing-library/react-native";
-import * as SecureStore from "expo-secure-store";
 
 import { queryClient } from "../src/api/queryClient";
 import { session } from "../src/auth";
-import { caregiverUser, disableCacheGcForTests, patientUser, routeFetch, tokens } from "../test-utils/fakeApi";
+import {
+  caregiverUser,
+  disableCacheGcForTests,
+  keychainKeys,
+  patientUser,
+  routeFetch,
+  setIntroSeen,
+  tokens,
+} from "../test-utils/fakeApi";
 
 import App from "../App";
 
@@ -11,8 +18,6 @@ jest.mock("expo-font", () => ({
   ...jest.requireActual("expo-font"),
   useFonts: () => [true, null],
 }));
-
-const keychainKeys = () => (SecureStore as unknown as { __keys: () => string[] }).__keys();
 
 async function signInThroughTheForm() {
   await fireEvent.changeText(await screen.findByLabelText("Email address"), "ada.placeholder@example.com");
@@ -25,6 +30,7 @@ describe("auth gate (App)", () => {
 
   beforeEach(async () => {
     await session.signOut();
+    await setIntroSeen(true);
   });
 
   afterAll(() => {
@@ -32,10 +38,19 @@ describe("auth gate (App)", () => {
     queryClient.clear();
   });
 
-  it("boots to the Login screen when nothing is stored", async () => {
+  it("opens on the intro slides on a fresh install, and Skip goes to Login", async () => {
+    await setIntroSeen(false);
+    const view = await render(<App />);
+    expect(await screen.findByText("AI-Powered Personalized Care")).toBeTruthy();
+    await fireEvent.press(screen.getByRole("button", { name: "Skip" }));
+    expect(await screen.findByText("Sign in to your Oakly Health account")).toBeTruthy();
+    view.unmount();
+  });
+
+  it("does not show the intro again once it has been seen", async () => {
     const view = await render(<App />);
     expect(await screen.findByText("Sign in to your Oakly Health account")).toBeTruthy();
-    expect(screen.getByLabelText("Email address")).toBeTruthy();
+    expect(screen.queryByText("AI-Powered Personalized Care")).toBeNull();
     view.unmount();
   });
 
@@ -49,7 +64,7 @@ describe("auth gate (App)", () => {
     view.unmount();
   });
 
-  it("signs in with email and password, shows the user from /auth/me, and logout clears everything", async () => {
+  it("signs in with email and password, lands on Home from /auth/me, and logout clears everything", async () => {
     const calls = routeFetch({
       "POST /api/v1/auth/login/mobile": () => ({ status: 200, body: tokens }),
       "GET /api/v1/auth/me": () => ({ status: 200, body: patientUser }),
@@ -57,7 +72,7 @@ describe("auth gate (App)", () => {
     const view = await render(<App />);
     await signInThroughTheForm();
 
-    expect(await screen.findByText("Welcome, Ada Placeholder")).toBeTruthy();
+    expect(await screen.findByText("Hello, Ada")).toBeTruthy();
     expect(calls[0]).toMatchObject({
       method: "POST",
       path: "/api/v1/auth/login/mobile",
@@ -67,7 +82,9 @@ describe("auth gate (App)", () => {
     expect(keychainKeys().length).toBeGreaterThan(0);
     expect(queryClient.getQueryCache().getAll().length).toBeGreaterThan(0);
 
-    await fireEvent.press(screen.getByRole("button", { name: "Log out" }));
+    await fireEvent.press(screen.getByRole("button", { name: "Open profile" }));
+    await fireEvent.press(await screen.findByRole("button", { name: "Account and data" }));
+    await fireEvent.press(await screen.findByRole("button", { name: "Log out" }));
 
     expect(await screen.findByText("Sign in to your Oakly Health account")).toBeTruthy();
     expect(keychainKeys()).toEqual([]);
@@ -106,7 +123,19 @@ describe("auth gate (App)", () => {
     await session.signIn({ accessToken: "access-stored", refreshToken: "refresh-stored" });
     routeFetch({ "GET /api/v1/auth/me": () => ({ status: 200, body: patientUser }) });
     const view = await render(<App />);
-    expect(await screen.findByText("Welcome, Ada Placeholder")).toBeTruthy();
+    expect(await screen.findByText("Hello, Ada")).toBeTruthy();
+    view.unmount();
+  });
+
+  it("sends a signed-in account with an unverified email to the verify step, and signing out leaves it", async () => {
+    await session.signIn({ accessToken: "access-stored", refreshToken: "refresh-stored" });
+    routeFetch({ "GET /api/v1/auth/me": () => ({ status: 200, body: { ...patientUser, is_verified: false } }) });
+    const view = await render(<App />);
+    expect(await screen.findByText(/Enter the 5-digit code we sent to ada.placeholder@example.com/)).toBeTruthy();
+    expect(screen.queryByRole("button", { name: "Go back" })).toBeNull();
+    await fireEvent.press(screen.getByRole("button", { name: "Use a different account" }));
+    expect(await screen.findByText("Sign in to your Oakly Health account")).toBeTruthy();
+    expect(keychainKeys()).toEqual([]);
     view.unmount();
   });
 });

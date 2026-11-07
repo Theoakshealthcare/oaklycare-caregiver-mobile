@@ -1,9 +1,8 @@
 import { render, screen, waitFor } from "@testing-library/react-native";
-import * as SecureStore from "expo-secure-store";
 
 import { queryClient } from "../src/api/queryClient";
 import { session } from "../src/auth";
-import { disableCacheGcForTests, patientUser, routeFetch, tokens } from "../test-utils/fakeApi";
+import { disableCacheGcForTests, keychainKeys, patientUser, routeFetch, setIntroSeen, tokens } from "../test-utils/fakeApi";
 
 import App from "../App";
 
@@ -12,13 +11,12 @@ jest.mock("expo-font", () => ({
   useFonts: () => [true, null],
 }));
 
-const keychainKeys = () => (SecureStore as unknown as { __keys: () => string[] }).__keys();
-
 describe("token refresh through the real client", () => {
   beforeAll(() => disableCacheGcForTests(queryClient));
 
   beforeEach(async () => {
     await session.signOut();
+    await setIntroSeen(true);
     await session.signIn({ accessToken: "access-stale", refreshToken: "refresh-stale" });
   });
 
@@ -66,7 +64,7 @@ describe("token refresh through the real client", () => {
       },
     });
     const view = await render(<App />);
-    expect(await screen.findByText("Welcome, Ada Placeholder")).toBeTruthy();
+    expect(await screen.findByText("Hello, Ada")).toBeTruthy();
     expect(refreshCalls).toBe(1);
     expect(calls.filter((c) => c.path === "/api/v1/auth/me").map((c) => c.authorization)).toEqual([
       "Bearer access-stale",

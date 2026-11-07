@@ -3,6 +3,9 @@
  * placeholder values; none of this is a captured response.
  */
 import type { Schemas } from "@oakly/api-client";
+import * as SecureStore from "expo-secure-store";
+
+import { ONBOARDING_KEY, useOnboarding } from "../src/auth/onboarding";
 
 export type FakeUser = Schemas["UserWithTypeData"];
 
@@ -32,7 +35,8 @@ export interface RecordedCall {
   body: unknown;
 }
 
-type Handler = (call: RecordedCall) => { status: number; body?: unknown } | Promise<{ status: number; body?: unknown }>;
+type Reply = { status: number; body?: unknown; headers?: Record<string, string> };
+type Handler = (call: RecordedCall) => Reply | Promise<Reply>;
 
 /** Routes the global fetch mock by "METHOD /path". Returns the list of calls it has served. */
 export function routeFetch(routes: Record<string, Handler>): RecordedCall[] {
@@ -49,10 +53,10 @@ export function routeFetch(routes: Record<string, Handler>): RecordedCall[] {
     calls.push(call);
     const handler = routes[`${call.method} ${call.path}`];
     if (!handler) throw new TypeError(`unrouted ${call.method} ${call.path}`);
-    const { status, body } = await handler(call);
+    const { status, body, headers } = await handler(call);
     return new Response(body === undefined ? null : JSON.stringify(body), {
       status,
-      headers: { "Content-Type": "application/json" },
+      headers: { "Content-Type": "application/json", ...headers },
     });
   });
   return calls;
@@ -69,4 +73,15 @@ export function disableCacheGcForTests(client: import("@tanstack/react-query").Q
     queries: { ...defaults.queries, gcTime: Infinity },
     mutations: { ...defaults.mutations, gcTime: Infinity },
   });
+}
+
+/** Keys in the (fake) keychain other than the "intro seen" flag, which signing out deliberately leaves alone. */
+export const keychainKeys = (): string[] =>
+  (SecureStore as unknown as { __keys: () => string[] }).__keys().filter((key) => key !== ONBOARDING_KEY);
+
+/** Decides whether the intro slides show on the next launch (false = a fresh install). Call before rendering. */
+export async function setIntroSeen(seen: boolean): Promise<void> {
+  if (seen) await SecureStore.setItemAsync(ONBOARDING_KEY, "1");
+  else await SecureStore.deleteItemAsync(ONBOARDING_KEY);
+  useOnboarding.setState({ status: "unknown" });
 }
