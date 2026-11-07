@@ -6,12 +6,13 @@ apps talk to it through `@oakly/api-client`, which is generated from the backend
 | Path | What | Status |
 |---|---|---|
 | `apps/caregiver` | Expo app for nurses and caregivers: onboarding, job offers, visits, earnings | Active |
+| `apps/patient` | Expo app for patients and families (Oakly Health). Shell only so far: login, placeholder home, logout; the old app's screens are ported in later slices | Foundation |
 | `apps/admin` | Next.js admin console (caregiver approval, bookings, refunds, payouts) | Active |
 | `apps/companion` | Patient web companion opened from WhatsApp links (tracking, vitals, video) | Planned |
 | `packages/api-client` | Typed backend client (`openapi-fetch` + generated types) | Active |
 
-The patient mobile app is paused; patients use WhatsApp plus the web companion (see the backend
-repo's `docs/prd/`).
+The patient mobile app moved into this repo as `apps/patient` (2026-11-07, SDK 57, no git history).
+WhatsApp is parked; the app is planned to sit beside it. See `docs/checklist/README.md` (Patient app).
 
 ## Setup
 
@@ -20,6 +21,9 @@ corepack enable          # uses the pnpm version pinned in package.json
 pnpm install
 cp apps/caregiver/.env.example apps/caregiver/.env
 pnpm caregiver           # expo start
+
+cp apps/patient/.env.example apps/patient/.env.local
+pnpm patient             # expo start (patient app)
 
 cp apps/admin/.env.example apps/admin/.env.local
 pnpm --filter admin dev  # admin console on http://localhost:3000 (needs the backend at OAKLY_API_ORIGIN)

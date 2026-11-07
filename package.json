@@ -11,7 +11,8 @@
     "typecheck": "pnpm -r --if-present typecheck",
     "lint": "pnpm -r --if-present lint",
     "test": "pnpm -r --if-present test",
-    "caregiver": "pnpm --filter caregiver start"
+    "caregiver": "pnpm --filter caregiver start",
+    "patient": "pnpm --filter oaklycare-patient-mobile start"
   },
   "devDependencies": {
     "typescript": "~6.0.3"
