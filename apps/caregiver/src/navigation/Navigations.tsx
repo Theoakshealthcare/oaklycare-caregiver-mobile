@@ -9,7 +9,7 @@ export type ScreenParamLists = {
   VerifyEmail: { email: string };
   AccountCreated: undefined;
   RecoverPassword: undefined;
-  ResetPassword: { email?: string } | undefined;
+  ResetPassword: { email: string };
   // Signed in, profile not approved yet
   CaregiverSetupStep1: undefined;
   CaregiverSetupStep2: undefined;

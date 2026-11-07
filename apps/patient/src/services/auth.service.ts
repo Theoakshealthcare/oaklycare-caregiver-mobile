@@ -40,19 +40,21 @@ export const authService = {
     return unwrap(api.POST("/api/v1/auth/resend-verification", { body: { email } }));
   },
 
-  /** Answers 200 with the same body whether or not the email has an account, so the screen never says which. */
+  /**
+   * Emails a 5-digit code (valid 15 minutes, once). Answers 200 with the same body whether or not the email has an account,
+   * is over its 3-an-hour limit, or the mail server is down, so the screen never says which.
+   */
   requestPasswordReset(email: string) {
     return unwrap(api.POST("/api/v1/auth/password-recovery", { body: { email } }));
   },
 
   /**
-   * THE ONE PLACE the reset submit lives. The reset screen collects a 5-digit `code`, but today's endpoint still
-   * takes the long token from the emailed link (`{ token, new_password }`), so the code is sent as the token and a
-   * 5-digit code is refused with 400 "Invalid token" until the backend reset-by-code slice lands. When it does, only
-   * this function changes (new route or body); the screen, its tests' call sites and the SOP note follow.
+   * POST /auth/reset-password with the emailed 5-digit code. `email` must be the exact string used to ask for the code
+   * (the counters and the lookup are per exact address). No tokens come back: the person signs in afterwards, and every
+   * other session of the account is ended. Refusals are `detail = { code, message }` (see `domain/passwordReset.ts`).
    */
-  resetPassword({ code, newPassword }: { code: string; newPassword: string }) {
-    return unwrap(api.POST("/api/v1/auth/reset-password", { body: { token: code, new_password: newPassword } }));
+  resetPassword({ email, code, newPassword }: { email: string; code: string; newPassword: string }) {
+    return unwrap(api.POST("/api/v1/auth/reset-password", { body: { email, code, new_password: newPassword } }));
   },
 
   /**
