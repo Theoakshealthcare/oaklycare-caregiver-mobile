@@ -14,7 +14,8 @@ async function settle<T>(call: Promise<FetchResult<T>>): Promise<FetchResult<T>>
     result = await call;
   } catch (error) {
     if (error instanceof ApiError) throw error;
-    if (__DEV__) console.warn("[api] request failed before a response was read:", error);
+    // console.log, not warn: a warn raises the LogBox toast, which covers the tab bar while someone is testing offline.
+    if (__DEV__) console.log("[api] request failed before a response was read:", error);
     // Only a request that never completed (offline, DNS, refused connection, timeout) says "Can't reach Oakly".
     // Any other throw is our own failure (building the request, a bug in a mapper) and must not blame the connection.
     if (isNetworkFailure(error)) throw new ApiError(0, null, NETWORK_MESSAGE);

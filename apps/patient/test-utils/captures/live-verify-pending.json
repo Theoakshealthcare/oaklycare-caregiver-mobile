@@ -1,0 +1,17 @@
+{
+  "request": {
+    "method": "POST",
+    "path": "/api/v1/booking/booking/ef2ae783-bad3-4632-b008-4d561a2ac5ed/verify-payment",
+    "auth": "Bearer <ACCESS_TOKEN_JWT>",
+    "body": null
+  },
+  "response": {
+    "status_code": 200,
+    "body": {
+      "status": "pending",
+      "message": "Payment not yet completed",
+      "booking_id": "ef2ae783-bad3-4632-b008-4d561a2ac5ed",
+      "payment_status": "abandoned"
+    }
+  }
+}

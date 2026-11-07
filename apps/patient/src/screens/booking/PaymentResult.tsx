@@ -68,7 +68,11 @@ const PaymentResult: React.FC<Props> = ({ navigation, route }) => {
 
   const reference = booking.data?.reference;
   const goBookings = () => navigation.navigate("Tabs", { tab: "bookings", at: Date.now() });
-  const viewBooking = () => navigation.replace("BookingDetails", { id: bookingId });
+  const viewBooking = () =>
+    navigation.reset({
+      index: 1,
+      routes: [{ name: "Tabs", params: { tab: "bookings", at: Date.now() } }, { name: "BookingDetails", params: { id: bookingId } }],
+    });
 
   if (state.kind === "paid") {
     return (

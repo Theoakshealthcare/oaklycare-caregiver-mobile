@@ -33,7 +33,12 @@ const BookingSummary: React.FC = () => {
           return;
         }
         reset();
-        navigation.replace("PaymentResult", { bookingId: booking.id, open: true });
+        // The form is done: Back from here goes to the bookings list (where an unpaid booking offers "Pay now"), not
+        // into the emptied form.
+        navigation.reset({
+          index: 1,
+          routes: [{ name: "Tabs", params: { tab: "bookings", at: Date.now() } }, { name: "PaymentResult", params: { bookingId: booking.id, open: true } }],
+        });
       },
       onError: (e) => setDialog(messageForError(e)),
     });

@@ -62,7 +62,7 @@ The screen asks for the 5-digit code, but the backend still emails a **long toke
 ## Follow-ups (per slice; each replaces one hook and removes one `SampleNotice`)
 | Slice | Hook(s) to replace |
 |---|---|
-| Booking (P5, backend PR #39 for cancel) | `useBookings`, `useBooking`, `useCancelTerms`, `useCancelBooking`, `useBookingQuote`, `useCreateBooking`; also Paystack checkout (WebView module not installed), real date and location fields (the API needs latitude/longitude), "Enter Booking Code" stays deferred |
+| Booking (P5) | **Done** on `feature/patient-booking`, see `2026-11-07-patient-booking-wiring-and-device-proof.md` (all six hooks replaced, Paystack in the system browser, location, chip dates). "Enter Booking Code" stays deferred. Open: a fresh payment link and address geocoding on the backend |
 | Tracking and chat (P9) | `useChat`, `useSendMessage`, the status steps; the live map and its native module |
 | Vitals (P6) | `useVitalReadings`, `useAddVital`, `useVitalAccess`, `useSetVitalAccess` (backend patient-id bug); insights, glucose sub-fields and sleep start/wake, report download |
 | FallGuard (P7) | `useFallguardQuestions` (fixture holds 6 of the 24), `useSubmitFallguard` (server score), history screen |

@@ -49,7 +49,7 @@ const Bookings: React.FC = () => {
             <Button small variant="outline" title="Try again" onPress={() => void bookings.refetch()} />
           </Card>
         ) : null}
-        {bookings.isLoading || bookings.isError ? null : shown.length === 0 ? (
+        {bookings.isLoading || (bookings.isError && !bookings.data) ? null : shown.length === 0 ? (
           <EmptyState title={EMPTY[tab]} />
         ) : (
           shown.map((booking) => (

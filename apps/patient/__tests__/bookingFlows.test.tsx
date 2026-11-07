@@ -39,8 +39,8 @@ const LIST = "GET /api/v1/booking/patient/bookings";
 
 const accepted = () => capture("022-p-b2-detail-accepted").body;
 const listItem = () => capture("023-p-bookings-list-accepted").body[0];
-// Shapes below that no capture holds (the create / preview / verify routes need a live Paystack account) are typed from the
-// OpenAPI schema and the route code, not captured: see the SOP.
+// Preview, create and verify-payment are `live-*` captures from the scratch stack (fake Paystack, real API); the cancel and
+// detail ones come from the backend's own capture run. Only the bookings made up by `unpaid()` are edited from a capture.
 const unpaid = () => ({
   ...listItem(),
   id: "11111111-1111-4111-8111-111111111111",
@@ -108,6 +108,28 @@ describe("bookings (real backend calls, answered with captured bodies)", () => {
       expect(await screen.findByText("Something went wrong. Please try again.")).toBeTruthy();
       expect(screen.queryByText(/Can't reach Oakly/)).toBeNull();
       second.view.unmount();
+    });
+  });
+
+  describe("home", () => {
+    it("lists the real upcoming visit with Track and Chat, and no sample notice for it", async () => {
+      const { view } = await renderSignedIn({ [LIST]: answer("023-p-bookings-list-accepted") });
+      expect(await screen.findByRole("button", { name: "Booking D96F7B66" })).toBeTruthy();
+      expect(screen.getByText("Caregiver assigned")).toBeTruthy();
+      expect(screen.getByRole("button", { name: "Track" })).toBeTruthy();
+      expect(screen.queryByText(/Your appointments/)).toBeNull();
+      view.unmount();
+    });
+
+    it("offline: says 'Can't reach Oakly' instead of 'You do not have any appointments'", async () => {
+      const { view } = await renderSignedIn({
+        [LIST]: () => {
+          throw new TypeError("Network request failed");
+        },
+      });
+      expect(await screen.findByText("Can't reach Oakly. Check your internet connection and try again.")).toBeTruthy();
+      expect(screen.queryByText("You do not have any appointments")).toBeNull();
+      view.unmount();
     });
   });
 
@@ -180,34 +202,12 @@ describe("bookings (real backend calls, answered with captured bodies)", () => {
     const CREATE = "POST /api/v1/booking/create";
     const NEW_ID = "22222222-2222-4222-8222-222222222222";
     const VERIFY = `POST /api/v1/booking/booking/${NEW_ID}/verify-payment`;
-    const preview = {
-      service_type: "nurse",
-      duration_hours: 4,
-      base_fee_per_hour: 12500,
-      service_multiplier: 1,
-      service_fee: 50000,
-      platform_fee: 5000,
-      platform_fee_percent: 10,
-      total_amount: 55000,
-      currency: "NGN",
-      surge_pricing_active: false,
-      surge_multiplier: null,
-      discount_active: false,
-      discount_percent: null,
-      pricing_breakdown: {},
-      estimated_caregivers_available: 3,
-      peak_hours_warning: null,
-    };
-    const created = (overrides: object = {}) => ({
-      ...unpaid(),
-      id: NEW_ID,
-      booking_code: "NEWBOOK1",
-      total_amount: 55000,
-      payment_url: "https://checkout.paystack.com/ac_placeholder",
-      payment_access_code: "ac_placeholder",
-      payment_error: null,
-      ...overrides,
-    });
+    const preview = capture("live-preview").body; // captured live: 4 h of nurse at the scratch pricing, no surge
+    // Captured live from POST /booking/create against the scratch stack (its fake Paystack served the checkout URL).
+    const created = (overrides: object = {}) => ({ ...capture("live-create").body, id: NEW_ID, ...overrides });
+    const PAY_URL = capture("live-create").body.payment_url as string;
+    const paid = () => ({ ...capture("live-verify-paid").body, booking_id: NEW_ID });
+    const pending = () => ({ ...capture("live-verify-pending").body, booking_id: NEW_ID });
 
     async function fillTheForm() {
       await press("Start Booking");
@@ -229,7 +229,7 @@ describe("bookings (real backend calls, answered with captured bodies)", () => {
         [PREVIEW]: () => ({ status: 200, body: preview }),
         [CREATE]: () => ({ status: 200, body: created() }),
         [`GET /api/v1/booking/booking/${NEW_ID}`]: () => ({ status: 200, body: created() }),
-        [VERIFY]: () => ({ status: 200, body: { status: "success", payment_status: "paid", booking_id: NEW_ID, message: "Payment verified successfully" } }),
+        [VERIFY]: () => ({ status: 200, body: paid() }),
       });
       await fillTheForm();
       await press("Save & Continue");
@@ -256,7 +256,7 @@ describe("bookings (real backend calls, answered with captured bodies)", () => {
       });
 
       await press("Proceed to Payment");
-      await waitFor(() => expect(WebBrowser.openBrowserAsync).toHaveBeenCalledWith("https://checkout.paystack.com/ac_placeholder", expect.anything()));
+      await waitFor(() => expect(WebBrowser.openBrowserAsync).toHaveBeenCalledWith(PAY_URL, expect.anything()));
       expect(await screen.findByText("Booking confirmed")).toBeTruthy();
 
       const body = calls.find((c) => c.path.endsWith("/booking/create"))?.body as Record<string, unknown>;
@@ -288,7 +288,7 @@ describe("bookings (real backend calls, answered with captured bodies)", () => {
     });
 
     it("a closed browser marks nothing paid: 'Payment not confirmed yet', then Pay now opens the same checkout again", async () => {
-      const verify = jest.fn(() => ({ status: 200, body: { status: "pending", message: "Payment not yet completed", payment_status: "abandoned", booking_id: NEW_ID } }));
+      const verify = jest.fn(() => ({ status: 200, body: pending() }));
       const { view, calls } = await renderSignedIn({
         [PREVIEW]: () => ({ status: 200, body: preview }),
         [CREATE]: () => ({ status: 200, body: created() }),
@@ -309,7 +309,7 @@ describe("bookings (real backend calls, answered with captured bodies)", () => {
 
       await press("Pay now");
       await waitFor(() => expect(WebBrowser.openBrowserAsync).toHaveBeenCalledTimes(2));
-      expect(WebBrowser.openBrowserAsync).toHaveBeenLastCalledWith("https://checkout.paystack.com/ac_placeholder", expect.anything());
+      expect(WebBrowser.openBrowserAsync).toHaveBeenLastCalledWith(PAY_URL, expect.anything());
       view.unmount();
     });
 
@@ -346,7 +346,7 @@ describe("bookings (real backend calls, answered with captured bodies)", () => {
 
     it("Pay now with no link on this phone (after a restart) says so and offers to cancel, and a late 'paid' answer still confirms", async () => {
       const item = unpaid();
-      const verify = () => ({ status: 200, body: { status: "success", payment_status: "paid", booking_id: item.id } });
+      const verify = () => ({ status: 200, body: { ...capture("live-verify-paid").body, booking_id: item.id } });
       const { view } = await renderSignedIn({
         [LIST]: () => ({ status: 200, body: [item] }),
         [`GET /api/v1/booking/booking/${item.id}`]: () => ({ status: 200, body: { ...item, visit_code: null } }),
