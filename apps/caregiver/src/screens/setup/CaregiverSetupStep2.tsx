@@ -2,12 +2,13 @@
 
 import { useState } from "react"
 import { useMutation, useQueryClient } from "@tanstack/react-query"
-import { View, ScrollView, Alert, TouchableOpacity } from "react-native"
+import { View, Alert, TouchableOpacity } from "react-native"
 import * as DocumentPicker from "expo-document-picker"
 
 import { theme } from "@/src/constants/theme"
 import Text from "@/src/components/ui/text"
 import Button from "@/src/components/ui/button"
+import KeyboardScrollView from "@/src/components/ui/keyboard-scroll-view"
 import Select from "@/src/components/ui/select"
 import HeaderBack from "@/src/components/back/HeaderBack"
 import { globalStyles } from "@/src/constants/styles"
@@ -96,7 +97,7 @@ const CaregiverSetupStep2 = () => {
 
   return (
     <View style={{ flex: 1, backgroundColor: theme.colors.white }}>
-      <ScrollView>
+      <KeyboardScrollView>
         <View style={[globalStyles.container, { flex: 1 }]}>
           <HeaderBack />
 
@@ -223,7 +224,7 @@ const CaregiverSetupStep2 = () => {
             />
           </View>
         </View>
-      </ScrollView>
+      </KeyboardScrollView>
     </View>
   )
 }

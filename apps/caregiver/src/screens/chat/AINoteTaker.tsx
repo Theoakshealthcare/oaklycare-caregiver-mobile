@@ -2,7 +2,7 @@
 
 import type React from "react"
 import { useState, useEffect } from "react"
-import { View, ScrollView, TouchableOpacity, Alert, TextInput } from "react-native"
+import { View, TouchableOpacity, Alert, TextInput } from "react-native"
 import { Feather } from "@expo/vector-icons"
 import type { StackScreenProps } from "@react-navigation/stack"
 import {
@@ -15,6 +15,7 @@ import {
 import { theme, MAX_FONT_SCALE } from "@/src/constants/theme"
 import Text from "@/src/components/ui/text"
 import Button from "@/src/components/ui/button"
+import KeyboardScrollView from "@/src/components/ui/keyboard-scroll-view"
 import HeaderBack from "@/src/components/back/HeaderBack"
 import { globalStyles } from "@/src/constants/styles"
 import { messageForError } from "@/src/api/errors"
@@ -212,7 +213,7 @@ const AINoteTaker: React.FC<StackScreenProps<ScreenParamLists, "AINoteTaker">> =
 
   return (
     <View style={{ flex: 1, backgroundColor: theme.colors.background }}>
-      <ScrollView>
+      <KeyboardScrollView>
         <View style={globalStyles.container}>
           <HeaderBack />
 
@@ -302,7 +303,7 @@ const AINoteTaker: React.FC<StackScreenProps<ScreenParamLists, "AINoteTaker">> =
             {notes.map(renderNote)}
           </View>
         </View>
-      </ScrollView>
+      </KeyboardScrollView>
     </View>
   )
 }
