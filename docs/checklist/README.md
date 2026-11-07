@@ -203,6 +203,10 @@ Owner decisions (2026-11-07): move the old app into the monorepo on SDK 57, copi
   - [x] Fixtures are 21 live captures (`__tests__/fixtures/live/63-83`, `scripts/capture-tracking-chat.mjs`); sample plumbing (`hooks/fixture.ts`, `fixtures/bookings.ts`) deleted
   - [ ] **No in-app map** (needs a native module and a Google Maps key, owner has none) and **no WebSocket** (polling is enough at this scale; `/booking/ws/patient/tracking` is documented in the SOP); a chat push or unread badge has no backend support yet
   - [ ] Not run: Android, a physical phone, a real caregiver phone feeding positions
+- [x] **Device pass 1 of the patient app** (2026-11-07 night, branch `fix/patient-device-pass-1`, see docs/sop/2026-11-08-patient-device-pass-1.md; ledger `LEDGER-device-patient-pass-1.md`; **walked on the iOS simulator**, not pushed): sign-up, verify, log-in, reset by code, booking with the backend price, Paystack in the in-app browser, Pay now after a restart, visit code, tracking states, chat, cancel with refund, notifications, profile, change password, six vitals, vitals sharing, FallGuard (server scored), log-out all pass; no screen shows sample data. Three fixes (booking screens follow the booking; Go key logs in; code boxes keep the keyboard); 20 findings, 17 open
+  - [ ] Real phone + Release build + Android + live Paystack page + push (keystroke loss P1-04, strong-password sheet, first-tap drops)
+  - [ ] Test-backend readiness: SMTP, worker, pricing row, FallGuard seed, Gemini key (P1-05, P1-06)
+  - [ ] Booking/detail polish and owner calls (P1-07 to P1-14), slices S3-S4 in the ledger
 - [ ] P10-P12 Nutritionist / physio, wallet / support, prescriptions / video call / AI note taker / ratings / care-plan view: hidden or deferred per the owner's v1 scope
 - [ ] P13 Tests per slice, device pass, EAS builds, TestFlight / Play internal track (owner: Apple / Google accounts)
 - [ ] Theme aligned to the designs (primary about `#3D8082`, coral about `#EB695A`; the shell still carries the caregiver tokens; owner to confirm, see `LEDGER-patient-screens.md` §6 Q4)
