@@ -12,6 +12,14 @@ channel) lives in the backend repo: `docs/checklist/MASTER_CHECKLIST.md`. Update
 - [x] Onboarding Skip safe area, Login link on all slides, Back to home lands on Home
 - [ ] Owner visual pass on device
 
+## Device pass 1 app fixes (2026-11-07)
+- [x] DP1-02 (blocker): multipart uploads (licence, profile photo) through plain `fetch`, never a `Request`; "Can't reach Oakly" only for a real network failure (branch `fix/dp1-upload-keyboard-home`, see docs/sop/2026-11-07-caregiver-device-pass-1-app-fixes.md; Jest/node only, **not device-verified**)
+- [x] DP1-03: shared `KeyboardScrollView` (sign-up, onboarding 1-2, care-plan details/notes via ScreenShell, change password, visit code, AI notes) and iOS keyboard-inset chat root
+- [x] DP1-04: AI note times parsed as UTC through `parseBackendDate`
+- [x] DP1-07: Home pull-to-refresh spinner follows only a user pull, not the focus refetch
+- [ ] Device re-check of all four (steps in the SOP); Android keyboard pass
+- [ ] DP1-05 (visit rules) and DP1-06 (decline semantics): owner decisions pending
+
 ## Caregiver vitals (Client care v1, part 1)
 - [x] Vitals tab: six-vital grid for the patient on the in-progress visit; "available during an active visit" on 403 or before the visit starts (2026-10-27, see docs/sop/2026-10-27-caregiver-vitals-tab.md)
 - [x] Per-vital chart (Day / Week / Month) and history; manual entry for all six (glucose mg/dL / mmol/L with RBS / FBS / PP); report download then native share, temp file deleted

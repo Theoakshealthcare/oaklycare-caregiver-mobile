@@ -1,7 +1,8 @@
 import React from "react";
-import { ScrollView, View, type RefreshControlProps } from "react-native";
+import { View, type RefreshControlProps } from "react-native";
 
 import HeaderBack from "@/src/components/back/HeaderBack";
+import KeyboardScrollView from "@/src/components/ui/keyboard-scroll-view";
 import Text from "@/src/components/ui/text";
 import { globalStyles } from "@/src/constants/styles";
 import { theme } from "@/src/constants/theme";
@@ -14,7 +15,7 @@ const ScreenShell: React.FC<{
   children: React.ReactNode;
 }> = ({ title, subtitle, refreshControl, children }) => (
   <View style={{ flex: 1, backgroundColor: theme.colors.white }}>
-    <ScrollView refreshControl={refreshControl} keyboardShouldPersistTaps="handled">
+    <KeyboardScrollView refreshControl={refreshControl}>
       <View style={globalStyles.container}>
         <HeaderBack />
         <View style={{ marginVertical: "5%" }}>
@@ -29,7 +30,7 @@ const ScreenShell: React.FC<{
         </View>
         {children}
       </View>
-    </ScrollView>
+    </KeyboardScrollView>
   </View>
 );
 

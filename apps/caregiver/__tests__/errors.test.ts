@@ -102,6 +102,12 @@ describe("unwrap", () => {
     await expect(failure).rejects.toMatchObject({ status: 0, message: NETWORK_MESSAGE });
   });
 
+  it("does not blame the connection for a failure that is not a fetch rejection", async () => {
+    const failure = unwrap(Promise.reject(new Error("could not read the picked file")));
+    await expect(failure).rejects.toMatchObject({ name: "ApiError", status: -1 });
+    await expect(unwrap(Promise.reject(new Error("x")))).rejects.not.toMatchObject({ message: NETWORK_MESSAGE });
+  });
+
   it("rejects an empty 200 instead of returning undefined as data", async () => {
     await expect(unwrap(Promise.resolve(ok(undefined)))).rejects.toBeInstanceOf(ApiError);
   });

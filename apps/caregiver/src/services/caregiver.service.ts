@@ -119,18 +119,13 @@ export const caregiverService = {
   },
 
   /**
-   * Multipart upload. React Native's FormData takes `{ uri, name, type }` for a file. The
-   * Content-Type header is deliberately NOT set: fetch adds `multipart/form-data` with the boundary
-   * (a hand-written header would omit it and the server would reject the body).
+   * Multipart upload, sent by the client's plain-`fetch` multipart path (never `api.POST`, whose
+   * `Request` wrapper cannot carry a React Native file part: DP1-02). React Native's FormData takes
+   * `{ uri, name, type }` for a file. Content-Type is deliberately NOT set: fetch adds
+   * `multipart/form-data` with the boundary (a hand-written header would omit it).
    */
   uploadDocument(file: PickedFile, documentType: string) {
-    return unwrap(
-      api.POST("/api/v1/caregiver/documents/upload", {
-        // The generated type describes the file field as a string; the real body is built below.
-        body: { file: "", document_type: documentType },
-        bodySerializer: () => buildDocumentForm(file, documentType),
-      }),
-    );
+    return unwrap(api.uploadMultipart<DocumentUploadResponse>("/api/v1/caregiver/documents/upload", buildDocumentForm(file, documentType)));
   },
 
   /** Submits consent, which moves `incomplete` and `changes_requested` to `under_review`. */

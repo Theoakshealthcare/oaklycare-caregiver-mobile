@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { View, Pressable, ScrollView } from 'react-native';
+import { View, Pressable } from 'react-native';
 import { useMutation } from '@tanstack/react-query';
 import { Feather } from '@expo/vector-icons';
 
@@ -7,6 +7,7 @@ import { theme } from '@/src/constants/theme';
 import Box from '@/src/components/ui/box';
 import Text from '@/src/components/ui/text';
 import Button from '@/src/components/ui/button';
+import KeyboardScrollView from '@/src/components/ui/keyboard-scroll-view';
 import Input from '@/src/components/ui/input';
 import Navigation from '@/src/hooks/use-navigation';
 import { globalStyles } from '@/src/constants/styles';
@@ -89,7 +90,7 @@ const CreateAccount: React.FC = () => {
 
   return (
     <View style={{ flex: 1, backgroundColor: theme.colors.white }}>
-      <ScrollView>
+      <KeyboardScrollView>
         <View style={[globalStyles.container, { flex: 1 }]}>
           <HeaderBack />
 
@@ -206,7 +207,7 @@ const CreateAccount: React.FC = () => {
             />
           </View>
         </View>
-      </ScrollView>
+      </KeyboardScrollView>
       <ErrorDialog
         visible={dialog !== null}
         title="Couldn't create your account"

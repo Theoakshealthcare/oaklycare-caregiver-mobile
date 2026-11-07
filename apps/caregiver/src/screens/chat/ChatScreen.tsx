@@ -2,11 +2,12 @@
 
 import type React from "react"
 import { useState, useRef } from "react"
-import { View, ScrollView, TextInput, TouchableOpacity, KeyboardAvoidingView, Platform, Alert } from "react-native"
+import { View, ScrollView, TextInput, TouchableOpacity, Alert } from "react-native"
 import type { StackScreenProps } from "@react-navigation/stack"
 import { Feather } from "@expo/vector-icons"
 
 import { theme, MAX_FONT_SCALE } from "@/src/constants/theme"
+import KeyboardInsetView from "@/src/components/ui/keyboard-inset-view"
 import Text from "@/src/components/ui/text"
 import { globalStyles } from "@/src/constants/styles"
 import Navigation from "@/src/hooks/use-navigation"
@@ -83,7 +84,7 @@ const ChatScreen: React.FC<StackScreenProps<ScreenParamLists, "ChatScreen">> = (
   }
 
   return (
-    <KeyboardAvoidingView style={{ flex: 1 }} behavior={Platform.OS === "ios" ? "padding" : "height"}>
+    <KeyboardInsetView style={{ flex: 1 }}>
       <View style={{ flex: 1, backgroundColor: theme.colors.background }}>
         {/* Header */}
         <View
@@ -139,7 +140,10 @@ const ChatScreen: React.FC<StackScreenProps<ScreenParamLists, "ChatScreen">> = (
           ref={scrollViewRef}
           style={{ flex: 1, paddingHorizontal: 20 }}
           contentContainerStyle={{ paddingVertical: 20 }}
+          keyboardShouldPersistTaps="handled"
           onContentSizeChange={() => scrollViewRef.current?.scrollToEnd({ animated: true })}
+          // The list shrinks when the keyboard opens: keep the latest message in view.
+          onLayout={() => scrollViewRef.current?.scrollToEnd({ animated: true })}
         >
           {messages.map(renderMessage)}
         </ScrollView>
@@ -196,7 +200,7 @@ const ChatScreen: React.FC<StackScreenProps<ScreenParamLists, "ChatScreen">> = (
           </View>
         </View>
       </View>
-    </KeyboardAvoidingView>
+    </KeyboardInsetView>
   )
 }
 

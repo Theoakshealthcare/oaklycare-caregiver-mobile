@@ -1,4 +1,4 @@
-import React, { useCallback, useMemo } from "react";
+import React, { useCallback, useMemo, useState } from "react";
 import { ActivityIndicator, Alert, RefreshControl, ScrollView, Switch, TouchableOpacity, View } from "react-native";
 import { useFocusEffect } from "@react-navigation/native";
 import { Feather } from "@expo/vector-icons";
@@ -180,7 +180,18 @@ const Home: React.FC = () => {
   const permissions = useLocationPermissions();
 
   // Back on this screen from a visit or an offer: show the latest right away.
+  // The focus refetch is silent. `RefreshControl.refreshing` follows only a pull by the caregiver:
+  // driving it from `isRefetching` left the native spinner stuck and the content pushed down ~700px (DP1-07).
   const { refetch } = home;
+  const [pulling, setPulling] = useState(false);
+  const pullToRefresh = useCallback(async () => {
+    setPulling(true);
+    try {
+      await refetch();
+    } finally {
+      setPulling(false);
+    }
+  }, [refetch]);
   useFocusEffect(
     useCallback(() => {
       void refetch();
@@ -331,9 +342,10 @@ const Home: React.FC = () => {
         onBell={() => navigation.navigate("Notifications")}
       />
       <ScrollView
+        testID="home-scroll"
         style={{ flex: 1, backgroundColor: theme.colors.background, borderTopLeftRadius: 24, borderTopRightRadius: 24 }}
         contentContainerStyle={{ paddingBottom: 32 }}
-        refreshControl={<RefreshControl refreshing={home.isRefetching} onRefresh={() => void home.refetch()} />}
+        refreshControl={<RefreshControl refreshing={pulling} onRefresh={() => void pullToRefresh()} />}
       >
         {body()}
       </ScrollView>

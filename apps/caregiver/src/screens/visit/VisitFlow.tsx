@@ -1,5 +1,5 @@
 import React, { useState } from "react";
-import { ActivityIndicator, Alert, ScrollView, View } from "react-native";
+import { ActivityIndicator, Alert, View } from "react-native";
 import { useQueryClient } from "@tanstack/react-query";
 import type { StackScreenProps } from "@react-navigation/stack";
 
@@ -7,6 +7,7 @@ import { isSuspendedStop, messageForError } from "@/src/api/errors";
 import { queryKeys } from "@/src/api/keys";
 import HeaderBack from "@/src/components/back/HeaderBack";
 import Button from "@/src/components/ui/button";
+import KeyboardScrollView from "@/src/components/ui/keyboard-scroll-view";
 import Text from "@/src/components/ui/text";
 import { globalStyles } from "@/src/constants/styles";
 import { theme } from "@/src/constants/theme";
@@ -211,12 +212,12 @@ const VisitFlow: React.FC<Props> = ({ route, navigation }) => {
 
   return (
     <View style={{ flex: 1, backgroundColor: theme.colors.white }}>
-      <ScrollView keyboardShouldPersistTaps="handled">
+      <KeyboardScrollView scrollToEndOnKeyboardShow>
         <View style={globalStyles.container}>
           <HeaderBack />
           <View style={{ marginTop: "5%" }}>{renderBody()}</View>
         </View>
-      </ScrollView>
+      </KeyboardScrollView>
     </View>
   );
 };

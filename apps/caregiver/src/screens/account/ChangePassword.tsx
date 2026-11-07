@@ -1,5 +1,5 @@
 import React, { useEffect, useState } from "react";
-import { Alert, ScrollView, View } from "react-native";
+import { Alert, View } from "react-native";
 import { useMutation } from "@tanstack/react-query";
 
 import {
@@ -11,6 +11,7 @@ import {
 } from "@/src/account/changePasswordModel";
 import { formatCountdown, messageForError } from "@/src/api/errors";
 import Button from "@/src/components/ui/button";
+import KeyboardScrollView from "@/src/components/ui/keyboard-scroll-view";
 import Input from "@/src/components/ui/input";
 import Text from "@/src/components/ui/text";
 import HeaderBack from "@/src/components/back/HeaderBack";
@@ -78,7 +79,7 @@ const ChangePassword: React.FC = () => {
 
   return (
     <View style={{ flex: 1, backgroundColor: theme.colors.white }}>
-      <ScrollView keyboardShouldPersistTaps="handled">
+      <KeyboardScrollView scrollToEndOnKeyboardShow>
         <View style={globalStyles.container}>
           <HeaderBack />
           <View style={{ marginVertical: "8%" }}>
@@ -139,7 +140,7 @@ const ChangePassword: React.FC = () => {
             />
           </View>
         </View>
-      </ScrollView>
+      </KeyboardScrollView>
     </View>
   );
 };

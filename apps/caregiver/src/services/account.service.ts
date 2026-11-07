@@ -27,15 +27,10 @@ export const accountService = {
     return unwrap(api.PUT("/api/v1/auth/profile", { body: data }));
   },
 
-  /** Multipart; Content-Type is left to fetch so the boundary is added. Answers `{ profile_image_url }`. */
+  /** Multipart (plain fetch); Content-Type is left to fetch so the boundary is added. Answers `{ profile_image_url }`. */
   async uploadProfileImage(image: PickedImage): Promise<string | null> {
-    const raw: unknown = await unwrap(
-      api.POST("/api/v1/auth/profile/upload-image", {
-        // The generated type describes the file field as a string; the real body is built below.
-        body: { file: "" },
-        bodySerializer: () => buildImageForm(image),
-      }),
-    );
+    // Plain-fetch multipart path: openapi-fetch's Request wrapper cannot send a React Native file part.
+    const raw: unknown = await unwrap(api.uploadMultipart("/api/v1/auth/profile/upload-image", buildImageForm(image)));
     const url = raw && typeof raw === "object" ? (raw as { profile_image_url?: unknown }).profile_image_url : undefined;
     return typeof url === "string" ? url : null;
   },

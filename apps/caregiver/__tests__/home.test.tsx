@@ -1,7 +1,8 @@
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { act, fireEvent, render, screen, waitFor } from "@testing-library/react-native";
 import React from "react";
-import { Alert } from "react-native";
+import { Alert, type RefreshControlProps } from "react-native";
+import { useFocusEffect } from "@react-navigation/native";
 
 import { ApiError } from "../src/api/errors";
 import {
@@ -217,7 +218,7 @@ describe("Home screen", () => {
   const order: string[] = [];
 
   async function renderHome() {
-    const client = new QueryClient({ defaultOptions: { queries: { retry: false } } });
+    const client = new QueryClient({ defaultOptions: { queries: { retry: false, gcTime: Infinity } } }); // no 5-minute gc timer holding jest open
     return await render(
       <QueryClientProvider client={client}>
         <Home />
@@ -275,6 +276,50 @@ describe("Home screen", () => {
     expect(screen.getByText("Accept")).toBeTruthy(); // the offer card
     expect(screen.getByText("You're available")).toBeTruthy();
     expect(getHome).toHaveBeenCalled();
+  });
+
+  describe("pull-to-refresh spinner (DP1-07)", () => {
+    const spinner = () =>
+      (screen.getByTestId("home-scroll").props as { refreshControl: { props: RefreshControlProps } }).refreshControl;
+
+    it("stays off while the focus refetch runs in the background", async () => {
+      getHome = jest.spyOn(locationService, "getHome").mockResolvedValue(homeWithVisitAndOffer);
+      await renderHome();
+      expect(await screen.findByText("Hello Ada")).toBeTruthy();
+
+      // Back from a visit or Notifications: React Navigation runs the focus callback and the refetch is slow.
+      let finish: (value: CaregiverHome) => void = () => undefined;
+      getHome.mockImplementation(() => new Promise<CaregiverHome>((resolve) => (finish = resolve)));
+      const focusCalls = (useFocusEffect as jest.Mock).mock.calls;
+      const onFocus = focusCalls[focusCalls.length - 1]?.[0] as () => void;
+      await act(async () => {
+        onFocus();
+      });
+      expect(spinner().props.refreshing).toBe(false);
+
+      await act(async () => {
+        finish(homeWithVisitAndOffer);
+      });
+      expect(spinner().props.refreshing).toBe(false);
+    });
+
+    it("shows while the caregiver pulls, then clears", async () => {
+      getHome = jest.spyOn(locationService, "getHome").mockResolvedValue(homeWithVisitAndOffer);
+      await renderHome();
+      expect(await screen.findByText("Hello Ada")).toBeTruthy();
+
+      let finish: (value: CaregiverHome) => void = () => undefined;
+      getHome.mockImplementation(() => new Promise<CaregiverHome>((resolve) => (finish = resolve)));
+      await act(async () => {
+        spinner().props.onRefresh?.();
+      });
+      expect(spinner().props.refreshing).toBe(true);
+
+      await act(async () => {
+        finish(homeWithVisitAndOffer);
+      });
+      await waitFor(() => expect(spinner().props.refreshing).toBe(false));
+    });
   });
 
   it("shows where each visit is, from the patient address on the response", async () => {
