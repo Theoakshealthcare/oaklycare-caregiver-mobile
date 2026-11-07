@@ -295,7 +295,7 @@
           "authentication"
         ],
         "summary": "Recover Password",
-        "description": "Password Recovery.",
+        "description": "Password Recovery. Always answers 200 with the same body, whether or not the email belongs to an account (so it\ncannot be used to find out who is registered), and whether or not the mail could be delivered (a failure is logged).",
         "operationId": "recover_password_api_v1_auth_password_recovery_post",
         "requestBody": {
           "content": {
@@ -3135,6 +3135,141 @@
         }
       }
     },
+    "/api/v1/booking/{booking_id}/cancel-terms": {
+      "get": {
+        "tags": [
+          "booking",
+          "Patient Bookings"
+        ],
+        "summary": "What would cancelling this booking cost right now?",
+        "description": "The cancellation fee as it stands now, to show before the person confirms.\n\nFree before a caregiver is assigned or more than 12 hours before the visit; 20% of the service fee from 12 to 2 hours\nbefore; 50% under 2 hours or once the caregiver is on the way (the hours come from ``policy``). Always 200 for the\nbooker: when the booking cannot be cancelled, ``can_cancel`` is false and ``reason`` says why. Only the booker may ask\n(403 ``not_your_booking``, 404 ``booking_not_found``). The answer is a preview: confirm with ``accepted_fee_kobo``.",
+        "operationId": "get_cancel_terms_api_v1_booking__booking_id__cancel_terms_get",
+        "security": [
+          {
+            "OAuth2PasswordBearer": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "booking_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid",
+              "title": "Booking Id"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/CancelTermsResponse"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Not the booker. detail = {code: not_your_booking, message}"
+          },
+          "404": {
+            "description": "No such booking. detail = {code: booking_not_found, message}"
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/booking/{booking_id}/cancel": {
+      "post": {
+        "tags": [
+          "booking",
+          "Patient Bookings"
+        ],
+        "summary": "Cancel a booking (booker only)",
+        "description": "Cancel a booking while it is dispatching, accepted or on the way.\n\nNever moves money by itself: a paid booking gets a refund (paid minus the fee) that a person approves, sent back to the\noriginal payment method. Idempotent: repeating a cancel the booker already made returns the same result with\n``already_cancelled`` true, with no second fee or refund. Cancelled for any other reason, or started, completed or\nclosed: 409 with a stable ``detail.code``.",
+        "operationId": "cancel_booking_api_v1_booking__booking_id__cancel_post",
+        "security": [
+          {
+            "OAuth2PasswordBearer": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "booking_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid",
+              "title": "Booking Id"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "anyOf": [
+                  {
+                    "$ref": "#/components/schemas/CancelBookingRequest"
+                  },
+                  {
+                    "type": "null"
+                  }
+                ],
+                "title": "Body"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/CancelBookingResponse"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Not the booker. detail = {code: not_your_booking, message}"
+          },
+          "404": {
+            "description": "No such booking. detail = {code: booking_not_found, message}"
+          },
+          "409": {
+            "description": "detail.code is one of booking_in_progress, booking_completed, booking_already_cancelled, booking_closed, terms_changed (detail.terms holds the new terms) or payment_under_review"
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          },
+          "503": {
+            "description": "detail.code payment_check_unavailable: Paystack could not be asked; nothing changed, retry"
+          }
+        }
+      }
+    },
     "/api/v1/booking/caregiver/bookings": {
       "get": {
         "tags": [
@@ -5815,6 +5950,144 @@
             "content": {
               "application/json": {
                 "schema": {}
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/patient/notifications": {
+      "get": {
+        "tags": [
+          "patient-notifications"
+        ],
+        "summary": "List Notifications",
+        "description": "Newest first. ``unread_count`` covers the whole feed, not just this page.",
+        "operationId": "list_notifications_api_v1_patient_notifications_get",
+        "security": [
+          {
+            "OAuth2PasswordBearer": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "limit",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "integer",
+              "maximum": 100,
+              "minimum": 1,
+              "default": 20,
+              "title": "Limit"
+            }
+          },
+          {
+            "name": "offset",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "integer",
+              "minimum": 0,
+              "default": 0,
+              "title": "Offset"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/NotificationList"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/patient/notifications/read-all": {
+      "post": {
+        "tags": [
+          "patient-notifications"
+        ],
+        "summary": "Mark All Read",
+        "description": "Mark every unread notification read. Idempotent: a second call marks nothing.",
+        "operationId": "mark_all_read_api_v1_patient_notifications_read_all_post",
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ReadAllResult"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "OAuth2PasswordBearer": []
+          }
+        ]
+      }
+    },
+    "/api/v1/patient/notifications/{notification_id}/read": {
+      "post": {
+        "tags": [
+          "patient-notifications"
+        ],
+        "summary": "Mark Read",
+        "description": "Mark one notification read. Idempotent: reading it again keeps the original ``read_at``.",
+        "operationId": "mark_read_api_v1_patient_notifications__notification_id__read_post",
+        "security": [
+          {
+            "OAuth2PasswordBearer": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "notification_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid",
+              "title": "Notification Id"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/NotificationOut"
+                }
               }
             }
           },
@@ -14436,6 +14709,47 @@
             "description": "4-digit code the patient gives the caregiver to start the visit. Only returned to the booking's own patient from GET /booking/booking/{id}, while the booking is accepted or en_route; null for everyone else and in every other response.",
             "example": "4821"
           },
+          "cancel_fee_tier": {
+            "anyOf": [
+              {
+                "type": "string",
+                "enum": [
+                  "none",
+                  "standard",
+                  "late"
+                ]
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Cancel Fee Tier",
+            "description": "Which cancellation fee applied when the booker cancelled (none = free). Null while the booking is not cancelled by its booker, and always null for caregivers."
+          },
+          "cancel_fee": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Cancel Fee",
+            "description": "Naira the booker was charged for cancelling (0 for a free cancel). Null unless the booker cancelled; patient views only.",
+            "example": 8000
+          },
+          "refund": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/RefundSummary"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "The booking's refund, newest one, when it has one. Patient views only; null for caregivers."
+          },
           "payment_url": {
             "anyOf": [
               {
@@ -14675,6 +14989,151 @@
         ],
         "title": "BookingStatus"
       },
+      "CancelBookingRequest": {
+        "properties": {
+          "reason": {
+            "anyOf": [
+              {
+                "type": "string",
+                "maxLength": 500
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Reason",
+            "description": "Why the family is cancelling. Optional; shown to the person who approves the refund."
+          },
+          "accepted_fee_kobo": {
+            "anyOf": [
+              {
+                "type": "integer",
+                "minimum": 0
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Accepted Fee Kobo",
+            "description": "The fee the person saw and agreed to (fee_amount_kobo from cancel-terms). If the fee is higher when the cancel is decided, nothing is cancelled and the response is 409 terms_changed. Omit only if you do not show a fee."
+          }
+        },
+        "type": "object",
+        "title": "CancelBookingRequest"
+      },
+      "CancelBookingResponse": {
+        "properties": {
+          "booking_id": {
+            "type": "string",
+            "format": "uuid",
+            "title": "Booking Id"
+          },
+          "booking_code": {
+            "type": "string",
+            "title": "Booking Code"
+          },
+          "status": {
+            "type": "string",
+            "const": "cancelled",
+            "title": "Status"
+          },
+          "already_cancelled": {
+            "type": "boolean",
+            "title": "Already Cancelled",
+            "description": "True when this is a repeat of a cancel the booker already made: nothing was changed and the first result is returned again"
+          },
+          "fee_tier": {
+            "type": "string",
+            "enum": [
+              "none",
+              "standard",
+              "late"
+            ],
+            "title": "Fee Tier"
+          },
+          "fee_percent": {
+            "type": "integer",
+            "title": "Fee Percent"
+          },
+          "fee_amount": {
+            "type": "number",
+            "title": "Fee Amount"
+          },
+          "fee_amount_kobo": {
+            "type": "integer",
+            "title": "Fee Amount Kobo"
+          },
+          "paid_amount": {
+            "type": "number",
+            "title": "Paid Amount"
+          },
+          "paid_amount_kobo": {
+            "type": "integer",
+            "title": "Paid Amount Kobo"
+          },
+          "refundable_amount": {
+            "type": "number",
+            "title": "Refundable Amount"
+          },
+          "refundable_amount_kobo": {
+            "type": "integer",
+            "title": "Refundable Amount Kobo"
+          },
+          "refund_queued": {
+            "type": "boolean",
+            "title": "Refund Queued"
+          },
+          "refund_destination": {
+            "anyOf": [
+              {
+                "type": "string",
+                "const": "original_method"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Refund Destination"
+          },
+          "refund_needs_approval": {
+            "type": "boolean",
+            "title": "Refund Needs Approval"
+          },
+          "caregiver_assigned": {
+            "type": "boolean",
+            "title": "Caregiver Assigned"
+          },
+          "refund": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/RefundSummary"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          }
+        },
+        "type": "object",
+        "required": [
+          "booking_id",
+          "booking_code",
+          "status",
+          "already_cancelled",
+          "fee_tier",
+          "fee_percent",
+          "fee_amount",
+          "fee_amount_kobo",
+          "paid_amount",
+          "paid_amount_kobo",
+          "refundable_amount",
+          "refundable_amount_kobo",
+          "refund_queued",
+          "refund_needs_approval",
+          "caregiver_assigned"
+        ],
+        "title": "CancelBookingResponse"
+      },
       "CancelIn": {
         "properties": {
           "reason": {
@@ -14724,6 +15183,194 @@
           "refund"
         ],
         "title": "CancelIn"
+      },
+      "CancelPolicyOut": {
+        "properties": {
+          "free_hours": {
+            "type": "integer",
+            "title": "Free Hours",
+            "description": "Cancelling more than this many hours before the visit is free",
+            "example": 12
+          },
+          "late_hours": {
+            "type": "integer",
+            "title": "Late Hours",
+            "description": "Cancelling less than this many hours before the visit (or once the caregiver is on the way) pays the late fee",
+            "example": 2
+          },
+          "fee_percent": {
+            "type": "integer",
+            "title": "Fee Percent",
+            "description": "Percent of the service fee kept between late_hours and free_hours",
+            "example": 20
+          },
+          "late_fee_percent": {
+            "type": "integer",
+            "title": "Late Fee Percent",
+            "description": "Percent of the service fee kept inside late_hours or en route",
+            "example": 50
+          }
+        },
+        "type": "object",
+        "required": [
+          "free_hours",
+          "late_hours",
+          "fee_percent",
+          "late_fee_percent"
+        ],
+        "title": "CancelPolicyOut"
+      },
+      "CancelTermsResponse": {
+        "properties": {
+          "booking_id": {
+            "type": "string",
+            "format": "uuid",
+            "title": "Booking Id"
+          },
+          "booking_code": {
+            "type": "string",
+            "title": "Booking Code"
+          },
+          "can_cancel": {
+            "type": "boolean",
+            "title": "Can Cancel"
+          },
+          "reason": {
+            "anyOf": [
+              {
+                "type": "string",
+                "enum": [
+                  "booking_in_progress",
+                  "booking_completed",
+                  "booking_already_cancelled",
+                  "booking_closed"
+                ]
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Reason",
+            "description": "Why it cannot be cancelled (null when it can); the same codes the cancel endpoint's 409 uses"
+          },
+          "message": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Message",
+            "description": "Plain-language version of reason, safe to show"
+          },
+          "fee_tier": {
+            "type": "string",
+            "enum": [
+              "none",
+              "standard",
+              "late"
+            ],
+            "title": "Fee Tier"
+          },
+          "fee_percent": {
+            "type": "integer",
+            "title": "Fee Percent",
+            "description": "Percent of the SERVICE fee kept (0 for the free tier)"
+          },
+          "fee_amount": {
+            "type": "number",
+            "title": "Fee Amount",
+            "description": "Naira kept if the booking is cancelled now",
+            "example": 8000
+          },
+          "fee_amount_kobo": {
+            "type": "integer",
+            "title": "Fee Amount Kobo",
+            "description": "Same in kobo: send it back as accepted_fee_kobo when confirming",
+            "example": 80000
+          },
+          "paid_amount": {
+            "type": "number",
+            "title": "Paid Amount",
+            "description": "Naira paid so far (0 when the booking is not paid yet)"
+          },
+          "paid_amount_kobo": {
+            "type": "integer",
+            "title": "Paid Amount Kobo"
+          },
+          "refundable_amount": {
+            "type": "number",
+            "title": "Refundable Amount",
+            "description": "Naira refunded if cancelled now: paid minus fee_amount"
+          },
+          "refundable_amount_kobo": {
+            "type": "integer",
+            "title": "Refundable Amount Kobo"
+          },
+          "refund_will_be_queued": {
+            "type": "boolean",
+            "title": "Refund Will Be Queued",
+            "description": "True when cancelling queues a refund (a paid booking). Never automatic: a person approves it."
+          },
+          "refund_destination": {
+            "anyOf": [
+              {
+                "type": "string",
+                "const": "original_method"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Refund Destination",
+            "description": "Where the refund goes: the original payment method (Paystack). Null when no refund is queued."
+          },
+          "refund_needs_approval": {
+            "type": "boolean",
+            "title": "Refund Needs Approval"
+          },
+          "caregiver_assigned": {
+            "type": "boolean",
+            "title": "Caregiver Assigned"
+          },
+          "policy": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/CancelPolicyOut"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "as_of": {
+            "type": "string",
+            "format": "date-time",
+            "title": "As Of",
+            "description": "When these terms were worked out (UTC). They can change: confirm with accepted_fee_kobo."
+          }
+        },
+        "type": "object",
+        "required": [
+          "booking_id",
+          "booking_code",
+          "can_cancel",
+          "fee_tier",
+          "fee_percent",
+          "fee_amount",
+          "fee_amount_kobo",
+          "paid_amount",
+          "paid_amount_kobo",
+          "refundable_amount",
+          "refundable_amount_kobo",
+          "refund_will_be_queued",
+          "refund_needs_approval",
+          "caregiver_assigned",
+          "as_of"
+        ],
+        "title": "CancelTermsResponse"
       },
       "Candidate": {
         "properties": {
@@ -20115,6 +20762,95 @@
         ],
         "title": "MfaVerifyOut"
       },
+      "NotificationList": {
+        "properties": {
+          "items": {
+            "items": {
+              "$ref": "#/components/schemas/NotificationOut"
+            },
+            "type": "array",
+            "title": "Items"
+          },
+          "total": {
+            "type": "integer",
+            "title": "Total"
+          },
+          "limit": {
+            "type": "integer",
+            "title": "Limit"
+          },
+          "offset": {
+            "type": "integer",
+            "title": "Offset"
+          },
+          "unread_count": {
+            "type": "integer",
+            "title": "Unread Count"
+          }
+        },
+        "type": "object",
+        "required": [
+          "items",
+          "total",
+          "limit",
+          "offset",
+          "unread_count"
+        ],
+        "title": "NotificationList"
+      },
+      "NotificationOut": {
+        "properties": {
+          "id": {
+            "type": "string",
+            "format": "uuid",
+            "title": "Id"
+          },
+          "type": {
+            "type": "string",
+            "title": "Type"
+          },
+          "title": {
+            "type": "string",
+            "title": "Title"
+          },
+          "body": {
+            "type": "string",
+            "title": "Body"
+          },
+          "data": {
+            "additionalProperties": true,
+            "type": "object",
+            "title": "Data"
+          },
+          "read_at": {
+            "anyOf": [
+              {
+                "type": "string",
+                "format": "date-time"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Read At"
+          },
+          "created_at": {
+            "type": "string",
+            "format": "date-time",
+            "title": "Created At"
+          }
+        },
+        "type": "object",
+        "required": [
+          "id",
+          "type",
+          "title",
+          "body",
+          "data",
+          "created_at"
+        ],
+        "title": "NotificationOut"
+      },
       "ObservationIn": {
         "properties": {
           "body": {
@@ -22534,6 +23270,24 @@
         ],
         "title": "PushTokenResponse"
       },
+      "ReadAllResult": {
+        "properties": {
+          "marked_read": {
+            "type": "integer",
+            "title": "Marked Read"
+          },
+          "unread_count": {
+            "type": "integer",
+            "title": "Unread Count"
+          }
+        },
+        "type": "object",
+        "required": [
+          "marked_read",
+          "unread_count"
+        ],
+        "title": "ReadAllResult"
+      },
       "ReasonIn": {
         "properties": {
           "reason": {
@@ -23437,6 +24191,41 @@
           "note"
         ],
         "title": "RefundResolveIn"
+      },
+      "RefundSummary": {
+        "properties": {
+          "status": {
+            "type": "string",
+            "enum": [
+              "under_review",
+              "processing",
+              "needs_bank_details",
+              "refunded",
+              "declined",
+              "contact_support"
+            ],
+            "title": "Status",
+            "description": "under_review: waiting for a person to approve it. processing: approved and on its way (also while Finance retries a failed attempt). needs_bank_details: the bank asked for the family's account; support will ask for it. refunded: money sent. declined: not refunded. contact_support: closed without a payout; support follows up."
+          },
+          "amount": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Amount",
+            "description": "Naira that will be (or was) refunded; null while a person still has to decide the amount",
+            "example": 36000
+          }
+        },
+        "type": "object",
+        "required": [
+          "status"
+        ],
+        "title": "RefundSummary"
       },
       "RequestChangesIn": {
         "properties": {

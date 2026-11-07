@@ -155,7 +155,8 @@ export interface paths {
         put?: never;
         /**
          * Recover Password
-         * @description Password Recovery.
+         * @description Password Recovery. Always answers 200 with the same body, whether or not the email belongs to an account (so it
+         *     cannot be used to find out who is registered), and whether or not the mail could be delivered (a failure is logged).
          */
         post: operations["recover_password_api_v1_auth_password_recovery_post"];
         delete?: never;
@@ -1158,6 +1159,56 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/v1/booking/{booking_id}/cancel-terms": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * What would cancelling this booking cost right now?
+         * @description The cancellation fee as it stands now, to show before the person confirms.
+         *
+         *     Free before a caregiver is assigned or more than 12 hours before the visit; 20% of the service fee from 12 to 2 hours
+         *     before; 50% under 2 hours or once the caregiver is on the way (the hours come from ``policy``). Always 200 for the
+         *     booker: when the booking cannot be cancelled, ``can_cancel`` is false and ``reason`` says why. Only the booker may ask
+         *     (403 ``not_your_booking``, 404 ``booking_not_found``). The answer is a preview: confirm with ``accepted_fee_kobo``.
+         */
+        get: operations["get_cancel_terms_api_v1_booking__booking_id__cancel_terms_get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/booking/{booking_id}/cancel": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Cancel a booking (booker only)
+         * @description Cancel a booking while it is dispatching, accepted or on the way.
+         *
+         *     Never moves money by itself: a paid booking gets a refund (paid minus the fee) that a person approves, sent back to the
+         *     original payment method. Idempotent: repeating a cancel the booker already made returns the same result with
+         *     ``already_cancelled`` true, with no second fee or refund. Cancelled for any other reason, or started, completed or
+         *     closed: 409 with a stable ``detail.code``.
+         */
+        post: operations["cancel_booking_api_v1_booking__booking_id__cancel_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/v1/booking/caregiver/bookings": {
         parameters: {
             query?: never;
@@ -2070,6 +2121,66 @@ export interface paths {
         /** Process Refund Request */
         put: operations["process_refund_request_api_v1_patient_admin_refund_requests__request_id__put"];
         post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/patient/notifications": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * List Notifications
+         * @description Newest first. ``unread_count`` covers the whole feed, not just this page.
+         */
+        get: operations["list_notifications_api_v1_patient_notifications_get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/patient/notifications/read-all": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Mark All Read
+         * @description Mark every unread notification read. Idempotent: a second call marks nothing.
+         */
+        post: operations["mark_all_read_api_v1_patient_notifications_read_all_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/patient/notifications/{notification_id}/read": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Mark Read
+         * @description Mark one notification read. Idempotent: reading it again keeps the original ``read_at``.
+         */
+        post: operations["mark_read_api_v1_patient_notifications__notification_id__read_post"];
         delete?: never;
         options?: never;
         head?: never;
@@ -4835,6 +4946,19 @@ export interface components {
              */
             visit_code?: string | null;
             /**
+             * Cancel Fee Tier
+             * @description Which cancellation fee applied when the booker cancelled (none = free). Null while the booking is not cancelled by its booker, and always null for caregivers.
+             */
+            cancel_fee_tier?: ("none" | "standard" | "late") | null;
+            /**
+             * Cancel Fee
+             * @description Naira the booker was charged for cancelling (0 for a free cancel). Null unless the booker cancelled; patient views only.
+             * @example 8000
+             */
+            cancel_fee?: number | null;
+            /** @description The booking's refund, newest one, when it has one. Patient views only; null for caregivers. */
+            refund?: components["schemas"]["RefundSummary"] | null;
+            /**
              * Payment Url
              * @description Paystack payment URL to complete the booking payment
              * @example https://checkout.paystack.com/abcd1234
@@ -4957,6 +5081,67 @@ export interface components {
          * @enum {string}
          */
         BookingStatus: "pending" | "accepted" | "en_route" | "in_progress" | "completed" | "cancelled" | "declined";
+        /** CancelBookingRequest */
+        CancelBookingRequest: {
+            /**
+             * Reason
+             * @description Why the family is cancelling. Optional; shown to the person who approves the refund.
+             */
+            reason?: string | null;
+            /**
+             * Accepted Fee Kobo
+             * @description The fee the person saw and agreed to (fee_amount_kobo from cancel-terms). If the fee is higher when the cancel is decided, nothing is cancelled and the response is 409 terms_changed. Omit only if you do not show a fee.
+             */
+            accepted_fee_kobo?: number | null;
+        };
+        /** CancelBookingResponse */
+        CancelBookingResponse: {
+            /**
+             * Booking Id
+             * Format: uuid
+             */
+            booking_id: string;
+            /** Booking Code */
+            booking_code: string;
+            /**
+             * Status
+             * @constant
+             */
+            status: "cancelled";
+            /**
+             * Already Cancelled
+             * @description True when this is a repeat of a cancel the booker already made: nothing was changed and the first result is returned again
+             */
+            already_cancelled: boolean;
+            /**
+             * Fee Tier
+             * @enum {string}
+             */
+            fee_tier: "none" | "standard" | "late";
+            /** Fee Percent */
+            fee_percent: number;
+            /** Fee Amount */
+            fee_amount: number;
+            /** Fee Amount Kobo */
+            fee_amount_kobo: number;
+            /** Paid Amount */
+            paid_amount: number;
+            /** Paid Amount Kobo */
+            paid_amount_kobo: number;
+            /** Refundable Amount */
+            refundable_amount: number;
+            /** Refundable Amount Kobo */
+            refundable_amount_kobo: number;
+            /** Refund Queued */
+            refund_queued: boolean;
+            /** Refund Destination */
+            refund_destination?: "original_method" | null;
+            /** Refund Needs Approval */
+            refund_needs_approval: boolean;
+            /** Caregiver Assigned */
+            caregiver_assigned: boolean;
+            refund?: components["schemas"]["RefundSummary"] | null;
+        };
         /** CancelIn */
         CancelIn: {
             /** Reason */
@@ -4973,6 +5158,112 @@ export interface components {
             refund: "full" | "partial" | "none";
             /** Refund Amount Kobo */
             refund_amount_kobo?: number | null;
+        };
+        /** CancelPolicyOut */
+        CancelPolicyOut: {
+            /**
+             * Free Hours
+             * @description Cancelling more than this many hours before the visit is free
+             * @example 12
+             */
+            free_hours: number;
+            /**
+             * Late Hours
+             * @description Cancelling less than this many hours before the visit (or once the caregiver is on the way) pays the late fee
+             * @example 2
+             */
+            late_hours: number;
+            /**
+             * Fee Percent
+             * @description Percent of the service fee kept between late_hours and free_hours
+             * @example 20
+             */
+            fee_percent: number;
+            /**
+             * Late Fee Percent
+             * @description Percent of the service fee kept inside late_hours or en route
+             * @example 50
+             */
+            late_fee_percent: number;
+        };
+        /** CancelTermsResponse */
+        CancelTermsResponse: {
+            /**
+             * Booking Id
+             * Format: uuid
+             */
+            booking_id: string;
+            /** Booking Code */
+            booking_code: string;
+            /** Can Cancel */
+            can_cancel: boolean;
+            /**
+             * Reason
+             * @description Why it cannot be cancelled (null when it can); the same codes the cancel endpoint's 409 uses
+             */
+            reason?: ("booking_in_progress" | "booking_completed" | "booking_already_cancelled" | "booking_closed") | null;
+            /**
+             * Message
+             * @description Plain-language version of reason, safe to show
+             */
+            message?: string | null;
+            /**
+             * Fee Tier
+             * @enum {string}
+             */
+            fee_tier: "none" | "standard" | "late";
+            /**
+             * Fee Percent
+             * @description Percent of the SERVICE fee kept (0 for the free tier)
+             */
+            fee_percent: number;
+            /**
+             * Fee Amount
+             * @description Naira kept if the booking is cancelled now
+             * @example 8000
+             */
+            fee_amount: number;
+            /**
+             * Fee Amount Kobo
+             * @description Same in kobo: send it back as accepted_fee_kobo when confirming
+             * @example 80000
+             */
+            fee_amount_kobo: number;
+            /**
+             * Paid Amount
+             * @description Naira paid so far (0 when the booking is not paid yet)
+             */
+            paid_amount: number;
+            /** Paid Amount Kobo */
+            paid_amount_kobo: number;
+            /**
+             * Refundable Amount
+             * @description Naira refunded if cancelled now: paid minus fee_amount
+             */
+            refundable_amount: number;
+            /** Refundable Amount Kobo */
+            refundable_amount_kobo: number;
+            /**
+             * Refund Will Be Queued
+             * @description True when cancelling queues a refund (a paid booking). Never automatic: a person approves it.
+             */
+            refund_will_be_queued: boolean;
+            /**
+             * Refund Destination
+             * @description Where the refund goes: the original payment method (Paystack). Null when no refund is queued.
+             */
+            refund_destination?: "original_method" | null;
+            /** Refund Needs Approval */
+            refund_needs_approval: boolean;
+            /** Caregiver Assigned */
+            caregiver_assigned: boolean;
+            policy?: components["schemas"]["CancelPolicyOut"] | null;
+            /**
+             * As Of
+             * Format: date-time
+             * @description When these terms were worked out (UTC). They can change: confirm with accepted_fee_kobo.
+             */
+            as_of: string;
         };
         /** Candidate */
         Candidate: {
@@ -6944,6 +7235,44 @@ export interface components {
             expires_in: number;
             admin: components["schemas"]["AdminOut"];
         };
+        /** NotificationList */
+        NotificationList: {
+            /** Items */
+            items: components["schemas"]["NotificationOut"][];
+            /** Total */
+            total: number;
+            /** Limit */
+            limit: number;
+            /** Offset */
+            offset: number;
+            /** Unread Count */
+            unread_count: number;
+        };
+        /** NotificationOut */
+        NotificationOut: {
+            /**
+             * Id
+             * Format: uuid
+             */
+            id: string;
+            /** Type */
+            type: string;
+            /** Title */
+            title: string;
+            /** Body */
+            body: string;
+            /** Data */
+            data: {
+                [key: string]: unknown;
+            };
+            /** Read At */
+            read_at?: string | null;
+            /**
+             * Created At
+             * Format: date-time
+             */
+            created_at: string;
+        };
         /** ObservationIn */
         ObservationIn: {
             /** Body */
@@ -7855,6 +8184,13 @@ export interface components {
             /** Platform */
             platform: string;
         };
+        /** ReadAllResult */
+        ReadAllResult: {
+            /** Marked Read */
+            marked_read: number;
+            /** Unread Count */
+            unread_count: number;
+        };
         /** ReasonIn */
         ReasonIn: {
             /** Reason */
@@ -8129,6 +8465,21 @@ export interface components {
              * @description Only to record a different amount than the refund's, when Paystack processed that amount (the 409 names it)
              */
             amount_naira?: number | string | null;
+        };
+        /** RefundSummary */
+        RefundSummary: {
+            /**
+             * Status
+             * @description under_review: waiting for a person to approve it. processing: approved and on its way (also while Finance retries a failed attempt). needs_bank_details: the bank asked for the family's account; support will ask for it. refunded: money sent. declined: not refunded. contact_support: closed without a payout; support follows up.
+             * @enum {string}
+             */
+            status: "under_review" | "processing" | "needs_bank_details" | "refunded" | "declined" | "contact_support";
+            /**
+             * Amount
+             * @description Naira that will be (or was) refunded; null while a person still has to decide the amount
+             * @example 36000
+             */
+            amount?: number | null;
         };
         /** RequestChangesIn */
         RequestChangesIn: {
@@ -11213,6 +11564,114 @@ export interface operations {
             };
         };
     };
+    get_cancel_terms_api_v1_booking__booking_id__cancel_terms_get: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                booking_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["CancelTermsResponse"];
+                };
+            };
+            /** @description Not the booker. detail = {code: not_your_booking, message} */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description No such booking. detail = {code: booking_not_found, message} */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    cancel_booking_api_v1_booking__booking_id__cancel_post: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                booking_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: {
+            content: {
+                "application/json": components["schemas"]["CancelBookingRequest"] | null;
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["CancelBookingResponse"];
+                };
+            };
+            /** @description Not the booker. detail = {code: not_your_booking, message} */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description No such booking. detail = {code: booking_not_found, message} */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description detail.code is one of booking_in_progress, booking_completed, booking_already_cancelled, booking_closed, terms_changed (detail.terms holds the new terms) or payment_under_review */
+            409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+            /** @description detail.code payment_check_unavailable: Paystack could not be asked; nothing changed, retry */
+            503: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+        };
+    };
     get_caregiver_bookings_api_v1_booking_caregiver_bookings_get: {
         parameters: {
             query?: {
@@ -12966,6 +13425,89 @@ export interface operations {
                 };
                 content: {
                     "application/json": unknown;
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    list_notifications_api_v1_patient_notifications_get: {
+        parameters: {
+            query?: {
+                limit?: number;
+                offset?: number;
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["NotificationList"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    mark_all_read_api_v1_patient_notifications_read_all_post: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ReadAllResult"];
+                };
+            };
+        };
+    };
+    mark_read_api_v1_patient_notifications__notification_id__read_post: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                notification_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["NotificationOut"];
                 };
             };
             /** @description Validation Error */
