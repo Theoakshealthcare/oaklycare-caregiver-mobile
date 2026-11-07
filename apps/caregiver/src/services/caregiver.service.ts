@@ -1,6 +1,7 @@
 import type { Schemas } from "@oakly/api-client";
 
 import { api } from "@/src/api/client";
+import { appendPickedFile } from "@/src/api/filePart";
 import { unwrap } from "@/src/api/unwrap";
 
 export type CaregiverProfile = Schemas["CaregiverProfile"];
@@ -151,8 +152,6 @@ export const ALL_CONSENTS: CaregiverConsent = {
 export function buildDocumentForm(file: PickedFile, documentType: string): FormData {
   const form = new FormData();
   form.append("document_type", documentType);
-  // React Native serialises this descriptor object as the file part; it is not a web Blob.
-  const part = { uri: file.uri, name: file.name, type: file.mimeType ?? "application/octet-stream" };
-  form.append("file", part as unknown as Blob);
+  appendPickedFile(form, "file", { uri: file.uri, name: file.name, type: file.mimeType ?? "application/octet-stream" });
   return form;
 }

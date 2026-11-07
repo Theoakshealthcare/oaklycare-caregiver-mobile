@@ -13,11 +13,12 @@ channel) lives in the backend repo: `docs/checklist/MASTER_CHECKLIST.md`. Update
 - [ ] Owner visual pass on device
 
 ## Device pass 1 app fixes (2026-11-07)
-- [x] DP1-02 (blocker): multipart uploads (licence, profile photo) through plain `fetch`, never a `Request`; "Can't reach Oakly" only for a real network failure (branch `fix/dp1-upload-keyboard-home`, see docs/sop/2026-11-07-caregiver-device-pass-1-app-fixes.md; Jest/node only, **not device-verified**)
+- [x] DP1-02 (blocker), **corrected 2026-11-07**: PR #19's upload fix failed on the simulator (`expo/fetch` rejects the `{ uri, name, type }` file part, `Unsupported FormDataPart implementation`) and broke the network message (RC1-01). Fixed on `fix/dp1-upload-expo-fetch`: shared `filePart` with `bytes()` for both builders, `isNetworkFailure` classifier; **proved on the simulator** (licence 200, photo reaches the backend against a local Cloudinary stub, "Can't reach Oakly" for login and upload with the backend stopped); see docs/sop/2026-11-07-caregiver-device-pass-1-app-fixes.md
 - [x] DP1-03: shared `KeyboardScrollView` (sign-up, onboarding 1-2, care-plan details/notes via ScreenShell, change password, visit code, AI notes) and iOS keyboard-inset chat root
 - [x] DP1-04: AI note times parsed as UTC through `parseBackendDate`
 - [x] DP1-07: Home pull-to-refresh spinner follows only a user pull, not the focus refetch
-- [ ] Device re-check of all four (steps in the SOP); Android keyboard pass
+- [x] Device re-check of DP1-03/04/07 passed (re-check 1); DP1-02 re-proved after its correction
+- [ ] Android keyboard pass; patient app to adopt `filePart` and `isNetworkFailure` when it gets uploads
 - [ ] DP1-05 (visit rules) and DP1-06 (decline semantics): owner decisions pending
 
 ## Device pass 1 minors and visit-rule follow-ups (2026-11-07)
@@ -151,20 +152,35 @@ Owner decisions (2026-11-07): move the old app into the monorepo on SDK 57, copi
   - [x] Screens: intro, auth (6), home, notifications, bookings tabs, booking details with the **visit code**, cancel with the fee tier shown first, booking steps 1 and 2 and summary, payment result, track, chat, vitals (tiles, entry, detail, history, who can see), FallGuard (intro, one generic question screen, result), profile (menu, edit, contact, account and data)
   - [x] Design mistakes fixed (units, typos, currency, no scores, no Critical chips); dead code not carried (24 FallGuard files, wallet, prescriptions, call, AI note taker)
   - [x] Every screen reads one `useXxx` hook over sample data and draws a "shows sample information" notice; the wiring slices below delete the notice
-  - [ ] Still to wire, per slice: booking + payment (P5, needs backend #39 and a Paystack WebView), tracking map and chat (P9), vitals (P6), FallGuard (P7), notifications (P8), profile edit and change password, FAQs / About copy, Terms / Privacy links
+  - [ ] Still to wire, per slice: tracking map and chat (P9). Booking, vitals, FallGuard, notifications and profile are wired (below)
   - [ ] Device pass: layouts, fonts, the keyboard helpers on a phone, intro slides
 - [ ] P2 Security: archive the old repo and rotate the old upload key (owner: was `com.oakly.oaklypatient` ever published, is the old repo public?); full logout also unregisters push
 - [ ] P3 Auth correctness (partly done 2026-11-07, same branch and SOP as P1b; Jest only, **not device-verified**)
   - [x] Register (email path; the backend's real 400 duplicate-email and 422 messages), verify email with the 5-digit code (auto-submit, 400 shown, boxes clear), resend with a 30 s cooldown and a `Retry-After` path, unverified login lands on the verify step, forgot password (same 200 for any email), delete account with the backend's 409 text
   - [x] Reset password: 5-box code UI and `resetPassword({ code, newPassword })` adapter in `auth.service.ts` that sends the code as today's `token`
   - [ ] **Reset cannot finish live** until the backend reset-by-code slice lands (today's route takes the long emailed token, a 5-digit code gets 400 `Invalid token`); then edit only the adapter
-  - [ ] Change password screen; profile edit refetches `/auth/me`; deep link scheme for the emailed link
+  - [x] Change password screen; profile edit refetches `/auth/me` (2026-11-07, branch `feature/patient-wiring-b`)
+  - [ ] Deep link scheme for the emailed link
   - [ ] Live capture of register / verify / resend / forgot / delete against the running backend (owed; the FE guide rule), device pass
 - [ ] P4-BE Backend: `GET cancel-terms` + `POST cancel` with fee tiers, cancel/refund state on the booking, FE guide with live captures
-- [ ] P5 Booking complete: booking detail with the **visit code**, all statuses and `dispatch_state`, cancel with fee confirm, payment polling cap and resume
-- [ ] P6 / P6-BE Vitals fix: insights shape, caregiver access list/grant/revoke (backend patient-id vs user-id bug at `vitals.py:151,164,180`)
-- [ ] P7 / P7-BE FallGuard tidy: align types, score computed server-side
-- [ ] P8-BE / P8 Patient notifications feed + push for app bookers, real Home, Expo push token (owner: Apple / FCM keys)
+- [x] P5 Booking on the real backend (2026-11-07, branch `feature/patient-booking`, stacked on #23, see docs/sop/2026-11-07-patient-booking-wiring-and-device-proof.md; **proved on the iOS simulator** against a scratch backend with a fake Paystack, ledger `LEDGER-device-patient-booking.md`; not pushed)
+  - [x] Preview price (backend only), create with the phone's location, language / gender in the special instructions, chip date and time
+  - [x] Paystack checkout in the system browser, capped backend confirm, "Payment not confirmed yet", Pay now (in memory)
+  - [x] List and detail: every status and `dispatch_state`, caregiver first name, visit code (20 s refresh while open and active), Pay now for an unpaid booking
+  - [x] Cancel: terms first, `accepted_fee_kobo`, `terms_changed`, every `detail.code` in a sentence, refund summary from the booking; no wallet wording
+  - [x] One error place: "Can't reach Oakly" only for a request that never completed (copy of the #22 classifier)
+  - [x] `ios-debug.sh --app patient`
+  - [ ] **Backend: a fresh payment link** (Pay now after an app restart), **coordinates from the address** (the phone's location is used today), caregiver phone in the booking
+  - [ ] Not run: physical phone, Android, live Paystack
+- [x] P6 Vitals wired (2026-11-07, branch `feature/patient-wiring-b`, see docs/sop/2026-11-07-patient-app-wiring-b-notifications-profile-vitals-fallguard.md; Jest + live captures, **not device-verified**)
+  - [x] Readings, add reading and history for BP, glucose (random / fasting / after meal), heart rate, temperature, respiratory, sleep (bed and wake times); the patient id, not the user id; caregiver-app vocabulary (`sleep_duration`); client validation (300/20 refused; the server accepts it)
+  - [ ] **P6-BE** server-side validation; caregiver access grant / revoke / list (backend patient-id vs user-id at `vitals.py:151,164,180`; the app shows "Coming soon"); insights shape and report download not in v1
+- [x] P7 FallGuard wired (same branch and SOP): the real 24 questions, submit, server total and AI text only when present, no per-option scores shown
+  - [ ] **P7-BE** score computed server-side (today the backend sums the client's scores; unknown question id is a 500); history screen is an open owner question
+- [x] P8 Notifications wired (same branch and SOP; needs backend PR #40 for the routes): feed with paging, unread badge on the bell, mark read, read all, tap opens the booking, push registration that skips quietly without an EAS project id, token forgotten on log out and delete
+  - [ ] Owner: `eas init` for the patient app, APNs / FCM keys; then a push test on a phone (real push, banner and tap not verified); rebuild the dev build (new native module `expo-notifications`)
+- [x] Profile wired (same branch and SOP): edit profile (re-reads `/auth/me`, keeps `user.patient`), change password (400 codes, 429 countdown, new token pair stored), FAQs and About open oaklycare.com; Terms / Privacy hidden until URLs are known
+  - [ ] **Backend: `PUT /auth/profile` does not save name or phone (live capture), and cannot clear a field**; the app says so instead of "updated"
 - [ ] P9 Live tracking (GET + WS) and chat (poll first)
 - [ ] P10-P12 Nutritionist / physio, wallet / support, prescriptions / video call / AI note taker / ratings / care-plan view: hidden or deferred per the owner's v1 scope
 - [ ] P13 Tests per slice, device pass, EAS builds, TestFlight / Play internal track (owner: Apple / Google accounts)

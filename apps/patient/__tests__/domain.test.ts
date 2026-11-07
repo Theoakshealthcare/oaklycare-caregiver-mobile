@@ -1,4 +1,16 @@
-import { canCancel, canTrack, showsVisitCode, statusLabel, tabForStatus, type BookingStatus } from "../src/domain/booking";
+import {
+  canCancel,
+  canTrack,
+  isActive,
+  needsPayment,
+  refundText,
+  showsVisitCode,
+  statusLabel,
+  tabForStatus,
+  type BookingStatus,
+  type DispatchState,
+  type PaymentState,
+} from "../src/domain/booking";
 import { formatNaira } from "../src/domain/format";
 import { dateOptions, timeOptions, toLocalDate } from "../src/domain/slots";
 import { isEmail, passwordProblem } from "../src/domain/validation";
@@ -18,14 +30,41 @@ describe("domain helpers", () => {
     expect(all.map(tabForStatus)).toEqual(["upcoming", "upcoming", "upcoming", "upcoming", "completed", "canceled", "canceled"]);
     expect(all.filter((status) => showsVisitCode({ status, visitCode: "1234" }))).toEqual(["accepted", "en_route"]);
     expect(showsVisitCode({ status: "accepted", visitCode: null })).toBe(false);
-    expect(all.filter((status) => canCancel({ status }))).toEqual(["pending", "accepted"]);
+    // Cancel is offered while looking, accepted or on the way; the visit under way is a handover to support.
+    expect(all.filter((status) => canCancel({ status }))).toEqual(["pending", "accepted", "en_route"]);
     expect(all.filter((status) => canTrack({ status }))).toEqual(["accepted", "en_route", "in_progress"]);
+    expect(all.filter((status) => isActive({ status }))).toEqual(["pending", "accepted", "en_route"]);
   });
 
-  it("words the dispatch states a family sees", () => {
-    expect(statusLabel({ status: "pending", dispatchState: "dispatching" })).toBe("Looking for a caregiver");
-    expect(statusLabel({ status: "pending", dispatchState: "unmatched" })).toBe("No caregiver found yet");
-    expect(statusLabel({ status: "en_route", dispatchState: "matched" })).toBe("Caregiver is on the way");
+  it("words every status and dispatch state, reading status first (dispatch_state is not cleared on a cancelled booking)", () => {
+    const label = (status: BookingStatus, dispatchState: DispatchState | null, paymentStatus: PaymentState = "paid") =>
+      statusLabel({ status, dispatchState, paymentStatus });
+    expect(label("pending", "dispatching")).toBe("Looking for a caregiver");
+    expect(label("pending", null)).toBe("Looking for a caregiver");
+    expect(label("pending", "unmatched")).toBe("No caregiver found yet");
+    expect(label("pending", null, "pending")).toBe("Payment pending");
+    expect(label("accepted", "matched")).toBe("Caregiver assigned");
+    expect(label("en_route", "matched")).toBe("Caregiver is on the way");
+    expect(label("in_progress", "matched")).toBe("Visit in progress");
+    expect(label("completed", "matched")).toBe("Completed");
+    expect(label("cancelled", "dispatching")).toBe("Canceled");
+    expect(label("cancelled", null, "failed")).toBe("Payment failed");
+    expect(label("declined", null)).toBe("Declined");
+    expect(needsPayment({ status: "pending", paymentStatus: "pending" })).toBe(true);
+    expect(needsPayment({ status: "pending", paymentStatus: "paid" })).toBe(false);
+    expect(needsPayment({ status: "cancelled", paymentStatus: "pending" })).toBe(false);
+  });
+
+  it("words each of the backend's six refund statuses", () => {
+    const statuses = ["under_review", "processing", "needs_bank_details", "refunded", "declined", "contact_support"] as const;
+    expect(statuses.map((status) => refundText({ status, amount: null }))).toEqual([
+      "Your refund is being reviewed.",
+      "Your refund has been approved and is on its way.",
+      "Our team will contact you for your bank details.",
+      "Your refund has been sent.",
+      "This refund was not approved. Contact support.",
+      "Please contact support about this refund.",
+    ]);
   });
 
   it("checks vital entries against plausible ranges and the blood pressure order", () => {

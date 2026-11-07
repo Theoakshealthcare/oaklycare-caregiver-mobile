@@ -1,0 +1,47 @@
+{
+  "request": {
+    "method": "POST",
+    "path": "/api/v1/fallguard/submit",
+    "auth": "bearer",
+    "body": {
+      "answers": [
+        {
+          "answer": "No"
+        }
+      ]
+    }
+  },
+  "response": {
+    "status": 422,
+    "body": {
+      "detail": [
+        {
+          "type": "missing",
+          "loc": [
+            "body",
+            "answers",
+            0,
+            "question_id"
+          ],
+          "msg": "Field required",
+          "input": {
+            "answer": "No"
+          }
+        },
+        {
+          "type": "missing",
+          "loc": [
+            "body",
+            "answers",
+            0,
+            "score"
+          ],
+          "msg": "Field required",
+          "input": {
+            "answer": "No"
+          }
+        }
+      ]
+    }
+  }
+}

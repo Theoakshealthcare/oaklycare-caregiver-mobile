@@ -1,0 +1,14 @@
+{
+  "request": {
+    "method": "DELETE",
+    "path": "/api/v1/devices/push-token",
+    "auth": "bearer",
+    "body": {
+      "token": "ExponentPushToken[placeholder-patient-phone]"
+    }
+  },
+  "response": {
+    "status": 204,
+    "body": null
+  }
+}

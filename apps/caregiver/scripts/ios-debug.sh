@@ -1,5 +1,7 @@
 #!/usr/bin/env bash
-# iOS Debug build + Metro hot-reload loop for the caregiver app (simulator only).
+# iOS Debug build + Metro hot-reload loop for the caregiver and patient apps (simulator only).
+#
+#   scripts/ios-debug.sh [--app patient] <command>     --app picks apps/<name> (default: caregiver, the app this file lives in)
 #
 #   scripts/ios-debug.sh setup [--clean]   prebuild (if needed), .xcode.env.local, pod install, sanity checks
 #   scripts/ios-debug.sh build             xcodebuild -configuration Debug into ios/build-debug
@@ -8,7 +10,8 @@
 #   scripts/ios-debug.sh dev [--clean]     setup + build, then Metro in the foreground and the app
 #                                          installed and launched as soon as Metro is ready
 #
-# Recipe and background: docs/sop/2026-11-07-caregiver-ios-debug-build.md (monorepo root).
+# Recipe and background: docs/sop/2026-11-07-caregiver-ios-debug-build.md (monorepo root). The patient app works the same way
+# (docs/sop/2026-11-07-patient-booking-wiring-and-device-proof.md).
 #
 # Environment (all optional):
 #   SIM_NAME             simulator to use when none is booted   (default: iPhone 17 Pro)
@@ -18,12 +21,18 @@
 
 set -euo pipefail
 
-APP_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
+# `--app <name>` selects apps/<name>; without it the app this script lives in (caregiver). The workspace, scheme and bundle id
+# are read from what `expo prebuild` generated and from app.json, so nothing is hard-coded per app.
+SCRIPT_APP_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
+APP_DIR="$SCRIPT_APP_DIR"
+if [[ "${1:-}" == "--app" ]]; then
+  [[ -n "${2:-}" ]] || { echo "ERROR: --app needs a name (caregiver or patient)" >&2; exit 2; }
+  APP_DIR="$(cd "$SCRIPT_APP_DIR/../$2" 2>/dev/null && pwd)" || { echo "ERROR: no app apps/$2" >&2; exit 2; }
+  shift 2
+fi
 IOS_DIR="$APP_DIR/ios"
-WORKSPACE="OaklyHealthCaregiver.xcworkspace"
-SCHEME="OaklyHealthCaregiver"
-BUNDLE_ID="com.oakly.oaklycaregiver"
 DERIVED="$IOS_DIR/build-debug"
+WORKSPACE="" SCHEME="" BUNDLE_ID=""
 SIM_NAME="${SIM_NAME:-iPhone 17 Pro}"
 METRO_PORT="${METRO_PORT:-8081}"
 export EXPO_PUBLIC_API_URL="${EXPO_PUBLIC_API_URL:-http://localhost:8000}"
@@ -56,6 +65,17 @@ setup() {
   (cd "$IOS_DIR" && LANG=en_US.UTF-8 pod install)
 
   verify_pods
+  resolve_project
+}
+
+# The Xcode project name comes from app.json "name" (prebuild strips spaces), the bundle id from ios.bundleIdentifier.
+resolve_project() {
+  local ws
+  ws="$(cd "$IOS_DIR" && ls -d ./*.xcworkspace 2>/dev/null | head -1)"; ws="${ws#./}"
+  [[ -n "$ws" ]] || die "No .xcworkspace in $IOS_DIR. Run: scripts/ios-debug.sh --app <name> setup"
+  WORKSPACE="$ws"; SCHEME="${ws%.xcworkspace}"
+  BUNDLE_ID="$(cd "$APP_DIR" && node -p "require('./app.json').expo.ios.bundleIdentifier")"
+  [[ -n "$BUNDLE_ID" ]] || die "app.json has no expo.ios.bundleIdentifier"
 }
 
 # A Debug link needs the *debug* React Native prebuilt. `pod install` downloads both tarballs and an
@@ -92,6 +112,7 @@ sim_udid() {
 # --- build ------------------------------------------------------------------
 
 build() {
+  resolve_project
   [[ -d "$IOS_DIR/Pods" ]] || die "No ios/Pods. Run: scripts/ios-debug.sh setup"
   verify_pods
   local udid; udid="$(sim_udid)"; [[ -n "$udid" ]] || die "No simulator found for '$SIM_NAME'"
@@ -108,6 +129,7 @@ build() {
 app_path() { echo "$DERIVED/Build/Products/Debug-iphonesimulator/$SCHEME.app"; }
 
 install_and_launch() {
+  resolve_project
   [[ -d "$(app_path)" ]] || die "No Debug app at $(app_path). Run: scripts/ios-debug.sh build"
   local udid; udid="$(sim_udid)"
   xcrun simctl bootstatus "$udid" -b >/dev/null 2>&1 || true   # boots it if needed

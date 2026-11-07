@@ -23,6 +23,7 @@
     },
     "plugins": [
       "expo-secure-store",
+      "expo-notifications",
       [
         "expo-splash-screen",
         {
@@ -31,7 +32,20 @@
           "resizeMode": "contain",
           "backgroundColor": "#ffffff"
         }
-      ]
-    ]
+      ],
+      [
+        "expo-location",
+        {
+          "locationWhenInUsePermission": "Oakly uses your location once, to find caregivers near the address you are booking a visit for."
+        }
+      ],
+      "expo-web-browser"
+    ],
+    "extra": {
+      "eas": {
+        "projectId": "9c6657c3-1e24-4e89-9b44-1a471ae80e1e"
+      }
+    },
+    "owner": "innodev"
   }
 }

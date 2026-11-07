@@ -1,37 +1,45 @@
-import { useMutation, useQueryClient } from "@tanstack/react-query";
+import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 
-import type { VitalAccessEntry, VitalInput, VitalReading } from "@/src/domain/vitals";
-import { sampleAccess, sampleReadings } from "@/src/fixtures/vitals";
+import { toCreateBody, toReading, type VitalInput, type VitalReading } from "@/src/domain/vitals";
+import { vitalsService } from "@/src/services/vitals.service";
 
-import { sampleKeys, useFixtureQuery } from "./fixture";
+import { useMe } from "./queries";
 
-/** Sample readings until the vitals slice reads `GET /vitals/{patient_id}`. */
+export const vitalKeys = {
+  all: ["vitals"] as const,
+  list: (patientId: string | undefined) => ["vitals", "list", patientId] as const,
+};
+
+/**
+ * The patient's readings, newest first, from `GET /vitals/{patient_id}`. The id is the PATIENT's (`/auth/me` -> `patient.id`),
+ * which is why an edit of the profile must never drop `user.patient`. Rows the app cannot show (another type, a value that is
+ * not a number) are left out.
+ */
 export function useVitalReadings() {
-  return useFixtureQuery(["readings"], () => sampleReadings());
+  const me = useMe();
+  const patientId = me.data?.patient?.id;
+  return useQuery({
+    queryKey: vitalKeys.list(patientId),
+    enabled: Boolean(patientId),
+    queryFn: () => vitalsService.list(patientId as string),
+    select: (rows): VitalReading[] =>
+      rows
+        .map(toReading)
+        .filter((r): r is VitalReading => r !== null)
+        .sort((a, b) => b.recordedAt.localeCompare(a.recordedAt)),
+  });
 }
 
 export function useAddVital() {
   const client = useQueryClient();
+  const me = useMe();
   return useMutation({
     mutationFn: async (input: VitalInput) => {
-      const reading: VitalReading = { ...input, id: `r-${Date.now()}`, recordedAt: new Date().toISOString() };
-      client.setQueryData<VitalReading[]>(sampleKeys.readings, (list) => [reading, ...(list ?? [])]);
+      const patientId = me.data?.patient?.id;
+      const userId = me.data?.id;
+      if (!patientId || !userId) throw new Error("Your profile is not ready yet.");
+      return vitalsService.create(toCreateBody(input, { patientId, userId }));
     },
-  });
-}
-
-/** Which caregivers can read the patient's vitals. */
-export function useVitalAccess() {
-  return useFixtureQuery(["access"], () => sampleAccess());
-}
-
-export function useSetVitalAccess() {
-  const client = useQueryClient();
-  return useMutation({
-    mutationFn: async ({ id, granted }: { id: string; granted: boolean }) => {
-      client.setQueryData<VitalAccessEntry[]>(sampleKeys.access, (list) =>
-        list?.map((a) => (a.id === id ? { ...a, granted, grantedAt: granted ? new Date().toISOString() : null } : a)),
-      );
-    },
+    onSuccess: () => client.invalidateQueries({ queryKey: vitalKeys.all }),
   });
 }

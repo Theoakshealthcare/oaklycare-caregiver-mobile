@@ -1,3 +1,5 @@
+import { isNetworkFailure } from "@oakly/api-client";
+
 import { ApiError, CLIENT_FAILURE_STATUS, FALLBACK_MESSAGE, NETWORK_MESSAGE, messageForStatus } from "./errors";
 
 /** The part of an openapi-fetch result the data layer reads. */
@@ -14,10 +16,11 @@ async function settle<T>(call: Promise<FetchResult<T>>): Promise<FetchResult<T>>
   } catch (error) {
     if (error instanceof ApiError) throw error;
     if (__DEV__) console.warn("[api] request failed before a response was read:", error);
-    // fetch rejects with a TypeError when the request never completed: offline, DNS, refused
-    // connection, timeout. Only that says "Can't reach Oakly"; any other throw is our own failure
-    // (building the request, reading the file) and must not blame the connection (DP1-02).
-    if (error instanceof TypeError) throw new ApiError(0, null, NETWORK_MESSAGE);
+    // Only a request that never completed (offline, DNS, refused connection, timeout) says "Can't reach
+    // Oakly". React Native's fetch reports that as a TypeError, expo/fetch as an Error "fetch failed: ...":
+    // see isNetworkFailure. Any other throw is our own failure (building the request, reading the file)
+    // and must not blame the connection (DP1-02, RC1-01).
+    if (isNetworkFailure(error)) throw new ApiError(0, null, NETWORK_MESSAGE);
     throw new ApiError(CLIENT_FAILURE_STATUS, null, FALLBACK_MESSAGE);
   }
   if (result.error !== undefined || !result.response.ok) {

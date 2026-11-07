@@ -1,0 +1,23 @@
+{
+  "request": {
+    "method": "POST",
+    "path": "/api/v1/patient/notifications/427477cd-3c12-4706-876c-9911596d3cff/read",
+    "auth": "bearer",
+    "body": null
+  },
+  "response": {
+    "status": 200,
+    "body": {
+      "id": "427477cd-3c12-4706-876c-9911596d3cff",
+      "type": "some_future_type",
+      "title": "Something new",
+      "body": "A kind of notice this app has never seen.",
+      "data": {
+        "target": "booking_detail",
+        "booking_id": "c07e8cce-79ac-4010-98f4-b05b13b05e94"
+      },
+      "read_at": "2026-11-07T15:33:55.225710",
+      "created_at": "2026-11-07T15:28:55.190673"
+    }
+  }
+}

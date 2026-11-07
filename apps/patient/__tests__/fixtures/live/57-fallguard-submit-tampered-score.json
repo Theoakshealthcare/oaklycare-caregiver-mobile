@@ -1,0 +1,36 @@
+{
+  "request": {
+    "method": "POST",
+    "path": "/api/v1/fallguard/submit",
+    "auth": "bearer",
+    "body": {
+      "answers": [
+        {
+          "question_id": "d2eb4249-1a4e-46a3-b01e-8cbd8c74f213",
+          "answer": "Less than 65",
+          "score": 99
+        }
+      ]
+    }
+  },
+  "response": {
+    "status": 200,
+    "body": {
+      "id": "bffbe85d-fb3f-4e63-b33f-b6790d729c92",
+      "patient_id": "37b440fd-cb39-45ea-bed3-cf4415862295",
+      "total_score": 99,
+      "ai_summary": "Unable to analyze",
+      "ai_recommendations": [],
+      "created_at": "2026-11-07T15:33:59.079189",
+      "answers": [
+        {
+          "question_id": "d2eb4249-1a4e-46a3-b01e-8cbd8c74f213",
+          "answer": "Less than 65",
+          "score": 99,
+          "id": "8c14e41d-2d73-44fc-ade1-b950d92ee6e7"
+        }
+      ]
+    }
+  },
+  "note": "The server sums the scores the CLIENT sends: it does not look them up from the question's options."
+}

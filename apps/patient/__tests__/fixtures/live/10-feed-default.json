@@ -1,0 +1,103 @@
+{
+  "request": {
+    "method": "GET",
+    "path": "/api/v1/patient/notifications",
+    "auth": "bearer",
+    "body": null
+  },
+  "response": {
+    "status": 200,
+    "body": {
+      "items": [
+        {
+          "id": "427477cd-3c12-4706-876c-9911596d3cff",
+          "type": "some_future_type",
+          "title": "Something new",
+          "body": "A kind of notice this app has never seen.",
+          "data": {
+            "target": "booking_detail",
+            "booking_id": "c07e8cce-79ac-4010-98f4-b05b13b05e94"
+          },
+          "read_at": null,
+          "created_at": "2026-11-07T15:28:55.190673"
+        },
+        {
+          "id": "c97d9bd7-f313-458f-a912-ad8a5d868811",
+          "type": "refund_started",
+          "title": "Refund started",
+          "body": "We've started your refund.",
+          "data": {
+            "target": "booking_detail",
+            "booking_id": "6ab3afb8-c8d6-4cce-9454-1d5f4c432b39"
+          },
+          "read_at": null,
+          "created_at": "2026-11-07T15:23:55.088947"
+        },
+        {
+          "id": "c4a81b2a-ee11-4931-803c-4b78495402e3",
+          "type": "visit_completed",
+          "title": "Visit completed",
+          "body": "Your visit is complete.",
+          "data": {
+            "target": "booking_detail",
+            "booking_id": "a5e1a26a-f925-4204-8367-d6defe0c6c8d"
+          },
+          "read_at": null,
+          "created_at": "2026-11-07T15:13:54.992020"
+        },
+        {
+          "id": "b8f0f7b2-329e-4446-97e9-06ace623a515",
+          "type": "visit_started",
+          "title": "Visit started",
+          "body": "Your visit has started.",
+          "data": {
+            "target": "booking_detail",
+            "booking_id": "a8e31eb7-e7af-489b-ad2e-441b18073226"
+          },
+          "read_at": null,
+          "created_at": "2026-11-07T15:03:54.888552"
+        },
+        {
+          "id": "6a9717bf-b64c-4474-b870-ceb7630b7f5d",
+          "type": "caregiver_on_the_way",
+          "title": "Caregiver on the way",
+          "body": "Ngozi is on the way.",
+          "data": {
+            "target": "booking_detail",
+            "booking_id": "39b547f8-621d-4751-8dda-7481cb34d608"
+          },
+          "read_at": null,
+          "created_at": "2026-11-07T14:53:54.785914"
+        },
+        {
+          "id": "3481f217-c612-4cfe-8f56-718e9a15cf02",
+          "type": "caregiver_found",
+          "title": "Caregiver found",
+          "body": "Ngozi will be your caregiver.",
+          "data": {
+            "target": "booking_detail",
+            "booking_id": "32f53162-7dc9-4323-98d9-eecacb35f325"
+          },
+          "read_at": null,
+          "created_at": "2026-11-07T14:43:54.685985"
+        },
+        {
+          "id": "2a3ffa35-3529-48d5-939f-ea9d5778861f",
+          "type": "booking_confirmed",
+          "title": "Booking confirmed",
+          "body": "Payment received. We're finding a caregiver for your visit.",
+          "data": {
+            "target": "booking_detail",
+            "booking_id": "f2f9ee68-3be2-411c-b451-d0359eb3c00b"
+          },
+          "read_at": null,
+          "created_at": "2026-11-07T14:33:54.575867"
+        }
+      ],
+      "total": 7,
+      "limit": 20,
+      "offset": 0,
+      "unread_count": 7
+    }
+  }
+}

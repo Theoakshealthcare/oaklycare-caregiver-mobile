@@ -1,0 +1,20 @@
+{
+  "request": {
+    "method": "POST",
+    "path": "/api/v1/fallguard/submit",
+    "auth": "bearer",
+    "body": {
+      "answers": [
+        {
+          "question_id": "905e50bc-01b3-4ca3-90cd-996bdd211547",
+          "answer": "No",
+          "score": 0
+        }
+      ]
+    }
+  },
+  "response": {
+    "status": 500,
+    "body": "Internal Server Error"
+  }
+}

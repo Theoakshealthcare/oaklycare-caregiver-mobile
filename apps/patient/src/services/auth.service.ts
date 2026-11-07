@@ -6,6 +6,7 @@ import { queryKeys } from "@/src/api/keys";
 import { queryClient } from "@/src/api/queryClient";
 import { unwrap } from "@/src/api/unwrap";
 import { session } from "@/src/auth";
+import { forgetPushToken } from "@/src/push/forget";
 
 export type User = Schemas["UserWithTypeData"];
 
@@ -54,6 +55,32 @@ export const authService = {
     return unwrap(api.POST("/api/v1/auth/reset-password", { body: { token: code, new_password: newPassword } }));
   },
 
+  /**
+   * POST /auth/change-password. The backend ends every session issued before the change, this device's included, and
+   * answers with a NEW token pair: it is stored here at once, so the person stays signed in (other devices are signed out).
+   * 400 `detail = { code, message }` for `wrong_current_password` / `weak_password` / `same_password`; 429
+   * `too_many_attempts` with `Retry-After`.
+   */
+  async changePassword(currentPassword: string, newPassword: string): Promise<void> {
+    const tokens = await unwrap(
+      api.POST("/api/v1/auth/change-password", { body: { current_password: currentPassword, new_password: newPassword } }),
+    );
+    await session.signIn({ accessToken: tokens.access_token, refreshToken: tokens.refresh_token });
+  },
+
+  /**
+   * PUT /auth/profile, then a fresh GET /auth/me. The PUT answers with the flat profile, which has NO `patient` object:
+   * storing it as the user (what the old app did) dropped `user.patient`, and every vitals call lost the patient id.
+   * The re-read is what goes into the cache. Returns the fresh user so the caller can check what was really saved.
+   * The backend ignores blank values and does not persist `full_name` / `phone_number` today (see the SOP).
+   */
+  async updateProfile(fields: Schemas["UserProfileUpdate"]): Promise<User> {
+    await unwrap(api.PUT("/api/v1/auth/profile", { body: fields }));
+    const fresh = await authService.getMe();
+    queryClient.setQueryData(queryKeys.me, fresh);
+    return fresh;
+  },
+
   getMe() {
     return unwrap(api.GET("/api/v1/auth/me"));
   },
@@ -80,18 +107,21 @@ export const authService = {
   /**
    * DELETE /auth/profile: the backend erases the person's data and refuses with 409 and a plain-language `detail`
    * while bookings or money are still open (shown as sent). The session is cleared only after the delete succeeded,
-   * so a refusal leaves the person signed in.
+   * so a refusal leaves the person signed in. The push token is forgotten first, while the account still exists.
    */
   async deleteAccount(): Promise<void> {
+    await forgetPushToken();
     await unwrap(api.DELETE("/api/v1/auth/profile"));
     await session.signOut();
   },
 
   /**
-   * Logs out: clears the keychain tokens, the in-memory session and every cached query (the session's
-   * `onSignedOut` hook clears the query cache). No server-side logout route exists today.
+   * Logs out: first (best effort, never blocking) tells the server to stop pushing to this device, then clears the
+   * keychain tokens, the in-memory session and every cached query (the session's `onSignedOut` hook clears the query
+   * cache). No server-side logout route exists today.
    */
   async logout(): Promise<void> {
+    await forgetPushToken();
     await session.signOut();
   },
 };

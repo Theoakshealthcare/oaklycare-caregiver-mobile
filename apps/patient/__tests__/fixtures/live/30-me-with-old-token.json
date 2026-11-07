@@ -1,0 +1,15 @@
+{
+  "request": {
+    "method": "GET",
+    "path": "/api/v1/auth/me",
+    "auth": "bearer",
+    "body": null
+  },
+  "response": {
+    "status": 401,
+    "body": {
+      "detail": "Could not validate credentials"
+    }
+  },
+  "note": "The pre-change access token stops working."
+}

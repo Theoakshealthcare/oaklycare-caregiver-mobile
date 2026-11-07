@@ -1,0 +1,31 @@
+{
+  "request": {
+    "method": "POST",
+    "path": "/api/v1/vitals/",
+    "auth": "bearer",
+    "body": {
+      "vital_type": "blood_pressure",
+      "value": "300/20",
+      "unit": "mmHg",
+      "source": "manual",
+      "recorded_at": "2026-11-07T15:33:58.737Z",
+      "patient_id": "37b440fd-cb39-45ea-bed3-cf4415862295",
+      "recorded_by_user_id": "8ace3f52-a752-42aa-b8d7-f705d4a4e5be"
+    }
+  },
+  "response": {
+    "status": 200,
+    "body": {
+      "vital_type": "blood_pressure",
+      "value": "300/20",
+      "unit": "mmHg",
+      "source": "manual",
+      "recorded_at": "2026-11-07T15:33:58.737000",
+      "notes": null,
+      "id": "21a471c5-5d6a-444e-ad45-36a3377747bc",
+      "patient_id": "37b440fd-cb39-45ea-bed3-cf4415862295",
+      "recorded_by_user_id": "8ace3f52-a752-42aa-b8d7-f705d4a4e5be"
+    }
+  },
+  "note": "DP1-16: the server accepts an impossible reading. The app validates on the client; the backend does not."
+}

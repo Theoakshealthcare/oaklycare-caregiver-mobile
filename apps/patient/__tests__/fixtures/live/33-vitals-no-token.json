@@ -1,0 +1,14 @@
+{
+  "request": {
+    "method": "GET",
+    "path": "/api/v1/vitals/37b440fd-cb39-45ea-bed3-cf4415862295",
+    "auth": null,
+    "body": null
+  },
+  "response": {
+    "status": 401,
+    "body": {
+      "detail": "Not authenticated"
+    }
+  }
+}

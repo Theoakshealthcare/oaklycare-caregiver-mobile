@@ -35,6 +35,7 @@ describe("nothing outside v1 is reachable", () => {
       "Notifications",
       "Profile",
       "EditProfile",
+      "ChangePassword",
       "Contact",
       "AccountData",
       "BookingStep1",

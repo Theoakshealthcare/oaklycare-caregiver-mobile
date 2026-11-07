@@ -1,0 +1,19 @@
+{
+  "request": {
+    "method": "POST",
+    "path": "/api/v1/booking/booking/ef2ae783-bad3-4632-b008-4d561a2ac5ed/verify-payment",
+    "auth": "Bearer <ACCESS_TOKEN_JWT>",
+    "body": null
+  },
+  "response": {
+    "status_code": 200,
+    "body": {
+      "status": "success",
+      "message": "Payment verified successfully",
+      "booking_id": "ef2ae783-bad3-4632-b008-4d561a2ac5ed",
+      "payment_status": "paid",
+      "amount_paid": "55000.00",
+      "paid_at": "2026-10-06T10:00:00.000Z"
+    }
+  }
+}

@@ -1,0 +1,22 @@
+{
+  "request": {
+    "method": "POST",
+    "path": "/api/v1/fallguard/submit",
+    "auth": "bearer",
+    "body": {
+      "answers": []
+    }
+  },
+  "response": {
+    "status": 200,
+    "body": {
+      "id": "27813753-71ee-4911-9f93-d13826f47df3",
+      "patient_id": "37b440fd-cb39-45ea-bed3-cf4415862295",
+      "total_score": 0,
+      "ai_summary": "Unable to analyze",
+      "ai_recommendations": [],
+      "created_at": "2026-11-07T15:33:59.093988",
+      "answers": []
+    }
+  }
+}
