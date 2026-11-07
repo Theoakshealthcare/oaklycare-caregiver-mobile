@@ -45,7 +45,7 @@ describe("RefundView", () => {
     expect(booking).toHaveTextContent("Paystack fee₦825");
     const rules = screen.getByRole("complementary", { name: "Refund rules" });
     expect(rules).toHaveTextContent("Finance approves up to the cumulative limit per booking (₦50,000)");
-    expect(rules).toHaveTextContent("A Super Admin approves anything above the limit, and every refund to the Oakly wallet.");
+    expect(rules).toHaveTextContent("A Super Admin approves anything above the limit.");
     expect(rules).toHaveTextContent("A refund raised by staff has to be approved by a different admin.");
   });
 
@@ -247,33 +247,36 @@ describe("RefundView", () => {
       expect(within(dialog).getByRole("button", { name: "Approve refund" })).toBeDisabled();
     });
 
-    it("offers the wallet only to a Super Admin on an app booking", async () => {
+    it("offers no destination choice, even to a Super Admin on an app booking, and sends the original payment method", async () => {
+      // Wallet-credit refunds are off in v1 (backend REFUND_WALLET_CREDIT_ENABLED=false): the wallet option is hidden.
       const user = userEvent.setup();
-      stubFetch({ [GET]: serve(makeDetail()) });
-      const { unmount } = render(withAuth(FINANCE, <RefundView id={REFUND_ID} />));
-      await user.click(await screen.findByRole("button", { name: /^Approve/ }));
-      await screen.findByRole("dialog");
-      expect(screen.queryByLabelText(/Oakly wallet/)).not.toBeInTheDocument();
-      unmount();
-
-      stubFetch({ [GET]: serve(makeDetail({ booking: { ...makeDetail().booking, channel: "whatsapp" } })) });
-      const whatsapp = render(withAuth(SUPER, <RefundView id={REFUND_ID} />));
-      await user.click(await screen.findByRole("button", { name: /^Approve/ }));
-      await screen.findByRole("dialog");
-      expect(screen.queryByLabelText(/Oakly wallet/)).not.toBeInTheDocument();
-      whatsapp.unmount();
-
-      const credited = makeDetail({ status: "succeeded", amount_naira: 55000.0, destination: "wallet", available_actions: [] });
-      const calls = stubFetch({ [GET]: serve(makeDetail({ needs_super_admin: false, max_approvable_naira: 55000.0 })), [post("approve")]: serve(credited) });
+      const done = makeDetail({ status: "approved", amount_naira: 55000.0, destination: "original_method", available_actions: [] });
+      const calls = stubFetch({ [GET]: serve(makeDetail({ needs_super_admin: false, max_approvable_naira: 55000.0 })), [post("approve")]: serve(done) });
       render(withAuth(SUPER, <RefundView id={REFUND_ID} />));
+      expect(makeDetail().booking.channel).toBe("app");
       await user.click(await screen.findByRole("button", { name: /^Approve/ }));
       const dialog = await screen.findByRole("dialog");
-      await user.click(within(dialog).getByLabelText(/Oakly wallet/));
-      expect(dialog).toHaveTextContent("Credits the family's Oakly wallet at once");
-      await user.click(within(dialog).getByRole("button", { name: "Approve and credit wallet" }));
+      expect(within(dialog).queryByLabelText(/Oakly wallet/)).not.toBeInTheDocument();
+      expect(within(dialog).queryByText(/Where the money goes/)).not.toBeInTheDocument();
+      expect(within(dialog).queryByRole("radio")).not.toBeInTheDocument();
+      expect(dialog).not.toHaveTextContent(/credit/i);
+      await user.click(within(dialog).getByRole("button", { name: "Approve refund" }));
       await waitFor(() => expect(screen.queryByRole("dialog")).not.toBeInTheDocument());
-      expect(calls.find((c) => c.key === post("approve"))?.body).toMatchObject({ amount_naira: 55000, destination: "wallet" });
-      expect(await screen.findByText(/The family's Oakly wallet was credited\./)).toBeInTheDocument();
+      expect(calls.find((c) => c.key === post("approve"))?.body).toMatchObject({ amount_naira: 55000, destination: "original_method" });
+    });
+
+    it("shows a clear sentence for the 409 wallet_refunds_disabled (an object detail with a code) and keeps the dialog open", async () => {
+      const user = userEvent.setup();
+      const detail = { code: "wallet_refunds_disabled", message: "Refunds to the Oakly wallet are off." };
+      stubFetch({ [GET]: serve(makeDetail({ needs_super_admin: false })), [post("approve")]: () => jsonResponse({ detail }, { status: 409 }) });
+      render(withAuth(FINANCE, <RefundView id={REFUND_ID} />));
+      await user.click(await screen.findByRole("button", { name: /^Approve/ }));
+      const dialog = await screen.findByRole("dialog");
+      await user.click(within(dialog).getByRole("button", { name: "Approve refund" }));
+      const alert = await within(dialog).findByRole("alert");
+      expect(alert).toHaveTextContent(/switched off/);
+      expect(alert).toHaveTextContent(/original payment method/);
+      expect(alert).not.toHaveTextContent("are off.");
     });
 
     it("previews the take-back, requires a reason when it is chosen, and sends both", async () => {

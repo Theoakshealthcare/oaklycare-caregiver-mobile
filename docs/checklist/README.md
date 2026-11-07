@@ -110,6 +110,7 @@ channel) lives in the backend repo: `docs/checklist/MASTER_CHECKLIST.md`. Update
 - [x] Refund detail: amounts in naira, booking link, attempts (holder fields blank for roles without access), review flag, take-back preview and debited/owed
 - [x] Actions only from `available_actions`: approve (lower amount, never above `max_approvable_naira`, wallet for a Super Admin on app bookings, take-back with reason), reject, retry, bank details (10 digits, only last four shown), switch to wallet, close, resolve (different-amount second call)
 - [x] Rules shown as UI text (Finance cumulative limit, Super Admin above it or for wallet, staff-raised needs another approver); Vitest/RTL for every state and action
+- [x] Wallet-credit destination hidden in the approve dialog and `detail.code` read from refund errors, incl. `wallet_refunds_disabled` (2026-11-07, branch `fix/admin-hide-wallet-refund`, see docs/sop/2026-11-07-admin-hide-wallet-refund.md; backend flag `REFUND_WALLET_CREDIT_ENABLED` is off)
 - [ ] Live browser pass against the local backend
 - [ ] Playwright e2e for approve and bank details
 - [ ] Live Paystack account and real WhatsApp delivery (guide §12.12 captures use a local fake)

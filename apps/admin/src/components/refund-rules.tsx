@@ -14,7 +14,7 @@ export function RefundRules({ limitNaira }: { limitNaira?: number }) {
           Finance approves up to the cumulative limit per booking ({limit}): this refund plus the booking&apos;s other approved,
           in-flight and succeeded refunds, so a big refund can&apos;t be split to get under it.
         </li>
-        <li>A Super Admin approves anything above the limit, and every refund to the Oakly wallet.</li>
+        <li>A Super Admin approves anything above the limit.</li>
         <li>A refund raised by staff has to be approved by a different admin.</li>
         <li>
           Approving does not send the money. Paystack&apos;s answer finishes it, and a card refund can take up to 10 business days

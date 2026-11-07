@@ -3,11 +3,13 @@ import { describe, expect, it } from "vitest";
 import { formatNairaValue } from "./format";
 import {
   differentAmountFromError,
+  errorCodeOf,
   friendlyRefundError,
   isInFlight,
   isTerminal,
   nairaInput,
   parseNaira,
+  refundErrorMessage,
   shownAmount,
 } from "./refunds";
 
@@ -64,5 +66,28 @@ describe("server messages", () => {
     expect(differentAmountFromError(message)).toEqual({ naira: 54000 });
     expect(differentAmountFromError("Paystack processed a different amount from this refund's.")).toEqual({ naira: null });
     expect(differentAmountFromError("This refund is not waiting for review")).toBeNull();
+  });
+});
+
+describe("detail.code errors", () => {
+  it("reads the code out of an object detail, and only out of that", () => {
+    expect(errorCodeOf({ detail: { code: "wallet_refunds_disabled", message: "m" } })).toBe("wallet_refunds_disabled");
+    expect(errorCodeOf({ detail: "A string detail" })).toBeNull();
+    expect(errorCodeOf({ detail: [{ msg: "bad" }] })).toBeNull();
+    expect(errorCodeOf({ detail: { message: "no code" } })).toBeNull();
+    expect(errorCodeOf({ detail: { code: 409 } })).toBeNull();
+    expect(errorCodeOf(null)).toBeNull();
+    expect(errorCodeOf(undefined)).toBeNull();
+    expect(errorCodeOf("text")).toBeNull();
+  });
+
+  it("words wallet_refunds_disabled as ours, and leaves other errors as the server sent them", () => {
+    const wallet = refundErrorMessage("server wording", { detail: { code: "wallet_refunds_disabled", message: "server wording" } });
+    expect(wallet).toMatch(/switched off/);
+    expect(wallet).toMatch(/original payment method/);
+    // an unknown code, a string detail and a missing body keep the server's message (with the kobo rewording)
+    expect(refundErrorMessage("Something odd", { detail: { code: "brand_new_code", message: "Something odd" } })).toBe("Something odd");
+    expect(refundErrorMessage("This refund is not pending", { detail: "This refund is not pending" })).toBe("This refund is not pending");
+    expect(refundErrorMessage("between 1 and 5500000 kobo", undefined)).toBe(`between ${formatNairaValue(0.01)} and ${formatNairaValue(55000)}`);
   });
 });
