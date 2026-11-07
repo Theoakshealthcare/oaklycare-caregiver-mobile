@@ -15,6 +15,9 @@ export const queryKeys = {
   banks: ["banks"] as const,
   caregiverProfile: ["caregiver-profile"] as const,
   notes: (bookingId: string) => ["notes", bookingId] as const,
+  /** The caregiver's own voice notes of one visit (every status). */
+  voiceNotes: (bookingId: string) => ["voice-notes", bookingId] as const,
+  voiceNote: (noteId: string) => ["voice-note", noteId] as const,
   clientProfile: (bookingId: string) => ["client-profile", bookingId] as const,
   vitals: (patientId: string) => ["vitals", patientId] as const,
   /** Every reading on record, not just the last 30 days; under the `vitals` prefix so a new reading refreshes it too. */
