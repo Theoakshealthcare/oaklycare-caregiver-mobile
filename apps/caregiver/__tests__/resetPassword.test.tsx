@@ -17,6 +17,8 @@ jest.mock("../src/hooks/use-navigation", () => ({
 jest.mock("@react-navigation/native", () => ({
   ...jest.requireActual("@react-navigation/native"),
   useNavigation: () => ({ canGoBack: () => true, goBack: jest.fn() }),
+  // HeaderBack reads its navigator's state (hides the arrow on a screen that is first in its stack); there is no navigator here.
+  useNavigationState: (select: (state: { index: number }) => unknown) => select({ index: 1 }),
 }));
 
 // Placeholder values, never real credentials.

@@ -122,13 +122,13 @@ const BankForm: React.FC<{ hasAccount: boolean; onSaved: (account: BankAccount) 
       />
 
       {failure ? (
-        <Text variant="small" color={theme.colors.error} style={{ marginBottom: 12 }} testID="bank-failure">
+        <Text variant="small" color={theme.colors.error} style={{ marginTop: 12, marginBottom: 12 }} testID="bank-failure">
           {failure}
         </Text>
       ) : null}
 
       {resolved ? (
-        <View style={{ padding: 16, borderRadius: 16, backgroundColor: theme.colors.primaryLight, marginBottom: 16 }} testID="bank-resolved">
+        <View style={{ padding: 16, borderRadius: 16, backgroundColor: theme.colors.primaryLight, marginTop: 16, marginBottom: 16 }} testID="bank-resolved">
           <Text variant="small" color={theme.colors.textLight}>
             Name on this account
           </Text>
@@ -147,7 +147,7 @@ const BankForm: React.FC<{ hasAccount: boolean; onSaved: (account: BankAccount) 
           <Button title="No, change details" variant="ghost" onPress={reset} style={{ marginTop: 8 }} />
         </>
       ) : (
-        <Button title="Check account" onPress={() => void check()} loading={resolve.isPending} />
+        <Button title="Check account" onPress={() => void check()} loading={resolve.isPending} style={{ marginTop: 16 }} />
       )}
       {hasAccount ? <Button title="Cancel" variant="ghost" onPress={onCancel} style={{ marginTop: 8 }} /> : null}
     </View>

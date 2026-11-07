@@ -1,6 +1,7 @@
 import React, { useMemo, useState } from "react";
 import { FlatList, Modal, Pressable, View } from "react-native";
 import { Feather } from "@expo/vector-icons";
+import { useSafeAreaInsets } from "react-native-safe-area-context";
 
 import { ErrorState, LoadingState } from "@/src/components/account/StateViews";
 import Input from "@/src/components/ui/input";
@@ -21,6 +22,7 @@ interface Props {
 
 /** A searchable bank list in a modal (the real Paystack list has a couple of hundred banks). */
 const BankPicker: React.FC<Props> = ({ banks, loading, error, onRetry, value, onChange, invalid }) => {
+  const insets = useSafeAreaInsets();
   const [open, setOpen] = useState(false);
   const [query, setQuery] = useState("");
   const shown = useMemo(() => filterBanks(banks ?? [], query), [banks, query]);
@@ -61,15 +63,20 @@ const BankPicker: React.FC<Props> = ({ banks, loading, error, onRetry, value, on
       ) : null}
 
       <Modal visible={open} animationType="slide" onRequestClose={close}>
-        <View style={{ flex: 1, padding: 16, paddingTop: 56, backgroundColor: theme.colors.white }}>
-          <View style={{ flexDirection: "row", alignItems: "center", justifyContent: "space-between", marginBottom: 12 }}>
-            <Text variant="h3" weight="bold">
-              Choose your bank
-            </Text>
-            <Pressable accessibilityRole="button" accessibilityLabel="Close bank list" onPress={close}>
-              <Feather name="x" size={24} color={theme.colors.primary} />
-            </Pressable>
-          </View>
+        {/* A full-screen modal covers the status bar and the Dynamic Island: start below the device's top inset, with a Back link like every other screen. */}
+        <View style={{ flex: 1, padding: 16, paddingTop: insets.top + 12, backgroundColor: theme.colors.white }} testID="bank-picker">
+          <Pressable
+            accessibilityRole="button"
+            accessibilityLabel="Close bank list"
+            onPress={close}
+            style={{ flexDirection: "row", alignItems: "center", gap: 4, marginBottom: 12 }}
+          >
+            <Feather name="chevron-left" size={24} color={theme.colors.text} />
+            <Text variant="body">Back</Text>
+          </Pressable>
+          <Text variant="h3" weight="bold" style={{ marginBottom: 12 }}>
+            Choose your bank
+          </Text>
           <Input placeholder="Search banks" value={query} onChangeText={setQuery} autoCorrect={false} />
           {error && !banks ? (
             <ErrorState error={error} onRetry={onRetry} />

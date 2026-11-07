@@ -9,6 +9,7 @@ import { bookingService, type Booking } from "../src/services/booking.service";
 jest.mock("@react-navigation/native", () => ({
   ...jest.requireActual("@react-navigation/native"),
   useNavigation: () => ({ canGoBack: () => true, goBack: jest.fn() }),
+  useNavigationState: (select: (state: { index: number }) => unknown) => select({ index: 1 }),
 }));
 
 // An assigned (full view) booking, shaped after the guide's caregiver detail capture.

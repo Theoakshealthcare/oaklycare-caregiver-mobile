@@ -34,6 +34,7 @@ jest.mock("../src/hooks/use-navigation", () => ({
 jest.mock("@react-navigation/native", () => ({
   ...jest.requireActual("@react-navigation/native"),
   useNavigation: () => ({ canGoBack: () => true, goBack: jest.fn() }),
+  useNavigationState: (select: (state: { index: number }) => unknown) => select({ index: 1 }),
 }));
 
 /** The server as the screen sees it: `current` is what `getState` answers; tests move it like the backend would. */

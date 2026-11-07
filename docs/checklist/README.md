@@ -27,6 +27,8 @@ channel) lives in the backend repo: `docs/checklist/MASTER_CHECKLIST.md`. Update
 - [ ] Welcome slide 3 art replacement (shows a "BOOK NOW" phone); sign-up "Create Account" clip after errors and bank picker top inset (DP1-31 remainder); Android pass
 - [ ] Leave alone until decided: DP1-10, 16, 21, 22, 23, 33
 
+## Device pass 2 follow-ups (2026-11-07)
+- [x] DP2-02 readable payslip with pending and held rows (text, built from the Wallet's payments; empty month says so), DP2-03 held amount on Home, Wallet "Total earned / Paid out to your bank" and one payout banner, DP2-06 bank form spacing and picker inset + Back, DP2-07 no dead Back arrow on Login after a sign-out (`HeaderBack` reads its navigator's state). Branch `fix/caregiver-pass-2-followups`, **device-verified on the simulator**; see docs/sop/2026-11-07-caregiver-pass-2-followups.md and the addendum in ledgers/LEDGER-device-pass-2.md
 ## Caregiver AI voice notes (design done, app side built on a fake; **not wired to a real backend**)
 - [x] Plan, API contract, data model and test plan written in the backend repo: `docs/plans/2026-11-07-ai-note-transcription.md` (migration `0026` reserved)
 - [x] App side against that contract (2026-11-07, branch `feature/caregiver-ai-notes-ui`, see docs/sop/2026-11-07-caregiver-ai-voice-notes-ui.md): consent card (exact line, naming an external AI service, remembered per visit), record, upload, transcribing with retry and `detail.code` sentences, edit screen with Save and Discard (discard deletes server-side), saved voice notes show the final text, typed note unchanged. Jest only; **no device run**; off unless `EXPO_PUBLIC_VOICE_NOTES=fake`

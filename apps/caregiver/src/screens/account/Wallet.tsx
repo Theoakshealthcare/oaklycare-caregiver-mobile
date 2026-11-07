@@ -21,6 +21,7 @@ import {
   MIN_PAYOUT_NAIRA_TEXT,
   PAUSE_REASON,
   payoutsPausedUntil,
+  monthLabel,
   monthOptions,
   walletBalances,
   type Tone,
@@ -75,9 +76,17 @@ const Wallet: React.FC = () => {
   };
 
   const downloadPayslip = async () => {
+    if (!txs.data) {
+      Alert.alert("Your payments are still loading", "Try again in a moment.");
+      return;
+    }
+    if (txs.data.length === 0) {
+      Alert.alert(`No earnings in ${monthLabel(month)}`, "There is nothing to put in a payslip for this month yet.");
+      return;
+    }
     setDownloading(true);
     try {
-      await sharePayslip(month);
+      await sharePayslip(month, txs.data);
     } catch (error) {
       Alert.alert("Couldn't get your payslip", messageForError(error));
     } finally {
@@ -119,14 +128,15 @@ const Wallet: React.FC = () => {
         ) : null}
 
         {pausedUntil ? (
-          <InfoRow tone="warning" icon="pause-circle" textTestID="wallet-paused" style={{ marginTop: 8 }}>
-            {`Payouts are paused until ${pausedUntil} ${PAUSE_REASON}.`}
+          // One banner, not two: the pause and the weekly rule say one thing together.
+          <InfoRow tone="warning" icon="pause-circle" textTestID="wallet-paused" style={{ marginVertical: 8 }}>
+            {`Payouts are paused until ${pausedUntil} ${PAUSE_REASON}. After that they are sent weekly once your available balance is at least ${MIN_PAYOUT_NAIRA_TEXT}.`}
           </InfoRow>
-        ) : null}
-
-        <InfoRow style={{ marginVertical: 8 }}>
-          {`Payouts are sent weekly to your bank account once your available balance is at least ${MIN_PAYOUT_NAIRA_TEXT}.`}
-        </InfoRow>
+        ) : (
+          <InfoRow style={{ marginVertical: 8 }}>
+            {`Payouts are sent weekly to your bank account once your available balance is at least ${MIN_PAYOUT_NAIRA_TEXT}.`}
+          </InfoRow>
+        )}
 
         {bank.data ? (
           <View style={{ flexDirection: "row", alignItems: "center", padding: 14, borderRadius: 12, backgroundColor: theme.colors.primaryLight, marginBottom: 12 }}>
@@ -155,8 +165,8 @@ const Wallet: React.FC = () => {
           </Pressable>
         ) : null}
 
-        <TotalCard label="Total amount paid in" value={formatKobo(summary.total_earned)} icon="arrow-down-left" />
-        <TotalCard label="Total paid out" value={formatKobo(summary.total_withdrawn)} icon="arrow-up-right" />
+        <TotalCard label="Total earned" value={formatKobo(summary.total_earned)} icon="arrow-down-left" />
+        <TotalCard label="Paid out to your bank" value={formatKobo(summary.total_withdrawn)} icon="arrow-up-right" />
 
         <View style={{ flexDirection: "row", alignItems: "center", justifyContent: "space-between", marginTop: 16 }}>
           <Text variant="h3" weight="bold">
