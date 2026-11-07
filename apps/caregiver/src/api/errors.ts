@@ -11,7 +11,7 @@ import { errorMessage } from "@oakly/api-client";
 export type ErrorContext = "default" | "login" | "accept" | "decline" | "availability" | "visit" | "bank";
 
 export class ApiError extends Error {
-  /** HTTP status, or 0 when the request never reached the server (offline, DNS, timeout). */
+  /** HTTP status, 0 when the request never reached the server (offline, DNS, timeout), or -1 for an app-side failure. */
   readonly status: number;
   /** `detail` when the server sent a plain string, else null. */
   readonly detail: string | null;
@@ -31,10 +31,13 @@ export class ApiError extends Error {
   }
 }
 
+/** `ApiError.status` for a failure inside the app (not the network, not a server answer). */
+export const CLIENT_FAILURE_STATUS = -1;
+
 export const NETWORK_MESSAGE = "Can't reach Oakly. Check your internet connection and try again.";
 export const SESSION_EXPIRED_MESSAGE = "Your session has expired. Please sign in again.";
 const SERVER_MESSAGE = "Something went wrong on our side. Please try again in a moment.";
-const FALLBACK_MESSAGE = "Something went wrong. Please try again.";
+export const FALLBACK_MESSAGE = "Something went wrong. Please try again.";
 
 /** Backend `detail` strings the app maps to its own wording. Matched exactly, never by prefix. */
 const DETAIL = {

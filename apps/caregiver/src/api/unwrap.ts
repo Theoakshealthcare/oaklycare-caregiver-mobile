@@ -1,4 +1,4 @@
-import { ApiError, NETWORK_MESSAGE, messageForStatus } from "./errors";
+import { ApiError, CLIENT_FAILURE_STATUS, FALLBACK_MESSAGE, NETWORK_MESSAGE, messageForStatus } from "./errors";
 
 /** The part of an openapi-fetch result the data layer reads. */
 interface FetchResult<T> {
@@ -12,9 +12,13 @@ async function settle<T>(call: Promise<FetchResult<T>>): Promise<FetchResult<T>>
   try {
     result = await call;
   } catch (error) {
-    // fetch rejects (TypeError) when the request never completed: offline, DNS, refused connection.
+    if (error instanceof ApiError) throw error;
     if (__DEV__) console.warn("[api] request failed before a response was read:", error);
-    throw new ApiError(0, null, NETWORK_MESSAGE);
+    // fetch rejects with a TypeError when the request never completed: offline, DNS, refused
+    // connection, timeout. Only that says "Can't reach Oakly"; any other throw is our own failure
+    // (building the request, reading the file) and must not blame the connection (DP1-02).
+    if (error instanceof TypeError) throw new ApiError(0, null, NETWORK_MESSAGE);
+    throw new ApiError(CLIENT_FAILURE_STATUS, null, FALLBACK_MESSAGE);
   }
   if (result.error !== undefined || !result.response.ok) {
     const { status } = result.response;

@@ -83,7 +83,55 @@ export function createOaklyClient(options: OaklyClientOptions) {
     },
   };
   client.use(auth);
-  return client;
+
+  // Resolved per call, like the retry above, so a fetch installed after the client was built is used.
+  const send: typeof globalThis.fetch = (input, init) => (options.fetch ?? globalThis.fetch)(input, init);
+  const baseUrl = options.baseUrl.replace(/\/+$/, "");
+
+  /**
+   * Multipart upload (`FormData` body), sent with plain `fetch(url, init)` and never through a
+   * `Request` object. openapi-fetch wraps every call in `new Request(url, { body })`, and React Native's
+   * `Request` cannot carry a `{ uri, name, type }` file part: the call dies before leaving the device
+   * and surfaces as a bogus network error. Content-Type is deliberately not set, so fetch adds
+   * `multipart/form-data` with the boundary. Auth matches the client: bearer token, and one
+   * refresh-and-retry on 401 (the same FormData is re-sent; a file part is a descriptor, not a stream).
+   *
+   * A rejection from `fetch` means the request never completed (offline, DNS, refused, timeout) and is
+   * passed up as is. Resolves like openapi-fetch: `{ data }` on 2xx, `{ error }` otherwise, plus `response`.
+   */
+  async function uploadMultipart<T = unknown>(
+    path: string,
+    form: FormData,
+    method: "POST" | "PUT" | "PATCH" = "POST",
+  ): Promise<{ data?: T; error?: unknown; response: Response }> {
+    const url = `${baseUrl}${path}`;
+    const attempt = (token: string | null): Promise<Response> => {
+      const headers: Record<string, string> = { Accept: "application/json" };
+      if (token) headers.Authorization = `Bearer ${token}`;
+      return send(url, { method, headers, body: form });
+    };
+
+    const token = await options.getAccessToken();
+    let response = await attempt(token);
+    if (response.status === 401 && token && options.onUnauthorized) {
+      const fresh = await options.onUnauthorized();
+      if (fresh) response = await attempt(fresh);
+    }
+
+    const text = await response.text();
+    let body: unknown = undefined;
+    if (text) {
+      try {
+        body = JSON.parse(text) as unknown;
+      } catch {
+        body = undefined;
+      }
+    }
+    // The caller names the response type from the generated schema; the body is not validated here.
+    return response.ok ? { data: body as T | undefined, response } : { error: body ?? {}, response };
+  }
+
+  return Object.assign(client, { uploadMultipart });
 }
 
 export type OaklyClient = ReturnType<typeof createOaklyClient>;
