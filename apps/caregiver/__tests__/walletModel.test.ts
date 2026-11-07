@@ -131,7 +131,7 @@ describe("earning transactions in plain English", () => {
     });
   });
   it("held", () => {
-    expect(transactionView({ ...e, status: "held" })).toMatchObject({ statusLabel: "Under review by Oakly", tone: "pending" });
+    expect(transactionView({ ...e, status: "held" })).toMatchObject({ statusLabel: "Under review", tone: "pending" });
   });
   it("successful earning is available", () => {
     expect(transactionView({ ...e, status: "successful" })).toMatchObject({ statusLabel: "Available", tone: "success", amount: "+₦55,000.00" });
