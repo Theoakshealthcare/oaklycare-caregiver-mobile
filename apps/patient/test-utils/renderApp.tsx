@@ -12,7 +12,11 @@ export async function renderSignedIn(extra: Routes = {}, user: FakeUser = patien
   await session.signOut();
   await setIntroSeen(true);
   await session.signIn({ accessToken: "access-stored", refreshToken: "refresh-stored" });
-  const calls = routeFetch({ "GET /api/v1/auth/me": () => ({ status: 200, body: user }), ...extra });
+  const calls = routeFetch({
+    "GET /api/v1/auth/me": () => ({ status: 200, body: user }),
+    "GET /api/v1/booking/patient/bookings": () => ({ status: 200, body: [] }),
+    ...extra,
+  });
   const view = await render(<App />);
   await screen.findByText(`Hello, ${user.full_name.split(" ")[0]}`);
   return { calls, view };

@@ -1,87 +1,82 @@
-import { useMutation, useQueryClient } from "@tanstack/react-query";
+import { useIsFocused } from "@react-navigation/native";
+import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 
-import type { Booking, BookingDraft, BookingQuote, CancelTerms, ChatMessage } from "@/src/domain/booking";
-import { sampleBookings, sampleChat } from "@/src/fixtures/bookings";
+import { queryKeys } from "@/src/api/keys";
+import { isActive, type Booking, type BookingDraft, type CancelResult } from "@/src/domain/booking";
+import { bookingService, type CreatedBooking } from "@/src/services/booking.service";
 
-import { sampleKeys, useFixtureQuery } from "./fixture";
+import { usePaymentLinks } from "./paymentLinks";
 
-/** Sample data until the booking slice reads `GET /booking/patient/bookings`. */
+/** How often the open detail of an active booking is read again (the visit code and the status live there). */
+export const detailRefresh = { intervalMs: 20_000 };
+
+/** The patient's bookings, newest first (`GET /booking/patient/bookings`). The list never carries the visit code. */
 export function useBookings() {
-  return useFixtureQuery(["bookings"], () => sampleBookings());
+  return useQuery({ queryKey: queryKeys.bookings, queryFn: bookingService.list });
 }
 
-/** One booking, from the same cache as the list. */
+/**
+ * One booking from `GET /booking/booking/{id}`: the only response that carries the visit code. While the screen is
+ * focused and the booking is still active (looking for a caregiver, accepted, on the way) it is read again every 20 s;
+ * a booking that is over, or a screen that is not in front, never polls.
+ */
 export function useBooking(id: string) {
-  const list = useBookings();
-  return { ...list, data: list.data?.find((b) => b.id === id) };
+  const focused = useIsFocused();
+  return useQuery({
+    queryKey: queryKeys.booking(id),
+    queryFn: () => bookingService.get(id),
+    refetchInterval: (query) => (focused && query.state.data && isActive(query.state.data) ? detailRefresh.intervalMs : false),
+  });
 }
 
-/** What canceling costs right now (free / 20% / 50%). Sample: always the 20% tier. */
+/** The price from the backend preview. Never computed on the device. */
+export function useBookingQuote(draft: BookingDraft) {
+  const hours = Number(draft.durationHours) || 0;
+  return useQuery({
+    queryKey: queryKeys.quote(hours, draft.latitude, draft.longitude),
+    queryFn: () => bookingService.preview({ durationHours: hours, latitude: draft.latitude, longitude: draft.longitude }),
+    enabled: hours >= 1 && hours <= 24,
+  });
+}
+
+/** Creates the booking. The checkout URL is kept (in memory) so "Pay now" can open it again. */
+export function useCreateBooking() {
+  const client = useQueryClient();
+  const remember = usePaymentLinks((s) => s.remember);
+  return useMutation({
+    mutationFn: (draft: BookingDraft): Promise<CreatedBooking> => bookingService.create(draft),
+    onSuccess: ({ booking, paymentUrl }) => {
+      if (paymentUrl) remember(booking.id, paymentUrl);
+      client.setQueryData<Booking>(queryKeys.booking(booking.id), booking);
+      void client.invalidateQueries({ queryKey: queryKeys.bookings });
+    },
+  });
+}
+
+/** What canceling costs right now. Never reused from the cache: the fee changes as the visit gets closer. */
 export function useCancelTerms(id: string) {
-  const booking = useBooking(id);
-  const terms: CancelTerms | undefined = booking.data && {
-    feePercent: 20,
-    feeAmount: Math.round(booking.data.amount * 0.2),
-    refundAmount: booking.data.amount - Math.round(booking.data.amount * 0.2),
-  };
-  return { ...booking, data: terms };
+  return useQuery({
+    queryKey: queryKeys.cancelTerms(id),
+    queryFn: () => bookingService.cancelTerms(id),
+    staleTime: 0,
+    gcTime: 0,
+    retry: false,
+  });
 }
 
+/** Cancels, sending the fee the person saw. The booking is read again afterwards: its refund summary is the truth. */
 export function useCancelBooking(id: string) {
   const client = useQueryClient();
   return useMutation({
-    mutationFn: async () => {
-      client.setQueryData<Booking[]>(sampleKeys.bookings, (list) =>
-        list?.map((b) => (b.id === id ? { ...b, status: "cancelled", visitCode: null, paymentStatus: "refunded" } : b)),
+    mutationFn: (input: { acceptedFeeKobo: number; reason?: string }): Promise<CancelResult> => bookingService.cancel(id, input),
+    onSuccess: (result) => {
+      client.setQueryData<Booking>(queryKeys.booking(id), (booking) =>
+        booking
+          ? { ...booking, status: "cancelled", visitCode: null, cancelFee: result.feeAmount, cancelFeeTier: result.feeTier, refund: result.refund }
+          : booking,
       );
-    },
-  });
-}
-
-/** The price shown on the summary. Sample: a flat hourly rate. */
-export function useBookingQuote(draft: BookingDraft) {
-  const hours = Number(draft.durationHours) || 0;
-  return useFixtureQuery<BookingQuote>(["quote", draft.durationHours], () => ({ amount: hours * 6250 }));
-}
-
-/** Creates the booking and answers with its id. Sample: adds it to the list as an unpaid, pending booking. */
-export function useCreateBooking() {
-  const client = useQueryClient();
-  return useMutation({
-    mutationFn: async (draft: BookingDraft): Promise<string> => {
-      const id = `sample-new-${Date.now()}`;
-      const created: Booking = {
-        id,
-        reference: "OC-NEW",
-        service: draft.service,
-        bookingFor: draft.forWhom,
-        scheduledAt: new Date().toISOString(),
-        durationHours: Number(draft.durationHours) || 1,
-        address: draft.address,
-        amount: (Number(draft.durationHours) || 1) * 6250,
-        paymentStatus: "pending",
-        status: "pending",
-        dispatchState: "dispatching",
-        caregiver: null,
-        visitCode: null,
-      };
-      client.setQueryData<Booking[]>(sampleKeys.bookings, (list) => [created, ...(list ?? [])]);
-      return id;
-    },
-  });
-}
-
-/** Sample chat for a booking. */
-export function useChat(bookingId: string) {
-  return useFixtureQuery(["chat", bookingId], () => sampleChat());
-}
-
-export function useSendMessage(bookingId: string) {
-  const client = useQueryClient();
-  return useMutation({
-    mutationFn: async (text: string) => {
-      const message: ChatMessage = { id: `m-${Date.now()}`, from: "me", text, sentAt: new Date().toISOString() };
-      client.setQueryData<ChatMessage[]>(sampleKeys.chat(bookingId), (list) => [...(list ?? []), message]);
+      void client.invalidateQueries({ queryKey: queryKeys.booking(id) });
+      void client.invalidateQueries({ queryKey: queryKeys.bookings });
     },
   });
 }

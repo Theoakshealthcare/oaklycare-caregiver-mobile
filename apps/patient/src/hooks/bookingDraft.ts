@@ -13,6 +13,10 @@ export const EMPTY_DRAFT: BookingDraft = {
   state: "",
   city: "",
   address: "",
+  latitude: null,
+  longitude: null,
+  genderPreference: "any",
+  languagePreference: "any",
   instructions: "",
 };
 

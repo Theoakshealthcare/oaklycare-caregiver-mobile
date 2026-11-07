@@ -10,7 +10,8 @@ import { Header } from "@/src/components/ui/screen";
 import Text from "@/src/components/ui/text";
 import { MAX_FONT_SCALE, theme } from "@/src/constants/theme";
 import { formatTime } from "@/src/domain/format";
-import { useBooking, useChat, useSendMessage } from "@/src/hooks/useBookings";
+import { useBooking } from "@/src/hooks/useBookings";
+import { useChat, useSendMessage } from "@/src/hooks/useChat";
 import type { ScreenParamLists } from "@/src/navigation/Navigations";
 
 type Props = StackScreenProps<ScreenParamLists, "Chat">;
@@ -32,7 +33,7 @@ const Chat: React.FC<Props> = ({ route }) => {
 
   return (
     <KeyboardInsetView style={styles.screen}>
-      <Header title={booking.data?.caregiver?.name ?? "Chat"} />
+      <Header title={booking.data?.caregiver?.firstName ?? "Chat"} />
       <ScrollView contentContainerStyle={styles.messages} keyboardShouldPersistTaps="handled">
         <SampleNotice what="This chat" />
         {(chat.data ?? []).map((m) => (
