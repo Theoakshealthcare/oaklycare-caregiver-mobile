@@ -1,0 +1,14 @@
+{
+  "request": {
+    "method": "GET",
+    "path": "/api/v1/booking/chat/00000000-0000-4000-8000-0000000000aa/messages",
+    "auth": "bearer",
+    "body": null
+  },
+  "response": {
+    "status": 404,
+    "body": {
+      "detail": "Booking not found"
+    }
+  }
+}

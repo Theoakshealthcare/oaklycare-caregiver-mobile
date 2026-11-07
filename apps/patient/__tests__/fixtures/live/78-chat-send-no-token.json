@@ -1,0 +1,16 @@
+{
+  "request": {
+    "method": "POST",
+    "path": "/api/v1/booking/chat/a6b424ed-ff26-48f1-8912-5f9b5b2694e4/send",
+    "auth": null,
+    "body": {
+      "message": "hi"
+    }
+  },
+  "response": {
+    "status": 401,
+    "body": {
+      "detail": "Not authenticated"
+    }
+  }
+}

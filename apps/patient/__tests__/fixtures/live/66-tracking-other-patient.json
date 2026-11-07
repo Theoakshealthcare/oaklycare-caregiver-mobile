@@ -1,0 +1,14 @@
+{
+  "request": {
+    "method": "GET",
+    "path": "/api/v1/booking/booking/a6b424ed-ff26-48f1-8912-5f9b5b2694e4/live-tracking",
+    "auth": "bearer",
+    "body": null
+  },
+  "response": {
+    "status": 403,
+    "body": {
+      "detail": "Access denied"
+    }
+  }
+}

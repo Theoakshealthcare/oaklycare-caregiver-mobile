@@ -153,7 +153,7 @@ Owner decisions (2026-11-07): move the old app into the monorepo on SDK 57, copi
   - [x] Screens: intro, auth (6), home, notifications, bookings tabs, booking details with the **visit code**, cancel with the fee tier shown first, booking steps 1 and 2 and summary, payment result, track, chat, vitals (tiles, entry, detail, history, who can see), FallGuard (intro, one generic question screen, result), profile (menu, edit, contact, account and data)
   - [x] Design mistakes fixed (units, typos, currency, no scores, no Critical chips); dead code not carried (24 FallGuard files, wallet, prescriptions, call, AI note taker)
   - [x] Every screen reads one `useXxx` hook over sample data and draws a "shows sample information" notice; the wiring slices below delete the notice
-  - [ ] Still to wire, per slice: tracking map and chat (P9). Booking, vitals, FallGuard, notifications and profile are wired (below)
+  - [x] Still to wire, per slice: booking, vitals, FallGuard, notifications, profile and tracking + chat are wired (below)
   - [ ] Device pass: layouts, fonts, the keyboard helpers on a phone, intro slides
 - [ ] P2 Security: archive the old repo and rotate the old upload key (owner: was `com.oakly.oaklypatient` ever published, is the old repo public?); full logout also unregisters push
 - [ ] P3 Auth correctness (partly done 2026-11-07, same branch and SOP as P1b; Jest only, **not device-verified**)
@@ -182,7 +182,12 @@ Owner decisions (2026-11-07): move the old app into the monorepo on SDK 57, copi
   - [ ] Owner: `eas init` for the patient app, APNs / FCM keys; then a push test on a phone (real push, banner and tap not verified); rebuild the dev build (new native module `expo-notifications`)
 - [x] Profile wired (same branch and SOP): edit profile (re-reads `/auth/me`, keeps `user.patient`), change password (400 codes, 429 countdown, new token pair stored), FAQs and About open oaklycare.com; Terms / Privacy hidden until URLs are known
   - [ ] **Backend: `PUT /auth/profile` does not save name or phone (live capture), and cannot clear a field**; the app says so instead of "updated"
-- [ ] P9 Live tracking (GET + WS) and chat (poll first)
+- [x] P9 Live tracking and chat wired (2026-11-07, branch `feature/patient-tracking-chat`, see docs/sop/2026-11-07-patient-tracking-and-chat.md; **proved on the iOS simulator**, ledger `LEDGER-device-patient-tracking-chat.md`; not pushed)
+  - [x] Tracking as text, polled every 15 s while the screen is in front and the caregiver is accepted / on the way: distance, estimated arrival (on the way only), "Updated ... ago", out-of-date warning from 5 min, "Location not shared yet" (404), nothing when closed (409), "Open in Maps" (Apple Maps on iOS, Google Maps link elsewhere)
+  - [x] Chat: the real conversation (5 s poll while open), send with the words given back and a reason when it fails, empty state, 1,000-character cap, no sample notice anywhere
+  - [x] Fixtures are 21 live captures (`__tests__/fixtures/live/63-83`, `scripts/capture-tracking-chat.mjs`); sample plumbing (`hooks/fixture.ts`, `fixtures/bookings.ts`) deleted
+  - [ ] **No in-app map** (needs a native module and a Google Maps key, owner has none) and **no WebSocket** (polling is enough at this scale; `/booking/ws/patient/tracking` is documented in the SOP); a chat push or unread badge has no backend support yet
+  - [ ] Not run: Android, a physical phone, a real caregiver phone feeding positions
 - [ ] P10-P12 Nutritionist / physio, wallet / support, prescriptions / video call / AI note taker / ratings / care-plan view: hidden or deferred per the owner's v1 scope
 - [ ] P13 Tests per slice, device pass, EAS builds, TestFlight / Play internal track (owner: Apple / Google accounts)
 - [ ] Theme aligned to the designs (primary about `#3D8082`, coral about `#EB695A`; the shell still carries the caregiver tokens; owner to confirm, see `LEDGER-patient-screens.md` §6 Q4)

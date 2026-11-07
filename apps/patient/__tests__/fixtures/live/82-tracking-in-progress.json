@@ -1,0 +1,24 @@
+{
+  "request": {
+    "method": "GET",
+    "path": "/api/v1/booking/booking/a6b424ed-ff26-48f1-8912-5f9b5b2694e4/live-tracking",
+    "auth": "bearer",
+    "body": null
+  },
+  "response": {
+    "status": 200,
+    "body": {
+      "booking_id": "a6b424ed-ff26-48f1-8912-5f9b5b2694e4",
+      "caregiver_id": "5f637f34-a944-4f82-8556-69abbc00bf2c",
+      "caregiver_name": "Placeholder Caregiver",
+      "current_latitude": 6.4494,
+      "current_longitude": 3.4723,
+      "distance_km": 0.22,
+      "estimated_arrival_minutes": 5,
+      "last_updated": "2026-11-07T19:17:16.273177",
+      "is_moving": false,
+      "booking_status": "in_progress"
+    }
+  },
+  "note": "In progress: the API still answers; the app stops asking once the visit has started."
+}

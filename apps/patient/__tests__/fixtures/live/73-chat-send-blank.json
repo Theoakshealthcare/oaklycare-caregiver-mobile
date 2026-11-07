@@ -1,0 +1,24 @@
+{
+  "request": {
+    "method": "POST",
+    "path": "/api/v1/booking/chat/a6b424ed-ff26-48f1-8912-5f9b5b2694e4/send",
+    "auth": "bearer",
+    "body": {
+      "message": ""
+    }
+  },
+  "response": {
+    "status": 200,
+    "body": {
+      "id": "12b25e40-fba8-485b-a970-cf67f12b615b",
+      "booking_id": "a6b424ed-ff26-48f1-8912-5f9b5b2694e4",
+      "sender_id": "ad3d5dec-718f-4394-8654-2c86fab2bb86",
+      "message": "",
+      "message_type": "text",
+      "attachment_url": null,
+      "is_read": false,
+      "created_at": "2026-11-07T19:17:16.018313"
+    }
+  },
+  "note": "The API does not refuse an empty message: the app never sends one."
+}

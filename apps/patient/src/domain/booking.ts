@@ -191,9 +191,11 @@ export interface BookingQuote {
   peakHoursWarning: string | null;
 }
 
+/** One chat message. `senderId` is the sender's USER id: the patient's own messages carry the `id` of `GET /auth/me`. */
 export interface ChatMessage {
   id: string;
-  from: "me" | "caregiver";
+  senderId: string;
   text: string;
+  /** An ISO instant (the API's zone-less UTC time, made explicit). */
   sentAt: string;
 }

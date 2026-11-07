@@ -1,0 +1,15 @@
+{
+  "request": {
+    "method": "GET",
+    "path": "/api/v1/booking/booking/a6b424ed-ff26-48f1-8912-5f9b5b2694e4/live-tracking",
+    "auth": "bearer",
+    "body": null
+  },
+  "response": {
+    "status": 404,
+    "body": {
+      "detail": "No tracking data available"
+    }
+  },
+  "note": "Seeded: the caregiver's location row was deleted from the table, so no position is known."
+}
