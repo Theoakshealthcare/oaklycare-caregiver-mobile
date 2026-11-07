@@ -1,7 +1,8 @@
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
-import { render, screen } from "@testing-library/react-native";
+import { fireEvent, render, screen } from "@testing-library/react-native";
 import React from "react";
 
+import { DECLINE_MESSAGE } from "../src/constants/offerCopy";
 import OfferCard from "../src/components/booking/OfferCard";
 import CaregiverBookings from "../src/screens/booking/CaregiverBookings";
 import { bookingService, toOffer, type Booking } from "../src/services/booking.service";
@@ -120,6 +121,20 @@ describe("offer view", () => {
     expect(await screen.findByText("Wound dressing")).toBeTruthy();
     expect(bookingService.listCaregiverBookings).toHaveBeenCalledWith("new_requests");
     expectNoPatientData(renderedText());
+  });
+});
+
+describe("declining from the New Request tab", () => {
+  it("the confirmation says a decline is final", async () => {
+    jest.spyOn(bookingService, "listCaregiverBookings").mockResolvedValue([offerView]);
+    const client = new QueryClient({ defaultOptions: { queries: { retry: false } } });
+    await render(
+      <QueryClientProvider client={client}>
+        <CaregiverBookings />
+      </QueryClientProvider>,
+    );
+    await fireEvent.press(await screen.findByText("Decline"));
+    expect(await screen.findByText(DECLINE_MESSAGE)).toBeTruthy();
   });
 });
 

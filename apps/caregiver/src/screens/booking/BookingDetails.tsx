@@ -7,6 +7,7 @@ import Button from "@/src/components/ui/button";
 import HeaderBack from "@/src/components/back/HeaderBack";
 import Text from "@/src/components/ui/text";
 import { globalStyles } from "@/src/constants/styles";
+import { DECLINE_MESSAGE, DECLINE_TITLE } from "@/src/constants/offerCopy";
 import { theme } from "@/src/constants/theme";
 import { useBooking } from "@/src/hooks/queries";
 import { useOfferActions } from "@/src/hooks/useOfferActions";
@@ -148,7 +149,7 @@ const BookingDetails: React.FC<Props> = ({ route, navigation }) => {
   });
 
   const confirmDecline = () =>
-    Alert.alert("Decline this job?", "It will be offered to other caregivers.", [
+    Alert.alert(DECLINE_TITLE, DECLINE_MESSAGE, [
       { text: "Cancel", style: "cancel" },
       { text: "Decline", style: "destructive", onPress: () => decline(bookingId) },
     ]);
