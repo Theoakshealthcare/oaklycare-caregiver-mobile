@@ -1,0 +1,112 @@
+{
+  "request": {
+    "method": "GET",
+    "path": "/api/v1/vitals/37b440fd-cb39-45ea-bed3-cf4415862295?start=2026-11-06T15%3A33%3A58.926Z",
+    "auth": "bearer",
+    "body": null
+  },
+  "response": {
+    "status": 200,
+    "body": [
+      {
+        "vital_type": "blood_pressure",
+        "value": "120/80",
+        "unit": "mmHg",
+        "source": "manual",
+        "recorded_at": "2026-11-07T15:33:58.737000",
+        "notes": null,
+        "id": "79828f47-09a5-4352-914b-604d78937c1d",
+        "patient_id": "37b440fd-cb39-45ea-bed3-cf4415862295",
+        "recorded_by_user_id": "8ace3f52-a752-42aa-b8d7-f705d4a4e5be"
+      },
+      {
+        "vital_type": "heart_rate",
+        "value": "72",
+        "unit": "bpm",
+        "source": "manual",
+        "recorded_at": "2026-11-07T15:33:58.737000",
+        "notes": null,
+        "id": "4b1cb9a9-3587-44e1-b677-2965f9b0b8d2",
+        "patient_id": "37b440fd-cb39-45ea-bed3-cf4415862295",
+        "recorded_by_user_id": "8ace3f52-a752-42aa-b8d7-f705d4a4e5be"
+      },
+      {
+        "vital_type": "temperature",
+        "value": "36.8",
+        "unit": "°C",
+        "source": "manual",
+        "recorded_at": "2026-11-07T15:33:58.737000",
+        "notes": null,
+        "id": "1c97d176-1583-4648-acec-665601a30c51",
+        "patient_id": "37b440fd-cb39-45ea-bed3-cf4415862295",
+        "recorded_by_user_id": "8ace3f52-a752-42aa-b8d7-f705d4a4e5be"
+      },
+      {
+        "vital_type": "respiratory_rate",
+        "value": "16",
+        "unit": "breaths/min",
+        "source": "manual",
+        "recorded_at": "2026-11-07T15:33:58.737000",
+        "notes": null,
+        "id": "a1d0941c-e0f6-4aba-a756-8bcc923cf87b",
+        "patient_id": "37b440fd-cb39-45ea-bed3-cf4415862295",
+        "recorded_by_user_id": "8ace3f52-a752-42aa-b8d7-f705d4a4e5be"
+      },
+      {
+        "vital_type": "blood_glucose",
+        "value": "110",
+        "unit": "mg/dL",
+        "source": "manual",
+        "recorded_at": "2026-11-07T15:33:58.737000",
+        "notes": "RBS",
+        "id": "ccec2eb1-9cc3-40c3-8afa-e1d7cece6286",
+        "patient_id": "37b440fd-cb39-45ea-bed3-cf4415862295",
+        "recorded_by_user_id": "8ace3f52-a752-42aa-b8d7-f705d4a4e5be"
+      },
+      {
+        "vital_type": "blood_glucose",
+        "value": "92",
+        "unit": "mg/dL",
+        "source": "manual",
+        "recorded_at": "2026-11-07T15:33:58.737000",
+        "notes": "FBS",
+        "id": "a50efa0c-6e79-43d1-9f3c-fde77cdddc5f",
+        "patient_id": "37b440fd-cb39-45ea-bed3-cf4415862295",
+        "recorded_by_user_id": "8ace3f52-a752-42aa-b8d7-f705d4a4e5be"
+      },
+      {
+        "vital_type": "sleep_duration",
+        "value": "7.5",
+        "unit": "hrs",
+        "source": "manual",
+        "recorded_at": "2026-11-07T15:33:58.737000",
+        "notes": "22:30-06:00",
+        "id": "a0491163-8e06-405d-b2b4-0dcc6088332a",
+        "patient_id": "37b440fd-cb39-45ea-bed3-cf4415862295",
+        "recorded_by_user_id": "8ace3f52-a752-42aa-b8d7-f705d4a4e5be"
+      },
+      {
+        "vital_type": "blood_pressure",
+        "value": "300/20",
+        "unit": "mmHg",
+        "source": "manual",
+        "recorded_at": "2026-11-07T15:33:58.737000",
+        "notes": null,
+        "id": "21a471c5-5d6a-444e-ad45-36a3377747bc",
+        "patient_id": "37b440fd-cb39-45ea-bed3-cf4415862295",
+        "recorded_by_user_id": "8ace3f52-a752-42aa-b8d7-f705d4a4e5be"
+      },
+      {
+        "vital_type": "banana",
+        "value": "not a number",
+        "unit": "kg",
+        "source": "manual",
+        "recorded_at": "2026-11-07T15:33:58.737000",
+        "notes": null,
+        "id": "22fbac7b-bcfd-47c0-8806-f4e44db138a7",
+        "patient_id": "37b440fd-cb39-45ea-bed3-cf4415862295",
+        "recorded_by_user_id": "8ace3f52-a752-42aa-b8d7-f705d4a4e5be"
+      }
+    ]
+  }
+}

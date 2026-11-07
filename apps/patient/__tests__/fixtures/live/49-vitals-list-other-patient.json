@@ -1,0 +1,14 @@
+{
+  "request": {
+    "method": "GET",
+    "path": "/api/v1/vitals/0a75be5c-daed-4723-af03-0dd056bf5719",
+    "auth": "bearer",
+    "body": null
+  },
+  "response": {
+    "status": 403,
+    "body": {
+      "detail": "Access denied"
+    }
+  }
+}

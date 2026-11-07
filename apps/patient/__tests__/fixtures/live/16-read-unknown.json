@@ -1,0 +1,14 @@
+{
+  "request": {
+    "method": "POST",
+    "path": "/api/v1/patient/notifications/62bc147d-c1e0-4961-bd09-27acb94b21b7/read",
+    "auth": "bearer",
+    "body": null
+  },
+  "response": {
+    "status": 404,
+    "body": {
+      "detail": "Notification not found."
+    }
+  }
+}

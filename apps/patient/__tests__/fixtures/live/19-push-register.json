@@ -1,0 +1,18 @@
+{
+  "request": {
+    "method": "POST",
+    "path": "/api/v1/devices/push-token",
+    "auth": "bearer",
+    "body": {
+      "token": "ExponentPushToken[placeholder-patient-phone]",
+      "platform": "ios"
+    }
+  },
+  "response": {
+    "status": 200,
+    "body": {
+      "token": "ExponentPushToken[placeholder-patient-phone]",
+      "platform": "ios"
+    }
+  }
+}

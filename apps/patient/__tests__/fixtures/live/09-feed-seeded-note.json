@@ -1,0 +1,3 @@
+{
+  "note": "SEEDED: 7 rows inserted into `notifications` with psql (the worker writes them after booking events); every other call in this folder is a real HTTP call."
+}

@@ -1,0 +1,137 @@
+{
+  "request": {
+    "method": "POST",
+    "path": "/api/v1/fallguard/submit",
+    "auth": "bearer",
+    "body": {
+      "answers": [
+        {
+          "question_id": "d2eb4249-1a4e-46a3-b01e-8cbd8c74f213",
+          "answer": "Less than 65",
+          "score": 0
+        },
+        {
+          "question_id": "6afe28b6-c914-4489-b78a-c72cf6e0ce09",
+          "answer": "With a caregiver",
+          "score": 1
+        },
+        {
+          "question_id": "443d861f-b42b-44d0-b1cd-bb919b8b865a",
+          "answer": "Yes, 3+ times",
+          "score": 2
+        },
+        {
+          "question_id": "b4e0ae82-39ff-41e9-9815-d76baba808e1",
+          "answer": "No",
+          "score": 0
+        },
+        {
+          "question_id": "9f7e87a9-ea80-4a6b-9fb5-df6c30d69276",
+          "answer": "Occasionally",
+          "score": 1
+        },
+        {
+          "question_id": "880d1ad6-bcc3-414c-9436-76b54ad6b4f8",
+          "answer": "Not at all",
+          "score": 2
+        },
+        {
+          "question_id": "92d5094c-b012-4b7e-8e36-c5f8a7759137",
+          "answer": "Never",
+          "score": 0
+        },
+        {
+          "question_id": "968c84e7-3634-428f-ad75-8299320270d0",
+          "answer": "Mild",
+          "score": 1
+        },
+        {
+          "question_id": "7f5178fe-2d4d-425a-bf88-9f24b7104bbb",
+          "answer": "Severe pain",
+          "score": 2
+        },
+        {
+          "question_id": "a93e7f98-f052-49d4-9fcf-8d063d9f5101",
+          "answer": "One condition",
+          "score": 1
+        },
+        {
+          "question_id": "4cc3b789-956c-420a-8e2c-ebffa28722d0",
+          "answer": "Occasionally",
+          "score": 1
+        },
+        {
+          "question_id": "ac3ad705-3e1e-466d-8a02-24c902b97e28",
+          "answer": "Frequently",
+          "score": 2
+        },
+        {
+          "question_id": "c12c735e-df64-4003-8dcb-0914b9556525",
+          "answer": "No difficulty",
+          "score": 0
+        },
+        {
+          "question_id": "8c50e2a5-759d-4a11-b480-e920cd9f8bfb",
+          "answer": "Mild difficulty",
+          "score": 1
+        },
+        {
+          "question_id": "3f93c4b1-d7c1-4442-8dd8-afcbc33f3511",
+          "answer": "No",
+          "score": 0
+        },
+        {
+          "question_id": "95557284-7943-4cef-9459-1b8dbb51da9e",
+          "answer": "Well-lit",
+          "score": 0
+        },
+        {
+          "question_id": "cbb78f56-e011-408e-9bae-351b580499bf",
+          "answer": "Occasionally",
+          "score": 1
+        },
+        {
+          "question_id": "e17c2d6a-9e88-4273-bb87-785f402aaa66",
+          "answer": "No aids present",
+          "score": 2
+        },
+        {
+          "question_id": "26afa29a-8b8a-470a-b764-0c92f6c15bfa",
+          "answer": "Yes",
+          "score": 0
+        },
+        {
+          "question_id": "be34b25f-ff03-4e92-a3df-f726513e8fe9",
+          "answer": "Occasionally",
+          "score": 1
+        },
+        {
+          "question_id": "59ff48ec-4451-44e6-a800-26b660f564c4",
+          "answer": "Rarely or never",
+          "score": 1
+        },
+        {
+          "question_id": "3b843ba3-3049-4605-b864-f3344f4099a2",
+          "answer": "Yes, daily",
+          "score": 0
+        },
+        {
+          "question_id": "cf3677ba-4a03-408f-9fcd-fe4e21fdb189",
+          "answer": "Yes",
+          "score": 1
+        },
+        {
+          "question_id": "ddf66543-e058-4f9f-ae24-b1b8070bb466",
+          "answer": "Daily or almost daily",
+          "score": 0
+        }
+      ]
+    }
+  },
+  "response": {
+    "status": 403,
+    "body": {
+      "detail": "Access denied. Patient account required."
+    }
+  }
+}

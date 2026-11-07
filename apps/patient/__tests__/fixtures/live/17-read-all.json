@@ -1,0 +1,15 @@
+{
+  "request": {
+    "method": "POST",
+    "path": "/api/v1/patient/notifications/read-all",
+    "auth": "bearer",
+    "body": null
+  },
+  "response": {
+    "status": 200,
+    "body": {
+      "marked_read": 6,
+      "unread_count": 0
+    }
+  }
+}

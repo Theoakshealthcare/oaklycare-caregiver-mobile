@@ -1,0 +1,201 @@
+{
+  "request": {
+    "method": "GET",
+    "path": "/api/v1/fallguard/history",
+    "auth": "bearer",
+    "body": null
+  },
+  "response": {
+    "status": 200,
+    "body": [
+      {
+        "id": "e5acaaca-2ffe-46e9-ac52-5c61ffdfc5e8",
+        "patient_id": "37b440fd-cb39-45ea-bed3-cf4415862295",
+        "total_score": 0,
+        "ai_summary": null,
+        "ai_recommendations": null,
+        "created_at": "2026-11-07T15:33:59.169784",
+        "answers": []
+      },
+      {
+        "id": "27813753-71ee-4911-9f93-d13826f47df3",
+        "patient_id": "37b440fd-cb39-45ea-bed3-cf4415862295",
+        "total_score": 0,
+        "ai_summary": "Unable to analyze",
+        "ai_recommendations": [],
+        "created_at": "2026-11-07T15:33:59.093988",
+        "answers": []
+      },
+      {
+        "id": "bffbe85d-fb3f-4e63-b33f-b6790d729c92",
+        "patient_id": "37b440fd-cb39-45ea-bed3-cf4415862295",
+        "total_score": 99,
+        "ai_summary": "Unable to analyze",
+        "ai_recommendations": [],
+        "created_at": "2026-11-07T15:33:59.079189",
+        "answers": [
+          {
+            "question_id": "d2eb4249-1a4e-46a3-b01e-8cbd8c74f213",
+            "answer": "Less than 65",
+            "score": 99,
+            "id": "8c14e41d-2d73-44fc-ade1-b950d92ee6e7"
+          }
+        ]
+      },
+      {
+        "id": "51eecb3f-e865-4916-9c9c-a68a7c677da9",
+        "patient_id": "37b440fd-cb39-45ea-bed3-cf4415862295",
+        "total_score": 20,
+        "ai_summary": "Unable to analyze",
+        "ai_recommendations": [],
+        "created_at": "2026-11-07T15:33:59.056600",
+        "answers": [
+          {
+            "question_id": "d2eb4249-1a4e-46a3-b01e-8cbd8c74f213",
+            "answer": "Less than 65",
+            "score": 0,
+            "id": "0f1b2a63-af99-4c4f-8d6c-906fcda0c5ff"
+          },
+          {
+            "question_id": "6afe28b6-c914-4489-b78a-c72cf6e0ce09",
+            "answer": "With a caregiver",
+            "score": 1,
+            "id": "7fb295de-f2a2-40ef-975f-90bd9b68a9d3"
+          },
+          {
+            "question_id": "443d861f-b42b-44d0-b1cd-bb919b8b865a",
+            "answer": "Yes, 3+ times",
+            "score": 2,
+            "id": "fd2081ff-c096-41ea-93b4-7957eb7b423a"
+          },
+          {
+            "question_id": "b4e0ae82-39ff-41e9-9815-d76baba808e1",
+            "answer": "No",
+            "score": 0,
+            "id": "3920f2de-a3ce-43ef-9fe8-df81e433944a"
+          },
+          {
+            "question_id": "9f7e87a9-ea80-4a6b-9fb5-df6c30d69276",
+            "answer": "Occasionally",
+            "score": 1,
+            "id": "e404cf78-f927-49f4-9671-1d6a0567d4ff"
+          },
+          {
+            "question_id": "880d1ad6-bcc3-414c-9436-76b54ad6b4f8",
+            "answer": "Not at all",
+            "score": 2,
+            "id": "9d66bbd1-70c1-46ca-891a-ad04aeb164fe"
+          },
+          {
+            "question_id": "92d5094c-b012-4b7e-8e36-c5f8a7759137",
+            "answer": "Never",
+            "score": 0,
+            "id": "c2c8a889-a42d-4d58-a89e-0f2d928d88e5"
+          },
+          {
+            "question_id": "968c84e7-3634-428f-ad75-8299320270d0",
+            "answer": "Mild",
+            "score": 1,
+            "id": "16d10de2-2b8e-4779-b151-b1921fa4f8db"
+          },
+          {
+            "question_id": "7f5178fe-2d4d-425a-bf88-9f24b7104bbb",
+            "answer": "Severe pain",
+            "score": 2,
+            "id": "7aa4ae22-2b7d-44e3-864a-82a0c7f36b35"
+          },
+          {
+            "question_id": "a93e7f98-f052-49d4-9fcf-8d063d9f5101",
+            "answer": "One condition",
+            "score": 1,
+            "id": "48d734e3-5e07-4122-89c1-d42658f48dcd"
+          },
+          {
+            "question_id": "4cc3b789-956c-420a-8e2c-ebffa28722d0",
+            "answer": "Occasionally",
+            "score": 1,
+            "id": "47fd12f4-5565-4da9-b1c9-d381fdfe9dfe"
+          },
+          {
+            "question_id": "ac3ad705-3e1e-466d-8a02-24c902b97e28",
+            "answer": "Frequently",
+            "score": 2,
+            "id": "e01b1b9f-ec50-4e0f-86df-e48ea54790bf"
+          },
+          {
+            "question_id": "c12c735e-df64-4003-8dcb-0914b9556525",
+            "answer": "No difficulty",
+            "score": 0,
+            "id": "4c21e8fd-7305-4389-a3fa-5e277534ccb4"
+          },
+          {
+            "question_id": "8c50e2a5-759d-4a11-b480-e920cd9f8bfb",
+            "answer": "Mild difficulty",
+            "score": 1,
+            "id": "0368a7e1-8bf2-44b3-a6e2-88c6c7fca8db"
+          },
+          {
+            "question_id": "3f93c4b1-d7c1-4442-8dd8-afcbc33f3511",
+            "answer": "No",
+            "score": 0,
+            "id": "bcee86de-41ad-48fd-8255-157de14acdb2"
+          },
+          {
+            "question_id": "95557284-7943-4cef-9459-1b8dbb51da9e",
+            "answer": "Well-lit",
+            "score": 0,
+            "id": "a96662ac-758e-4e16-a22e-668b74afb2d7"
+          },
+          {
+            "question_id": "cbb78f56-e011-408e-9bae-351b580499bf",
+            "answer": "Occasionally",
+            "score": 1,
+            "id": "85fbaa21-0835-4101-9bf3-8ddecafa9193"
+          },
+          {
+            "question_id": "e17c2d6a-9e88-4273-bb87-785f402aaa66",
+            "answer": "No aids present",
+            "score": 2,
+            "id": "0144693b-879c-4198-863b-da68b8fec10e"
+          },
+          {
+            "question_id": "26afa29a-8b8a-470a-b764-0c92f6c15bfa",
+            "answer": "Yes",
+            "score": 0,
+            "id": "2a83ab07-5330-4a60-a370-87286f2dd419"
+          },
+          {
+            "question_id": "be34b25f-ff03-4e92-a3df-f726513e8fe9",
+            "answer": "Occasionally",
+            "score": 1,
+            "id": "d1e27cfd-a446-4ccc-a85b-3b58074c9fdf"
+          },
+          {
+            "question_id": "59ff48ec-4451-44e6-a800-26b660f564c4",
+            "answer": "Rarely or never",
+            "score": 1,
+            "id": "7c741c02-f6e1-4519-9ffe-b1c0265cff0d"
+          },
+          {
+            "question_id": "3b843ba3-3049-4605-b864-f3344f4099a2",
+            "answer": "Yes, daily",
+            "score": 0,
+            "id": "e2f3ffdc-5097-4ffb-b751-ed8b6c4512bf"
+          },
+          {
+            "question_id": "cf3677ba-4a03-408f-9fcd-fe4e21fdb189",
+            "answer": "Yes",
+            "score": 1,
+            "id": "759ef796-373c-4691-b074-8dc565dbe252"
+          },
+          {
+            "question_id": "ddf66543-e058-4f9f-ae24-b1b8070bb466",
+            "answer": "Daily or almost daily",
+            "score": 0,
+            "id": "55ae3d72-9829-4420-aac5-10f2e011aa26"
+          }
+        ]
+      }
+    ]
+  }
+}

@@ -1,0 +1,55 @@
+{
+  "request": {
+    "method": "GET",
+    "path": "/api/v1/patient/notifications?limit=3&offset=3",
+    "auth": "bearer",
+    "body": null
+  },
+  "response": {
+    "status": 200,
+    "body": {
+      "items": [
+        {
+          "id": "b8f0f7b2-329e-4446-97e9-06ace623a515",
+          "type": "visit_started",
+          "title": "Visit started",
+          "body": "Your visit has started.",
+          "data": {
+            "target": "booking_detail",
+            "booking_id": "a8e31eb7-e7af-489b-ad2e-441b18073226"
+          },
+          "read_at": null,
+          "created_at": "2026-11-07T15:03:54.888552"
+        },
+        {
+          "id": "6a9717bf-b64c-4474-b870-ceb7630b7f5d",
+          "type": "caregiver_on_the_way",
+          "title": "Caregiver on the way",
+          "body": "Ngozi is on the way.",
+          "data": {
+            "target": "booking_detail",
+            "booking_id": "39b547f8-621d-4751-8dda-7481cb34d608"
+          },
+          "read_at": null,
+          "created_at": "2026-11-07T14:53:54.785914"
+        },
+        {
+          "id": "3481f217-c612-4cfe-8f56-718e9a15cf02",
+          "type": "caregiver_found",
+          "title": "Caregiver found",
+          "body": "Ngozi will be your caregiver.",
+          "data": {
+            "target": "booking_detail",
+            "booking_id": "32f53162-7dc9-4323-98d9-eecacb35f325"
+          },
+          "read_at": null,
+          "created_at": "2026-11-07T14:43:54.685985"
+        }
+      ],
+      "total": 7,
+      "limit": 3,
+      "offset": 3,
+      "unread_count": 7
+    }
+  }
+}
