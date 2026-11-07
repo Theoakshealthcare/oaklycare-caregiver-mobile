@@ -3,6 +3,7 @@ import { fireEvent, screen, waitFor } from "@testing-library/react-native";
 import { queryClient } from "../src/api/queryClient";
 import { detailRefresh } from "../src/hooks/useBookings";
 import { paymentPolling } from "../src/hooks/usePaymentCheck";
+import { paymentLinkRetry } from "../src/hooks/fetchPaymentLink";
 import { usePaymentLinks } from "../src/hooks/paymentLinks";
 import { answer, capture } from "../test-utils/captures";
 import { disableCacheGcForTests, type RecordedCall } from "../test-utils/fakeApi";
@@ -63,6 +64,7 @@ describe("bookings (real backend calls, answered with captured bodies)", () => {
     jest.clearAllMocks();
     usePaymentLinks.getState().clear();
     paymentPolling.intervalMs = 1;
+    paymentLinkRetry.delayMs = 1;
     detailRefresh.intervalMs = 20_000;
   });
 
@@ -344,22 +346,115 @@ describe("bookings (real backend calls, answered with captured bodies)", () => {
       view.unmount();
     });
 
-    it("Pay now with no link on this phone (after a restart) says so and offers to cancel, and a late 'paid' answer still confirms", async () => {
-      const item = unpaid();
-      const verify = () => ({ status: 200, body: { ...capture("live-verify-paid").body, booking_id: item.id } });
-      const { view } = await renderSignedIn({
-        [LIST]: () => ({ status: 200, body: [item] }),
-        [`GET /api/v1/booking/booking/${item.id}`]: () => ({ status: 200, body: { ...item, visit_code: null } }),
-        [`POST /api/v1/booking/booking/${item.id}/verify-payment`]: verify,
+    describe("Pay now after an app restart (no checkout URL kept on this phone)", () => {
+      // The real answers of POST /booking/{id}/payment-link, from `backend/docs/fe-captures/patient` (copied to `test-utils/captures`).
+      const linkReply = () => capture("066-p-link");
+      const LINK_URL = linkReply().body.payment_url as string;
+      const refused = (name: string) => () => ({ status: capture(name).status, body: capture(name).body });
+
+      /** An unpaid booking in the list, opened with "Pay now" from the Bookings tab. */
+      async function openPayNow(linkHandler: (call: RecordedCall) => { status: number; body?: unknown }, extra: Record<string, any> = {}) {
+        const item = unpaid();
+        const rendered = await renderSignedIn({
+          [LIST]: () => ({ status: 200, body: [item] }),
+          [`GET /api/v1/booking/booking/${item.id}`]: () => ({ status: 200, body: { ...item, visit_code: null } }),
+          [`POST /api/v1/booking/${item.id}/payment-link`]: linkHandler,
+          [`POST /api/v1/booking/booking/${item.id}/verify-payment`]: () => ({ status: 200, body: { ...capture("live-verify-paid").body, booking_id: item.id } }),
+          ...extra,
+        });
+        await tab("Booking");
+        await fireEvent.press(await screen.findByRole("button", { name: "Pay now" }));
+        return { ...rendered, item };
+      }
+
+      it("asks the backend for a link (no body), opens it in the in-app browser, and reuses it on the next tap", async () => {
+        const item = unpaid();
+        const pending = () => ({ status: 200, body: { ...capture("live-verify-pending").body, booking_id: item.id } });
+        const { calls, view } = await openPayNow(() => linkReply(), { [`POST /api/v1/booking/booking/${item.id}/verify-payment`]: pending });
+        await waitFor(() => expect(WebBrowser.openBrowserAsync).toHaveBeenCalledWith(LINK_URL, expect.anything()));
+        const request = calls.find((c) => c.path === `/api/v1/booking/${item.id}/payment-link`);
+        expect(request).toMatchObject({ method: "POST", body: null });
+        expect(usePaymentLinks.getState().urls[item.id]).toBe(LINK_URL);
+        // The browser closed with nothing paid (the mock answers "dismiss", verify says pending): not confirmed, nothing marked paid.
+        expect(await screen.findByText("Payment not confirmed yet")).toBeTruthy();
+        // Pay now opens the remembered link: the backend is not asked for a second one.
+        await press("Pay now");
+        await waitFor(() => expect(WebBrowser.openBrowserAsync).toHaveBeenCalledTimes(2));
+        expect(countOf(calls, `POST /api/v1/booking/${item.id}/payment-link`)).toBe(1);
+        view.unmount();
       });
-      await tab("Booking");
-      await fireEvent.press(await screen.findByRole("button", { name: "Pay now" }));
-      expect(await screen.findByText(/not available on this phone any more/)).toBeTruthy();
-      expect(WebBrowser.openBrowserAsync).not.toHaveBeenCalled();
-      expect(screen.getByRole("button", { name: "Cancel this booking" })).toBeTruthy();
-      await press("I have paid, check now");
-      expect(await screen.findByText("Booking confirmed")).toBeTruthy();
-      view.unmount();
+
+      it("a booking the server says is already paid is confirmed, never shown as an error (409 booking_already_paid)", async () => {
+        const { view } = await openPayNow(refused("076-p-link-paid-but-webhook-late"));
+        expect(await screen.findByText("Booking confirmed")).toBeTruthy();
+        expect(WebBrowser.openBrowserAsync).not.toHaveBeenCalled();
+        view.unmount();
+      });
+
+      it.each([
+        ["081-p-link-cancelled", "This booking has been cancelled, so it can no longer be paid. You can book again."],
+        ["079-p-link-window-expired", "The time to pay for this booking has run out. Please make a new booking."],
+      ])("a booking that can no longer be paid (%s) says why and offers no Pay now", async (name, sentence) => {
+        const { view } = await openPayNow(refused(name));
+        expect(await screen.findByText("This booking can't be paid")).toBeTruthy();
+        expect(screen.getByText(sentence)).toBeTruthy();
+        expect(screen.queryByRole("button", { name: "Pay now" })).toBeNull();
+        expect(WebBrowser.openBrowserAsync).not.toHaveBeenCalled();
+        view.unmount();
+      });
+
+      it("a refused payment link (503 payment_link_unavailable) says to try again, keeps Pay now and offers to cancel", async () => {
+        const { calls, view, item } = await openPayNow(refused("073-p-link-paystack-refuses"));
+        expect(await screen.findByText("Could not open the payment page")).toBeTruthy();
+        expect(screen.getByText(/We couldn't prepare your payment link right now\. Your booking is still waiting for payment and nothing was charged\./)).toBeTruthy();
+        expect(WebBrowser.openBrowserAsync).not.toHaveBeenCalled();
+        await press("OK");
+        expect(screen.getByRole("button", { name: "Pay now" })).toBeTruthy();
+        expect(screen.getByRole("button", { name: "Cancel this booking" })).toBeTruthy();
+        // Pay now tries again (still refused here): one more request, not a stuck screen.
+        await press("Pay now");
+        await waitFor(() => expect(countOf(calls, `POST /api/v1/booking/${item.id}/payment-link`)).toBe(2));
+        view.unmount();
+      });
+
+      it("Paystack could not be asked (503 payment_check_unavailable) says no link was prepared and nothing was charged", async () => {
+        const { view } = await openPayNow(refused("075-p-link-paystack-unreachable"));
+        expect(await screen.findByText(/no payment link was prepared\. Nothing was charged\./)).toBeTruthy();
+        view.unmount();
+      });
+
+      it("another request for the same booking still running (409 payment_link_in_progress) is waited out, not shown as an error", async () => {
+        paymentLinkRetry.delayMs = 1;
+        let calls = 0;
+        const { view } = await openPayNow(() => {
+          calls += 1;
+          return calls < 3
+            ? { status: 409, body: { detail: { code: "payment_link_in_progress", message: "A payment link is already being prepared." } } }
+            : linkReply();
+        });
+        await waitFor(() => expect(WebBrowser.openBrowserAsync).toHaveBeenCalledWith(LINK_URL, expect.anything()));
+        expect(calls).toBe(3);
+        expect(screen.queryByText("Could not open the payment page")).toBeNull();
+        view.unmount();
+      });
+
+      it("somebody else's booking or one that does not exist is closed with the server's meaning", async () => {
+        const { view } = await openPayNow(refused("069-q-link-other-patient"));
+        expect(await screen.findByText("Only the person who made this booking can pay for it.")).toBeTruthy();
+        view.unmount();
+      });
+
+      it("no pricing configured (503 booking_settings_not_configured) on create says booking is unavailable, in plain words", async () => {
+        const { view } = await renderSignedIn({
+          "POST /api/v1/booking/preview": refused("061-p-preview-no-pricing"),
+        });
+        await fillTheForm();
+        await press("Use my current location");
+        await screen.findByText("Location saved");
+        await press("Save & Continue");
+        expect(await screen.findByText("Booking isn't available right now. Please try again later.")).toBeTruthy();
+        view.unmount();
+      });
     });
   });
 

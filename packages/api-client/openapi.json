@@ -295,7 +295,7 @@
           "authentication"
         ],
         "summary": "Recover Password",
-        "description": "Password Recovery. Always answers 200 with the same body, whether or not the email belongs to an account (so it\ncannot be used to find out who is registered), and whether or not the mail could be delivered (a failure is logged).",
+        "description": "Password recovery: emails a 5-digit code (valid 15 minutes) that ``POST /auth/reset-password`` takes with the\nemail address. Always answers 200 with the same body: whether or not the email belongs to an account (so it cannot\nbe used to find out who is registered), whether or not this address is over its hourly limit (3 emails an hour; the\nrest are answered the same and logged), and whether or not the mail could be delivered (a failure is logged). The\nmail goes out after the reply, so the response time does not depend on the mail server. A new request makes the\nprevious code useless.",
         "operationId": "recover_password_api_v1_auth_password_recovery_post",
         "requestBody": {
           "content": {
@@ -339,7 +339,7 @@
           "authentication"
         ],
         "summary": "Reset Password Route",
-        "description": "Reset password.",
+        "description": "Reset the password with the emailed code: ``{email, code, new_password}``. The new password must pass the same\npolicy as change-password. Success ends every session of the account (the app signs in again with the new\npassword; no tokens are returned). 400 ``detail = {\"code\", \"message\"}`` for ``invalid_or_expired_code`` (wrong,\nexpired, used, never issued, or no such account: one answer) and ``weak_password`` (the code is not consumed);\n429 ``too_many_attempts`` after 5 wrong codes for the address, until a new code is requested.\n\nDeprecated: ``{token, new_password}`` with the long token from the same email still works for the shipped caregiver\napp, with plain-string ``detail`` errors (400 ``Invalid token`` / ``Invalid or expired token`` / the weak-password\nsentence).",
         "operationId": "reset_password_route_api_v1_auth_reset_password_post",
         "requestBody": {
           "content": {
@@ -2984,12 +2984,15 @@
               }
             }
           },
-          "500": {
-            "description": "Booking settings not configured",
+          "503": {
+            "description": "No pricing version exists yet (a new environment). detail.code is booking_settings_not_configured",
             "content": {
               "application/json": {
                 "example": {
-                  "detail": "Booking settings not configured"
+                  "detail": {
+                    "code": "booking_settings_not_configured",
+                    "message": "Pricing is not available right now. Please try again later."
+                  }
                 }
               }
             }
@@ -3056,6 +3059,9 @@
                 }
               }
             }
+          },
+          "503": {
+            "description": "No pricing version exists yet. detail.code is booking_settings_not_configured"
           }
         },
         "security": [
@@ -3266,6 +3272,68 @@
           },
           "503": {
             "description": "detail.code payment_check_unavailable: Paystack could not be asked; nothing changed, retry"
+          }
+        }
+      }
+    },
+    "/api/v1/booking/{booking_id}/payment-link": {
+      "post": {
+        "tags": [
+          "booking",
+          "Patient Bookings"
+        ],
+        "summary": "Get the payment link of a booking that is not paid yet (booker only)",
+        "description": "The \"Pay now\" link for a booking created earlier, so it survives an app restart.\n\nSame response as ``/create`` (the booking with ``payment_url`` and ``payment_access_code``) plus ``paystack_reference``\nand ``payment_expires_at``. The booking keeps its\none Paystack reference, so Paystack itself can charge it only once: tapping twice, or paying on an old page and a new\none, can never charge twice. Paystack is asked first whether the booking was already paid (a late webhook): if so it\nis settled and the answer is 409 ``booking_already_paid``. Nothing is written when a link is handed out. Only for a\npending booking whose payment window is still open; the window is not extended.",
+        "operationId": "get_payment_link_api_v1_booking__booking_id__payment_link_post",
+        "security": [
+          {
+            "OAuth2PasswordBearer": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "booking_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid",
+              "title": "Booking Id"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/PaymentLinkResponse"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Not the booker. detail = {code: not_your_booking, message}"
+          },
+          "404": {
+            "description": "No such booking. detail = {code: booking_not_found, message}"
+          },
+          "409": {
+            "description": "detail.code is one of booking_already_paid, booking_already_cancelled, booking_not_payable, payment_window_expired, payment_link_in_progress (a first request is still running: retry in a moment) or payment_under_review"
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          },
+          "503": {
+            "description": "detail.code payment_check_unavailable (Paystack could not be asked whether it was paid) or payment_link_unavailable (Paystack would not start the payment); nothing changed, retry"
           }
         }
       }
@@ -5237,6 +5305,7 @@
           "vitals"
         ],
         "summary": "List Caregiver Access",
+        "description": "A patient: the caregivers they have granted access (with `caregiver_name`). A caregiver: the patients who\ngranted them access (with `patient_name`). Active grants only.",
         "operationId": "list_caregiver_access_api_v1_vitals_access_list_get",
         "responses": {
           "200": {
@@ -5320,14 +5389,7 @@
             }
           },
           "422": {
-            "description": "Validation Error",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/HTTPValidationError"
-                }
-              }
-            }
+            "description": "detail = {code, message[, question_id]}; code is one of fallguard_no_answers, fallguard_duplicate_question, fallguard_unknown_question, fallguard_invalid_option"
           }
         },
         "security": [
@@ -18727,7 +18789,7 @@
         ],
         "title": "EventOut"
       },
-      "FallGuardAnswerBase": {
+      "FallGuardAnswerInput": {
         "properties": {
           "question_id": {
             "type": "string",
@@ -18739,17 +18801,25 @@
             "title": "Answer"
           },
           "score": {
-            "type": "integer",
-            "title": "Score"
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Score",
+            "description": "Ignored. Accepted for older clients; the server scores from the stored options."
           }
         },
         "type": "object",
         "required": [
           "question_id",
-          "answer",
-          "score"
+          "answer"
         ],
-        "title": "FallGuardAnswerBase"
+        "title": "FallGuardAnswerInput",
+        "description": "One answer as the patient app sends it.\n\n``score`` is accepted so the clients already shipped keep working, but it is IGNORED: the server looks the score\nup from the stored option whose ``text`` equals ``answer`` and computes the total itself."
       },
       "FallGuardAnswerResponse": {
         "properties": {
@@ -18785,7 +18855,7 @@
         "properties": {
           "answers": {
             "items": {
-              "$ref": "#/components/schemas/FallGuardAnswerBase"
+              "$ref": "#/components/schemas/FallGuardAnswerInput"
             },
             "type": "array",
             "title": "Answers"
@@ -21052,21 +21122,51 @@
       },
       "PasswordReset": {
         "properties": {
-          "token": {
-            "type": "string",
-            "title": "Token"
-          },
           "new_password": {
             "type": "string",
             "title": "New Password"
+          },
+          "email": {
+            "anyOf": [
+              {
+                "type": "string",
+                "format": "email"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Email"
+          },
+          "code": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Code"
+          },
+          "token": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Token"
           }
         },
         "type": "object",
         "required": [
-          "token",
           "new_password"
         ],
-        "title": "PasswordReset"
+        "title": "PasswordReset",
+        "description": "``{email, code, new_password}`` (the emailed 5-digit code) or, deprecated, ``{token, new_password}`` (the long\nlink token the shipped caregiver app pastes). Exactly one form."
       },
       "PasswordResetRequest": {
         "properties": {
@@ -21386,6 +21486,28 @@
               }
             ],
             "title": "Revoked At"
+          },
+          "caregiver_name": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Caregiver Name"
+          },
+          "patient_name": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Patient Name"
           }
         },
         "type": "object",
@@ -22074,6 +22196,331 @@
           "created_at"
         ],
         "title": "PaymentAttemptOut"
+      },
+      "PaymentLinkResponse": {
+        "properties": {
+          "id": {
+            "type": "string",
+            "format": "uuid",
+            "title": "Id"
+          },
+          "booking_code": {
+            "type": "string",
+            "title": "Booking Code"
+          },
+          "channel": {
+            "type": "string",
+            "enum": [
+              "app",
+              "whatsapp",
+              "admin"
+            ],
+            "title": "Channel"
+          },
+          "patient_id": {
+            "type": "string",
+            "format": "uuid",
+            "title": "Patient Id"
+          },
+          "patient_details": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/PatientDetails"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "caregiver_id": {
+            "anyOf": [
+              {
+                "type": "string",
+                "format": "uuid"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Caregiver Id"
+          },
+          "caregiver_details": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/CaregiverDetails"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "service_type": {
+            "type": "string",
+            "title": "Service Type"
+          },
+          "assistance_type": {
+            "type": "string",
+            "title": "Assistance Type"
+          },
+          "condition": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Condition"
+          },
+          "duration_hours": {
+            "type": "integer",
+            "title": "Duration Hours"
+          },
+          "scheduled_date": {
+            "type": "string",
+            "format": "date-time",
+            "title": "Scheduled Date"
+          },
+          "scheduled_end_date": {
+            "type": "string",
+            "format": "date-time",
+            "title": "Scheduled End Date"
+          },
+          "patient_address": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Patient Address"
+          },
+          "patient_latitude": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Patient Latitude"
+          },
+          "patient_longitude": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Patient Longitude"
+          },
+          "patient_city": {
+            "type": "string",
+            "title": "Patient City"
+          },
+          "patient_state": {
+            "type": "string",
+            "title": "Patient State"
+          },
+          "status": {
+            "$ref": "#/components/schemas/BookingStatus"
+          },
+          "payment_status": {
+            "$ref": "#/components/schemas/PaymentStatus"
+          },
+          "total_amount": {
+            "type": "number",
+            "title": "Total Amount"
+          },
+          "service_fee": {
+            "type": "number",
+            "title": "Service Fee"
+          },
+          "platform_fee": {
+            "type": "number",
+            "title": "Platform Fee"
+          },
+          "special_instructions": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Special Instructions"
+          },
+          "booking_for": {
+            "type": "string",
+            "title": "Booking For"
+          },
+          "created_at": {
+            "type": "string",
+            "format": "date-time",
+            "title": "Created At"
+          },
+          "updated_at": {
+            "type": "string",
+            "format": "date-time",
+            "title": "Updated At"
+          },
+          "dispatch_state": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Dispatch State",
+            "description": "dispatching | matched | unmatched; null before payment or for legacy bookings"
+          },
+          "visit_code": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Visit Code",
+            "description": "4-digit code the patient gives the caregiver to start the visit. Only returned to the booking's own patient from GET /booking/booking/{id}, while the booking is accepted or en_route; null for everyone else and in every other response.",
+            "example": "4821"
+          },
+          "cancel_fee_tier": {
+            "anyOf": [
+              {
+                "type": "string",
+                "enum": [
+                  "none",
+                  "standard",
+                  "late"
+                ]
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Cancel Fee Tier",
+            "description": "Which cancellation fee applied when the booker cancelled (none = free). Null while the booking is not cancelled by its booker, and always null for caregivers."
+          },
+          "cancel_fee": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Cancel Fee",
+            "description": "Naira the booker was charged for cancelling (0 for a free cancel). Null unless the booker cancelled; patient views only.",
+            "example": 8000
+          },
+          "refund": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/RefundSummary"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "The booking's refund, newest one, when it has one. Patient views only; null for caregivers."
+          },
+          "payment_url": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Payment Url",
+            "description": "Paystack payment URL to complete the booking payment",
+            "example": "https://checkout.paystack.com/abcd1234"
+          },
+          "payment_access_code": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Payment Access Code",
+            "description": "Paystack access code for the payment",
+            "example": "abc123xyz"
+          },
+          "payment_error": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Payment Error",
+            "description": "Error message if payment initialization failed",
+            "example": "Payment gateway temporarily unavailable"
+          },
+          "paystack_reference": {
+            "type": "string",
+            "title": "Paystack Reference",
+            "description": "The booking's one Paystack reference (the same for every link)",
+            "example": "BKG_AB12CD34_0a1b2c3d"
+          },
+          "payment_expires_at": {
+            "anyOf": [
+              {
+                "type": "string",
+                "format": "date-time"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Payment Expires At",
+            "description": "When the unpaid booking is cancelled if it is still not paid (UTC)"
+          }
+        },
+        "type": "object",
+        "required": [
+          "id",
+          "booking_code",
+          "channel",
+          "patient_id",
+          "service_type",
+          "assistance_type",
+          "duration_hours",
+          "scheduled_date",
+          "scheduled_end_date",
+          "patient_city",
+          "patient_state",
+          "status",
+          "payment_status",
+          "total_amount",
+          "service_fee",
+          "platform_fee",
+          "booking_for",
+          "created_at",
+          "updated_at",
+          "paystack_reference"
+        ],
+        "title": "PaymentLinkResponse",
+        "description": "``POST /booking/{id}/payment-link``: what ``/create`` returns, plus the reference and when the window closes."
       },
       "PaymentOut": {
         "properties": {

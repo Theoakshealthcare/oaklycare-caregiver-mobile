@@ -72,7 +72,7 @@ export const authService = {
    * PUT /auth/profile, then a fresh GET /auth/me. The PUT answers with the flat profile, which has NO `patient` object:
    * storing it as the user (what the old app did) dropped `user.patient`, and every vitals call lost the patient id.
    * The re-read is what goes into the cache. Returns the fresh user so the caller can check what was really saved.
-   * The backend ignores blank values and does not persist `full_name` / `phone_number` today (see the SOP).
+   * The backend now saves `full_name` and `phone_number` (trimmed, phone without separators); refusals are read by `profileRefusal`.
    */
   async updateProfile(fields: Schemas["UserProfileUpdate"]): Promise<User> {
     await unwrap(api.PUT("/api/v1/auth/profile", { body: fields }));

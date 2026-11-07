@@ -17,7 +17,7 @@ export function useFallguardQuestions() {
   });
 }
 
-/** Sends the answers (with the option scores from the question list, which the server sums) and returns the server's result. */
+/** Sends the chosen option texts and returns the server's result (its own total: the phone adds nothing up). */
 export function useSubmitFallguard() {
   return useMutation({
     mutationFn: async ({ questions, answers }: { questions: FallguardQuestion[]; answers: FallguardAnswers }): Promise<FallguardResult> => {
