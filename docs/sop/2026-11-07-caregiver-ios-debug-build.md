@@ -36,6 +36,7 @@ I could not establish *how* the main checkout ended up release-only (an earlier 
 | **Never start Metro with `CI=1`** | Expo CLI turns file watching off under `CI`. Metro still serves the bundle, and the app still loads, but a saved edit produces **no HMR message at all**, so hot reload silently does nothing. Proved by connecting a WebSocket client to `/hot`: no `update-start` after an edit with `CI=1`, one on every edit without it. The script runs Metro with `env -u CI`. (`CI=1` is fine for `expo prebuild`, where it only suppresses prompts.) |
 | Expo rewrites `tsconfig.json` | `expo start` edits `apps/caregiver/tsconfig.json` (drops `.expo/types`, reformats). The script sets `EXPO_NO_TYPESCRIPT_SETUP=1`; if you start Metro another way, `git checkout apps/caregiver/tsconfig.json` before committing. |
 | Screenshots lag | A simulator screenshot taken the instant after saving can still show the old text. Wait a second or two before concluding hot reload failed. |
+| LogBox toast covers taps | In a Debug build any warning raises a dark "Open debugger to view warnings" toast over the bottom 50 px (it covers the tab bar and the welcome "Login" link). Tap its X before concluding a tap does nothing (device re-check 1, RC1-02). |
 | Metro port | The Debug app has no dev launcher; it reads `localhost:8081`. Other port: shake the device for the dev menu and set the bundler location. |
 
 ## What is involved
