@@ -102,6 +102,19 @@ describe("unwrap", () => {
     await expect(failure).rejects.toMatchObject({ status: 0, message: NETWORK_MESSAGE });
   });
 
+  it("recognises expo/fetch's rejection (plain Error 'fetch failed: ...'), the app's real fetch (RC1-01)", async () => {
+    const refused = new Error("fetch failed: UnexpectedException: Could not connect to the server.");
+    await expect(unwrap(Promise.reject(refused))).rejects.toMatchObject({ status: 0, message: NETWORK_MESSAGE });
+    const offline = new Error("fetch failed: UnexpectedException: The Internet connection appears to be offline.");
+    await expect(unwrap(Promise.reject(offline))).rejects.toMatchObject({ status: 0, message: NETWORK_MESSAGE });
+  });
+
+  it("does not blame the connection for expo/fetch's own FormData failure or a stray TypeError", async () => {
+    for (const bug of [new Error("Unsupported FormDataPart implementation"), new TypeError("undefined is not a function")]) {
+      await expect(unwrap(Promise.reject(bug))).rejects.toMatchObject({ status: -1 });
+    }
+  });
+
   it("does not blame the connection for a failure that is not a fetch rejection", async () => {
     const failure = unwrap(Promise.reject(new Error("could not read the picked file")));
     await expect(failure).rejects.toMatchObject({ name: "ApiError", status: -1 });
