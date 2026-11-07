@@ -5,6 +5,7 @@ import { Alert, type RefreshControlProps } from "react-native";
 import { useFocusEffect } from "@react-navigation/native";
 
 import { ApiError } from "../src/api/errors";
+import { DECLINE_MESSAGE, DECLINE_TITLE } from "../src/constants/offerCopy";
 import {
   firstName,
   formatNaira,
@@ -281,6 +282,14 @@ describe("Home screen", () => {
     expect(screen.getByText("Accept")).toBeTruthy(); // the offer card
     expect(screen.getByText("You're available")).toBeTruthy();
     expect(getHome).toHaveBeenCalled();
+  });
+
+  it("tells the caregiver before the tap that a decline is final (DP1-06)", async () => {
+    getHome = jest.spyOn(locationService, "getHome").mockResolvedValue(homeWithVisitAndOffer);
+    await renderHome();
+    await fireEvent.press(await screen.findByText("Decline"));
+    expect(alertSpy).toHaveBeenCalledWith(DECLINE_TITLE, DECLINE_MESSAGE, expect.any(Array));
+    expect(DECLINE_MESSAGE).toMatch(/won't be able to accept it afterwards/);
   });
 
   describe("pull-to-refresh spinner (DP1-07)", () => {

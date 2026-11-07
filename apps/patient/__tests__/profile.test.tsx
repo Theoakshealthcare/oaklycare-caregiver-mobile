@@ -7,6 +7,7 @@ import { session } from "../src/auth";
 import { formatCountdown, validatePasswordForm } from "../src/account/changePasswordModel";
 import { disableCacheGcForTests } from "../test-utils/fakeApi";
 import { live, liveBody, liveReply } from "../test-utils/live";
+import { capture } from "../test-utils/captures";
 import { renderSignedIn } from "../test-utils/renderApp";
 
 jest.mock("expo-font", () => ({
@@ -65,24 +66,82 @@ describe("profile (live-shaped)", () => {
       view.unmount();
     });
 
-    it("does not claim success when the server answers 200 but keeps the old name (captured backend behaviour)", async () => {
-      const { view } = await renderSignedIn(
+    it("saves the name and phone for real: sends what was typed, re-reads /auth/me and shows what the server kept (phone without spaces)", async () => {
+      const put = capture("pv-100-profile-save");
+      const after = capture("pv-101-me-after-profile-save");
+      let saved = false;
+      const { calls, view } = await renderSignedIn(
         {
-          // exactly what the live backend did: 200, and the name and phone are unchanged afterwards
-          "PUT /api/v1/auth/profile": () => liveReply("profile-update"),
-          "GET /api/v1/auth/me": () => ({ status: 200, body: liveBody("me-after-update") }),
+          "PUT /api/v1/auth/profile": () => {
+            saved = true;
+            return { status: put.status, body: put.body };
+          },
+          "GET /api/v1/auth/me": () => ({ status: 200, body: saved ? after.body : meWithDetails() }),
         },
         meWithDetails(),
       );
       await press("Open profile");
       await press("Edit personal information");
-      await type("Full name", "Placeholder Patient Edited");
-      await type("Phone number", "+2340000000001");
+      await type("Full name", "  Placeholder Patient Edited  ");
+      await type("Phone number", "+234 000 071 8205");
       await press("Update Profile Details");
-      expect(await screen.findByText("We couldn't save your name or your phone number yet. Your other details were saved.")).toBeTruthy();
+      expect(await screen.findByText("Profile has been updated")).toBeTruthy();
+      expect(calls.find((c) => c.method === "PUT")?.body).toEqual({ full_name: "Placeholder Patient Edited", phone_number: "+234 000 071 8205" });
+      // The boxes show what the server holds now: trimmed name, phone with the separators removed (captured behaviour).
+      expect(screen.getByLabelText("Full name").props.value).toBe("Placeholder Patient Edited");
+      expect(screen.getByLabelText("Phone number").props.value).toBe("+2340000718205");
+      expect(screen.queryByText(/couldn't save/)).toBeNull();
+      view.unmount();
+    });
+
+    it("shows the server's own sentence under the phone for a bad number (422 list, detail[0].msg) and keeps what was typed", async () => {
+      const refused = capture("pv-108-profile-bad-phone");
+      expect(refused.status).toBe(422);
+      const { view } = await renderSignedIn({ "PUT /api/v1/auth/profile": () => ({ status: refused.status, body: refused.body }) }, meWithDetails());
+      await press("Open profile");
+      await press("Edit personal information");
+      await type("Phone number", "12");
+      await press("Update Profile Details");
+      expect(await screen.findByText(refused.body.detail[0].msg)).toBeTruthy();
+      expect(screen.getByLabelText("Phone number").props.value).toBe("12");
       expect(screen.queryByText("Profile has been updated")).toBeNull();
-      // the field shows what the server holds again, not the unsaved text
-      expect(screen.getByLabelText("Full name").props.value).toBe("Placeholder Patient");
+      view.unmount();
+    });
+
+    it("a phone another account uses (409 phone_number_taken) is said under the phone, in the server's words", async () => {
+      const refused = capture("pv-111-profile-phone-taken");
+      expect(refused.status).toBe(409);
+      const { view } = await renderSignedIn({ "PUT /api/v1/auth/profile": () => ({ status: refused.status, body: refused.body }) }, meWithDetails());
+      await press("Open profile");
+      await press("Edit personal information");
+      await type("Phone number", "+2340000718205");
+      await press("Update Profile Details");
+      expect(await screen.findByText("That phone number is already used by another account.")).toBeTruthy();
+      view.unmount();
+    });
+
+    it("a refusal the server does not tie to a field (400 email_change_not_supported) opens a dialog with its message", async () => {
+      const refused = capture("pv-104-profile-email-change");
+      expect(refused.status).toBe(400);
+      const { view } = await renderSignedIn({ "PUT /api/v1/auth/profile": () => ({ status: refused.status, body: refused.body }) }, meWithDetails());
+      await press("Open profile");
+      await press("Edit personal information");
+      await type("House address", "9 New Road, Abuja");
+      await press("Update Profile Details");
+      expect(await screen.findByText("Could not save")).toBeTruthy();
+      expect(screen.getByText(refused.body.detail.message)).toBeTruthy();
+      expect(screen.getByText("To change your email, contact support.")).toBeTruthy();
+      view.unmount();
+    });
+
+    it("refuses an emptied phone box on the screen (a phone is removed on purpose, never by a blank)", async () => {
+      const { calls, view } = await renderSignedIn({}, { ...meWithDetails(), phone_number: "+2340000718205" });
+      await press("Open profile");
+      await press("Edit personal information");
+      await type("Phone number", "");
+      await press("Update Profile Details");
+      expect(await screen.findByText("Enter a phone number, or leave it as it is.")).toBeTruthy();
+      expect(calls.some((c) => c.method === "PUT")).toBe(false);
       view.unmount();
     });
 

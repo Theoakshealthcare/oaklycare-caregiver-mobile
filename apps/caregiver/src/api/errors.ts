@@ -92,6 +92,13 @@ export function isSuspendedStop(error: unknown): boolean {
   return error instanceof ApiError && error.status === 403 && error.detail === DETAIL.notApprovedToStartVisits;
 }
 
+/** "45 seconds", "3 minutes": how long a 429 `Retry-After` asks the person to wait. */
+export function waitText(seconds: number): string {
+  const s = Math.max(1, Math.ceil(seconds));
+  if (s < 90) return `${s} ${s === 1 ? "second" : "seconds"}`;
+  return `${Math.ceil(s / 60)} minutes`;
+}
+
 export function formatCountdown(totalSeconds: number): string {
   const seconds = Math.max(0, Math.ceil(totalSeconds));
   const m = Math.floor(seconds / 60);

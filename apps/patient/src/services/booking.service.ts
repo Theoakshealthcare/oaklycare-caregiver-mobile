@@ -71,6 +71,18 @@ export const bookingService = {
     return toBooking(body);
   },
 
+  /**
+   * `POST /booking/{id}/payment-link` (no body): a checkout link for an unpaid booking whose `/create` URL this phone no
+   * longer has (restart). The booking keeps ONE Paystack reference, so asking again is the same payment. Refusals are
+   * `detail = { code, message }`: see `paymentLinkErrorMessage` and `paymentLinkOutcome`. Until the backend stores the
+   * Paystack URL at create, a real Paystack may refuse a repeated reference: `503 payment_link_unavailable`.
+   */
+  async paymentLink(id: string): Promise<{ paymentUrl: string; expiresAt: string | null }> {
+    const body = await unwrap(api.POST("/api/v1/booking/{booking_id}/payment-link", { params: { path: { booking_id: id } } }));
+    if (!body.payment_url) throw new ApiError(502, { detail: { code: "payment_link_unavailable", message: "" } }, "No payment link in the answer");
+    return { paymentUrl: body.payment_url, expiresAt: body.payment_expires_at ?? null };
+  },
+
   async verifyPayment(id: string): Promise<PaymentCheck> {
     const body = await unwrap(
       api.POST("/api/v1/booking/booking/{booking_id}/verify-payment", { params: { path: { booking_id: id } } }),

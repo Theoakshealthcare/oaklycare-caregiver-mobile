@@ -9,6 +9,7 @@ import Button from "@/src/components/ui/button";
 import Text from "@/src/components/ui/text";
 import { theme } from "@/src/constants/theme";
 import { greeting, mapHome, type HomeView, type VisitView } from "@/src/home/homeModel";
+import { DECLINE_MESSAGE, DECLINE_TITLE } from "@/src/constants/offerCopy";
 import { useAvailability } from "@/src/hooks/useAvailability";
 import { useCaregiverHome, useMe, useWallet } from "@/src/hooks/queries";
 import useNavigation from "@/src/hooks/use-navigation";
@@ -221,7 +222,7 @@ const Home: React.FC = () => {
   const held = wallet.data ? walletBalances(wallet.data).held : null;
 
   const confirmDecline = (bookingId: string) =>
-    Alert.alert("Decline this job?", "It will be offered to other caregivers.", [
+    Alert.alert(DECLINE_TITLE, DECLINE_MESSAGE, [
       { text: "Cancel", style: "cancel" },
       { text: "Decline", style: "destructive", onPress: () => decline(bookingId) },
     ]);

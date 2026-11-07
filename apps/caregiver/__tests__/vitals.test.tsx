@@ -53,8 +53,14 @@ const vital = (over: Partial<PatientVital>): PatientVital => ({
   ...over,
 });
 
+// react-query keeps a 5 minute garbage-collection timer per query; without clearing the clients the Jest process idles for
+// five minutes after the last test before it exits.
+const clients: QueryClient[] = [];
+afterEach(() => clients.splice(0).forEach((c) => c.clear()));
+
 async function renderWith(ui: React.ReactElement) {
   const client = new QueryClient({ defaultOptions: { queries: { retry: false } } });
+  clients.push(client);
   return await render(<QueryClientProvider client={client}>{ui}</QueryClientProvider>);
 }
 
@@ -393,6 +399,17 @@ describe("AddVitals (manual entry)", () => {
     await fireEvent.press(screen.getByText("Save heart rate"));
     expect(await screen.findByTestId("entry-error")).toHaveTextContent("Enter a number for heart rate.");
     expect(createSpy).not.toHaveBeenCalled();
+  });
+
+  it("clears an old error as soon as the reading is edited (pass 2: the 300/20 message stayed over a valid 120/80)", async () => {
+    createSpy.mockRejectedValue(new ApiError(0, null, "offline"));
+    await openEntry("blood_pressure");
+    await fireEvent.changeText(screen.getByTestId("entry-systolic"), "300");
+    await fireEvent.changeText(screen.getByTestId("entry-diastolic"), "20");
+    await fireEvent.press(screen.getByText("Save blood pressure"));
+    expect(await screen.findByTestId("entry-error")).toBeTruthy();
+    await fireEvent.changeText(screen.getByTestId("entry-systolic"), "120");
+    expect(screen.queryByTestId("entry-error")).toBeNull();
   });
 
   it("takes blood pressure as two numbers", async () => {

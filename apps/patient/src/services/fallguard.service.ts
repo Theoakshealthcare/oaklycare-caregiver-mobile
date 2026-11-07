@@ -10,9 +10,10 @@ export const fallguardService = {
   },
 
   /**
-   * `POST /fallguard/submit`. The server stores and sums the `score` of each answer AS SENT; it does not check them against
-   * the question's options (a captured score of 99 was kept), and answers for an unknown question id are a 500. The AI summary
-   * is written before the answer returns, so this can take a few seconds.
+   * `POST /fallguard/submit` with `{ question_id, answer: option text }` per answer. The SERVER looks each score up from its
+   * stored options and computes the total (a `score` sent by the client is ignored). A refused submission is `422`
+   * `detail = { code, message, question_id? }` and stores nothing: see `fallguardRefusal`. The AI summary is written before
+   * the answer returns, so this can take a few seconds.
    */
   submit(body: Schemas["FallGuardAssessmentCreate"]) {
     return unwrap(api.POST("/api/v1/fallguard/submit", { body }));

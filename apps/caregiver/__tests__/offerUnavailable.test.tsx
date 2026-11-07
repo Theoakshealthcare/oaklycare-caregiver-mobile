@@ -1,7 +1,9 @@
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
-import { render, screen } from "@testing-library/react-native";
+import { fireEvent, render, screen } from "@testing-library/react-native";
 import React from "react";
+import { Alert } from "react-native";
 
+import { DECLINE_MESSAGE, DECLINE_TITLE } from "../src/constants/offerCopy";
 import BookingDetails from "../src/screens/booking/BookingDetails";
 import type { Offer } from "../src/services/booking.service";
 
@@ -44,6 +46,14 @@ describe("a job request (DP1-06 follow-up)", () => {
     expect(screen.getByText("Accept Job")).toBeTruthy();
     expect(screen.getByText("Decline Job")).toBeTruthy();
     expect(screen.queryByTestId("offer-unavailable")).toBeNull();
+  });
+
+  it("warns before the tap that a decline is final", async () => {
+    const alertSpy = jest.spyOn(Alert, "alert").mockImplementation(() => undefined);
+    await renderOffer(null);
+    await fireEvent.press(screen.getByText("Decline Job"));
+    expect(alertSpy).toHaveBeenCalledWith(DECLINE_TITLE, DECLINE_MESSAGE, expect.any(Array));
+    alertSpy.mockRestore();
   });
 
   it("an offer from Home (no response field) still offers Accept and Decline", async () => {

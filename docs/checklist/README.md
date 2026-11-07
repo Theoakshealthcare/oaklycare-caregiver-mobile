@@ -29,6 +29,10 @@ channel) lives in the backend repo: `docs/checklist/MASTER_CHECKLIST.md`. Update
 
 ## Device pass 2 follow-ups (2026-11-07)
 - [x] DP2-02 readable payslip with pending and held rows (text, built from the Wallet's payments; empty month says so), DP2-03 held amount on Home, Wallet "Total earned / Paid out to your bank" and one payout banner, DP2-06 bank form spacing and picker inset + Back, DP2-07 no dead Back arrow on Login after a sign-out (`HeaderBack` reads its navigator's state). Branch `fix/caregiver-pass-2-followups`, **device-verified on the simulator**; see docs/sop/2026-11-07-caregiver-pass-2-followups.md and the addendum in ledgers/LEDGER-device-pass-2.md
+## Device pass 2 (2026-11-07)
+- [x] Second simulator walk of the caregiver app: accept/decline offers, "No longer available", wallet pending/available/on hold, bank add/change and 24 h pause, payslip, vitals entry, normal and short visit completion, under-review / changes-requested / rejected states, note taker with the mic, logout, Home, Job Details, offers list. 9 findings (1 major, 4 minor, 2 polish, 1 note), 2 fixed on `fix/caregiver-device-pass-2` (decline copy says a decline is final; vitals entry clears an old error); see docs/sop/2026-11-07-caregiver-device-pass-2.md and ledgers/LEDGER-device-pass-2.md
+- [ ] DP2-01 (major): tell the caregiver, before and after completing, that a visit under half its booked time is held for Finance review (owner wording; backend earning status in the `complete` response)
+- [ ] Still unwalked: "I've arrived" step, reset-by-code screens, cancel/drop-out, Android, push, location, keyboard re-check
 
 ## Caregiver vitals (Client care v1, part 1)
 - [x] Vitals tab: six-vital grid for the patient on the in-progress visit; "available during an active visit" on 403 or before the visit starts (2026-10-27, see docs/sop/2026-10-27-caregiver-vitals-tab.md)
@@ -75,6 +79,11 @@ channel) lives in the backend repo: `docs/checklist/MASTER_CHECKLIST.md`. Update
   - [ ] Edit and stop a medication (backend routes exist; not drawn in the design); native date and time pickers; device pass
   - [ ] Clinician sign-off of the notice wording (go-live gate; one string, `MEDICATION_NOTICE`)
 - [ ] Clinical sign-off of seeded templates and copy (go-live gate)
+
+## Caregiver reset password by code (2026-11-07)
+- [x] Recover and Reset screens moved to the emailed 5-digit code (`{email, code, new_password}`; no long-token field left), Resend with a 60 s cooldown, `detail.code` sentences, "signed out on your other devices" on success; branch `feature/apps-reset-by-code`, see docs/sop/2026-11-07-apps-reset-password-by-code.md; Jest only, **not device-verified**
+- [ ] Walk it on a device with a real inbox (caregiver second device pass)
+- [ ] Backend env `PASSWORD_RESET_LEGACY_TOKEN_ENABLED=false` once the previously installed caregiver build (which pastes the long token) is retired: **not flipped by this change**
 
 ## Caregiver change password
 - [x] Change password screen from Profile settings: current / new / confirm, inline errors per backend code, Retry-After countdown, stays signed in on the returned tokens (2026-10-30, branch `feature/change-password-screen`, see docs/sop/2026-10-30-caregiver-change-password.md; Jest only, **not device-verified**; backend endpoint is backend#37)
@@ -161,8 +170,8 @@ Owner decisions (2026-11-07): move the old app into the monorepo on SDK 57, copi
 - [ ] P2 Security: archive the old repo and rotate the old upload key (owner: was `com.oakly.oaklypatient` ever published, is the old repo public?); full logout also unregisters push
 - [ ] P3 Auth correctness (partly done 2026-11-07, same branch and SOP as P1b; Jest only, **not device-verified**)
   - [x] Register (email path; the backend's real 400 duplicate-email and 422 messages), verify email with the 5-digit code (auto-submit, 400 shown, boxes clear), resend with a 30 s cooldown and a `Retry-After` path, unverified login lands on the verify step, forgot password (same 200 for any email), delete account with the backend's 409 text
-  - [x] Reset password: 5-box code UI and `resetPassword({ code, newPassword })` adapter in `auth.service.ts` that sends the code as today's `token`
-  - [ ] **Reset cannot finish live** until the backend reset-by-code slice lands (today's route takes the long emailed token, a 5-digit code gets 400 `Invalid token`); then edit only the adapter
+  - [x] Reset password by the emailed 5-digit code (2026-11-07, branch `feature/apps-reset-by-code`, see docs/sop/2026-11-07-apps-reset-password-by-code.md; Jest only, **not device-verified**): `resetPassword({ email, code, newPassword })` against backend #42, 5-box code UI, Resend with a 60 s cooldown, plain sentences read from `detail.code` (`invalid_or_expired_code`, `weak_password`, `too_many_attempts` with and without `Retry-After`), "signed out on your other devices" on success
+  - [ ] Walk reset on a device against a real mailbox (the backend's mail transport was faked in its captures) in the patient device pass
   - [x] Change password screen; profile edit refetches `/auth/me` (2026-11-07, branch `feature/patient-wiring-b`)
   - [ ] Deep link scheme for the emailed link
   - [ ] Live capture of register / verify / resend / forgot / delete against the running backend (owed; the FE guide rule), device pass
@@ -174,13 +183,18 @@ Owner decisions (2026-11-07): move the old app into the monorepo on SDK 57, copi
   - [x] Cancel: terms first, `accepted_fee_kobo`, `terms_changed`, every `detail.code` in a sentence, refund summary from the booking; no wallet wording
   - [x] One error place: "Can't reach Oakly" only for a request that never completed (copy of the #22 classifier)
   - [x] `ios-debug.sh --app patient`
-  - [ ] **Backend: a fresh payment link** (Pay now after an app restart), **coordinates from the address** (the phone's location is used today), caregiver phone in the booking
+  - [x] **Pay now after an app restart** (2026-11-07, branch `feature/patient-wiring-c`, see docs/sop/2026-11-07-patient-wiring-c-fallguard-paylink-vitals-access-profile.md; Jest only, **not device-verified**): `POST /booking/{id}/payment-link` when this phone has no checkout URL, in-app browser flow unchanged; already-paid is confirmed, cancelled / expired / not payable say why, 503s say "try again"; `booking_settings_not_configured` 503 in plain words
+  - [ ] **Backend: store the Paystack URL at create** (a real Paystack may refuse the repeated reference, so the new route can answer 503 `payment_link_unavailable` for every booking `/create` already started; the app then says try again / contact support), **coordinates from the address** (the phone's location is used today), caregiver phone in the booking
+  - [ ] Show the time left from `payment_expires_at` on Pay now (guide section 10.4 item 2; the app only reacts to `payment_window_expired` today)
   - [ ] Not run: physical phone, Android, live Paystack
 - [x] P6 Vitals wired (2026-11-07, branch `feature/patient-wiring-b`, see docs/sop/2026-11-07-patient-app-wiring-b-notifications-profile-vitals-fallguard.md; Jest + live captures, **not device-verified**)
   - [x] Readings, add reading and history for BP, glucose (random / fasting / after meal), heart rate, temperature, respiratory, sleep (bed and wake times); the patient id, not the user id; caregiver-app vocabulary (`sleep_duration`); client validation (300/20 refused; the server accepts it)
-  - [ ] **P6-BE** server-side validation; caregiver access grant / revoke / list (backend patient-id vs user-id at `vitals.py:151,164,180`; the app shows "Coming soon"); insights shape and report download not in v1
+  - [x] **P6-BE merged (backend #43)**: server-side vitals validation (the client ranges stay as a first check); caregiver access grant / revoke / list fixed. **"Who can see my vitals" is enabled** (2026-11-07, branch `feature/patient-wiring-c`, Jest only, **not device-verified**): list of active grants, confirm before sharing, "Stop sharing", candidates are the caregivers on the patient's own bookings
+  - [ ] Insights shape and report download not in v1
+  - [x] Profile name and phone **persist for real** (backend #43): the "not saved" workaround is gone; the server's 422 / 409 sentences show under the field (branch `feature/patient-wiring-c`, Jest only, **not device-verified**)
 - [x] P7 FallGuard wired (same branch and SOP): the real 24 questions, submit, server total and AI text only when present, no per-option scores shown
-  - [ ] **P7-BE** score computed server-side (today the backend sums the client's scores; unknown question id is a 500); history screen is an open owner question
+  - [x] **P7-BE merged (backend #44)**: the server scores; the app no longer sends a `score`, reads the four 422 codes (`fallguard_no_answers`, `_duplicate_question`, `_unknown_question`, `_invalid_option`) and reloads the questions when the questionnaire changed (branch `feature/patient-wiring-c`, Jest only, **not device-verified**)
+  - [ ] History screen is an open owner question
 - [x] P8 Notifications wired (same branch and SOP; needs backend PR #40 for the routes): feed with paging, unread badge on the bell, mark read, read all, tap opens the booking, push registration that skips quietly without an EAS project id, token forgotten on log out and delete
   - [ ] Owner: `eas init` for the patient app, APNs / FCM keys; then a push test on a phone (real push, banner and tap not verified); rebuild the dev build (new native module `expo-notifications`)
 - [x] Profile wired (same branch and SOP): edit profile (re-reads `/auth/me`, keeps `user.patient`), change password (400 codes, 429 countdown, new token pair stored), FAQs and About open oaklycare.com; Terms / Privacy hidden until URLs are known

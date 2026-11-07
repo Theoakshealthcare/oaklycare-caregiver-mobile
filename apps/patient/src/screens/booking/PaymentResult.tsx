@@ -3,12 +3,17 @@ import type React from "react";
 import { useCallback, useEffect, useRef, useState } from "react";
 import { ActivityIndicator, AppState, StyleSheet, View } from "react-native";
 
+import { useQueryClient } from "@tanstack/react-query";
+
 import { messageForError } from "@/src/api/errors";
+import { queryKeys } from "@/src/api/keys";
+import { paymentLinkErrorMessage, paymentLinkOutcome } from "@/src/api/bookingErrors";
 import Button from "@/src/components/ui/button";
 import ErrorDialog from "@/src/components/ui/ErrorDialog";
 import Icon from "@/src/components/ui/icon";
 import Text from "@/src/components/ui/text";
 import { theme } from "@/src/constants/theme";
+import { fetchPaymentLink } from "@/src/hooks/fetchPaymentLink";
 import { usePaymentLinks } from "@/src/hooks/paymentLinks";
 import { paymentPolling, usePaymentCheck } from "@/src/hooks/usePaymentCheck";
 import { useBooking } from "@/src/hooks/useBookings";
@@ -21,21 +26,61 @@ type Props = StackScreenProps<ScreenParamLists, "PaymentResult">;
  * Pay for a booking and find out whether it worked. The checkout opens in the system browser; when it closes the
  * backend is asked (a capped poll). Nothing is shown as paid until the backend says so, so a browser that was
  * cancelled or closed leaves "Payment not confirmed yet" with a way to pay again (`Pay now`).
+ *
+ * The checkout URL of a booking created on this phone is kept in memory and used first. After an app restart it is gone, so
+ * "Pay now" asks the backend for a link (`POST /booking/{id}/payment-link`) and remembers it. A refusal is read by its
+ * `detail.code`: an already-paid booking is confirmed (good news), a booking that can no longer be paid says why and drops
+ * "Pay now", anything else keeps "Pay now" so the person can try again.
  */
 const PaymentResult: React.FC<Props> = ({ navigation, route }) => {
   const { bookingId, open } = route.params;
   const booking = useBooking(bookingId);
   const url = usePaymentLinks((s) => s.urls[bookingId]);
   const { state, check } = usePaymentCheck(bookingId);
+  const remember = usePaymentLinks((s) => s.remember);
+  const client = useQueryClient();
   const [dialog, setDialog] = useState<string | null>(null);
   const [browserOpen, setBrowserOpen] = useState(false);
+  const [fetching, setFetching] = useState(false);
+  // The booking can no longer be paid (cancelled, expired, someone else's): the sentence replaces "Pay now".
+  const [closed, setClosed] = useState<string | null>(null);
+  // The backend could not give a link: keep "Pay now" for another try, and offer to cancel the booking (it is free).
+  const [linkFailed, setLinkFailed] = useState(false);
   const autoOpened = useRef(false);
+  const fetchingRef = useRef(false);
 
   const pay = useCallback(async () => {
-    if (!url) return;
+    let target = url;
+    if (!target) {
+      if (fetchingRef.current) return;
+      fetchingRef.current = true;
+      setFetching(true);
+      try {
+        target = await fetchPaymentLink(bookingId);
+        remember(bookingId, target);
+        setLinkFailed(false);
+      } catch (error) {
+        const outcome = paymentLinkOutcome(error);
+        if (outcome === "paid") {
+          // Paid a moment ago and the webhook was late: the server settled it. Confirm it the normal way.
+          void client.invalidateQueries({ queryKey: queryKeys.bookings });
+          void check();
+        } else if (outcome === "closed") {
+          void client.invalidateQueries({ queryKey: queryKeys.bookings });
+          setClosed(paymentLinkErrorMessage(error));
+        } else {
+          setLinkFailed(true);
+          setDialog(paymentLinkErrorMessage(error));
+        }
+        return;
+      } finally {
+        fetchingRef.current = false;
+        setFetching(false);
+      }
+    }
     try {
       setBrowserOpen(true);
-      const outcome = await openCheckout(url);
+      const outcome = await openCheckout(target);
       if (outcome === "closed") {
         setBrowserOpen(false);
         void check();
@@ -44,15 +89,15 @@ const PaymentResult: React.FC<Props> = ({ navigation, route }) => {
       setBrowserOpen(false);
       setDialog(messageForError(error));
     }
-  }, [url, check]);
+  }, [url, bookingId, remember, client, check]);
 
-  // Arriving from "Proceed to Payment" or "Pay now": open the checkout once.
+  // Arriving from "Proceed to Payment" or "Pay now": open the checkout once (asking the backend for a link if this phone has none).
   useEffect(() => {
-    if (open && url && !autoOpened.current) {
+    if (open && !autoOpened.current) {
       autoOpened.current = true;
       void pay();
     }
-  }, [open, url, pay]);
+  }, [open, pay]);
 
   // A browser that cannot report its own close (Android Custom Tabs): ask when the app comes back to the front.
   useEffect(() => {
@@ -117,6 +162,33 @@ const PaymentResult: React.FC<Props> = ({ navigation, route }) => {
     );
   }
 
+  if (fetching) {
+    return (
+      <View style={styles.container}>
+        <ActivityIndicator size="large" color={theme.colors.primary} />
+        <Text variant="h3" weight="bold" center>
+          Preparing your payment…
+        </Text>
+      </View>
+    );
+  }
+
+  if (closed) {
+    return (
+      <View style={styles.container}>
+        <Icon name="information" size={40} color={theme.colors.white} circleColor={theme.colors.secondary} />
+        <Text variant="h2" weight="bold" center>
+          This booking can&apos;t be paid
+        </Text>
+        <Text color={theme.colors.textLight} center>
+          {closed}
+        </Text>
+        <Button title="View booking" style={styles.button} onPress={viewBooking} />
+        <Button title="Go to bookings" variant="outline" style={styles.button} onPress={goBookings} />
+      </View>
+    );
+  }
+
   const notConfirmed = state.kind === "not_confirmed";
   return (
     <View style={styles.container}>
@@ -128,13 +200,13 @@ const PaymentResult: React.FC<Props> = ({ navigation, route }) => {
         {notConfirmed
           ? state.message ??
             "We have not received a payment for this booking yet. If you just paid, it can take a minute to show. Nothing is charged for a booking you do not pay for."
-          : url
-            ? "Pay by card in the secure payment page. Come back here when you are done."
-            : "The payment link for this booking is not available on this phone any more. If you already paid, check the payment below. Otherwise cancel this booking (it is free) and book again."}
+          : linkFailed
+            ? "We couldn't get your payment link just now. If you already paid, check the payment below. Otherwise try again, or cancel this booking (it is free) and book again."
+            : "Pay by card in the secure payment page. Come back here when you are done."}
       </Text>
-      {url ? <Button title="Pay now" style={styles.button} onPress={() => void pay()} /> : null}
-      <Button title={notConfirmed ? "Check again" : "I have paid, check now"} variant={url ? "outline" : "primary"} style={styles.button} onPress={() => void check()} />
-      {!url ? <Button title="Cancel this booking" variant="danger" style={styles.button} onPress={() => navigation.navigate("CancelBooking", { id: bookingId })} /> : null}
+      <Button title="Pay now" style={styles.button} onPress={() => void pay()} />
+      <Button title={notConfirmed ? "Check again" : "I have paid, check now"} variant="outline" style={styles.button} onPress={() => void check()} />
+      {linkFailed ? <Button title="Cancel this booking" variant="danger" style={styles.button} onPress={() => navigation.navigate("CancelBooking", { id: bookingId })} /> : null}
       <Button title="View booking" variant="outline" style={styles.button} onPress={viewBooking} />
       <ErrorDialog visible={dialog !== null} title="Could not open the payment page" message={dialog ?? ""} onClose={() => setDialog(null)} />
     </View>
