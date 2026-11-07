@@ -18,6 +18,7 @@ import Button from "@/src/components/ui/button"
 import HeaderBack from "@/src/components/back/HeaderBack"
 import { globalStyles } from "@/src/constants/styles"
 import { messageForError } from "@/src/api/errors"
+import { parseBackendDate } from "@/src/utils/dates"
 import { useCreateNote, useNotes } from "@/src/hooks/queries"
 import type { BookingNote } from "@/src/services/booking.service"
 import type { ScreenParamLists } from "@/src/navigation/Navigations"
@@ -199,7 +200,7 @@ const AINoteTaker: React.FC<StackScreenProps<ScreenParamLists, "AINoteTaker">> =
       )}
 
       <Text variant="small" color={theme.colors.textLight} style={{ marginTop: 8 }}>
-        {new Date(note.created_at).toLocaleDateString("en-US", {
+        {parseBackendDate(note.created_at).toLocaleDateString("en-US", {
           month: "short",
           day: "numeric",
           hour: "2-digit",
