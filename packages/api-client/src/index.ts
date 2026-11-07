@@ -151,3 +151,81 @@ export function errorMessage(error: unknown, fallback = "Something went wrong. P
   }
   return fallback;
 }
+
+// ---- Multipart file parts (the expo/fetch trap) ----
+
+/**
+ * Multipart file parts that the React Native `fetch` of an Expo app can actually send.
+ *
+ * The trap: an Expo app's global `fetch` is `expo/fetch` (installed by `expo/src/winter/runtime.native.ts`),
+ * not React Native's own. Its FormData conversion (`convertFormDataAsync`) accepts a string, a `Blob` or
+ * any object with a `bytes()` method. React Native's classic `{ uri, name, type }` file descriptor is none
+ * of those, so `fetch` throws `Unsupported FormDataPart implementation` before any request is made and
+ * nothing reaches the server. Jest tests that mock `fetch` never see it.
+ *
+ * `filePart` builds a part `expo/fetch` accepts: `name` and `type` become the part's filename and
+ * Content-Type, and `bytes()` reads the file only when the request is sent. The reader is injected so
+ * this package keeps no native dependency; each app passes
+ * `(uri) => new File(uri).bytes()` from `expo-file-system`.
+ */
+
+/** A local file as the pickers report it. */
+export interface FilePartDescriptor {
+  uri: string;
+  name: string;
+  type: string;
+}
+
+/** Reads a local file (a `file://` uri) into memory. */
+export type ReadFileBytes = (uri: string) => Promise<Uint8Array>;
+
+/** What `expo/fetch` accepts as a FormData file part (an object with `bytes()` plus `name` and `type`). */
+export interface FilePart {
+  readonly uri: string;
+  readonly name: string;
+  readonly type: string;
+  bytes(): Promise<Uint8Array>;
+}
+
+export function filePart(file: FilePartDescriptor, readBytes: ReadFileBytes): FilePart {
+  return {
+    uri: file.uri,
+    name: file.name,
+    type: file.type,
+    bytes: () => readBytes(file.uri),
+  };
+}
+
+/** Appends a file part to a FormData (the DOM typings only know `Blob`, hence the cast). */
+export function appendFilePart(form: FormData, field: string, part: FilePart): void {
+  form.append(field, part as unknown as Blob);
+}
+
+// ---- Did the request never complete? ----
+
+/**
+ * Did a request fail because it never completed (offline, DNS, refused connection, timeout), as opposed
+ * to a failure inside our own code (building the request, reading a file)?
+ *
+ * Each `fetch` reports "never completed" in its own way, so a plain `instanceof TypeError` is not enough:
+ *   - React Native's fetch:  `TypeError: Network request failed` (or `... timed out`).
+ *   - `expo/fetch`:          a plain `Error` whose message starts `fetch failed:`, e.g.
+ *                            `fetch failed: UnexpectedException: Could not connect to the server.`
+ *                            Only the native request raises this, so it always means the request ran.
+ *   - Node (undici):         `TypeError: fetch failed`.
+ *   - Browsers:              `TypeError: Failed to fetch` (Chrome), `Load failed` (Safari),
+ *                            `NetworkError when attempting to fetch resource.` (Firefox).
+ *
+ * A programming or client error, such as expo/fetch's `Error: Unsupported FormDataPart implementation`
+ * thrown while converting the body, matches none of them and must not blame the connection.
+ */
+const EXPO_FETCH_PREFIX = /^fetch failed(?::|$)/;
+const EXPO_FETCH_ABORTED = /^fetch failed: The operation was aborted\.?$/;
+const TYPE_ERROR_NETWORK = /^(Network request (failed|timed out)|Failed to fetch|Load failed|NetworkError when attempting to fetch resource\.?)$/;
+
+export function isNetworkFailure(error: unknown): boolean {
+  if (!(error instanceof Error)) return false;
+  const { message } = error;
+  if (EXPO_FETCH_PREFIX.test(message)) return !EXPO_FETCH_ABORTED.test(message);
+  return error instanceof TypeError && TYPE_ERROR_NETWORK.test(message);
+}

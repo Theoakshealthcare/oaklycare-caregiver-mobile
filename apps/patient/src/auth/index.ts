@@ -3,6 +3,8 @@ import { useStore } from "zustand";
 
 import { API_BASE_URL } from "@/src/api/config";
 import { queryClient } from "@/src/api/queryClient";
+import { useBookingDraft } from "@/src/hooks/bookingDraft";
+import { usePaymentLinks } from "@/src/hooks/paymentLinks";
 
 import { secureTokenStorage } from "./secureStorage";
 import { createSession, type SessionState, type SessionTokens } from "./session";
@@ -27,7 +29,13 @@ async function refreshRequest(refreshToken: string): Promise<SessionTokens | nul
 export const session = createSession({
   storage: secureTokenStorage,
   refreshRequest,
-  onSignedOut: () => queryClient.clear(),
+  // Everything about the person that lives in memory goes: cached answers, a half-filled booking (address, condition)
+  // and the checkout links of bookings made on this phone.
+  onSignedOut: () => {
+    queryClient.clear();
+    useBookingDraft.getState().reset();
+    usePaymentLinks.getState().clear();
+  },
 });
 
 export function useSession<T>(selector: (state: SessionState) => T): T {

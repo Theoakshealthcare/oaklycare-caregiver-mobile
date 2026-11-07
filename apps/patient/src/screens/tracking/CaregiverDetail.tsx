@@ -42,7 +42,7 @@ const CaregiverDetail: React.FC<Props> = ({ navigation, route }) => {
           Your caregiver
         </Text>
         <Text variant="h3" weight="bold">
-          {booking.caregiver?.name ?? "Not assigned yet"}
+          {booking.caregiver?.firstName ?? "Not assigned yet"}
         </Text>
         <Text variant="small">{statusLabel(booking)}</Text>
       </Card>

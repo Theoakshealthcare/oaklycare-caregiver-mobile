@@ -1,0 +1,56 @@
+# SOP: Patient app booking wired to the backend, and the iOS simulator proof (P5)
+
+| | |
+|---|---|
+| **What shipped** | The sample-data booking hooks in `apps/patient` are replaced by real calls: price **preview**, **create**, Paystack checkout in the system browser with a capped backend **confirm** and a resumable **Pay now**, the bookings **list**, the **detail** with the **visit code**, and **cancel** with the fee shown first. Proved on the iOS simulator against a local backend (see "Device proof"). `apps/caregiver/scripts/ios-debug.sh` now builds either app (`--app patient`). |
+| **Branch / commits** | `feature/patient-booking`, stacked on `feature/patient-ui-port-auth` (PR #23, `7a459e8`). Not pushed. Commits are in the lead report. |
+| **Device-verified?** | **Yes, on the iPhone 17 Pro simulator** (iOS 26.2): every step listed under "Device proof". Not on Android, not on a physical phone, not against a live Paystack. |
+
+## Why
+P3 wired sign-up and sign-in; every booking screen still read `useFixtureQuery` sample data behind a "shows sample information" notice. The owner wants a usable patient test build in about two days, and the lesson of the caregiver device pass was that tests with a mocked `fetch` pass while a real device fails, so anything that crosses the native boundary (the payment browser, location) had to be run on the simulator.
+
+## How (decisions)
+| Area | Decision | Rejected / why |
+|---|---|---|
+| Price | `POST /booking/preview` (public) with the draft's hours and coordinates. The summary shows total, service fee, platform fee and the surge / discount / peak notes from the response. **Nothing is computed on the device**; "Proceed to Payment" is disabled until a price arrived. | Estimating on the phone (the old hook did hours x 6,250) |
+| Location | `expo-location` foreground permission, one read when the person taps "Use my current location", plus the typed state / city / address. The booking needs `patient_latitude` / `patient_longitude` and **the backend has no address-to-coordinates route** (`app/services/geocoding.py` is internal, used by the WhatsApp channel only). The step says "Stand at the visit address and tap the button". | Free-text address only (the API rejects it); a map picker (a native module and a bigger slice) |
+| Language, gender | Chips on step 2, sent inside `special_instructions` ("Preferred caregiver gender: female"). "Wound Care" and "Immediate booking" are not built (owner decision). | A backend field |
+| Dates, times | The kit's `ChipSelect` (14 days, hourly slots), never free text. The ISO `scheduled_date` is built from the local date. | A native date picker (a new module) |
+| Payment | The create response carries `payment_url`. `openBrowserAsync` (SFSafariViewController / Chrome Custom Tab) opens it from `PaymentResult`. **The browser result is never a payment result.** When it closes, `POST /booking/booking/{id}/verify-payment` is asked up to 6 times, 3 s apart (`paymentPolling`), and only `status: "success"` with `payment_status: "paid"` shows "Booking confirmed". Otherwise "Payment not confirmed yet" with **Pay now**, **Check again**, **View booking**. A 4xx from verify stops the polling at once. `refund_required: true` (paid after the link expired) has its own screen. | A WebView (no module installed, and a second place a card form could leak); trusting the redirect |
+| Pay now | `create` is the only call that returns the checkout URL; **no endpoint gives a fresh one**. The URL is kept **in memory only** (`hooks/paymentLinks.ts`, cleared on sign-out), so Pay now works while the app process lives. After a restart the screen says the link is not on this phone any more and offers "I have paid, check now" and **Cancel this booking** (free). | Writing the URL to disk (it is a live payment link) |
+| Statuses | `status` is read first (`dispatch_state` is never cleared on a cancelled booking). pending + unpaid = "Payment pending"; pending + paid = "Looking for a caregiver" / "No caregiver found yet" (`unmatched`); accepted, en_route, in_progress, completed, cancelled (and "Payment failed" when `payment_status` is `failed`), declined. Cancel is offered in pending, accepted and en_route. The caregiver is shown as a **first name** (titles skipped). **The API returns no caregiver phone**, so none is shown. | |
+| Visit code | Detail only, while accepted or en route, large, with "Give this code to your caregiver when they arrive". The open detail is read again every **20 s** while the screen is focused and the booking is active (`detailRefresh`); a finished booking or a screen in the background never polls. Never logged, not in a share sheet, not in a notification. The list never carries it. No patient "enter pin" step (owner decision). | |
+| Cancel | `GET cancel-terms` on open (never cached: `staleTime 0`, `gcTime 0`, no polling); the tier, the reason sentence built from `policy`, the fee, the refund and "Refunds are reviewed and sent to your original payment method." `POST cancel` always sends `accepted_fee_kobo`. **`409 terms_changed` is not an error**: the new terms from `detail.terms` replace the screen's and the person confirms again. After a cancel the refund summary is **read from the booking** (`refund.status`, `refund.amount`, `cancel_fee`), and the same block shows on the detail. No wallet wording, no "Request Refund". | |
+| Errors | One place: `api/unwrap.ts`. `isNetworkFailure` (a copy of the classifier on `fix/dp1-upload-expo-fetch`, PR #22; delete `api/networkFailure.ts` and import from `@oakly/api-client` once #22 lands) decides "Can't reach Oakly"; any other throw is `ApiError` status -1 with the generic sentence, so a bug never blames the connection (the old `settle` mapped every throw to the network message; one auth test depended on that and now throws the real RN message). `ApiError.code` carries `detail.code`; `api/bookingErrors.ts` gives each code in the FE guide a sentence. A coded 5xx (`payment_check_unavailable`) shows its own sentence. | |
+| Back stack | After "Proceed to Payment" and after "View booking" the stack is **reset** to `Tabs (bookings)` + the next screen, so Back never lands in the emptied booking form. (Found on the device: Back from the detail opened an empty step 2.) | |
+
+## What's involved
+| Path | What |
+|---|---|
+| `packages/api-client/openapi.json`, `src/schema.d.ts` | `pnpm api:sync` against backend `470bb3a` (adds `cancel-terms` and `cancel`) |
+| `apps/patient/src/api/{unwrap,errors,networkFailure,bookingErrors,keys}.ts` | Error classification, `ApiError.code`, query keys |
+| `apps/patient/src/services/{booking.service,bookingMapper,checkout,location}.ts` | The calls, the mapping from `BookingResponse` and the cancel types, the browser, the location |
+| `apps/patient/src/hooks/{useBookings,usePaymentCheck,paymentLinks,useChat}.ts`, `bookingDraft.ts` | Hooks (`useBookings`, `useBooking`, `useBookingQuote`, `useCreateBooking`, `useCancelTerms`, `useCancelBooking`); chat stays a sample hook in its own file; sign-out also clears the draft and the payment links (`auth/index.ts`) |
+| `apps/patient/src/domain/booking.ts` | Types, status and refund wording, `feeReason` |
+| `apps/patient/src/screens/booking/*`, `home/Home.tsx`, `components/booking/VisitCodeCard.tsx` | Form step 2, summary, payment result, list, detail, cancel; the `SampleNotice` is gone from every booking screen (Home keeps one for vitals) |
+| `apps/patient/app.json`, `package.json` | `expo-location` (when-in-use only) and `expo-web-browser` plugins and dependencies; script `ios:debug` |
+| `apps/caregiver/scripts/ios-debug.sh` | `--app <name>`; workspace, scheme and bundle id are read from the prebuild output and `app.json` |
+| `apps/patient/__tests__/{bookingFlows,bookingUnits}.test.ts*`, `test-utils/captures*` | 30 new tests; fixtures are **real captured bodies** (see Verification) |
+
+## Verification
+**Jest (single worker, foreground, no `--forceExit`; the process exited by itself):** 10 suites, **103 tests**, `tsc --noEmit` and `expo lint` clean (also api-client and caregiver typecheck after the sync). `bookingFlows` runs the whole app through a fake `fetch` that answers with captured bodies: list by tab (Pay now for an unpaid one, Track / Cancel by status), offline and bug messages, the visit code (accepted, en route, never after the visit starts, polling on and off), form, location refusal, create body and preview body, closed browser marks nothing paid and polling is capped, Pay now reopens the same URL, payment start failure, no link after a restart, cancel (terms first, `accepted_fee_kobo`, refund read from the booking, free and 50% tiers, `terms_changed`, in progress, 503, offline, unpaid).
+**Captured bodies:** cancel, terms, detail and list bodies are copied from `backend/docs/fe-captures/patient/` (the backend's own live run). **Preview, create and verify-payment (pending, paid) were captured live from this slice's scratch stack** (`ledgers/device-patient-booking/captures/`, copied to `apps/patient/test-utils/captures/live-*.json`); the shapes matched what the code assumed (`verify-payment` answers `{status:"pending", payment_status:"abandoned"}` before paying and `{status:"success", payment_status:"paid", amount_paid:"55000.00"}` after; a second verify answers the same with `paid_at: null`).
+**Device proof (iPhone 17 Pro simulator, Debug build + Metro, scratch backend on :8001, fake Paystack, fake checkout page):** see `ledgers/LEDGER-device-patient-booking.md` (PASS/FAIL per step, screenshots in `ledgers/device-patient-booking/`).
+
+## Operate / roll back
+`pnpm patient` (or `pnpm --filter oaklycare-patient-mobile ios:debug dev`) with `EXPO_PUBLIC_API_URL`; Metro never with `CI=1`. Backend prerequisite: **pricing must exist** (`booking_settings` has a row), otherwise preview and create answer `500 "Booking settings not configured."` and the app says "Something went wrong on our side". Revert the branch to go back to sample data. No backend change.
+
+## Follow-ups
+| Item | Detail |
+|---|---|
+| **Backend: a fresh payment link** | Pay now cannot work after an app restart because only `create` returns `payment_url`. Needs `POST /booking/{id}/payment-link` (or `payment_url` on the detail of an unpaid booking). Until then an unpaid booking left across a restart can only be cancelled (free) and booked again. |
+| **Backend: coordinates from the address** | The coordinates are the phone's, not the address's: booking for a parent across the city dispatches near the wrong place. `geocoding.py` exists; a slice should make lat/lng optional and geocode on create (or add a geocode route). |
+| Backend: caregiver phone | Not in `CaregiverDetails`; the brief asked to show it when returned. |
+| iOS and Android | Not run: a physical phone, Android, Paystack's real hosted page (its callback is an https page that cannot close the browser, the person taps close), the Chrome Custom Tab "opened" path (coded, Jest only). |
+| #22 | Replace `api/networkFailure.ts` with the `@oakly/api-client` export. |
+| Tracking and chat (P9) | `CaregiverDetail` and `Chat` read the real booking now but keep their sample notice (steps list, map and messages are still samples). |

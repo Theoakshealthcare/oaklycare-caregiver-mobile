@@ -17,6 +17,7 @@ export async function renderSignedIn(extra: Routes = {}, user: FakeUser = patien
   const calls = routeFetch({
     "GET /api/v1/auth/me": () => ({ status: 200, body: user }),
     "GET /api/v1/patient/notifications": () => liveReply("feed-empty"),
+    "GET /api/v1/booking/patient/bookings": () => ({ status: 200, body: [] }),
     ...extra,
   });
   const view = await render(<App />);

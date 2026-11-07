@@ -136,9 +136,12 @@ describe("helpers", () => {
     const form = buildDocumentForm({ uri: "file:///cache/license.png", name: "license.png", mimeType: "image/png" }, "license");
     expect(form).toBeInstanceOf(FormData);
     expect(append).toHaveBeenCalledWith("document_type", "license");
-    // React Native reads a { uri, name, type } descriptor as the file part. It must be the object
-    // itself: JSON-stringifying it (the old bug) sends text, not a file.
-    expect(append).toHaveBeenCalledWith("file", { uri: "file:///cache/license.png", name: "license.png", type: "image/png" });
+    // The file part must be the descriptor object itself (JSON-stringifying it, the old bug, sends text, not a file),
+    // carrying bytes() because the app's global fetch is expo/fetch (see expoFormData.test.ts).
+    expect(append).toHaveBeenCalledWith(
+      "file",
+      expect.objectContaining({ uri: "file:///cache/license.png", name: "license.png", type: "image/png", bytes: expect.any(Function) }),
+    );
     append.mockRestore();
   });
 });

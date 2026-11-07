@@ -252,7 +252,12 @@ describe("auth flows", () => {
     });
 
     it("recovery: shows a network failure instead of moving on", async () => {
-      const { view } = await renderSignedOut({});
+      // React Native's fetch reports a request that never completed as `TypeError: Network request failed`.
+      const { view } = await renderSignedOut({
+        "POST /api/v1/auth/password-recovery": () => {
+          throw new TypeError("Network request failed");
+        },
+      });
       await press("Forgot password?");
       await type("Email address", "ada.placeholder@example.com");
       await press("Send Recovery Email");

@@ -5,11 +5,11 @@ import { StyleSheet, View } from "react-native";
 import Button from "@/src/components/ui/button";
 import { Card, Chip, DetailRow, EmptyState } from "@/src/components/ui/card";
 import KeyboardScrollView from "@/src/components/ui/keyboard-scroll-view";
-import SampleNotice from "@/src/components/ui/sample-notice";
 import SegmentedControl from "@/src/components/ui/segmented-control";
 import Text from "@/src/components/ui/text";
 import { theme } from "@/src/constants/theme";
-import { canCancel, canTrack, statusLabel, tabForStatus, type BookingTab } from "@/src/domain/booking";
+import { canCancel, canTrack, needsPayment, refundText, statusLabel, tabForStatus, type BookingTab } from "@/src/domain/booking";
+import { messageForError } from "@/src/api/errors";
 import { formatDateTime, formatNaira } from "@/src/domain/format";
 import { useBookings } from "@/src/hooks/useBookings";
 import { useNav } from "@/src/navigation/Navigations";
@@ -41,8 +41,15 @@ const Bookings: React.FC = () => {
         <SegmentedControl options={TABS} value={tab} onChange={setTab} />
       </View>
       <KeyboardScrollView contentContainerStyle={styles.content}>
-        <SampleNotice what="Your bookings" />
-        {shown.length === 0 ? (
+        {bookings.isLoading ? (
+          <Text color={theme.colors.textLight}>Loading your bookings…</Text>
+        ) : bookings.isError ? (
+          <Card tone="warm">
+            <Text accessibilityRole="alert">{messageForError(bookings.error)}</Text>
+            <Button small variant="outline" title="Try again" onPress={() => void bookings.refetch()} />
+          </Card>
+        ) : null}
+        {bookings.isLoading || (bookings.isError && !bookings.data) ? null : shown.length === 0 ? (
           <EmptyState title={EMPTY[tab]} />
         ) : (
           shown.map((booking) => (
@@ -51,14 +58,30 @@ const Bookings: React.FC = () => {
                 <Text weight="bold">{booking.reference}</Text>
                 <Chip
                   label={statusLabel(booking)}
-                  tone={booking.status === "cancelled" || booking.status === "declined" ? "error" : booking.status === "completed" ? "success" : "primary"}
+                  tone={
+                    booking.status === "cancelled" || booking.status === "declined"
+                      ? "error"
+                      : booking.status === "completed"
+                        ? "success"
+                        : needsPayment(booking)
+                          ? "warning"
+                          : "primary"
+                  }
                 />
               </View>
               <DetailRow label="Service" value={booking.service} />
               <DetailRow label="For" value={booking.bookingFor} />
               <DetailRow label="When" value={formatDateTime(booking.scheduledAt)} />
               <DetailRow label="Amount" value={formatNaira(booking.amount)} />
+              {booking.refund ? (
+                <Text variant="small" color={theme.colors.textLight}>
+                  {refundText(booking.refund)}
+                </Text>
+              ) : null}
               <View style={styles.actions}>
+                {needsPayment(booking) ? (
+                  <Button small title="Pay now" onPress={() => navigation.navigate("PaymentResult", { bookingId: booking.id, open: true })} />
+                ) : null}
                 {canTrack(booking) ? <Button small title="Track" onPress={() => navigation.navigate("CaregiverDetail", { id: booking.id })} /> : null}
                 {booking.caregiver && tab === "upcoming" ? (
                   <Button small variant="outline" title="Chat" onPress={() => navigation.navigate("Chat", { id: booking.id })} />
