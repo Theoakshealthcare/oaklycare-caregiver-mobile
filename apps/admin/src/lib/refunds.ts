@@ -19,7 +19,7 @@ export type RefundReason = Schemas["RefundRequestIn"]["reason_code"];
 /** Reads need any one of these (guide table); the server enforces it, the nav and pages mirror it. */
 export const REFUNDS_READ = ["refunds.request", "refunds.approve", "payments.read"];
 export const REFUNDS_REQUEST = "refunds.request";
-/** Only a Super Admin holds this: approving above the Finance limit or to the wallet, switch-to-wallet, resolve. */
+/** Only a Super Admin holds this: approving above the Finance limit, switch-to-wallet, resolve. */
 export const REFUNDS_ABOVE_LIMIT = "refunds.approve_above_limit";
 
 export const PAGE_SIZE = 50;
@@ -141,12 +141,34 @@ export function differentAmountFromError(message: string): { naira: number | nul
   return { naira: match ? Number(match[1]) / 100 : null };
 }
 
-/** Run an API call, rewording the one kobo message and keeping the status for callers that branch on it. */
+/**
+ * Stable error codes the refund routes answer inside an object detail: `{"detail": {"code": "...", "message": "..."}}`.
+ * The sentence is ours so it does not depend on the server's wording.
+ */
+const REFUND_ERROR_CODES: Record<string, string> = {
+  wallet_refunds_disabled: "Refunds to the Oakly wallet are switched off for now. Choose the family's original payment method instead.",
+};
+
+/** The `detail.code` of an error body (`detail` an object), or `null` for a string or list detail. */
+export function errorCodeOf(body: unknown): string | null {
+  const detail = body && typeof body === "object" ? (body as { detail?: unknown }).detail : undefined;
+  if (!detail || typeof detail !== "object" || Array.isArray(detail)) return null;
+  const code = (detail as { code?: unknown }).code;
+  return typeof code === "string" ? code : null;
+}
+
+/** What to show for a failed refund call: our sentence for a known `detail.code`, else the server's message (kobo reworded). */
+export function refundErrorMessage(message: string, body: unknown): string {
+  const code = errorCodeOf(body);
+  return (code !== null ? REFUND_ERROR_CODES[code] : undefined) ?? friendlyRefundError(message);
+}
+
+/** Run an API call, rewording known errors and keeping the status and body for callers that branch on them. */
 async function call<T>(run: () => Promise<T>): Promise<T> {
   try {
     return await run();
   } catch (e) {
-    if (e instanceof ApiError) throw new ApiError(friendlyRefundError(e.message), e.status, e.body);
+    if (e instanceof ApiError) throw new ApiError(refundErrorMessage(e.message, e.body), e.status, e.body);
     throw e;
   }
 }

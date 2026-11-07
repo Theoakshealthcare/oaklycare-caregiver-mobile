@@ -9,7 +9,6 @@ import { Button } from "@/components/ui/button";
 import { Input, Select, Textarea } from "@/components/ui/input";
 import { formatNairaValue } from "@/lib/format";
 import {
-  REFUNDS_ABOVE_LIMIT,
   REFUNDS_LIST_KEY,
   STAFF_REASONS,
   type RefundDetail,
@@ -53,7 +52,6 @@ const LABELS: Record<Exclude<Dialog, null>, string> = {
  * the backend. Each action goes through a confirmation that names the refund.
  */
 export function RefundActions({ refund, onDone }: { refund: RefundDetail; onDone?: (notice: string) => void }) {
-  const { can } = useAuth();
   const queryClient = useQueryClient();
   const [dialog, setDialog] = React.useState<Dialog>(null);
   const actions = refund.available_actions;
@@ -96,7 +94,6 @@ export function RefundActions({ refund, onDone }: { refund: RefundDetail; onDone
       {dialog === "approve" ? (
         <ApproveDialog
           refund={refund}
-          mayUseWallet={can(REFUNDS_ABOVE_LIMIT) && refund.booking.channel === "app"}
           onOpenChange={close}
           onApprove={(body) => act(() => approveRefund(refund.id, body), (next) => `Approved ${describe(next)}.`)}
         />
@@ -174,14 +171,20 @@ export function RefundActions({ refund, onDone }: { refund: RefundDetail; onDone
   );
 }
 
+/**
+ * Wallet-credit refunds are off for app users in v1 (owner decision 2026-11-07): the backend setting
+ * `REFUND_WALLET_CREDIT_ENABLED` is false and it answers 409 `wallet_refunds_disabled` to the wallet destination. So the
+ * approve dialog offers no destination choice and always sends the original payment method. The API type still allows
+ * `"wallet"`; when the flag is turned on, bring the picker back here.
+ */
+const ORIGINAL_METHOD = "original_method" as const;
+
 function ApproveDialog({
   refund,
-  mayUseWallet,
   onOpenChange,
   onApprove,
 }: {
   refund: RefundDetail;
-  mayUseWallet: boolean;
   onOpenChange: (open: boolean) => void;
   onApprove: (body: {
     amount_naira: number;
@@ -195,7 +198,6 @@ function ApproveDialog({
   const suggested = refund.suggested_amount_naira;
   // Start from the suggestion, or from the most this admin may approve when the suggestion is above it.
   const [amount, setAmount] = React.useState(nairaInput(suggested === null ? null : Math.min(suggested, max)));
-  const [destination, setDestination] = React.useState<"original_method" | "wallet">("original_method");
   const [takeBack, setTakeBack] = React.useState(false);
   const [takeBackReason, setTakeBackReason] = React.useState("");
   const [note, setNote] = React.useState("");
@@ -209,18 +211,14 @@ function ApproveDialog({
       open
       onOpenChange={onOpenChange}
       title={`Approve refund for booking ${refund.booking_code ?? "—"}?`}
-      sideEffects={
-        destination === "wallet"
-          ? "Credits the family's Oakly wallet at once and the refund is complete."
-          : "Approving does not send the money. The send job sends it to Paystack within about a minute and Paystack's answer finishes it. You can approve less than suggested, never more than the most you are allowed."
-      }
-      confirmLabel={destination === "wallet" ? "Approve and credit wallet" : "Approve refund"}
+      sideEffects="Approving does not send the money. The send job sends it to Paystack within about a minute and Paystack's answer finishes it. You can approve less than suggested, never more than the most you are allowed."
+      confirmLabel="Approve refund"
       extraValid={valid}
       onConfirm={async () => {
         if (value === null) return;
         await onApprove({
           amount_naira: value,
-          destination,
+          destination: ORIGINAL_METHOD,
           take_back_from_caregiver: canTakeBack && takeBack,
           take_back_reason: canTakeBack && takeBack ? takeBackReason.trim() : undefined,
           note: note.trim() || undefined,
@@ -250,19 +248,6 @@ function ApproveDialog({
           Between {formatNairaValue(0.01)} and {formatNairaValue(max)}, the most you can approve now.
         </p>
       </div>
-      {mayUseWallet ? (
-        <fieldset className="grid gap-2">
-          <legend className="mb-1 text-sm font-medium">Where the money goes</legend>
-          <label className="flex items-center gap-2 text-sm">
-            <input type="radio" name="destination" className="size-4" checked={destination === "original_method"} onChange={() => setDestination("original_method")} />
-            The family&apos;s original payment method, through Paystack
-          </label>
-          <label className="flex items-center gap-2 text-sm">
-            <input type="radio" name="destination" className="size-4" checked={destination === "wallet"} onChange={() => setDestination("wallet")} />
-            The family&apos;s Oakly wallet (immediate, Super Admin only)
-          </label>
-        </fieldset>
-      ) : null}
       {canTakeBack ? (
         <div className="grid gap-2 rounded-md border p-3 text-sm">
           <p>
@@ -350,7 +335,7 @@ const RESOLVE_EFFECTS: Record<Outcome | "none", string> = {
   succeeded:
     "Records the refund as complete once: the booking's payment status, any caregiver take-back and the family's message. If Paystack processed a different amount, the server says so and you resolve again with that amount.",
   failed:
-    "Marks the refund failed so it can be retried, switched to the wallet or closed. Refused if the money already left; reversing that is done on the Paystack dashboard.",
+    "Marks the refund failed so it can be retried or closed. Refused if the money already left; reversing that is done on the Paystack dashboard.",
 };
 
 function ResolveDialog({
