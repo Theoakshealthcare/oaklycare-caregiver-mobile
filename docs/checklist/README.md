@@ -117,3 +117,29 @@ channel) lives in the backend repo: `docs/checklist/MASTER_CHECKLIST.md`. Update
   - [x] Read = `caregivers.read`, decide / reset = `caregivers.approve`
   - [ ] Live browser pass against a local backend; Playwright flow for review and reset
 - [ ] K8 Device pass against sandbox keys (and one live-key check)
+
+## Patient app (moved into the monorepo as `apps/patient`; plan from the 2026-11-07 audit, ledger `LEDGER-patient-audit.md` §5)
+Owner decisions (2026-11-07): move the old app into the monorepo on SDK 57, copied without git history, using the generated `packages/api-client`; v1 sign-in is email + password only; WhatsApp parked (the app sits beside it later); in-app chat IN; patient wallet HIDDEN (card per booking via Paystack); FallGuard IN; nutritionist, physio, prescriptions, video call, AI note taker, ratings hidden or deferred. Screen map of the 51 owner designs: `LEDGER-patient-screens.md` (outside the repo).
+- [x] P0 Decisions: repo move, v1 scope, sign-in (2026-11-07)
+- [x] P1a Foundation shell (2026-11-07, branch `feature/patient-app-foundation`, see docs/sop/2026-11-07-patient-app-foundation.md; Jest only, **not device-verified**)
+  - [x] `apps/patient` on Expo SDK 57 / RN 0.86 (same versions as the caregiver app), app identity "Oakly Health", slug `oakly-patient`, `com.oakly.oaklypatient`, scheme `oaklypatient`
+  - [x] Secure-store session, single-flight refresh (a 401 on the refresh call = logout), React Query client, typed api-client with `EXPO_PUBLIC_API_URL`
+  - [x] Auth gate (loading / error / signed out / wrong account / verify email placeholder / app), Login (email + password), placeholder Home from `/auth/me`, Logout clearing keychain and query cache
+  - [x] RNTL tests: gate table, session state machine, App boot / login / wrong account / logout, refresh failure through the real client
+  - [x] No MMKV, no hard-coded key, no `android/`, no keystore, no `.env`; CI covers the new app through `pnpm -r`
+  - [ ] Device pass (iOS and Android) of login / home / logout
+- [ ] P1b Port the UI kit, navigation and the live screens from the old app as-is (delete the 4.4k dead lines; one generic FallGuard question screen), against the designs
+- [ ] P2 Security: archive the old repo and rotate the old upload key (owner: was `com.oakly.oaklypatient` ever published, is the old repo public?); full logout also unregisters push
+- [ ] P3 Auth correctness: register (email only), verify email, forgot to reset with a deep link (decide link vs OTP and the scheme in the reset email), change password, delete account with the 409 text, profile edit refetches `/auth/me`
+- [ ] P4-BE Backend: `GET cancel-terms` + `POST cancel` with fee tiers, cancel/refund state on the booking, FE guide with live captures
+- [ ] P5 Booking complete: booking detail with the **visit code**, all statuses and `dispatch_state`, cancel with fee confirm, payment polling cap and resume
+- [ ] P6 / P6-BE Vitals fix: insights shape, caregiver access list/grant/revoke (backend patient-id vs user-id bug at `vitals.py:151,164,180`)
+- [ ] P7 / P7-BE FallGuard tidy: align types, score computed server-side
+- [ ] P8-BE / P8 Patient notifications feed + push for app bookers, real Home, Expo push token (owner: Apple / FCM keys)
+- [ ] P9 Live tracking (GET + WS) and chat (poll first)
+- [ ] P10-P12 Nutritionist / physio, wallet / support, prescriptions / video call / AI note taker / ratings / care-plan view: hidden or deferred per the owner's v1 scope
+- [ ] P13 Tests per slice, device pass, EAS builds, TestFlight / Play internal track (owner: Apple / Google accounts)
+- [ ] Theme aligned to the designs (primary about `#3D8082`, coral about `#EB695A`; the shell still carries the caregiver tokens; owner to confirm, see `LEDGER-patient-screens.md` §6 Q4)
+- [ ] Extract shared auth / theme / ui package (the shell was copied from the caregiver app on purpose; two copies of `session.ts`, `errors.ts`, theme and ui primitives now exist)
+- [ ] Production font licence check for GT Walsheim Pro (the files were copied from the caregiver app)
+
