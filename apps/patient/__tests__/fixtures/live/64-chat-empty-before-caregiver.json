@@ -1,0 +1,13 @@
+{
+  "request": {
+    "method": "GET",
+    "path": "/api/v1/booking/chat/a6b424ed-ff26-48f1-8912-5f9b5b2694e4/messages",
+    "auth": "bearer",
+    "body": null
+  },
+  "response": {
+    "status": 200,
+    "body": []
+  },
+  "note": "Chat before any caregiver is assigned: the patient owns the booking, so it answers 200 with an empty list."
+}

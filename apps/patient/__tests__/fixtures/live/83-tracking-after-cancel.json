@@ -1,0 +1,15 @@
+{
+  "request": {
+    "method": "GET",
+    "path": "/api/v1/booking/booking/fd7cd955-1f4f-4d7a-a1dc-23b9041b1b9c/live-tracking",
+    "auth": "bearer",
+    "body": null
+  },
+  "response": {
+    "status": 409,
+    "body": {
+      "detail": "Live tracking is only available while the booking is accepted or in progress"
+    }
+  },
+  "note": "A cancelled booking that had a caregiver."
+}
