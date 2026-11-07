@@ -1,5 +1,6 @@
 import { useIsFocused } from "@react-navigation/native";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
+import { useEffect } from "react";
 
 import { queryKeys } from "@/src/api/keys";
 import { isActive, type Booking, type BookingDraft, type CancelResult } from "@/src/domain/booking";
@@ -10,14 +11,35 @@ import { usePaymentLinks } from "./paymentLinks";
 /** How often the open detail of an active booking is read again (the visit code and the status live there). */
 export const detailRefresh = { intervalMs: 20_000 };
 
-/** The patient's bookings, newest first (`GET /booking/patient/bookings`). The list never carries the visit code. */
+/** How often the lists are read again while one is in front and a booking in them is still moving. */
+export const listRefresh = { intervalMs: 20_000 };
+
+/**
+ * The patient's bookings, newest first (`GET /booking/patient/bookings`). The list never carries the visit code.
+ *
+ * A screen of tabs stays mounted, so "the app came back to the foreground" is not the only moment it can be out of date:
+ * showing the screen again reads the list if it has gone stale (a caregiver may have accepted, or the visit ended, while the
+ * patient was elsewhere in the app), and while a booking is still moving the screen in front keeps reading it.
+ */
 export function useBookings() {
-  return useQuery({ queryKey: queryKeys.bookings, queryFn: bookingService.list });
+  const focused = useIsFocused();
+  const query = useQuery({
+    queryKey: queryKeys.bookings,
+    queryFn: bookingService.list,
+    refetchInterval: (q) => (focused && q.state.data?.some(isActive) ? listRefresh.intervalMs : false),
+  });
+  const { isStale, isFetching, refetch } = query;
+  useEffect(() => {
+    if (focused && isStale && !isFetching) void refetch();
+    // Only the moment the screen comes to the front matters here; a read already running is left alone.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [focused]);
+  return query;
 }
 
 /**
  * One booking from `GET /booking/booking/{id}`: the only response that carries the visit code. While the screen is
- * focused and the booking is still active (looking for a caregiver, accepted, on the way) it is read again every 20 s;
+ * focused and the booking is still active (looking for a caregiver, accepted, on the way, in progress) it is read again every 20 s;
  * a booking that is over, or a screen that is not in front, never polls.
  */
 export function useBooking(id: string) {
