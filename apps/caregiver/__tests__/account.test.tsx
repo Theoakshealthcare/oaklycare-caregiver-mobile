@@ -156,7 +156,9 @@ describe("Profile screen", () => {
     expect(title).toBe("Delete your account?");
     expect(message).toMatch(/personal details will be removed/i);
     expect(message).toMatch(/cannot be undone/i);
-    expect(message).toMatch(/cannot be undone/i);
+    // The backend refuses (409) with active bookings or a wallet balance: say so up front (DP1-27).
+    expect(message).toMatch(/active bookings/i);
+    expect(message).toMatch(/money in your wallet/i);
     expect(del).not.toHaveBeenCalled();
     await pressAlertButton("Cancel");
     expect(del).not.toHaveBeenCalled();
@@ -198,7 +200,9 @@ describe("EditProfile screen", () => {
     await renderWith(<EditProfile />);
     expect(await screen.findByDisplayValue("Ada Obi")).toBeTruthy();
     expect(screen.getByDisplayValue("+2348000000001")).toBeTruthy();
-    expect(screen.getByDisplayValue("1990-05-01")).toBeTruthy();
+    // Date of birth uses the shared "1 May 1990" format, not the raw ISO text (DP1-28).
+    expect(screen.getByText("1 May 1990")).toBeTruthy();
+    expect(screen.queryByDisplayValue("1990-05-01")).toBeNull();
     expect(screen.queryByText(/password/i)).toBeNull();
   });
 

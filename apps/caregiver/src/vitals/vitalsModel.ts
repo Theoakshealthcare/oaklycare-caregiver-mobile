@@ -1,7 +1,7 @@
 import { ApiError } from "@/src/api/errors";
 import type { Booking } from "@/src/services/booking.service";
 import type { PatientVital } from "@/src/services/vitals.service";
-import { parseBackendDate } from "@/src/utils/dates";
+import { formatClock, formatDayHeading, formatStamp, parseBackendDate } from "@/src/utils/dates";
 
 /**
  * The six vitals on the design's grid. The backend stores `vital_type` as free text, so these keys
@@ -113,12 +113,11 @@ export function formatReading(r: Pick<Reading, "value" | "unit">): string {
   return r.unit ? `${r.value} ${r.unit}` : r.value;
 }
 
-/** "Updated at 10:45 am" for today, "Updated 24 Oct, 10:45 am" before. */
-export function formatUpdated(date: Date, now: Date = new Date(), locale = "en-NG"): string {
-  const time = date.toLocaleTimeString(locale, { hour: "numeric", minute: "2-digit" });
+/** "Updated at 10:45" for today, "Updated 24 Oct, 10:45" before. */
+export function formatUpdated(date: Date, now: Date = new Date()): string {
   const sameDay = date.toDateString() === now.toDateString();
-  if (sameDay) return `Updated at ${time}`;
-  return `Updated ${date.toLocaleDateString(locale, { day: "numeric", month: "short" })}, ${time}`;
+  if (sameDay) return `Updated at ${formatClock(date)}`;
+  return `Updated ${formatStamp(date)}`;
 }
 
 // --- Chart range -----------------------------------------------------------------------------
@@ -204,7 +203,7 @@ function pressureBars(readings: Reading[]): ChartBar[] {
 }
 
 /** Readings (already newest first) grouped under "Today", "Yesterday" or the date, keeping their order. */
-export function groupReadingsByDay(readings: Reading[], now: Date = new Date(), locale = "en-NG"): { title: string; readings: Reading[] }[] {
+export function groupReadingsByDay(readings: Reading[], now: Date = new Date()): { title: string; readings: Reading[] }[] {
   const yesterday = new Date(now.getTime() - 24 * HOUR);
   const groups: { title: string; readings: Reading[] }[] = [];
   for (const r of readings) {
@@ -213,7 +212,7 @@ export function groupReadingsByDay(readings: Reading[], now: Date = new Date(), 
         ? "Today"
         : r.recordedAt.toDateString() === yesterday.toDateString()
           ? "Yesterday"
-          : r.recordedAt.toLocaleDateString(locale, { weekday: "short", day: "numeric", month: "short", year: "numeric" });
+          : formatDayHeading(r.recordedAt);
     const last = groups[groups.length - 1];
     if (last && last.title === title) last.readings.push(r);
     else groups.push({ title, readings: [r] });
@@ -221,9 +220,9 @@ export function groupReadingsByDay(readings: Reading[], now: Date = new Date(), 
   return groups;
 }
 
-/** The clock time of a reading, "10:45 am". */
-export function formatTime(date: Date, locale = "en-NG"): string {
-  return date.toLocaleTimeString(locale, { hour: "numeric", minute: "2-digit" });
+/** The clock time of a reading, "10:45". */
+export function formatTime(date: Date): string {
+  return formatClock(date);
 }
 
 // --- Manual entry ----------------------------------------------------------------------------

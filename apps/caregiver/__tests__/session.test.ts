@@ -25,8 +25,23 @@ describe("session state machine", () => {
     const session = createSession({ storage: memoryStorage(), refreshRequest: jest.fn() });
     expect(session.store.getState().status).toBe("restoring");
     await session.restore();
-    expect(session.store.getState()).toEqual({ status: "signedOut", tokens: null });
+    expect(session.store.getState()).toEqual({ status: "signedOut", tokens: null, returning: false });
     expect(session.getAccessToken()).toBeNull();
+  });
+
+  it("remembers a device that has signed in, so sign-out is not a fresh install (DP1-12)", async () => {
+    let returning = false;
+    const storage = { ...memoryStorage(), loadReturning: async () => returning, markReturning: async () => { returning = true; } };
+    const first = createSession({ storage, refreshRequest: jest.fn() });
+    await first.restore();
+    expect(first.store.getState().returning).toBe(false);
+    await first.signIn(OLD);
+    await first.signOut();
+    expect(first.store.getState()).toEqual({ status: "signedOut", tokens: null, returning: true });
+    // A cold start after logging out: nothing stored, but this device is known.
+    const second = createSession({ storage, refreshRequest: jest.fn() });
+    await second.restore();
+    expect(second.store.getState()).toEqual({ status: "signedOut", tokens: null, returning: true });
   });
 
   it("restores stored tokens as signedIn", async () => {
@@ -60,7 +75,7 @@ describe("session state machine", () => {
     const session = createSession({ storage, refreshRequest: jest.fn(), onSignedOut });
     await session.restore();
     await session.signOut();
-    expect(session.store.getState()).toEqual({ status: "signedOut", tokens: null });
+    expect(session.store.getState()).toEqual({ status: "signedOut", tokens: null, returning: true });
     expect(storage.current()).toBeNull();
     expect(onSignedOut).toHaveBeenCalledTimes(1);
   });

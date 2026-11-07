@@ -8,7 +8,7 @@ import { queryKeys } from "../src/api/keys";
 import { useBookingAction } from "../src/hooks/queries";
 import { bookingService } from "../src/services/booking.service";
 import { ApiError, formatCountdown, isSuspendedStop, messageForError, visitCodeFailure } from "../src/api/errors";
-import { OnMyWayStep, VisitCodeStep } from "../src/screens/visit/VisitSteps";
+import { InProgressStep, OnMyWayStep, VisitCodeStep, VisitDoneStep } from "../src/screens/visit/VisitSteps";
 import {
   DROP_OUT_CONFIRM,
   isOnMyWayOpen,
@@ -211,8 +211,16 @@ describe("VisitCodeStep", () => {
         onSubmit={jest.fn()}
       />,
     );
-    expect(screen.getByText(/1 try left before the code is locked for 15 minutes/)).toBeTruthy();
+    // The exact error already says how many tries are left: the hint must not repeat it (DP1-32).
+    expect(screen.getAllByText(/1 try left/)).toHaveLength(1);
     expect(screen.getByText(/That code isn't right/)).toBeTruthy();
+  });
+
+  it("shows the tries-left hint only when there is no error to carry it", async () => {
+    await render(
+      <VisitCodeStep visit={visit} busy={false} lockedUntil={null} attemptsLeft={2} error={null} onSubmit={jest.fn()} />,
+    );
+    expect(screen.getAllByText(/2 tries left/)).toHaveLength(1);
   });
 
   it("replaces the input with a ticking countdown while locked, then offers the input again", async () => {
@@ -351,5 +359,44 @@ describe("caregiver drop-out", () => {
     expect(bookingService.act).toHaveBeenCalledWith("b-1", "cancel", undefined);
     const keys = invalidate.mock.calls.map((c) => c[0]?.queryKey);
     expect(keys).toEqual(expect.arrayContaining([queryKeys.allBookings, queryKeys.booking("b-1"), queryKeys.home]));
+  });
+});
+
+describe("visit in progress and completed screens (DP1-19)", () => {
+  const visit = { patientName: "Placeholder Patient", address: "12 Placeholder Street, Lekki", when: "Tue 6 Oct" };
+  const base = { visit, busy: false, onComplete: jest.fn(), onNotes: jest.fn() };
+
+  it("says nothing about location sharing when it never started", async () => {
+    await render(<InProgressStep {...base} />);
+    expect(screen.queryByText(/location sharing/i)).toBeNull();
+  });
+
+  it("explains that completing stops location sharing only when it is being shared", async () => {
+    await render(<InProgressStep {...base} sharingLocation />);
+    expect(screen.getByText(/This stops location sharing/)).toBeTruthy();
+  });
+
+  it("links to the care plan and to vitals from the visit, so they are not only reachable at clock-out", async () => {
+    const onCarePlan = jest.fn();
+    const onVitals = jest.fn();
+    await render(<InProgressStep {...base} onCarePlan={onCarePlan} onVitals={onVitals} />);
+    await fireEvent.press(screen.getByText("Care plan"));
+    await fireEvent.press(screen.getByText("Record vitals"));
+    expect(onCarePlan).toHaveBeenCalledTimes(1);
+    expect(onVitals).toHaveBeenCalledTimes(1);
+  });
+
+  it("omits the care plan link when the client has no plan", async () => {
+    await render(<InProgressStep {...base} onVitals={jest.fn()} />);
+    expect(screen.queryByText("Care plan")).toBeNull();
+    expect(screen.getByText("Record vitals")).toBeTruthy();
+  });
+
+  it("the completed screen claims 'sharing has stopped' only if it was shared", async () => {
+    const first = await render(<VisitDoneStep onHome={jest.fn()} />);
+    expect(screen.queryByText(/Location sharing has stopped/)).toBeNull();
+    await first.unmount();
+    await render(<VisitDoneStep onHome={jest.fn()} sharedLocation />);
+    expect(screen.getByText(/Location sharing has stopped/)).toBeTruthy();
   });
 });

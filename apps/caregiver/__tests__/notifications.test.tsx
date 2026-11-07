@@ -26,6 +26,7 @@ const notification: CaregiverNotification = {
   notification_type: "new_booking",
   is_read: false,
   created_at: "2026-10-06T08:23:27.927274",
+  response: null,
   booking: {
     id: "1b4b008b-c4d2-4fb1-a7b6-1eca61375802",
     booking_code: "2DC38733",
@@ -103,19 +104,48 @@ describe("Notifications screen", () => {
     await renderScreen();
     expect(await screen.findByText(/Can't reach Oakly/)).toBeTruthy();
     await fireEvent.press(screen.getByText("Try again"));
-    expect(await screen.findByText("New Booking Request")).toBeTruthy();
+    expect(await screen.findByText("Nurse visit request")).toBeTruthy();
     expect(list).toHaveBeenCalledTimes(2);
   });
 
   it("lists notifications and opens an un-accepted one as an offer", async () => {
     jest.spyOn(notificationService, "list").mockResolvedValue([notification]);
     await renderScreen();
-    expect(await screen.findByText("New Booking Request")).toBeTruthy();
-    expect(screen.getByText("New nurse request - 0.0km away, ETA 5 min")).toBeTruthy();
-    await fireEvent.press(screen.getByText("New Booking Request"));
+    expect(await screen.findByText("Nurse visit request")).toBeTruthy();
+    await fireEvent.press(screen.getByText("Nurse visit request"));
     expect(mockNavigate).toHaveBeenCalledWith("BookingDetails", {
       bookingId: notification.booking_id,
-      offer: expect.objectContaining({ id: notification.booking_id, area: "Lagos, Lagos" }),
+      offer: expect.objectContaining({ id: notification.booking_id, area: "Lagos, Lagos", response: null }),
+    });
+  });
+
+  it("tells offers apart by service, visit time and area, and drops the meaningless ETA (DP1-20)", async () => {
+    const other = {
+      ...notification,
+      id: "n2",
+      booking_id: "b2",
+      booking: { ...notification.booking, id: "b2", service_type: "physio", scheduled_date: "2026-10-09T14:00:00", patient_city: "Ikeja", duration_hours: 1 },
+    };
+    jest.spyOn(notificationService, "list").mockResolvedValue([notification, other]);
+    await renderScreen();
+    expect(await screen.findByText("Nurse visit request")).toBeTruthy();
+    expect(screen.getByText("Physio visit request")).toBeTruthy();
+    expect(screen.getByText(/1 hour • Ikeja, Lagos/)).toBeTruthy();
+    expect(screen.getByText(/2 hours • Lagos, Lagos/)).toBeTruthy();
+    expect(screen.queryByText(/ETA/)).toBeNull();
+    expect(screen.queryByText("New Booking Request")).toBeNull();
+    expect(screen.getAllByText("0.0 km away").length).toBe(2);
+  });
+
+  it("opens a declined offer as unavailable: it carries the response so Accept/Decline are hidden", async () => {
+    const declined = { ...notification, response: "declined" };
+    jest.spyOn(notificationService, "list").mockResolvedValue([declined]);
+    await renderScreen();
+    expect(await screen.findByText("No longer available")).toBeTruthy();
+    await fireEvent.press(screen.getByText("Nurse visit request"));
+    expect(mockNavigate).toHaveBeenCalledWith("BookingDetails", {
+      bookingId: notification.booking_id,
+      offer: expect.objectContaining({ response: "declined" }),
     });
   });
 
@@ -123,14 +153,14 @@ describe("Notifications screen", () => {
     const assigned = { ...notification, booking: { ...notification.booking, caregiver_id: "cg1", status: "accepted" as const } };
     jest.spyOn(notificationService, "list").mockResolvedValue([assigned]);
     await renderScreen();
-    await fireEvent.press(await screen.findByText("New Booking Request"));
+    await fireEvent.press(await screen.findByText("Nurse visit request"));
     expect(mockNavigate).toHaveBeenCalledWith("BookingDetails", { bookingId: notification.booking_id });
   });
 
   it("pull-to-refresh refetches", async () => {
     const list = jest.spyOn(notificationService, "list").mockResolvedValue([notification]);
     await renderScreen();
-    await screen.findByText("New Booking Request");
+    await screen.findByText("Nurse visit request");
     await act(async () => {
       screen.getByTestId("notifications-list").props.refreshControl.props.onRefresh();
     });

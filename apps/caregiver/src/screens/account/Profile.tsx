@@ -54,7 +54,7 @@ const Profile: React.FC = () => {
   const confirmDelete = () =>
     Alert.alert(
       "Delete your account?",
-      "Your personal details will be removed and you will be signed out. This cannot be undone. Records we must keep by law, such as past bookings and payments, are kept without your details.",
+      "Your personal details will be removed and you will be signed out. This cannot be undone. You can't delete your account while you have active bookings or money in your wallet: finish your visits and wait until your balance has been paid out to your bank account. Records we must keep by law, such as past bookings and payments, are kept without your details.",
       [
         { text: "Cancel", style: "cancel" },
         {
@@ -128,7 +128,7 @@ const Profile: React.FC = () => {
           <MenuRow icon="credit-card" label="Payment & earnings" onPress={() => navigation.navigate("Wallet")} />
           <MenuRow icon="info" label="About us" onPress={() => void Linking.openURL(ABOUT_URL)} />
           <MenuRow icon="help-circle" label="FAQs" onPress={() => void Linking.openURL(FAQ_URL)} />
-          <MenuRow icon="phone" label="Contact us" onPress={() => navigation.navigate("Contact")} />
+          <MenuRow icon="mail" label="Contact us" onPress={() => navigation.navigate("Contact")} />
           <MenuRow icon="log-out" label="Logout" onPress={confirmLogout} danger />
           <MenuRow icon="trash-2" label="Delete account" onPress={confirmDelete} danger />
         </View>

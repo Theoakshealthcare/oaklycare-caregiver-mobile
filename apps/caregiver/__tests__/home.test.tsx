@@ -14,12 +14,15 @@ import {
   HOME_POLL_IDLE_MS,
   isLocationStale,
   mapHome,
+  shouldRefetchHomeAfterPing,
 } from "../src/home/homeModel";
 import Home from "../src/screens/home/Home";
 import { authService } from "../src/services/auth.service";
 import { walletService, type WalletSummary } from "../src/services/wallet.service";
 import { session } from "../src/auth";
 import { locationService, type CaregiverHome } from "../src/supply/locationService";
+import { locationPermissionStore } from "../src/supply/permissionState";
+import { LOCATION_SHARING_SENTENCE } from "../src/supply/permissions";
 
 const mockNavigate = jest.fn();
 jest.mock("../src/hooks/use-navigation", () => ({
@@ -32,6 +35,7 @@ jest.mock("@react-navigation/native", () => ({
 }));
 const mockEnsureForeground = jest.fn();
 jest.mock("../src/supply/permissions", () => ({
+  ...jest.requireActual("../src/supply/permissions"),
   ensureForegroundLocation: () => mockEnsureForeground(),
   ensureBackgroundLocation: jest.fn(),
 }));
@@ -228,6 +232,7 @@ describe("Home screen", () => {
 
   beforeEach(async () => {
     order.length = 0;
+    locationPermissionStore.setState({ foreground: false, background: false, loaded: false });
     await session.signIn({ accessToken: "access", refreshToken: "refresh" });
     jest.spyOn(authService, "getMe").mockResolvedValue({
       email: "ada@example.com",
@@ -360,11 +365,41 @@ describe("Home screen", () => {
   });
 
   it("warns when available but the location is out of date", async () => {
+    locationPermissionStore.setState({ foreground: true, background: false, loaded: true });
     getHome = jest
       .spyOn(locationService, "getHome")
       .mockResolvedValue({ ...emptyHome, is_available: true, location_updated_at: "2020-01-01T00:00:00" });
     await renderHome();
     expect(await screen.findByText(/your location is out of date/)).toBeTruthy();
+  });
+
+  it("does not call a location that was never shared 'out of date': asks to allow it instead (DP1-14)", async () => {
+    locationPermissionStore.setState({ foreground: false, background: false, loaded: true });
+    getHome = jest
+      .spyOn(locationService, "getHome")
+      .mockResolvedValue({ ...emptyHome, is_available: true, location_updated_at: null });
+    await renderHome();
+    expect(await screen.findByText(/Oakly needs your location to find visits near you/)).toBeTruthy();
+    expect(screen.queryByText(/out of date/)).toBeNull();
+    await fireEvent.press(screen.getByText("Allow location"));
+    expect(mockEnsureForeground).toHaveBeenCalled();
+  });
+
+  it("refetches Home after a ping only while the held Home still shows a stale location (DP1-14)", () => {
+    const now = Date.parse("2026-10-06T08:30:00Z");
+    const stale = { is_available: true, location_updated_at: null };
+    const fresh = { is_available: true, location_updated_at: "2026-10-06T08:29:00" };
+    expect(shouldRefetchHomeAfterPing(stale, now)).toBe(true);
+    expect(shouldRefetchHomeAfterPing(undefined, now)).toBe(true);
+    expect(shouldRefetchHomeAfterPing(fresh, now)).toBe(false);
+    expect(shouldRefetchHomeAfterPing({ is_available: false, location_updated_at: null }, now)).toBe(false);
+  });
+
+  it("the during-visit location card uses the shared location sentence (DP1-13)", async () => {
+    locationPermissionStore.setState({ foreground: true, background: false, loaded: true });
+    getHome = jest.spyOn(locationService, "getHome").mockResolvedValue(homeWithVisitAndOffer);
+    await renderHome();
+    expect(await screen.findByText(LOCATION_SHARING_SENTENCE)).toBeTruthy();
   });
 
   it("going available sends a location ping first, then the switch, with no is_available on the ping", async () => {

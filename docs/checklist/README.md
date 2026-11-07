@@ -21,6 +21,12 @@ channel) lives in the backend repo: `docs/checklist/MASTER_CHECKLIST.md`. Update
 - [ ] Android keyboard pass; patient app to adopt `filePart` and `isNetworkFailure` when it gets uploads
 - [ ] DP1-05 (visit rules) and DP1-06 (decline semantics): owner decisions pending
 
+## Device pass 1 minors and visit-rule follow-ups (2026-11-07)
+- [x] Fall tab removed, caregiver welcome slides, logout lands on Login (DP1-18, 11, 12); one truthful location sentence and no stale-location warning before location is shared (DP1-13, 14); Job Details wording, notification rows, declined offers "No longer available", held earning "Under review" (DP1-15, 20, 06); visit screens and care plan / vitals links (DP1-19, 32); shared date formatter and `DateField`, care-plan form defaults (DP1-28, 25); care-plan back stack and client "View all" push (DP1-26, 30); multi-select areas and 4-step onboarding (DP1-29, 09); AI note taker mic on tap (DP1-17); Contact us and delete-account copy (DP1-24, 27). Branch `fix/caregiver-device-pass-minors`, **device-verified on the simulator**, see docs/sop/2026-11-07-caregiver-device-pass-minors.md and ledgers/LEDGER-device-caregiver-minors.md
+- [ ] Backend asks: caregiver earning on the booking (Job Details "You earn"), no ETA / a `distance_km` field in offer notifications, `status_reason` on the wallet list
+- [ ] Welcome slide 3 art replacement (shows a "BOOK NOW" phone); sign-up "Create Account" clip after errors and bank picker top inset (DP1-31 remainder); Android pass
+- [ ] Leave alone until decided: DP1-10, 16, 21, 22, 23, 33
+
 ## Caregiver vitals (Client care v1, part 1)
 - [x] Vitals tab: six-vital grid for the patient on the in-progress visit; "available during an active visit" on 403 or before the visit starts (2026-10-27, see docs/sop/2026-10-27-caregiver-vitals-tab.md)
 - [x] Per-vital chart (Day / Week / Month) and history; manual entry for all six (glucose mg/dL / mmol/L with RBS / FBS / PP); report download then native share, temp file deleted

@@ -13999,6 +13999,17 @@
             "format": "date-time",
             "title": "Created At"
           },
+          "response": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Response"
+          },
           "booking": {
             "$ref": "#/components/schemas/BookingResponse"
           }

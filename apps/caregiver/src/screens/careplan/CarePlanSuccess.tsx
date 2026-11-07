@@ -9,6 +9,7 @@ import Text from "@/src/components/ui/text";
 import { globalStyles } from "@/src/constants/styles";
 import { theme } from "@/src/constants/theme";
 import useNavigation from "@/src/hooks/use-navigation";
+import { openCreatedPlan } from "@/src/navigation/carePlanStack";
 import type { ScreenParamLists } from "@/src/navigation/Navigations";
 
 type Props = StackScreenProps<ScreenParamLists, "CarePlanSuccess">;
@@ -43,7 +44,8 @@ const CarePlanSuccess: React.FC<Props> = ({ route }) => {
   const copy = COPY[kind];
 
   // A new plan replaces this page with its details; a new goal, task or medication returns to the details underneath.
-  const view = () => (kind === "created" ? navigation.replace("CarePlanDetails", { planId }) : navigation.goBack());
+  // "Created" also drops the creation screens (picker, form, this page) so Back reaches the hub (DP1-26).
+  const view = () => (kind === "created" ? navigation.dispatch(openCreatedPlan(planId)) : navigation.goBack());
 
   return (
     <View style={[globalStyles.container, { flex: 1 }]}>

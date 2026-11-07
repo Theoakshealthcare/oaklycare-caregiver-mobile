@@ -43,12 +43,10 @@ const Contact: React.FC = () => {
   return (
     <ScreenShell title="Contact us" subtitle="Our team is here to help.">
       <Channel icon="mail" label="Email" detail={CONTACT_EMAIL} onPress={() => void Linking.openURL(`mailto:${CONTACT_EMAIL}`)} />
-      <Channel
-        icon="message-circle"
-        label="WhatsApp"
-        detail={whatsapp ? "Chat with support" : "Not available yet"}
-        onPress={whatsapp ? () => void Linking.openURL(whatsapp) : undefined}
-      />
+      {/* No dead row: WhatsApp appears only once the owner supplies a number (DP1-24). Calling stays hidden (CALLING_ENABLED). */}
+      {whatsapp ? (
+        <Channel icon="message-circle" label="WhatsApp" detail="Chat with support" onPress={() => void Linking.openURL(whatsapp)} />
+      ) : null}
     </ScreenShell>
   );
 };

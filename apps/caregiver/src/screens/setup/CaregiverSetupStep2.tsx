@@ -9,6 +9,7 @@ import { theme } from "@/src/constants/theme"
 import Text from "@/src/components/ui/text"
 import Button from "@/src/components/ui/button"
 import KeyboardScrollView from "@/src/components/ui/keyboard-scroll-view"
+import StepIndicator, { ONBOARDING_STEP } from "@/src/components/ui/step-indicator"
 import Select from "@/src/components/ui/select"
 import HeaderBack from "@/src/components/back/HeaderBack"
 import { globalStyles } from "@/src/constants/styles"
@@ -106,28 +107,7 @@ const CaregiverSetupStep2 = () => {
               Set up your Account
             </Text>
 
-            <View style={{ marginTop: 20 }}>
-              <Text variant="body" weight="medium">
-                Step 2
-              </Text>
-              <View
-                style={{
-                  height: 4,
-                  backgroundColor: theme.colors.border,
-                  borderRadius: 2,
-                  marginTop: 8,
-                }}
-              >
-                <View
-                  style={{
-                    height: 4,
-                    backgroundColor: theme.colors.primary,
-                    borderRadius: 2,
-                    width: "66%",
-                  }}
-                />
-              </View>
-            </View>
+            <StepIndicator step={ONBOARDING_STEP.work} />
 
             <Text variant="h3" weight="bold" style={{ marginTop: 20 }}>
               Work & Experience
@@ -199,20 +179,15 @@ const CaregiverSetupStep2 = () => {
             <Select
               label="Choose Service areas"
               placeholder="Select Service Areas"
-              value={formData.service_areas.join(", ")}
-              onValueChange={(value) => {
-                const area = String(value)
-                const areas = formData.service_areas.includes(area)
-                  ? formData.service_areas.filter((a) => a !== area)
-                  : [...formData.service_areas, area]
-                updateFormData("service_areas", areas)
-              }}
+              multiple
+              values={formData.service_areas}
+              onValuesChange={(areas) => updateFormData("service_areas", areas.map(String))}
               options={(formOptions?.service_areas ?? []).map((area) => ({ label: area, value: area }))}
               error={errors.service_areas}
             />
             {formData.service_areas.length > 0 && (
               <Text variant="small" color={theme.colors.primary}>
-                Selected: {formData.service_areas.join(", ")} (tap an area again to remove it)
+                Selected: {formData.service_areas.join(", ")}
               </Text>
             )}
 

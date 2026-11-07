@@ -71,7 +71,7 @@ const STATUS: Record<string, { label: string; tone: Tone }> = {
 /** Earnings use their own lifecycle: pending_clearance -> successful, or held / voided (backend guide). */
 const EARNING_STATUS: Record<string, { label: string; tone: Tone }> = {
   pending_clearance: { label: "Pending", tone: "pending" },
-  held: { label: "Under review by Oakly", tone: "pending" },
+  held: { label: "Under review", tone: "pending" },
   successful: { label: "Available", tone: "success" },
   voided: { label: "Cancelled", tone: "error" },
 };
@@ -94,7 +94,9 @@ export function transactionView(tx: CaregiverTransaction): TransactionView {
       ? [tx.bank_name, tx.account_number].filter(Boolean).join(" ")
       : waiting
         ? `Available from ${waiting}`
-        : (tx.reference ?? ""),
+        : tx.status === "held"
+          ? "Oakly is reviewing this visit before it is paid"
+          : (tx.reference ?? ""),
     amount: `${isWithdrawal ? "-" : "+"}${formatKobo(tx.amount)}`,
     statusLabel: status.label,
     tone: status.tone,

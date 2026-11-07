@@ -144,7 +144,7 @@ describe("Wallet screen", () => {
     await renderWith(<Wallet />);
     expect(await screen.findByTestId("wallet-pending")).toBeTruthy();
     expect(screen.getByTestId("wallet-pending").props.children).toMatch(/^₦40,000\.00 pending · available from /);
-    expect(screen.queryByText("Under review by Oakly")).toBeNull();
+    expect(screen.queryByText("Under review")).toBeNull();
   });
 
   it("shows money on hold as under review", async () => {
@@ -152,8 +152,19 @@ describe("Wallet screen", () => {
     jest.spyOn(walletService, "getTransactions").mockResolvedValue([]);
     await renderWith(<Wallet />);
     expect((await screen.findByTestId("wallet-held")).props.children).toBe("₦40,000.00 on hold");
-    expect(screen.getByText("Under review by Oakly")).toBeTruthy();
+    expect(screen.getByText("Under review")).toBeTruthy();
     expect(screen.queryByTestId("wallet-pending")).toBeNull();
+  });
+
+  it("labels a held visit earning 'Under review' in the list, with why (short-visit hold)", async () => {
+    jest.spyOn(walletService, "getWallet").mockResolvedValue(wallet);
+    jest.spyOn(walletService, "getTransactions").mockResolvedValue([
+      tx({ id: "t3", type: "earning", status: "held", amount: 2000000, narration: "Visit HOLD1234", reference: null }),
+    ]);
+    await renderWith(<Wallet />);
+    expect(await screen.findByText("Visit HOLD1234")).toBeTruthy();
+    expect(screen.getByText("Under review")).toBeTruthy();
+    expect(screen.getByText("Oakly is reviewing this visit before it is paid")).toBeTruthy();
   });
 
   it("shows the weekly payout info card and no withdraw button", async () => {

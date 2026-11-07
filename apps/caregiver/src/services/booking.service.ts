@@ -29,9 +29,15 @@ export interface Offer {
   scheduledEndDate: string;
   /** "<city>, <state>", the only location shown before accepting. */
   area: string;
+  /**
+   * The caregiver's own answer to this offer, from the notification list: null while unanswered. Anything
+   * else (declined, taken by someone else, cancelled, reassigned) means Accept/Decline must not be offered:
+   * the backend refuses an accept after a decline (403 "You declined this offer").
+   */
+  response?: string | null;
 }
 
-export function toOffer(booking: Booking): Offer {
+export function toOffer(booking: Booking, response?: string | null): Offer {
   return {
     id: booking.id,
     serviceType: booking.service_type,
@@ -40,6 +46,7 @@ export function toOffer(booking: Booking): Offer {
     scheduledDate: booking.scheduled_date,
     scheduledEndDate: booking.scheduled_end_date,
     area: [booking.patient_city, booking.patient_state].filter(Boolean).join(", "),
+    ...(response !== undefined ? { response } : {}),
   };
 }
 

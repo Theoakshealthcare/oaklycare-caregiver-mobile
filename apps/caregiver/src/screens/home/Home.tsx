@@ -13,7 +13,7 @@ import { useAvailability } from "@/src/hooks/useAvailability";
 import { useCaregiverHome, useMe, useWallet } from "@/src/hooks/queries";
 import useNavigation from "@/src/hooks/use-navigation";
 import { useOfferActions } from "@/src/hooks/useOfferActions";
-import { ensureBackgroundLocation } from "@/src/supply/permissions";
+import { ensureBackgroundLocation, ensureForegroundLocation, LOCATION_SHARING_SENTENCE } from "@/src/supply/permissions";
 import { useLocationPermissions } from "@/src/supply/permissionState";
 import { hasActiveVisit } from "@/src/supply/tracking";
 import { walletBalances } from "@/src/wallet/walletModel";
@@ -136,7 +136,10 @@ const AvailabilityCard: React.FC<{
   view: HomeView;
   pending: boolean;
   onToggle: (next: boolean) => void;
-}> = ({ view, pending, onToggle }) => (
+  /** False only once the OS has said location is not allowed; null while that is still unknown. */
+  locationAllowed: boolean | null;
+  onAllowLocation: () => void;
+}> = ({ view, pending, onToggle, locationAllowed, onAllowLocation }) => (
   <View style={{ paddingHorizontal: 20, paddingTop: 20, marginBottom: 16 }}>
     <View style={{ backgroundColor: theme.colors.white, borderRadius: 16, padding: 16, gap: 8 }}>
       <View style={{ flexDirection: "row", alignItems: "center", justifyContent: "space-between" }}>
@@ -162,7 +165,15 @@ const AvailabilityCard: React.FC<{
           Your profile is {view.profileStatus.replace("_", " ")}. You can go available once an admin approves it.
         </Text>
       ) : null}
-      {view.locationStale ? (
+      {view.locationStale && locationAllowed === false ? (
+        // Never shared (or turned off): "out of date" would blame a location that never existed (DP1-14).
+        <>
+          <Text variant="small" color={theme.colors.warningText}>
+            You are not receiving offers yet: Oakly needs your location to find visits near you.
+          </Text>
+          <Button title="Allow location" variant="outline" onPress={onAllowLocation} />
+        </>
+      ) : view.locationStale ? (
         <Text variant="small" color={theme.colors.warningText}>
           You are not receiving offers: your location is out of date. Open the app with location on to refresh it.
         </Text>
@@ -234,13 +245,19 @@ const Home: React.FC = () => {
     const onAVisit = hasActiveVisit(view.todayVisits.map((v) => v.status));
     return (
       <>
-        <AvailabilityCard view={view} pending={availability.pending} onToggle={availability.setAvailable} />
+        <AvailabilityCard
+          view={view}
+          pending={availability.pending}
+          onToggle={availability.setAvailable}
+          locationAllowed={permissions.loaded ? permissions.foreground : null}
+          onAllowLocation={() => void ensureForegroundLocation()}
+        />
 
         {onAVisit && !permissions.background ? (
           <View style={{ paddingHorizontal: 20, marginBottom: 16 }}>
             <View style={{ backgroundColor: theme.colors.secondaryLight, borderRadius: 16, padding: 16, gap: 8 }}>
               <Text variant="small">
-                Share your location during visits, even with the app closed, so the patient can follow your arrival.
+                {LOCATION_SHARING_SENTENCE}
               </Text>
               <Button title="Allow location during visits" variant="outline" onPress={() => void ensureBackgroundLocation()} />
             </View>

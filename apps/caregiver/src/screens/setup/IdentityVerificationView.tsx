@@ -2,6 +2,7 @@ import React from "react";
 import { ActivityIndicator, ScrollView, View } from "react-native";
 import { Feather } from "@expo/vector-icons";
 
+import StepIndicator, { ONBOARDING_STEP } from "@/src/components/ui/step-indicator";
 import HeaderBack from "@/src/components/back/HeaderBack";
 import ConsentBlock from "@/src/components/identity/ConsentBlock";
 import Button from "@/src/components/ui/button";
@@ -309,6 +310,7 @@ const IdentityVerificationView: React.FC<IdentityViewProps> = (props) => {
       <ScrollView keyboardShouldPersistTaps="handled" contentContainerStyle={{ flexGrow: 1 }}>
         <View style={[globalStyles.container, { gap: 8 }]}>
           <HeaderBack />
+          <StepIndicator step={ONBOARDING_STEP.identity} />
           {props.banner ? (
             <View testID="identity-banner" style={{ padding: 14, borderRadius: 12, backgroundColor: theme.colors.warning + "33" }}>
               <Text variant="body" color={theme.colors.warningText}>

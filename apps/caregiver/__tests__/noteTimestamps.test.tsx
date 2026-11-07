@@ -62,8 +62,8 @@ describe("backend timestamps", () => {
   it("the AI note list shows each note at its UTC instant, whether or not the API added a Z", async () => {
     mockNotes = [note("1", "2026-11-07T10:56:00"), note("2", "2026-11-07T10:56:00Z")];
     const rendered: number[] = [];
-    const original = Date.prototype.toLocaleDateString;
-    const spy = jest.spyOn(Date.prototype, "toLocaleDateString").mockImplementation(function (this: Date, ...args) {
+    const original = Date.prototype.toLocaleString;
+    const spy = jest.spyOn(Date.prototype, "toLocaleString").mockImplementation(function (this: Date, ...args) {
       rendered.push(this.getTime());
       return original.apply(this, args as Parameters<typeof original>);
     });

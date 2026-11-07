@@ -30,6 +30,14 @@ export function isLocationStale(home: Pick<Home, "is_available" | "location_upda
   return now - parseBackendDate(home.location_updated_at).getTime() > LOCATION_FRESHNESS_MS;
 }
 
+/**
+ * After a location ping lands, is the home we hold still showing the old "location out of date"
+ * warning? Then it must be refetched, or the warning stays until the caregiver pulls to refresh (DP1-14).
+ */
+export function shouldRefetchHomeAfterPing(cached: Pick<Home, "is_available" | "location_updated_at"> | undefined, now: number): boolean {
+  return !cached || isLocationStale(cached, now);
+}
+
 export function formatNaira(amount: number): string {
   const [whole, fraction] = Math.abs(amount).toFixed(2).split(".");
   const grouped = (whole ?? "0").replace(/\B(?=(\d{3})+(?!\d))/g, ",");

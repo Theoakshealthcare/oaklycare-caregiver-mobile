@@ -14,6 +14,7 @@ import type { ScreenParamLists } from "@/src/navigation/Navigations";
 import type { Booking, Offer } from "@/src/services/booking.service";
 import { buildDirectionsUrl, directionsTarget } from "@/src/utils/maps";
 import { formatDuration, formatVisitTime } from "@/src/utils/dates";
+import { bookingStatusLabel, serviceName } from "@/src/utils/labels";
 
 type Props = StackScreenProps<ScreenParamLists, "BookingDetails">;
 
@@ -42,24 +43,39 @@ const OfferDetails: React.FC<{ offer: Offer; busy: boolean; onAccept: () => void
     <Text variant="h3" weight="bold" style={{ marginBottom: 16 }}>
       Service Information
     </Text>
-    <Row label="Service" value={offer.assistanceType ?? `${offer.serviceType} visit`} />
+    <Row label="Service" value={serviceName(offer.serviceType)} />
+    {offer.assistanceType ? <Row label="Care needed" value={offer.assistanceType} /> : null}
     <Row label="When" value={formatVisitTime(offer.scheduledDate)} />
     <Row label="Duration" value={formatDuration(offer.durationHours)} />
     <Row label="Area" value={offer.area} />
     <Text variant="small" color={theme.colors.textLight} style={{ marginBottom: 24 }}>
       The patient&apos;s name, address and condition are shared with you once you accept this job.
     </Text>
-    <View style={[globalStyles.row, { gap: 12 }]}>
-      <Button title="Accept Job" onPress={onAccept} loading={busy} style={{ flex: 1 }} />
-      <Button
-        title="Decline Job"
-        variant="outline"
-        onPress={onDecline}
-        disabled={busy}
-        style={{ flex: 1, borderColor: theme.colors.error }}
-        textStyle={{ color: theme.colors.error }}
-      />
-    </View>
+    {offer.response != null ? (
+      // Declined, taken or cancelled: there is nothing left to accept or decline.
+      <View testID="offer-unavailable" style={{ backgroundColor: theme.colors.soft, padding: 16, borderRadius: 12 }}>
+        <Text variant="body" weight="bold">
+          No longer available
+        </Text>
+        <Text variant="small" color={theme.colors.textLight} style={{ marginTop: 2 }}>
+          {offer.response === "declined"
+            ? "You declined this job, so it can't be accepted any more."
+            : "This job is no longer open to you."}
+        </Text>
+      </View>
+    ) : (
+      <View style={[globalStyles.row, { gap: 12 }]}>
+        <Button title="Accept Job" onPress={onAccept} loading={busy} style={{ flex: 1 }} />
+        <Button
+          title="Decline Job"
+          variant="outline"
+          onPress={onDecline}
+          disabled={busy}
+          style={{ flex: 1, borderColor: theme.colors.error }}
+          textStyle={{ color: theme.colors.error }}
+        />
+      </View>
+    )}
   </>
 );
 
@@ -78,13 +94,15 @@ const AssignedDetails: React.FC<{
     <Text variant="h3" weight="bold" style={{ marginBottom: 16 }}>
       Service Information
     </Text>
-    <Row label="Service" value={booking.assistance_type} />
+    <Row label="Service" value={serviceName(booking.service_type)} />
+    {booking.assistance_type ? <Row label="Care needed" value={booking.assistance_type} /> : null}
     <Row label="Patient" value={booking.patient_details?.full_name ?? "N/A"} />
     {booking.patient_details?.phone_number ? <Row label="Phone" value={booking.patient_details.phone_number} /> : null}
     <Row label="When" value={formatVisitTime(booking.scheduled_date)} />
     <Row label="Duration" value={formatDuration(booking.duration_hours)} />
-    <Row label="Status" value={booking.status.replace("_", " ")} />
-    <Row label="Service fee" value={`₦${booking.service_fee.toLocaleString()}`} />
+    <Row label="Status" value={bookingStatusLabel(booking.status)} />
+    {/* No earning row: the booking carries the family's service fee, not the caregiver's share, and
+        showing it read as the caregiver's pay (DP1-15). Needs a caregiver_earning field from the API. */}
 
     <Text variant="h3" weight="bold" style={{ marginTop: 16, marginBottom: 16 }}>
       Location
@@ -172,7 +190,7 @@ const BookingDetails: React.FC<Props> = ({ route, navigation }) => {
 
   return (
     <View style={{ flex: 1, backgroundColor: theme.colors.white }}>
-      <ScrollView>
+      <ScrollView contentContainerStyle={{ paddingBottom: 48 }}>
         <View style={globalStyles.container}>
           <HeaderBack />
           <View style={{ marginVertical: "5%" }}>

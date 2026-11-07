@@ -173,7 +173,7 @@ const CreateAccount: React.FC = () => {
 
               <View style={{ flex: 1 }}>
                 <Text variant="small" style={{ lineHeight: 18 }}>
-                  By tapping Get Started, you agree to our Terms of Services.
+                  By tapping Create Account, you agree to our Terms of Services.
                   Learn how we process your data in our{' '}
                   <Text
                     variant="small"

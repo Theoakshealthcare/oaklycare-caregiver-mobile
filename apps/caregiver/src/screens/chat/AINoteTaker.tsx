@@ -2,7 +2,7 @@
 
 import type React from "react"
 import { useState, useEffect } from "react"
-import { View, TouchableOpacity, Alert, TextInput } from "react-native"
+import { View, TouchableOpacity, Alert, TextInput, Linking } from "react-native"
 import { Feather } from "@expo/vector-icons"
 import type { StackScreenProps } from "@react-navigation/stack"
 import {
@@ -19,7 +19,7 @@ import KeyboardScrollView from "@/src/components/ui/keyboard-scroll-view"
 import HeaderBack from "@/src/components/back/HeaderBack"
 import { globalStyles } from "@/src/constants/styles"
 import { messageForError } from "@/src/api/errors"
-import { parseBackendDate } from "@/src/utils/dates"
+import { formatStamp } from "@/src/utils/dates"
 import { useCreateNote, useNotes } from "@/src/hooks/queries"
 import type { BookingNote } from "@/src/services/booking.service"
 import type { ScreenParamLists } from "@/src/navigation/Navigations"
@@ -50,24 +50,22 @@ const AINoteTaker: React.FC<StackScreenProps<ScreenParamLists, "AINoteTaker">> =
     }
   }, [isRecording])
 
-  const setupAudio = async () => {
-    try {
-      await requestRecordingPermissionsAsync()
-      await setAudioModeAsync({
-        allowsRecording: true,
-        playsInSilentMode: true,
-      })
-    } catch (error) {
-      console.error("Failed to setup audio:", error)
-    }
-  }
-
-  useEffect(() => {
-    void setupAudio()
-  }, [])
-
   const startRecording = async () => {
     try {
+      // The microphone is asked for only now, when the caregiver taps the mic, never on opening the screen (DP1-17).
+      const permission = await requestRecordingPermissionsAsync()
+      if (!permission.granted) {
+        Alert.alert(
+          "Microphone is off",
+          "Allow the microphone for Oakly in Settings to record. You can still type your note.",
+          [
+            { text: "Not now", style: "cancel" },
+            { text: "Open Settings", onPress: () => void Linking.openSettings() },
+          ],
+        )
+        return
+      }
+      await setAudioModeAsync({ allowsRecording: true, playsInSilentMode: true })
       await recorder.prepareToRecordAsync()
       recorder.record()
       setIsRecording(true)
@@ -201,18 +199,13 @@ const AINoteTaker: React.FC<StackScreenProps<ScreenParamLists, "AINoteTaker">> =
       )}
 
       <Text variant="small" color={theme.colors.textLight} style={{ marginTop: 8 }}>
-        {parseBackendDate(note.created_at).toLocaleDateString("en-US", {
-          month: "short",
-          day: "numeric",
-          hour: "2-digit",
-          minute: "2-digit",
-        })}
+        {formatStamp(note.created_at)}
       </Text>
     </View>
   )
 
   return (
-    <View style={{ flex: 1, backgroundColor: theme.colors.background }}>
+    <View style={{ flex: 1, backgroundColor: theme.colors.white }}>
       <KeyboardScrollView>
         <View style={globalStyles.container}>
           <HeaderBack />
@@ -222,7 +215,7 @@ const AINoteTaker: React.FC<StackScreenProps<ScreenParamLists, "AINoteTaker">> =
               AI Note Taker
             </Text>
             <Text variant="body" color={theme.colors.textLight}>
-              Record or write notes with AI analysis
+              Write notes for this visit. Voice recordings are not transcribed yet.
             </Text>
           </View>
 
@@ -266,6 +259,9 @@ const AINoteTaker: React.FC<StackScreenProps<ScreenParamLists, "AINoteTaker">> =
             {/* Recording Controls */}
             <View style={[globalStyles.row, { justifyContent: "center", marginBottom: 16 }]}>
               <TouchableOpacity
+                testID="mic-button"
+                accessibilityRole="button"
+                accessibilityLabel={isRecording ? "Stop recording" : "Start recording"}
                 onPress={isRecording ? stopRecording : startRecording}
                 style={{
                   width: 80,
@@ -280,17 +276,23 @@ const AINoteTaker: React.FC<StackScreenProps<ScreenParamLists, "AINoteTaker">> =
                 <Feather name={isRecording ? "square" : "mic"} size={32} color={theme.colors.white} />
               </TouchableOpacity>
 
-              {isRecording && (
-                <View style={{ justifyContent: "center" }}>
-                  <Text variant="h3" color={theme.colors.error} weight="bold">
-                    {formatDuration(recordingDuration)}
-                  </Text>
-                  <Text variant="small" color={theme.colors.textLight}>
-                    Recording...
-                  </Text>
-                </View>
-              )}
             </View>
+
+            {isRecording && (
+              <View
+                testID="recording-indicator"
+                accessibilityRole="alert"
+                style={[globalStyles.row, { justifyContent: "center", marginBottom: 16, backgroundColor: theme.colors.secondaryLight, padding: 12, borderRadius: 12 }]}
+              >
+                <View style={{ width: 12, height: 12, borderRadius: 6, backgroundColor: theme.colors.error }} />
+                <Text variant="body" color={theme.colors.error} weight="bold" testID="recording-timer">
+                  {`Recording ${formatDuration(recordingDuration)}`}
+                </Text>
+                <Text variant="small" color={theme.colors.textLight}>
+                  Tap the square to stop
+                </Text>
+              </View>
+            )}
 
             <Button title="Save Note" onPress={saveTextNote} loading={createNote.isPending} />
           </View>
@@ -300,7 +302,13 @@ const AINoteTaker: React.FC<StackScreenProps<ScreenParamLists, "AINoteTaker">> =
             <Text variant="h3" weight="bold" style={{ marginBottom: 16 }}>
               Previous Notes ({notes.length})
             </Text>
-            {notes.map(renderNote)}
+            {notes.length === 0 ? (
+              <Text variant="body" color={theme.colors.textLight} testID="notes-empty">
+                No notes for this visit yet. Notes you save appear here.
+              </Text>
+            ) : (
+              notes.map(renderNote)
+            )}
           </View>
         </View>
       </KeyboardScrollView>

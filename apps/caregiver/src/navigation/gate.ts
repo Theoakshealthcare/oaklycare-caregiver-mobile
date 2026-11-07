@@ -71,3 +71,8 @@ export function resolveGate({ session, me, status, kycEnabled = false }: GateInp
       return { kind: "status", status: status.data.profileStatus };
   }
 }
+
+/** First screen when signed out: Login for a device that has signed in before, the welcome slides for a new install (DP1-12). */
+export function firstSignedOutRoute(returning: boolean): "Login" | "Onboarding" {
+  return returning ? "Login" : "Onboarding";
+}

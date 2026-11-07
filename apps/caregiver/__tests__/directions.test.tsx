@@ -88,3 +88,15 @@ describe("Get directions", () => {
     expect(screen.queryByText("Get Directions")).toBeNull();
   });
 });
+
+describe("Job Details wording (DP1-15)", () => {
+  it("shows the service name and a readable status, and no service fee that reads as the caregiver's pay", async () => {
+    await renderDetails(assigned);
+    expect(await screen.findByText("Nurse visit")).toBeTruthy();
+    expect(screen.getByText("Wound dressing")).toBeTruthy();
+    expect(screen.getByText("Accepted")).toBeTruthy();
+    expect(screen.queryByText("accepted")).toBeNull();
+    expect(screen.queryByText("Service fee")).toBeNull();
+    expect(screen.queryByText(/50,000/)).toBeNull();
+  });
+});

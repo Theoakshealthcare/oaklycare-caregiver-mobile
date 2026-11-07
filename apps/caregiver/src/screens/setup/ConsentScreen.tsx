@@ -6,6 +6,7 @@ import { View, ScrollView, TouchableOpacity, Alert } from "react-native"
 import { theme } from "@/src/constants/theme"
 import Text from "@/src/components/ui/text"
 import Button from "@/src/components/ui/button"
+import StepIndicator, { consentStepNumber } from "@/src/components/ui/step-indicator"
 import HeaderBack from "@/src/components/back/HeaderBack"
 import { globalStyles } from "@/src/constants/styles"
 import { caregiverService } from "@/src/services/caregiver.service"
@@ -28,6 +29,7 @@ const ConsentScreen = () => {
       <ScrollView>
         <View style={[globalStyles.container, { flex: 1 }]}>
           <HeaderBack />
+          <StepIndicator step={consentStepNumber()} />
 
           <View style={{ marginVertical: "10%" }}>
             <Text variant="h2" weight="bold">
@@ -38,7 +40,7 @@ const ConsentScreen = () => {
           <View style={{ flex: 1, justifyContent: "space-between" }}>
             <View>
               <Text variant="body" style={{ lineHeight: 24 }}>
-                By tapping Get Started, you agree to our{" "}
+                By tapping Give Consent and Submit, you agree to our{" "}
                 <Text variant="body" color={theme.colors.primary}>
                   Terms of Services
                 </Text>

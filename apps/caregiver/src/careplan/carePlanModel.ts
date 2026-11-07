@@ -3,6 +3,7 @@
  * and how the backend's error bodies are read. Shapes follow the backend's verified FE guide
  * (`fe-integration-guide-caregiver.md`, section 16). Nothing here touches the network or the disk.
  */
+import { formatClock as formatClockShared, formatStamp as formatStampShared, toDateOnly } from "@/src/utils/dates";
 import { ApiError } from "@/src/api/errors";
 import type {
   CarePlan,
@@ -203,12 +204,16 @@ export interface PlanDraft {
   specialInstructions: string;
 }
 
+/** What a new plan starts with, shown in the form as real values rather than grey placeholders (DP1-25). */
+export const DEFAULT_DURATION_DAYS = "30";
+export const DEFAULT_REVIEW_EVERY_DAYS = "14";
+
 export const emptyDraft = (): PlanDraft => ({
   diagnosis: "",
   risk: null,
-  startDate: "",
-  durationDays: "",
-  reviewEveryDays: "",
+  startDate: toDateOnly(new Date()),
+  durationDays: DEFAULT_DURATION_DAYS,
+  reviewEveryDays: DEFAULT_REVIEW_EVERY_DAYS,
   goals: [],
   tasks: [],
   allergies: "",
@@ -483,20 +488,10 @@ export function validateNote(text: string): string | null {
 }
 
 /** "28 Oct, 09:14" in the phone's own zone, from a backend UTC timestamp (no `Z`). Empty when it can't be read. */
-export function formatStamp(iso: string | null | undefined): string {
-  if (!iso) return "";
-  const date = parseBackendDate(iso);
-  if (Number.isNaN(date.getTime())) return "";
-  return date.toLocaleString("en-NG", { day: "numeric", month: "short", hour: "2-digit", minute: "2-digit", hour12: false });
-}
+export const formatStamp = formatStampShared;
 
 /** "09:14" for the "Nurse Saliu, 09:14" line under a ticked task. */
-export function formatClock(iso: string | null | undefined): string {
-  if (!iso) return "";
-  const date = parseBackendDate(iso);
-  if (Number.isNaN(date.getTime())) return "";
-  return date.toLocaleTimeString("en-NG", { hour: "2-digit", minute: "2-digit", hour12: false });
-}
+export const formatClock = formatClockShared;
 
 /** "Done by Nurse Saliu, 09:14". */
 export const doneByText = (task: { done_by?: string | null; done_at?: string | null }): string => {

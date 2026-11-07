@@ -146,7 +146,7 @@ const ClientProfile: React.FC<Props> = ({ route }) => {
 
         <Section
           title="Latest vitals"
-          action={{ label: "View all", onPress: () => navigation.navigate("BottomNavigation", { tab: "vitals", at: Date.now() }) }}
+          action={{ label: "View all", onPress: () => navigation.navigate("PatientVitals", { patientId: profile.patient_id }) }}
         >
           {vitals === null ? (
             <Text variant="small" color={theme.colors.textLight} testID="client-vitals-unavailable">

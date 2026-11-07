@@ -10,7 +10,7 @@ import { useNotifications } from "@/src/hooks/queries";
 import useNavigation from "@/src/hooks/use-navigation";
 import { toOffer } from "@/src/services/booking.service";
 import type { CaregiverNotification } from "@/src/services/notification.service";
-import { formatVisitTime } from "@/src/utils/dates";
+import { notificationView } from "@/src/account/notificationModel";
 
 const Notifications: React.FC = () => {
   const { navigation } = useNavigation();
@@ -21,9 +21,9 @@ const Notifications: React.FC = () => {
    * so it opens as one; an assigned booking opens as the full job.
    */
   const open = (n: CaregiverNotification) =>
-    n.booking.caregiver_id
+    notificationView(n).opensAs === "job"
       ? navigation.navigate("BookingDetails", { bookingId: n.booking_id })
-      : navigation.navigate("BookingDetails", { bookingId: n.booking_id, offer: toOffer(n.booking) });
+      : navigation.navigate("BookingDetails", { bookingId: n.booking_id, offer: toOffer(n.booking, n.response ?? null) });
 
   const body = () => {
     if (query.isError && !query.data) return <ErrorState error={query.error} onRetry={() => void query.refetch()} />;
@@ -49,28 +49,46 @@ const Notifications: React.FC = () => {
             ListEmptyComponent={
               <EmptyState icon="bell" title="No notifications yet" hint="New job requests and updates will show up here." />
             }
-            renderItem={({ item }) => (
-              <Pressable
-                accessibilityRole="button"
-                onPress={() => open(item)}
-                style={{
-                  padding: 16,
-                  borderRadius: 16,
-                  marginBottom: 12,
-                  backgroundColor: item.is_read ? theme.colors.soft : theme.colors.primaryLight,
-                }}
-              >
-                <Text variant="body" weight="bold">
-                  {item.title}
-                </Text>
-                <Text variant="small" color={theme.colors.textLight} style={{ marginTop: 2 }}>
-                  {item.message}
-                </Text>
-                <Text variant="caption" color={theme.colors.textLight} style={{ marginTop: 6 }}>
-                  {formatVisitTime(item.created_at)}
-                </Text>
-              </Pressable>
-            )}
+            renderItem={({ item }) => {
+              const view = notificationView(item);
+              return (
+                <Pressable
+                  accessibilityRole="button"
+                  onPress={() => open(item)}
+                  style={{
+                    padding: 16,
+                    borderRadius: 16,
+                    marginBottom: 12,
+                    backgroundColor: view.isRead ? theme.colors.soft : theme.colors.primaryLight,
+                  }}
+                >
+                  <Text variant="body" weight="bold">
+                    {view.title}
+                  </Text>
+                  <Text variant="small" color={theme.colors.textLight} style={{ marginTop: 2 }}>
+                    {view.detail}
+                  </Text>
+                  {view.distance ? (
+                    <Text variant="small" color={theme.colors.textLight}>
+                      {view.distance}
+                    </Text>
+                  ) : null}
+                  {view.stateLabel ? (
+                    <Text
+                      variant="small"
+                      weight="medium"
+                      color={view.state === "unavailable" ? theme.colors.textLight : theme.colors.primary}
+                      style={{ marginTop: 4 }}
+                    >
+                      {view.stateLabel}
+                    </Text>
+                  ) : null}
+                  <Text variant="caption" color={theme.colors.textLight} style={{ marginTop: 6 }}>
+                    {view.received}
+                  </Text>
+                </Pressable>
+              );
+            }}
           />
         ) : (
           body()

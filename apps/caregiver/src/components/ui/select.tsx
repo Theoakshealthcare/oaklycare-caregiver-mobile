@@ -13,7 +13,14 @@ interface SelectProps {
   placeholder?: string;
   options: SelectOption[];
   value?: string | number;
-  onValueChange: (value: string | number) => void;
+  onValueChange?: (value: string | number) => void;
+  /**
+   * Multi-select (service areas): the sheet stays open while areas are toggled, each shows a check, and a
+   * Done button closes it. `values` and `onValuesChange` replace `value` and `onValueChange` (DP1-29).
+   */
+  multiple?: boolean;
+  values?: (string | number)[];
+  onValuesChange?: (values: (string | number)[]) => void;
   error?: string;
   disabled?: boolean;
   required?: boolean;
@@ -25,6 +32,9 @@ export const Select: React.FC<SelectProps> = ({
   options,
   value,
   onValueChange,
+  multiple = false,
+  values = [],
+  onValuesChange,
   error,
   disabled = false,
   required = false,
@@ -32,9 +42,21 @@ export const Select: React.FC<SelectProps> = ({
   const [isOpen, setIsOpen] = useState(false);
 
   const selectedOption = options.find(option => option.value === value);
+  const isSelected = (option: SelectOption) => (multiple ? values.includes(option.value) : option.value === value);
+  const summary = multiple
+    ? values.length === 0
+      ? undefined
+      : values.length <= 2
+        ? options.filter(o => values.includes(o.value)).map(o => o.label).join(', ')
+        : `${values.length} selected`
+    : selectedOption?.label;
 
   const handleSelect = (option: SelectOption) => {
-    onValueChange(option.value);
+    if (multiple) {
+      onValuesChange?.(values.includes(option.value) ? values.filter(v => v !== option.value) : [...values, option.value]);
+      return;
+    }
+    onValueChange?.(option.value);
     setIsOpen(false);
   };
 
@@ -58,10 +80,10 @@ export const Select: React.FC<SelectProps> = ({
       >
         <Text style={[
           styles.selectButtonText,
-          !selectedOption && styles.placeholderText,
+          !summary && styles.placeholderText,
           disabled && styles.disabledText,
         ]}>
-          {selectedOption ? selectedOption.label : placeholder}
+          {summary ?? placeholder}
         </Text>
         <Ionicons
           name={isOpen ? 'chevron-up' : 'chevron-down'}
@@ -94,22 +116,31 @@ export const Select: React.FC<SelectProps> = ({
                 <TouchableOpacity
                   style={[
                     styles.option,
-                    item.value === value && styles.selectedOption,
+                    isSelected(item) && styles.selectedOption,
                   ]}
                   onPress={() => handleSelect(item)}
+                  accessibilityRole={multiple ? "checkbox" : "button"}
+                  accessibilityState={{ checked: isSelected(item) }}
                 >
                   <Text style={[
                     styles.optionText,
-                    item.value === value && styles.selectedOptionText,
+                    isSelected(item) && styles.selectedOptionText,
                   ]}>
                     {item.label}
                   </Text>
-                  {item.value === value && (
+                  {isSelected(item) && (
                     <Ionicons name="checkmark" size={20} color="#007AFF" />
                   )}
                 </TouchableOpacity>
               )}
             />
+            {multiple ? (
+              <TouchableOpacity testID="select-done" style={styles.doneButton} onPress={() => setIsOpen(false)}>
+                <Text style={styles.doneText}>
+                  {values.length > 0 ? `Done (${values.length} selected)` : 'Done'}
+                </Text>
+              </TouchableOpacity>
+            ) : null}
           </View>
         </View>
       </Modal>
@@ -196,6 +227,18 @@ const styles = StyleSheet.create({
     paddingVertical: 16,
     borderBottomWidth: 1,
     borderBottomColor: '#F5F5F5',
+  },
+  doneButton: {
+    margin: 16,
+    paddingVertical: 14,
+    borderRadius: 8,
+    alignItems: 'center',
+    backgroundColor: theme.colors.primary,
+  },
+  doneText: {
+    color: '#FFF',
+    fontSize: theme.sizes.body,
+    fontWeight: '600',
   },
   selectedOption: {
     backgroundColor: '#F0F8FF',

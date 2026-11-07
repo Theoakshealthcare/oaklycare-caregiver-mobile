@@ -4616,6 +4616,8 @@ export interface components {
              * Format: date-time
              */
             created_at: string;
+            /** Response */
+            response?: string | null;
             booking: components["schemas"]["BookingResponse"];
         };
         /** BookingPolicyOut */

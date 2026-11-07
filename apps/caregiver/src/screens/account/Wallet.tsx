@@ -113,7 +113,7 @@ const Wallet: React.FC = () => {
               {`${balances.held.amount} on hold`}
             </Text>
             <Text variant="small" color={theme.colors.textLight}>
-              Under review by Oakly
+              Under review
             </Text>
           </View>
         ) : null}
