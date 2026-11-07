@@ -52,9 +52,11 @@ describe("backend timestamps", () => {
     expect(parseBackendDate("2026-11-07T10:56:00.123456").toISOString()).toBe("2026-11-07T10:56:00.123Z");
   });
 
-  it("formats a naive timestamp in Lagos time (UTC+1)", () => {
-    expect(formatVisitTime("2026-11-07T10:56:00", "en-NG")).toMatch(/11:56/);
-    expect(formatVisitTime("2026-11-07T10:56:00Z", "en-NG")).toMatch(/11:56/);
+  it("formats a naive timestamp exactly as the same instant with a Z (whatever the runner's timezone)", () => {
+    // The runner's timezone is not reliably switchable (a Linux CI runner kept UTC), so compare outputs, not clock text.
+    const naive = formatVisitTime("2026-11-07T10:56:00", "en-NG");
+    expect(naive).not.toBe("");
+    expect(naive).toBe(formatVisitTime("2026-11-07T10:56:00Z", "en-NG"));
   });
 
   it("the AI note list shows each note at its UTC instant, whether or not the API added a Z", async () => {
