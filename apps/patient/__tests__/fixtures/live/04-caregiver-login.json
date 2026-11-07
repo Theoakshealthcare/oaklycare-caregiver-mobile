@@ -1,0 +1,19 @@
+{
+  "request": {
+    "method": "POST",
+    "path": "/api/v1/auth/login/mobile",
+    "auth": null,
+    "body": {
+      "email_or_phone": "caregiver-wiring-b@example.com",
+      "password": "<password>"
+    }
+  },
+  "response": {
+    "status": 200,
+    "body": {
+      "access_token": "<jwt>",
+      "refresh_token": "<jwt>",
+      "token_type": "bearer"
+    }
+  }
+}

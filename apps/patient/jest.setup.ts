@@ -25,3 +25,20 @@ jest.mock("react-native-safe-area-context", () => require("react-native-safe-are
 globalThis.fetch = jest.fn(async (input: RequestInfo | URL) => {
   throw new TypeError(`unmocked fetch: ${typeof input === "string" ? input : (input as Request).url}`);
 }) as unknown as typeof fetch;
+
+// Native notification modules have no JS fallback under jest. The default is "a simulator with no EAS project": push skips
+// quietly. A push test overrides these (see __tests__/push.test.ts).
+jest.mock("expo-device", () => ({ isDevice: false }));
+jest.mock("expo-notifications", () => {
+  const subscription = { remove: jest.fn() };
+  return {
+    getPermissionsAsync: jest.fn(async () => ({ granted: true, canAskAgain: true })),
+    requestPermissionsAsync: jest.fn(async () => ({ granted: true })),
+    getExpoPushTokenAsync: jest.fn(async () => ({ data: "ExponentPushToken[placeholder-patient-phone]" })),
+    setNotificationHandler: jest.fn(),
+    addPushTokenListener: jest.fn(() => subscription),
+    addNotificationReceivedListener: jest.fn(() => subscription),
+    addNotificationResponseReceivedListener: jest.fn(() => subscription),
+    getLastNotificationResponse: jest.fn(() => null),
+  };
+});

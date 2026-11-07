@@ -9,7 +9,7 @@ const OPTIONS: SecureStore.SecureStoreOptions = {
 
 const ACCESS_KEY = "oakly.access_token";
 const REFRESH_KEY = "oakly.refresh_token";
-// Reserved for the Expo push token (patient push lands in P8); logout already wipes it.
+// The Expo push token this device registered; `clear()` wipes it on sign-out (after `authService.logout` has told the server).
 const PUSH_TOKEN_KEY = "oakly.push_token";
 
 export const secureTokenStorage: TokenStorage = {
@@ -33,4 +33,10 @@ export const secureTokenStorage: TokenStorage = {
       SecureStore.deleteItemAsync(PUSH_TOKEN_KEY, OPTIONS),
     ]);
   },
+};
+
+/** The Expo push token this device registered with `POST /devices/push-token`; logout reads it to call DELETE. */
+export const pushTokenStorage = {
+  get: () => SecureStore.getItemAsync(PUSH_TOKEN_KEY, OPTIONS),
+  set: (token: string) => SecureStore.setItemAsync(PUSH_TOKEN_KEY, token, OPTIONS),
 };

@@ -4,7 +4,7 @@ import { Pressable, StyleSheet, View } from "react-native";
 import { Card } from "@/src/components/ui/card";
 import Icon from "@/src/components/ui/icon";
 import KeyboardScrollView from "@/src/components/ui/keyboard-scroll-view";
-import SampleNotice from "@/src/components/ui/sample-notice";
+import QueryError from "@/src/components/ui/query-error";
 import Text from "@/src/components/ui/text";
 import MenuRow from "@/src/components/ui/menu-row";
 import { theme } from "@/src/constants/theme";
@@ -27,10 +27,10 @@ const Vitals: React.FC = () => {
         <Text color={theme.colors.white}>Your health numbers, in one place</Text>
       </View>
       <KeyboardScrollView contentContainerStyle={styles.content}>
-        <SampleNotice what="Your vitals" />
+        {readings.isError ? <QueryError what="your vitals" error={readings.error} onRetry={() => void readings.refetch()} /> : null}
         <View style={styles.grid}>
           {VITALS.map((meta) => {
-            const latest = readings.data?.filter((r) => r.kind === meta.kind).sort((a, b) => b.recordedAt.localeCompare(a.recordedAt))[0];
+            const latest = readings.data?.find((r) => r.kind === meta.kind);
             return (
               <Card
                 key={meta.kind}

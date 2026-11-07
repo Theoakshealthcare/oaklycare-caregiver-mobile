@@ -1,0 +1,22 @@
+{
+  "request": {
+    "method": "POST",
+    "path": "/api/v1/vitals/",
+    "auth": "bearer",
+    "body": {
+      "vital_type": "heart_rate",
+      "value": "70",
+      "unit": "bpm",
+      "source": "manual",
+      "recorded_at": "2026-11-07T15:33:58.737Z",
+      "patient_id": "f0834884-e16f-47ac-93ab-c9fe9a7c9375",
+      "recorded_by_user_id": "8ace3f52-a752-42aa-b8d7-f705d4a4e5be"
+    }
+  },
+  "response": {
+    "status": 403,
+    "body": {
+      "detail": "Access denied"
+    }
+  }
+}

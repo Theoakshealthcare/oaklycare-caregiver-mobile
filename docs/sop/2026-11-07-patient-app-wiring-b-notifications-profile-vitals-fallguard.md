@@ -1,0 +1,70 @@
+# SOP: Patient app wiring B (notifications, profile, change password, vitals, FallGuard)
+
+| | |
+|---|---|
+| **What shipped** | Four screens that showed sample data now read and write the real backend through `@oakly/api-client`: **notifications** (feed, unread badge on the bell, mark read, read all, push registration, tap to open the booking), **profile** (edit profile, change password, FAQs and About links), **vitals** (readings, add reading, history for all six vitals) and **FallGuard** (the real 24 questions, submit, result). Each replaced hook deleted its screen's `SampleNotice`. |
+| **Branch / commits** | `feature/patient-wiring-b`, stacked on `feature/patient-ui-port-auth` (PR #23). Not pushed. In order: spec sync, live captures, notifications, profile, vitals, FallGuard (then this doc). Rebase onto `oakly/main` once #23 merges. |
+| **Device-verified?** | **No.** Jest (RNTL against a fake `fetch` answering with REAL captured bodies) plus live HTTP captures. No simulator, no phone, no real push. |
+
+## Why
+The UI port (PR #23) put every v1 screen in place over sample data. This slice replaces four of those hooks so a test build can show a patient's real notices, profile, vitals and FallGuard result, and it records what the live backend really does, because three things it does were wrong or surprising.
+
+## How
+| Area | Decision |
+|---|---|
+| Evidence | `apps/patient/scripts/capture-live.mjs` drives a LOCAL backend (a detached checkout of the PR #40 branch, scratch Postgres 16 and Redis 7, throwaway env file) and saves 62 request/response pairs to `apps/patient/__tests__/fixtures/live/`. The tests load those files (`test-utils/live.ts`); no body in the new tests is hand-typed. Placeholder data only (`example.com`, `<jwt>`). Two things were seeded, and labelled: the 7 notification rows (inserted with psql; the worker writes them after booking events) and the e-mail verification code (read from the DB; no e-mail locally). |
+| Spec | `packages/api-client/openapi.json` and `schema.d.ts` regenerated with `OAKLY_BACKEND_DIR=<PR #40 checkout> pnpm api:sync`: the notification routes exist only on that branch. **The spec drift check passes once backend #40 is on `main`**; until then CI's drift check can fail on this branch. |
+| Timestamps | The backend sends UTC with no zone (`2026-11-07T14:45:27.465509`, and with a space on `PUT /auth/profile`). `new Date()` reads that as phone-local time, so every time goes through `utcIso` (`src/domain/dates.ts`) first. |
+| Notifications | `useNotifications` is an infinite query (`limit` 20, `offset`, a "Show older" button, rows de-duplicated by id), polled every 60 s; `useUnreadCount` asks `limit=1` for the bell's badge. A tap marks the row read and, for `data.target == "booking_detail"` with a `booking_id`, opens the booking; an unknown target or type stays on the list with its own title and body. Push: `src/push/registration.ts` is the caregiver module (skips quietly on a simulator, without an EAS project id and without permission, never throws); `native.ts` adds the token listener, a refetch on receipt and the tap handler (marks `data.notification_id` read, ignores a 404, opens the booking, also for a cold start through `getLastNotificationResponse`). `forgetPushToken` runs on log out and on account deletion and never blocks them. |
+| Profile | `PUT /auth/profile` sends **only the changed, non-blank fields**, then `GET /auth/me` goes into the cache (the PUT answers a flat profile with no `patient`; storing it dropped `user.patient`, which made every vitals call lose the patient id). The screen also compares what it sent with the re-read user: see "Backend defects found". Change password is the caregiver screen and model: 400 `wrong_current_password` / `weak_password` / `same_password` on the right field (branching on `detail.code`, never the message), 429 `too_many_attempts` with a `Retry-After` countdown on a disabled button, and the **new token pair replaces the stored one** so the person stays signed in. FAQs and About open `https://oaklycare.com/faq` and `/about`. Terms, Privacy and Cookies rows are **hidden** (no URLs known). Support stays e-mail only (`Contact`). Photo upload is out (fix is in PR #22). |
+| Vitals | `GET /vitals/{patient_id}` with the **patient** id (`/auth/me` -> `patient.id`, not the user id), `POST /vitals/` with `patient_id` and `recorded_by_user_id`. The vocabulary is the caregiver app's: `heart_rate`, `blood_pressure` (`"120/80"`), `temperature`, `respiratory_rate`, `blood_glucose`, **`sleep_duration`** (the sample used `sleep`). Glucose context goes in `notes` as `RBS` (random) / `FBS` (fasting) / `PP` (after a meal); sleep takes bed and wake times (24 h `HH:MM`), sends the hours as the value and `"22:30-06:00"` in `notes`. Rows the app cannot show (another type, a non-numeric value) are dropped. |
+| Vitals validation | The server checks nothing (below), so the client is the only guard: heart rate 20-250, systolic 50-260 above diastolic 30-160, temperature 30-45 °C, respiration 4-60, glucose 20-600 mg/dL, sleep 30 min to 18 h; strict number syntax (`1e2`, `0x10` refused). 300/20 is refused. |
+| Caregiver access | **Out** (backend patient-id vs user-id bug). The route stays so the menu row is not a dead end; the screen says "Coming soon" and offers nothing to tap. Its hook and fixtures are deleted. |
+| FallGuard | `GET /fallguard/questions` (24, ordered by `order`), `POST /fallguard/submit` with `{ question_id, answer: option text, score: option score }` per answer: **the current contract is kept** because the backend sums the client's scores (see below). Option scores are sent but never rendered. The result shows the server's total with "out of N" (the sum of each question's best option), the AI summary and recommendations **only when present**, and treats the backend's `"Unable to analyze"` stand-in as no summary. With no AI text it says "We could not prepare personal advice just now. Your score has been saved with your account." instead of showing made-up advice (the 4 sample cards are gone). Questions are cached 10 minutes and not refetched on focus so the list cannot change mid-assessment. |
+
+## Backend defects found by the live capture (not fixed here; list for a backend slice)
+| # | Finding | Evidence | Effect in the app |
+|---|---|---|---|
+| 1 | **`PUT /auth/profile` answers 200 and does not persist `full_name`, `phone_number`, `email` or `profile_image_url`** (the `users` row); the patient fields (address, emergency contact, gender, date of birth) are saved. Checked three ways: the response, the `/auth/me` after it, and `select full_name from users`. A name-only edit changes nothing. Cause not found: the handler assigns `current_user.full_name` and commits, yet the row is unchanged. | captures 22-25 | The app re-reads `/auth/me`, compares, and says "We couldn't save your name or your phone number yet. Your other details were saved." instead of "updated". **Name and phone edits cannot work until the backend is fixed.** |
+| 2 | The same handler ignores blank values (`if update_data.address:`), so a field cannot be cleared. | capture 24-25 | Clearing a prefilled field shows "This can't be cleared yet. Change it to something else." and sends nothing. |
+| 3 | **`POST /vitals/` accepts anything**: `300/20` blood pressure, `vital_type: "banana"` with value `not a number`, any unit (DP1-16 confirmed on the server). `recorded_by_user_id` is taken from the body, so a patient can record a reading "by" another user id (not tried against a real second user). | captures 42, 43 | Client validation (above); the list drops rows it cannot parse. |
+| 4 | **`POST /fallguard/submit` trusts the client's score**: a captured `score: 99` was stored and the total became 99; an empty `answers` list is accepted (total 0, a stored assessment); an unknown `question_id` is a **500** `Internal Server Error` (plain text). | captures 57-59 | The app sends the real option scores from the server's own list. **Server-side scoring is a follow-up** (the audit's P7-BE). A 500 shows the generic "Something went wrong on our side" and keeps the person on the last question. |
+| 5 | FallGuard AI text is the stand-in `"Unable to analyze"` and `ai_recommendations: []` (first answer) / `null` (history) when no Gemini key is set. `GET /vitals/{id}/insights` likewise answers `{"summary":"Unable to analyze vitals.","concerns":[],"recommendations":[],"key_vitals":[]}`. | captures 51, 56, 62 | Handled as "no summary". The real AI text shape (`ai_summary` string, `ai_recommendations` string list) is from the schema, not captured. |
+| 6 | The FallGuard `submit` and history return a fresh stored assessment on every call, so an accidental double tap on Submit creates two. | by reading the handler | The Submit button is disabled while the call runs. |
+| 7 | `PUT /auth/profile` writes its timestamps with a space (`2026-11-07 15:33:53.445803`), every other route with a `T`; none has a zone. | captures 05, 10, 22 | `utcIso` handles both. |
+
+## What's involved
+| Path | What |
+|---|---|
+| `packages/api-client/openapi.json`, `src/schema.d.ts` | regenerated from the PR #40 branch |
+| `apps/patient/scripts/capture-live.mjs`, `__tests__/fixtures/live/*.json` | capture script and 62 real responses; re-run to refresh (needs a scratch backend; header of the script says how) |
+| `apps/patient/test-utils/live.ts`, `renderApp.tsx`, `fakeApi.ts` | `live` / `liveBody` / `liveReply` loader; signed-in renders answer the bell with the captured empty feed; calls now record `search` |
+| `src/domain/{dates,notifications,vitals,fallguard}.ts` | pure mapping and validation |
+| `src/services/{notifications,vitals,fallguard}.service.ts`, `auth.service.ts` | typed calls; `changePassword`, `updateProfile`, push forget on logout / delete |
+| `src/hooks/{useNotifications,useProfile,useVitals,useFallguard}.ts` | the four hooks (the other fixture hooks are untouched; `fixtures/{notifications,vitals,fallguard}.ts` are deleted) |
+| `src/push/{registration,native,forget}.ts`, `src/auth/secureStorage.ts` | push registration, handlers, token storage |
+| `src/account/changePasswordModel.ts`, `src/screens/profile/ChangePassword.tsx` | copied from the caregiver app |
+| `src/components/{NotificationBell,ui/query-error}.tsx` | bell with badge; "We couldn't load X" with retry |
+| `src/screens/{home/Notifications,profile/*,vitals/*,fall/*}`, `navigation/{routes,Navigations,StackNavigator}` | screens, the `ChangePassword` route, `PushEffects` |
+| `apps/patient/{package.json,app.json,tsconfig.json,jest.setup.ts}`, `pnpm-lock.yaml` | `expo-notifications`, `expo-device` (same versions as the caregiver app), the `expo-notifications` config plugin, `@types/node`, Jest mocks for the two native modules. The lockfile also re-resolved `@expo/require-utils` 57.0.5 to 57.0.6. |
+
+## Verification
+- `tsc --noEmit` and `expo lint` clean; Jest single worker in the foreground, no `--forceExit`: **15 suites, 147 tests passed after merging booking (#25)** (13 suites, 117 tests before it), the process exits on its own. New: `notifications` (9), `push` (7), `profile` (11), `vitals` (13), `fallguard` (9). One profile test (the 429 countdown) timed out once on a cold transform cache while running with the whole suite and passed on 5 reruns; its wait is now 4 s.
+- Live: 62 real HTTP calls against the PR #40 backend (`b6f08a9`) on a scratch database; the stack was shut down and removed afterwards.
+- **Not verified:** any device or simulator; a real push (needs an EAS project, APNs/FCM keys and a phone; push skips quietly without a project id, which is the case until the owner runs `eas init` for the patient app); notification timing (about 15 s from the event by the backend's cron, not measured); the AI summary and recommendation text (no Gemini key locally); the Android keyboard and layouts; that `expo-notifications` links into the existing dev build (it is a new native module, so **the patient dev build must be rebuilt**; the foundation SOP said no new native module, this slice adds one); a second real user for the `recorded_by_user_id` question.
+
+## Operate / roll back
+Needs the PR #40 backend (the notification routes) for the feed and bell; against `main` they 404 and the bell and list show the load-error state. Run `pnpm install`, rebuild the dev client, then `pnpm patient`. Roll back by reverting the branch; no backend change. To re-capture: scratch Postgres 16 and Redis 7, `alembic upgrade head`, `seed_fallguard_questions`, uvicorn on a free port, then `node apps/patient/scripts/capture-live.mjs --api <url> --pg <container>`.
+
+## Follow-ups
+| Item | Owner / where |
+|---|---|
+| Fix `PUT /auth/profile` to persist `full_name`, `phone_number`, `email` and `profile_image_url`; accept blank to clear; (while there) re-verify an e-mail change | backend slice |
+| Server-side FallGuard scoring (look the score up from the question's option; refuse an unknown question id with 422 not 500; refuse an empty list) | backend P7-BE |
+| Server-side vitals validation (type allow-list, value format and ranges, `recorded_by_user_id` from the token) | backend |
+| Caregiver access grant / revoke / list (patient id vs user id at `vitals.py:151,164,180`), then un-hide `VitalAccess` | backend, then app |
+| `eas init` for the patient app (project id), APNs/FCM keys, then a push test on a phone and the foreground banner / tap behaviour | owner |
+| Rebuild the patient dev build for `expo-notifications` / `expo-device` | whoever owns the simulator |
+| Terms / Privacy / Cookies URLs | owner |
+| FallGuard history screen, share / download of results, vitals insights and report download | owner questions still open |
+| Merged `oakly/main` (booking, PR #25) into this branch on 2026-11-07: `Home.tsx` keeps #25's real bookings and my bell with no sample notice left; `renderApp.tsx` routes both the bookings list and the empty notification feed; `appScreens.test.tsx` is main's with the vitals and FallGuard sections moved to their own suites | done |

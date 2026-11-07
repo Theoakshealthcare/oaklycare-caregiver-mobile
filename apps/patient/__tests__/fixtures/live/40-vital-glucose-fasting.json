@@ -1,0 +1,31 @@
+{
+  "request": {
+    "method": "POST",
+    "path": "/api/v1/vitals/",
+    "auth": "bearer",
+    "body": {
+      "vital_type": "blood_glucose",
+      "value": "92",
+      "unit": "mg/dL",
+      "source": "manual",
+      "recorded_at": "2026-11-07T15:33:58.737Z",
+      "notes": "FBS",
+      "patient_id": "37b440fd-cb39-45ea-bed3-cf4415862295",
+      "recorded_by_user_id": "8ace3f52-a752-42aa-b8d7-f705d4a4e5be"
+    }
+  },
+  "response": {
+    "status": 200,
+    "body": {
+      "vital_type": "blood_glucose",
+      "value": "92",
+      "unit": "mg/dL",
+      "source": "manual",
+      "recorded_at": "2026-11-07T15:33:58.737000",
+      "notes": "FBS",
+      "id": "a50efa0c-6e79-43d1-9f3c-fde77cdddc5f",
+      "patient_id": "37b440fd-cb39-45ea-bed3-cf4415862295",
+      "recorded_by_user_id": "8ace3f52-a752-42aa-b8d7-f705d4a4e5be"
+    }
+  }
+}

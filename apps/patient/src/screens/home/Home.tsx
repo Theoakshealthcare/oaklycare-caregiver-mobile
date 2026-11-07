@@ -2,11 +2,11 @@ import type React from "react";
 import { Pressable, StyleSheet, View } from "react-native";
 
 import { messageForError } from "@/src/api/errors";
+import NotificationBell from "@/src/components/NotificationBell";
 import Button from "@/src/components/ui/button";
 import { Card, Chip, EmptyState } from "@/src/components/ui/card";
 import Icon from "@/src/components/ui/icon";
 import KeyboardScrollView from "@/src/components/ui/keyboard-scroll-view";
-import SampleNotice from "@/src/components/ui/sample-notice";
 import Text from "@/src/components/ui/text";
 import { theme } from "@/src/constants/theme";
 import { formatDateTime } from "@/src/domain/format";
@@ -35,9 +35,7 @@ const Home: React.FC = () => {
         <Pressable accessibilityRole="button" accessibilityLabel="Open profile" hitSlop={8} onPress={() => navigation.navigate("Profile")}>
           <Icon name="menu" size={26} />
         </Pressable>
-        <Pressable accessibilityRole="button" accessibilityLabel="Notifications" hitSlop={8} onPress={() => navigation.navigate("Notifications")}>
-          <Icon name="notifications-outline" size={26} />
-        </Pressable>
+        <NotificationBell />
       </View>
 
       <View>
@@ -46,8 +44,6 @@ const Home: React.FC = () => {
         </Text>
         <Text color={theme.colors.textLight}>What would you like to do today?</Text>
       </View>
-
-      <SampleNotice what="The vitals section" />
 
       <Card tone="warm" style={styles.start}>
         <Text variant="h3" weight="bold">

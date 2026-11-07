@@ -1,0 +1,14 @@
+{
+  "request": {
+    "method": "GET",
+    "path": "/api/v1/patient/notifications",
+    "auth": "bearer",
+    "body": null
+  },
+  "response": {
+    "status": 403,
+    "body": {
+      "detail": "Access denied. Patient account required."
+    }
+  }
+}

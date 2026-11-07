@@ -1,0 +1,14 @@
+{
+  "request": {
+    "method": "DELETE",
+    "path": "/api/v1/vitals/21a471c5-5d6a-444e-ad45-36a3377747bc",
+    "auth": "bearer",
+    "body": null
+  },
+  "response": {
+    "status": 200,
+    "body": {
+      "ok": true
+    }
+  }
+}

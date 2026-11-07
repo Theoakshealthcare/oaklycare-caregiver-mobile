@@ -23,6 +23,7 @@ export type ScreenParamLists = {
   Notifications: undefined;
   Profile: undefined;
   EditProfile: undefined;
+  ChangePassword: undefined;
   Contact: undefined;
   AccountData: undefined;
   BookingStep1: undefined;

@@ -13,6 +13,4 @@ export function useFixtureQuery<T>(key: readonly string[], produce: () => T) {
 /** Keys of the sample caches that mutation hooks edit in place. */
 export const sampleKeys = {
   chat: (bookingId: string) => ["sample", "chat", bookingId] as const,
-  readings: ["sample", "readings"] as const,
-  access: ["sample", "access"] as const,
 };
