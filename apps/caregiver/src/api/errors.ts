@@ -49,6 +49,7 @@ const DETAIL = {
   notApprovedToStartVisits: "Your account is not approved to start visits",
   notAssigned: "This booking is not assigned to you",
   onlyAcceptedOnTheWay: "Only an accepted booking can be marked on the way",
+  onlyAcceptedArrived: "Only an accepted booking can be marked as arrived",
   onlyAcceptedStart: "Only an accepted booking can be started",
   onlyInProgressComplete: "Only a booking in progress can be completed",
   noVisitCode: "This booking has no visit code. Contact support",
@@ -120,6 +121,7 @@ function visitMessage(status: number, detail: string | null, retryAfterSeconds: 
     }
     const early = detail ? ON_MY_WAY_TOO_EARLY.exec(detail) : null;
     if (early) return `You can mark yourself on the way from ${early[1]} before the visit.`;
+    if (detail === DETAIL.onlyAcceptedArrived) return "This visit has already moved past this step. We've refreshed it.";
     if (detail === DETAIL.onlyAcceptedStart) return "This visit can't be started right now. We've refreshed it.";
     if (detail === DETAIL.onlyInProgressComplete) return "This visit isn't in progress, so it can't be completed yet.";
     if (detail === DETAIL.noVisitCode) return "This visit has no visit code. Please contact Oakly support.";

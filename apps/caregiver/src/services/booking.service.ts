@@ -64,7 +64,7 @@ export function homeOfferToOffer(offer: Schemas["HomeOffer"]): Offer {
 }
 
 export type BookingAction = "accept" | "decline";
-export type VisitAction = "on_my_way" | "start" | "complete" | "cancel";
+export type VisitAction = "on_my_way" | "arrived" | "start" | "complete" | "cancel";
 
 function byScheduledDate(a: Booking, b: Booking): number {
   return a.scheduled_date.localeCompare(b.scheduled_date);
@@ -95,7 +95,7 @@ export const bookingService = {
     bookingId: string,
     action: BookingAction | VisitAction,
     visitCode?: string,
-  ): Promise<{ status: string | null }> {
+  ): Promise<{ status: string | null; arrivedAt: string | null }> {
     const raw: unknown = await unwrap(
       api.POST("/api/v1/booking/caregiver/action/{booking_id}", {
         params: { path: { booking_id: bookingId } },
@@ -104,8 +104,12 @@ export const bookingService = {
       }),
     );
     const booking = raw && typeof raw === "object" ? (raw as { booking?: unknown }).booking : undefined;
-    const status = booking && typeof booking === "object" ? (booking as { status?: unknown }).status : undefined;
-    return { status: typeof status === "string" ? status : null };
+    const fields = booking && typeof booking === "object" ? (booking as { status?: unknown; arrived_at?: unknown }) : {};
+    return {
+      status: typeof fields.status === "string" ? fields.status : null,
+      // Stamped by `arrived` (the same value on a repeat tap); null for every other action until it is set.
+      arrivedAt: typeof fields.arrived_at === "string" ? fields.arrived_at : null,
+    };
   },
 
   listChatMessages(bookingId: string) {

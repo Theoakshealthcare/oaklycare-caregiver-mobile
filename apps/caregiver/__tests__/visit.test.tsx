@@ -277,7 +277,7 @@ describe("OnMyWayStep: unlocks two hours before the visit", () => {
     await fireEvent.press(screen.getByText("On my way"));
     expect(onOnMyWay).not.toHaveBeenCalled();
     // The code entry stays available.
-    await fireEvent.press(screen.getByText("I've arrived: enter visit code"));
+    await fireEvent.press(screen.getByText("I've arrived"));
     expect(onArrived).toHaveBeenCalledTimes(1);
 
     await act(async () => {
@@ -345,7 +345,7 @@ describe("caregiver drop-out", () => {
   });
 
   it("a successful cancel refetches the lists, the booking and home", async () => {
-    jest.spyOn(bookingService, "act").mockResolvedValue({ status: "pending" });
+    jest.spyOn(bookingService, "act").mockResolvedValue({ status: "pending", arrivedAt: null });
     const client = new QueryClient({ defaultOptions: { queries: { retry: false }, mutations: { retry: false } } });
     const invalidate = jest.spyOn(client, "invalidateQueries");
     const wrapper = ({ children }: { children: React.ReactNode }) => (
