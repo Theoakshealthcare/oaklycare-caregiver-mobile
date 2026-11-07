@@ -3,6 +3,10 @@
 The single master checklist for all of Oakly (backend, caregiver app, admin console, WhatsApp
 channel) lives in the backend repo: `docs/checklist/MASTER_CHECKLIST.md`. Update it there.
 
+## Caregiver iOS dev loop
+- [x] iOS **Debug** build links and runs on the simulator with Metro hot reload; one script, `pnpm --filter oaklycare-caregiver-mobile ios:debug dev` (2026-11-07, branch `chore/ios-debug-build`, see docs/sop/2026-11-07-caregiver-ios-debug-build.md). A JS edit shows on the simulator in seconds without a rebuild; no Release workaround, no manual `React.framework` copy
+- [ ] Physical iPhone build and signing (this script is simulator only)
+
 ## Caregiver UI polish
 - [x] Fixed, width-damped type scale and capped OS text scaling (2026-10-07, see docs/sop/2026-10-07-caregiver-typography-layout.md)
 - [x] Onboarding Skip safe area, Login link on all slides, Back to home lands on Home
