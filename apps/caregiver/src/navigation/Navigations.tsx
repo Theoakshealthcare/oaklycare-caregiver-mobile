@@ -36,6 +36,8 @@ export type ScreenParamLists = {
   ClientProfile: { bookingId: string; bookingCode?: string };
   /** One vital of the patient on the current visit: chart and history. */
   VitalDetail: { patientId: string; patientName?: string; kind: VitalKind };
+  /** The vitals overview of one patient on a live visit, pushed from the client profile ("View all"). */
+  PatientVitals: { patientId: string };
   /** Every reading of one vital on record, grouped by day. */
   VitalHistory: { patientId: string; patientName?: string; kind: VitalKind };
   /** Manual vital entry for the patient on the current visit. */

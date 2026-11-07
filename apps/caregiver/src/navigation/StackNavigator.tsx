@@ -30,6 +30,7 @@ import CarePlans from "../screens/careplan/CarePlans";
 import CreateCarePlan from "../screens/careplan/CreateCarePlan";
 import VisitFlow from "../screens/visit/VisitFlow";
 import AddVitals from "../screens/vitals/AddVitals";
+import PatientVitals from "../screens/vitals/PatientVitals";
 import VitalDetail from "../screens/vitals/VitalDetail";
 import VitalHistory from "../screens/vitals/VitalHistory";
 import GateMessage from "../screens/GateMessage";
@@ -151,6 +152,7 @@ const StackNavigator = () => {
             <Stack.Screen name="BankDetails" component={BankDetails} />
             <Stack.Screen name="Contact" component={Contact} />
             <Stack.Screen name="ClientProfile" component={ClientProfile} />
+            <Stack.Screen name="PatientVitals" component={PatientVitals} />
             <Stack.Screen name="VitalDetail" component={VitalDetail} />
             <Stack.Screen name="VitalHistory" component={VitalHistory} />
             <Stack.Screen name="AddVitals" component={AddVitals} />

@@ -115,10 +115,11 @@ describe("ClientProfile", () => {
     expect(await screen.findByTestId("client-vitals-empty")).toBeTruthy();
   });
 
-  it("opens the Vitals tab from View all, and notes from Add notes", async () => {
+  it("pushes the patient's vitals from View all (Back returns here), and opens notes from Add notes (DP1-30)", async () => {
     await renderProfile();
     await fireEvent.press(await screen.findByText("View all"));
-    expect(mockNavigate).toHaveBeenCalledWith("BottomNavigation", { tab: "vitals", at: expect.any(Number) });
+    expect(mockNavigate).toHaveBeenCalledWith("PatientVitals", { patientId: expect.any(String) });
+    expect(mockNavigate).not.toHaveBeenCalledWith("BottomNavigation", expect.anything());
     await fireEvent.press(screen.getByText("Add notes"));
     expect(mockNavigate).toHaveBeenCalledWith("AINoteTaker", { bookingId: BOOKING });
   });

@@ -69,13 +69,13 @@ const Tile: React.FC<{ info: VitalKindInfo; value: string | null; unit: string |
  *
  * `active` is false while another tab is showing, so nothing is fetched until the tab is opened.
  */
-const Vitals: React.FC<{ active?: boolean }> = ({ active = true }) => {
+const Vitals: React.FC<{ active?: boolean; patientId?: string; onBack?: () => void }> = ({ active = true, patientId, onBack }) => {
   const { navigation } = useNavigation();
   const bookings = useBookingsTab("upcoming");
   const { ready, waiting } = useMemo(() => vitalsPatients(bookings.data ?? []), [bookings.data]);
 
   const [pickedId, setPickedId] = useState<string | null>(null);
-  const patient = ready.find((p) => p.patientId === pickedId) ?? ready[0];
+  const patient = ready.find((p) => p.patientId === (pickedId ?? patientId)) ?? ready[0];
   const vitals = useVitals(patient?.patientId, active);
 
   // A downloaded report belongs to one patient; it is kept in memory only, tagged with who it is for.
@@ -149,7 +149,7 @@ const Vitals: React.FC<{ active?: boolean }> = ({ active = true }) => {
           </View>
         </View>
 
-        {ready.length > 1 ? (
+        {ready.length > 1 && !patientId ? (
           <View style={{ flexDirection: "row", flexWrap: "wrap", gap: theme.spacing.sm, marginBottom: theme.spacing.md }}>
             {ready.map((p) => (
               <Pressable
@@ -219,9 +219,16 @@ const Vitals: React.FC<{ active?: boolean }> = ({ active = true }) => {
           justifyContent: "space-between",
         }}
       >
-        <Text variant="h2" weight="bold" color={theme.colors.white}>
-          Vitals
-        </Text>
+        <View style={{ flexDirection: "row", alignItems: "center", gap: theme.spacing.sm }}>
+          {onBack ? (
+            <Pressable testID="vitals-back" accessibilityRole="button" accessibilityLabel="Back" onPress={onBack} hitSlop={12}>
+              <Feather name="chevron-left" size={26} color={theme.colors.white} />
+            </Pressable>
+          ) : null}
+          <Text variant="h2" weight="bold" color={theme.colors.white}>
+            Vitals
+          </Text>
+        </View>
         {patient ? (
           <Pressable
             accessibilityRole="button"

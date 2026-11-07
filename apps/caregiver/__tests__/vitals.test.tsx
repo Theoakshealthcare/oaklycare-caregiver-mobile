@@ -135,6 +135,19 @@ describe("Vitals tab", () => {
     expect(listSpy).toHaveBeenLastCalledWith("22222222-2222-4222-8222-222222222222", expect.any(String));
   });
 
+  it("opened for one patient (client profile View all): shows that patient, no switcher, and a Back button (DP1-30)", async () => {
+    const goBack = jest.fn();
+    const second = "22222222-2222-4222-8222-222222222222";
+    jest
+      .spyOn(bookingService, "listActive")
+      .mockResolvedValue([booking({}), booking({ id: "b2", patient_id: second, patient_details: { full_name: "Second Patient" } as Booking["patient_details"] })]);
+    await renderWith(<Vitals patientId={second} onBack={goBack} />);
+    expect(await screen.findByTestId("vitals-patient-name")).toHaveTextContent("Second Patient");
+    expect(screen.queryByText("Placeholder Patient")).toBeNull();
+    await fireEvent.press(screen.getByTestId("vitals-back"));
+    expect(goBack).toHaveBeenCalled();
+  });
+
   it("offers a retry on a server error and loads on the second try", async () => {
     listSpy.mockRejectedValueOnce(new ApiError(500, null, "boom"));
     await renderWith(<Vitals />);

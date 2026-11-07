@@ -2,6 +2,7 @@ import { fireEvent, screen, waitFor } from "@testing-library/react-native";
 import React from "react";
 
 import { session } from "../src/auth";
+import { routesAfterPlanCreated } from "../src/navigation/carePlanStack";
 import CarePlanSuccess from "../src/screens/careplan/CarePlanSuccess";
 import CreateCarePlan from "../src/screens/careplan/CreateCarePlan";
 import { carePlansService } from "../src/services/carePlans.service";
@@ -22,9 +23,10 @@ import {
 const mockNavigate = jest.fn();
 const mockReplace = jest.fn();
 const mockGoBack = jest.fn();
+const mockDispatch = jest.fn();
 jest.mock("../src/hooks/use-navigation", () => ({
   __esModule: true,
-  default: () => ({ navigation: { navigate: mockNavigate, goBack: mockGoBack, replace: mockReplace } }),
+  default: () => ({ navigation: { navigate: mockNavigate, goBack: mockGoBack, replace: mockReplace, dispatch: mockDispatch } }),
 }));
 jest.mock("@react-navigation/native", () => ({
   ...jest.requireActual("@react-navigation/native"),
@@ -40,6 +42,7 @@ afterEach(async () => {
   mockNavigate.mockClear();
   mockReplace.mockClear();
   mockGoBack.mockClear();
+  mockDispatch.mockClear();
   await session.signOut();
 });
 
@@ -221,11 +224,19 @@ describe("Success page", () => {
   const renderSuccess = (kind: "created" | "goal_added") =>
     renderWithClient(<CarePlanSuccess {...routeProps<React.ComponentProps<typeof CarePlanSuccess>>({ kind, planId: PLAN_ID })} />);
 
-  it("after a plan is created, opens its details in place of the success page", async () => {
+  it("after a plan is created, opens its details over the hub: the creation screens leave the stack (DP1-26)", async () => {
     await renderSuccess("created");
     expect(screen.getByTestId("success-title")).toHaveTextContent("Care plan created");
     await fireEvent.press(screen.getByText("View care plan"));
-    expect(mockReplace).toHaveBeenCalledWith("CarePlanDetails", { planId: PLAN_ID });
+    expect(mockDispatch).toHaveBeenCalledTimes(1);
+    // What the dispatched action does to a real stack: hub, picker, form, success -> hub, plan.
+    const action = mockDispatch.mock.calls[0]?.[0] as (state: unknown) => { payload: { routes: { name: string }[]; index: number } };
+    const next = action({
+      index: 3,
+      routes: [{ name: "BottomNavigation" }, { name: "CarePlans" }, { name: "CarePlanClients" }, { name: "CreateCarePlan" }, { name: "CarePlanSuccess" }],
+    });
+    expect(next.payload.routes.map((r) => r.name)).toEqual(["BottomNavigation", "CarePlans", "CarePlanDetails"]);
+    expect(next.payload.index).toBe(2);
   });
 
   it("after a goal is added, returns to the details underneath", async () => {
@@ -234,5 +245,16 @@ describe("Success page", () => {
     await fireEvent.press(screen.getByText("View Care Goal"));
     expect(mockGoBack).toHaveBeenCalled();
     expect(mockReplace).not.toHaveBeenCalled();
+  });
+});
+
+describe("routesAfterPlanCreated", () => {
+  it("keeps what was under the creation flow, e.g. the client profile when started from there", () => {
+    const routes = routesAfterPlanCreated(
+      [{ name: "BottomNavigation" }, { name: "ClientProfile" }, { name: "CreateCarePlan" }, { name: "CarePlanSuccess" }],
+      "p1",
+    );
+    expect(routes.map((r) => r.name)).toEqual(["BottomNavigation", "ClientProfile", "CarePlanDetails"]);
+    expect(routes[2]?.params).toEqual({ planId: "p1" });
   });
 });

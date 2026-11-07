@@ -9,6 +9,7 @@ import Text from "@/src/components/ui/text"
 import Button from "@/src/components/ui/button"
 import KeyboardScrollView from "@/src/components/ui/keyboard-scroll-view"
 import DateField from "@/src/components/ui/date-field"
+import StepIndicator, { onboardingStepCount, ONBOARDING_STEP } from "@/src/components/ui/step-indicator"
 import Input from "@/src/components/ui/input"
 import Select from "@/src/components/ui/select"
 import HeaderBack from "@/src/components/back/HeaderBack"
@@ -87,31 +88,10 @@ const CaregiverSetupStep1 = () => {
               Set up your Account
             </Text>
             <Text variant="body" color={theme.colors.textLight}>
-              Set up your account in 3 steps
+              Set up your account in {onboardingStepCount()} steps
             </Text>
 
-            <View style={{ marginTop: 20 }}>
-              <Text variant="body" weight="medium">
-                Step 1
-              </Text>
-              <View
-                style={{
-                  height: 4,
-                  backgroundColor: theme.colors.border,
-                  borderRadius: 2,
-                  marginTop: 8,
-                }}
-              >
-                <View
-                  style={{
-                    height: 4,
-                    backgroundColor: theme.colors.primary,
-                    borderRadius: 2,
-                    width: "33%",
-                  }}
-                />
-              </View>
-            </View>
+            <StepIndicator step={ONBOARDING_STEP.profile} />
           </View>
 
           <View style={globalStyles.column}>
