@@ -74,6 +74,7 @@ describe("Create care plan: blank", () => {
     expect(create).toHaveBeenCalledWith(BOOKING, {
       diagnosis: "Placeholder diagnosis",
       risk_level: "high",
+      start_date: expect.stringMatching(/^\d{4}-\d{2}-\d{2}$/),
       duration_days: 30,
       review_every_days: 14,
       goals: [],
@@ -110,17 +111,24 @@ describe("Create care plan: blank", () => {
     expect(body?.tasks).toEqual([{ title: "Placeholder task", time_slot: "evening", time_of_day: null, days_of_week: [1, 2, 3, 4, 5] }]);
   });
 
-  it("rejects a malformed start date and an out-of-range duration", async () => {
+  it("rejects an out-of-range duration", async () => {
     const create = jest.spyOn(carePlansService, "createPlan");
     await renderForm();
     await type("create-diagnosis", "Placeholder diagnosis");
     await fireEvent.press(screen.getByTestId("risk-low"));
-    await type("create-start", "tomorrow");
     await type("create-duration", "400");
     await fireEvent.press(screen.getByTestId("create-submit"));
-    expect(screen.getByText(/Use the format YYYY-MM-DD/)).toBeTruthy();
     expect(screen.getByText(/whole number of days from 1 to 365/)).toBeTruthy();
     expect(create).not.toHaveBeenCalled();
+  });
+
+  it("shows real defaults, not grey placeholders: start today, 30 days, review every 14 (DP1-25)", async () => {
+    await renderForm();
+    expect(screen.getByTestId("create-duration").props.value).toBe("30");
+    expect(screen.getByTestId("create-review").props.value).toBe("14");
+    // The start date is a picker row showing today in the shared format, not a free-text box.
+    expect(screen.queryByPlaceholderText(/YYYY-MM-DD/)).toBeNull();
+    expect(screen.getByTestId("create-start").props.accessibilityLabel).toMatch(/^Start date: \d{1,2} \w{3} \d{4}$/);
   });
 });
 

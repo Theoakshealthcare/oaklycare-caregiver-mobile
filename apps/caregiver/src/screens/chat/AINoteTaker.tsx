@@ -19,7 +19,7 @@ import KeyboardScrollView from "@/src/components/ui/keyboard-scroll-view"
 import HeaderBack from "@/src/components/back/HeaderBack"
 import { globalStyles } from "@/src/constants/styles"
 import { messageForError } from "@/src/api/errors"
-import { parseBackendDate } from "@/src/utils/dates"
+import { formatStamp } from "@/src/utils/dates"
 import { useCreateNote, useNotes } from "@/src/hooks/queries"
 import type { BookingNote } from "@/src/services/booking.service"
 import type { ScreenParamLists } from "@/src/navigation/Navigations"
@@ -201,12 +201,7 @@ const AINoteTaker: React.FC<StackScreenProps<ScreenParamLists, "AINoteTaker">> =
       )}
 
       <Text variant="small" color={theme.colors.textLight} style={{ marginTop: 8 }}>
-        {parseBackendDate(note.created_at).toLocaleDateString("en-US", {
-          month: "short",
-          day: "numeric",
-          hour: "2-digit",
-          minute: "2-digit",
-        })}
+        {formatStamp(note.created_at)}
       </Text>
     </View>
   )

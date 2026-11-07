@@ -10,6 +10,7 @@ import ScreenShell from "@/src/components/account/ScreenShell";
 import { ErrorState, LoadingState } from "@/src/components/account/StateViews";
 import Button from "@/src/components/ui/button";
 import Image from "@/src/components/ui/image";
+import DateField from "@/src/components/ui/date-field";
 import Input from "@/src/components/ui/input";
 import Select from "@/src/components/ui/select";
 import Text from "@/src/components/ui/text";
@@ -186,13 +187,14 @@ const EditForm: React.FC<{ profile: CaregiverProfile }> = ({ profile }) => {
           value={form.gender || undefined}
           onValueChange={(v) => set("gender")(String(v))}
         />
-        <Input
+        <DateField
+          testID="edit-dob"
           label="Date of birth"
           value={form.dateOfBirth}
-          onChangeText={set("dateOfBirth")}
-          placeholder="YYYY-MM-DD"
+          onChange={set("dateOfBirth")}
+          placeholder="Select your date of birth"
           error={errors.dateOfBirth}
-          autoCapitalize="none"
+          maximumDate={new Date()}
         />
         <Select
           label="State"

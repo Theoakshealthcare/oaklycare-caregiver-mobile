@@ -37,11 +37,11 @@ describe("Contact", () => {
     expect(open).toHaveBeenCalledWith(`mailto:${CONTACT_EMAIL}`);
   });
 
-  it("says WhatsApp is coming rather than opening a made-up number", async () => {
+  it("shows no WhatsApp row while there is no number: no dead row, no call or phone entry (DP1-24)", async () => {
     await render(<Contact />);
-    expect(screen.getByText("WhatsApp")).toBeTruthy();
-    expect(screen.getByText("Not available yet")).toBeTruthy();
-    await fireEvent.press(screen.getByText("WhatsApp"));
+    expect(screen.queryByText("WhatsApp")).toBeNull();
+    expect(screen.queryByText("Not available yet")).toBeNull();
+    expect(screen.queryByText(/call/i)).toBeNull();
     expect(open).not.toHaveBeenCalled();
   });
 });

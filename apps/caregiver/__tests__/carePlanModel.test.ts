@@ -147,8 +147,16 @@ describe("buildCreateBody", () => {
     specialInstructions: "",
   });
 
+  it("a new draft carries real defaults: today, 30 days, a review every 14 days (DP1-25)", () => {
+    const draft = emptyDraft();
+    expect(draft.startDate).toMatch(/^\d{4}-\d{2}-\d{2}$/);
+    expect(draft.durationDays).toBe("30");
+    expect(draft.reviewEveryDays).toBe("14");
+    expect(buildCreateBody({ ...filled() }, null)).toMatchObject({ duration_days: 30, review_every_days: 14 });
+  });
+
   it("omits what was left blank so the backend defaults apply", () => {
-    const body = buildCreateBody(filled(), null);
+    const body = buildCreateBody({ ...filled(), startDate: "", durationDays: "", reviewEveryDays: "" }, null);
     expect(body).not.toHaveProperty("template_id");
     expect(body).not.toHaveProperty("start_date");
     expect(body).not.toHaveProperty("duration_days");

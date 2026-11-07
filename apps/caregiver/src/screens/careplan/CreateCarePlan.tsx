@@ -8,6 +8,7 @@ import ScreenShell from "@/src/components/account/ScreenShell";
 import { ErrorState, LoadingState } from "@/src/components/account/StateViews";
 import { CarePlanNotice, Card, Chip, FieldHint } from "@/src/components/careplan/parts";
 import Button from "@/src/components/ui/button";
+import DateField from "@/src/components/ui/date-field";
 import Input from "@/src/components/ui/input";
 import Text from "@/src/components/ui/text";
 import { theme } from "@/src/constants/theme";
@@ -285,13 +286,11 @@ const CreateCarePlan: React.FC<Props> = ({ route }) => {
         </View>
         {errors.risk ? <FieldHint text={errors.risk} testID="create-risk-error" /> : null}
 
-        <Input
+        <DateField
           testID="create-start"
           label="Start date"
-          placeholder="Today (or YYYY-MM-DD)"
           value={draft.startDate}
-          onChangeText={(startDate) => patch({ startDate })}
-          autoCapitalize="none"
+          onChange={(startDate) => patch({ startDate })}
           error={errors.startDate}
         />
         <Input
@@ -305,8 +304,8 @@ const CreateCarePlan: React.FC<Props> = ({ route }) => {
         />
         <Input
           testID="create-review"
-          label="Review every (days, optional)"
-          placeholder="14"
+          label="Review every (days, optional: clear to skip)"
+          placeholder="No review"
           keyboardType="number-pad"
           value={draft.reviewEveryDays}
           onChangeText={(reviewEveryDays) => patch({ reviewEveryDays })}

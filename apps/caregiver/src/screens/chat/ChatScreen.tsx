@@ -14,7 +14,7 @@ import Navigation from "@/src/hooks/use-navigation"
 import { useChatMessages, useMe, useSendChatMessage } from "@/src/hooks/queries"
 import { messageForError } from "@/src/api/errors"
 import { CALLING_ENABLED } from "@/src/config/calling"
-import { parseBackendDate } from "@/src/utils/dates"
+import { formatClock } from "@/src/utils/dates"
 import type { ChatMessage } from "@/src/services/booking.service"
 import type { ScreenParamLists } from "@/src/navigation/Navigations"
 
@@ -74,10 +74,7 @@ const ChatScreen: React.FC<StackScreenProps<ScreenParamLists, "ChatScreen">> = (
           color={isMyMessage ? theme.colors.white + "80" : theme.colors.textLight}
           style={{ marginTop: 4, alignSelf: "flex-end" }}
         >
-          {parseBackendDate(message.created_at).toLocaleTimeString("en-US", {
-            hour: "2-digit",
-            minute: "2-digit",
-          })}
+          {formatClock(message.created_at)}
         </Text>
       </View>
     )

@@ -2,13 +2,13 @@
 
 import { useState } from "react"
 import { useMutation, useQueryClient } from "@tanstack/react-query"
-import { View, Alert, TouchableOpacity } from "react-native"
-import DateTimePicker from "@react-native-community/datetimepicker"
+import { View, Alert } from "react-native"
 
 import { theme } from "@/src/constants/theme"
 import Text from "@/src/components/ui/text"
 import Button from "@/src/components/ui/button"
 import KeyboardScrollView from "@/src/components/ui/keyboard-scroll-view"
+import DateField from "@/src/components/ui/date-field"
 import Input from "@/src/components/ui/input"
 import Select from "@/src/components/ui/select"
 import HeaderBack from "@/src/components/back/HeaderBack"
@@ -39,8 +39,6 @@ const CaregiverSetupStep1 = () => {
     emergency_contact_phone: "",
   })
 
-  const [showDatePicker, setShowDatePicker] = useState(false)
-  const [selectedDate, setSelectedDate] = useState(new Date())
   const [errors, setErrors] = useState<Record<string, string>>({})
 
   const save = useMutation({
@@ -56,14 +54,6 @@ const CaregiverSetupStep1 = () => {
     setFormData((prev) => ({ ...prev, [field]: value }))
     if (errors[field]) {
       setErrors((prev) => ({ ...prev, [field]: "" }))
-    }
-  }
-
-  const handleDateChange = (_event: unknown, date?: Date) => {
-    setShowDatePicker(false)
-    if (date) {
-      setSelectedDate(date)
-      updateFormData("date_of_birth", date.toISOString().split("T")[0])
     }
   }
 
@@ -125,37 +115,15 @@ const CaregiverSetupStep1 = () => {
           </View>
 
           <View style={globalStyles.column}>
-            <View>
-              <Text variant="body" weight="medium" style={{ marginBottom: 8 }}>
-                Date of Birth
-              </Text>
-              <TouchableOpacity
-                onPress={() => setShowDatePicker(true)}
-                style={{
-                  borderWidth: 1,
-                  borderColor: errors.date_of_birth ? theme.colors.secondary : theme.colors.border,
-                  borderRadius: 8,
-                  paddingHorizontal: 16,
-                  paddingVertical: 14,
-                  backgroundColor: theme.colors.white,
-                  flexDirection: 'row',
-                  alignItems: 'center',
-                  justifyContent: 'space-between',
-                  marginBottom: errors.date_of_birth ? 0 : 16,
-                }}
-                activeOpacity={0.7}
-              >
-                <Text variant="body" color={formData.date_of_birth ? theme.colors.text : theme.colors.textLight}>
-                  {formData.date_of_birth ? formData.date_of_birth : "Enter your DOB"}
-                </Text>
-                <Text>📅</Text>
-              </TouchableOpacity>
-              {errors.date_of_birth && (
-                <Text variant="small" color={theme.colors.secondary} style={{ marginTop: 4 }}>
-                  {errors.date_of_birth}
-                </Text>
-              )}
-            </View>
+            <DateField
+              testID="dob-field"
+              label="Date of Birth"
+              placeholder="Enter your DOB"
+              value={formData.date_of_birth}
+              onChange={(iso) => updateFormData("date_of_birth", iso)}
+              error={errors.date_of_birth}
+              maximumDate={new Date()}
+            />
 
             <Select
               label="Gender"
@@ -211,15 +179,6 @@ const CaregiverSetupStep1 = () => {
             />
           </View>
 
-          {showDatePicker && (
-            <DateTimePicker
-              value={selectedDate}
-              mode="date"
-              display="default"
-              onChange={handleDateChange}
-              maximumDate={new Date()}
-            />
-          )}
         </View>
       </KeyboardScrollView>
     </View>
