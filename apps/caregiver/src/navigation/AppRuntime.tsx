@@ -11,7 +11,8 @@ import { resolveOffer } from "@/src/push/openOffer";
 import { parseJobOffer } from "@/src/push/registration";
 import { stopVisitUpdates, startVisitUpdates } from "@/src/supply/backgroundLocationTask";
 import { createExpoForegroundTracker } from "@/src/supply/foregroundTracker";
-import { locationService } from "@/src/supply/locationService";
+import { shouldRefetchHomeAfterPing } from "@/src/home/homeModel";
+import { locationService, type CaregiverHome } from "@/src/supply/locationService";
 import { locationPermissionStore, useLocationPermissions } from "@/src/supply/permissionState";
 import { decideTracking } from "@/src/supply/tracking";
 
@@ -38,7 +39,13 @@ async function openOffer(bookingId: string): Promise<void> {
 const AppRuntime: React.FC = () => {
   const home = useCaregiverHome();
   const permissions = useLocationPermissions();
-  const [foregroundTracker] = useState(() => createExpoForegroundTracker((coords) => locationService.ping(coords)));
+  const [foregroundTracker] = useState(() => createExpoForegroundTracker(async (coords) => {
+      await locationService.ping(coords);
+      // The warning on Home is judged from the last fetched home: refetch once the first ping lands (DP1-14).
+      if (shouldRefetchHomeAfterPing(queryClient.getQueryData<CaregiverHome>(queryKeys.home), Date.now())) {
+        void queryClient.invalidateQueries({ queryKey: queryKeys.home });
+      }
+    }));
   const handled = useRef(new Set<string>());
 
   // Location permission can change in Settings while the app is in the background.

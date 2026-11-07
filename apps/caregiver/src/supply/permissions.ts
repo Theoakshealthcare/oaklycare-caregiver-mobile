@@ -25,16 +25,23 @@ function offerSettings(title: string, message: string): void {
   ]);
 }
 
+/**
+ * The one statement of when Oakly shares the caregiver's location. Every prompt and card uses it, so
+ * they cannot contradict each other (DP1-13). It matches `decideTracking`: while available with the
+ * app open, and from "On my way" until the visit is completed (with the app closed too, when
+ * "Always" is allowed).
+ */
+export const LOCATION_SHARING_SENTENCE =
+  "Oakly shares your location while you are available and the app is open, and from \u201cOn my way\u201d until you complete a visit, even with the app closed if you allow \u201cAlways\u201d.";
+
 export const FOREGROUND_RATIONALE = {
   title: "Share your location",
-  message:
-    "Oakly uses your location while you are available so we can offer you visits near you. It is only shared while the app is open, and you can go unavailable at any time.",
+  message: `${LOCATION_SHARING_SENTENCE} We use it to offer you visits near you. You can go unavailable at any time.`,
 };
 
 export const BACKGROUND_RATIONALE = {
   title: "Share your location during visits",
-  message:
-    "During an active visit Oakly shares your location even when the app is closed, so the patient and our team can see you are on your way and have arrived. It stops when you complete the visit. On the next screen, choose \"Always\" (or \"Allow all the time\").",
+  message: `${LOCATION_SHARING_SENTENCE} On the next screen, choose \u201cAlways\u201d (or \u201cAllow all the time\u201d).`,
 };
 
 interface Explain {
