@@ -13,11 +13,12 @@ channel) lives in the backend repo: `docs/checklist/MASTER_CHECKLIST.md`. Update
 - [ ] Owner visual pass on device
 
 ## Device pass 1 app fixes (2026-11-07)
-- [x] DP1-02 (blocker): multipart uploads (licence, profile photo) through plain `fetch`, never a `Request`; "Can't reach Oakly" only for a real network failure (branch `fix/dp1-upload-keyboard-home`, see docs/sop/2026-11-07-caregiver-device-pass-1-app-fixes.md; Jest/node only, **not device-verified**)
+- [x] DP1-02 (blocker), **corrected 2026-11-07**: PR #19's upload fix failed on the simulator (`expo/fetch` rejects the `{ uri, name, type }` file part, `Unsupported FormDataPart implementation`) and broke the network message (RC1-01). Fixed on `fix/dp1-upload-expo-fetch`: shared `filePart` with `bytes()` for both builders, `isNetworkFailure` classifier; **proved on the simulator** (licence 200, photo reaches the backend against a local Cloudinary stub, "Can't reach Oakly" for login and upload with the backend stopped); see docs/sop/2026-11-07-caregiver-device-pass-1-app-fixes.md
 - [x] DP1-03: shared `KeyboardScrollView` (sign-up, onboarding 1-2, care-plan details/notes via ScreenShell, change password, visit code, AI notes) and iOS keyboard-inset chat root
 - [x] DP1-04: AI note times parsed as UTC through `parseBackendDate`
 - [x] DP1-07: Home pull-to-refresh spinner follows only a user pull, not the focus refetch
-- [ ] Device re-check of all four (steps in the SOP); Android keyboard pass
+- [x] Device re-check of DP1-03/04/07 passed (re-check 1); DP1-02 re-proved after its correction
+- [ ] Android keyboard pass; patient app to adopt `filePart` and `isNetworkFailure` when it gets uploads
 - [ ] DP1-05 (visit rules) and DP1-06 (decline semantics): owner decisions pending
 
 ## Caregiver vitals (Client care v1, part 1)
