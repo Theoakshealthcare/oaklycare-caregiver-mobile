@@ -11,6 +11,7 @@ import { globalStyles } from '@/src/constants/styles';
 import Navigation from '@/src/hooks/use-navigation';
 import { authService } from '@/src/services/auth.service';
 import { messageForError } from '@/src/api/errors';
+import { SENT_MESSAGE, SENT_TITLE } from '@/src/account/resetPasswordModel';
 
 const RecoverPassword: React.FC = () => {
   const { navigation } = Navigation();
@@ -20,11 +21,10 @@ const RecoverPassword: React.FC = () => {
   const recover = useMutation({
     mutationFn: () => authService.requestPasswordReset(email.trim()),
     onSuccess: () => {
-      Alert.alert(
-        'Recovery Email Sent',
-        'Check your email for the reset code, then enter it with your new password.',
-        [{ text: 'OK', onPress: () => navigation.navigate('ResetPassword', { email: email.trim() }) }],
-      );
+      // The server answers 200 for any address, so the wording never says whether the email has an account.
+      Alert.alert(SENT_TITLE, SENT_MESSAGE, [
+        { text: 'OK', onPress: () => navigation.navigate('ResetPassword', { email: email.trim() }) },
+      ]);
     },
     onError: (err) => Alert.alert('Error', messageForError(err)),
   });
@@ -48,7 +48,7 @@ const RecoverPassword: React.FC = () => {
         <Text variant="h2">Recover Password</Text>
 
         <Text variant="body" color={theme.colors.textLight}>
-          Provide your email address to recover your password
+          Provide your email address and we will email you a 5-digit code to reset your password
         </Text>
       </View>
 

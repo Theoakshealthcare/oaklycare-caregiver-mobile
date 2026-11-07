@@ -46,8 +46,12 @@ export const authService = {
     return unwrap(api.POST("/api/v1/auth/password-recovery", { body: { email } }));
   },
 
-  resetPassword(token: string, newPassword: string) {
-    return unwrap(api.POST("/api/v1/auth/reset-password", { body: { token, new_password: newPassword } }));
+  /**
+   * POST /auth/reset-password with the emailed 5-digit code. `email` is the exact string the code was requested with (the
+   * server counts and looks up per exact address). No tokens come back; every other session of the account is ended.
+   */
+  resetPassword(email: string, code: string, newPassword: string) {
+    return unwrap(api.POST("/api/v1/auth/reset-password", { body: { email, code, new_password: newPassword } }));
   },
 
   /**

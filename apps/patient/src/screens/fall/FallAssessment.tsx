@@ -1,3 +1,4 @@
+import { useQueryClient } from "@tanstack/react-query";
 import type React from "react";
 import { useState } from "react";
 import { Pressable, StyleSheet, View } from "react-native";
@@ -11,13 +12,14 @@ import QueryError from "@/src/components/ui/query-error";
 import Screen from "@/src/components/ui/screen";
 import Text from "@/src/components/ui/text";
 import { theme } from "@/src/constants/theme";
-import type { FallguardAnswers } from "@/src/domain/fallguard";
+import { fallguardRefusal, type FallguardAnswers } from "@/src/domain/fallguard";
 import { useFallguardQuestions, useSubmitFallguard } from "@/src/hooks/useFallguard";
 import { useNav } from "@/src/navigation/Navigations";
 
 /** One generic question screen, driven by the question list (the old app had 24 near-identical files). No scores are shown. */
 const FallAssessment: React.FC = () => {
   const navigation = useNav();
+  const client = useQueryClient();
   const questions = useFallguardQuestions();
   const submit = useSubmitFallguard();
   const [index, setIndex] = useState(0);
@@ -46,7 +48,16 @@ const FallAssessment: React.FC = () => {
     if (!last) return setIndex(index + 1);
     submit.mutate({ questions: list, answers }, {
       onSuccess: (result) => navigation.replace("FallResult", { result }),
-      onError: (e) => setDialog(messageForError(e)),
+      onError: (e) => {
+        const refusal = fallguardRefusal(e);
+        if (refusal?.kind === "reload") {
+          // The questionnaire changed: fetch it again and start over, rather than resend answers that cannot match.
+          setAnswers({});
+          setIndex(0);
+          void client.invalidateQueries({ queryKey: ["fallguard", "questions"] });
+        }
+        setDialog(refusal?.message ?? messageForError(e));
+      },
     });
   };
 

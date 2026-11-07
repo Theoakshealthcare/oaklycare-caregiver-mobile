@@ -1,4 +1,4 @@
-import { fireEvent, screen, waitFor } from "@testing-library/react-native";
+import { act, fireEvent, screen, waitFor } from "@testing-library/react-native";
 
 import { queryClient } from "../src/api/queryClient";
 import { disableCacheGcForTests, keychainKeys, patientUser, routeFetch, tokens } from "../test-utils/fakeApi";
@@ -193,24 +193,41 @@ describe("auth flows", () => {
         "POST /api/v1/auth/password-recovery": () => ({ status: 200, body: { message: "Password recovery email sent" } }),
       });
       await press("Forgot password?");
-      await press("Send Recovery Email");
+      await press("Send Reset Code");
       expect(await screen.findByText("Email is required")).toBeTruthy();
       await type("Email address", "nobody@example.com");
-      await press("Send Recovery Email");
+      await press("Send Reset Code");
       expect(await screen.findByText(/Enter the 5-digit code we emailed to nobody@example.com/)).toBeTruthy();
       expect(calls.find((c) => c.path === "/api/v1/auth/password-recovery")?.body).toEqual({ email: "nobody@example.com" });
       view.unmount();
     });
 
-    it("reset: checks the code and passwords, calls today's endpoint with the code as the token, then back to Login", async () => {
-      const { calls, view } = await renderSignedOut({
+    /** Signed-out journey to the reset step, with the given reset-password reply. */
+    async function openResetStep(reply: () => { status: number; body?: unknown; headers?: Record<string, string> }) {
+      const rig = await renderSignedOut({
         "POST /api/v1/auth/password-recovery": () => ({ status: 200, body: { message: "Password recovery email sent" } }),
-        "POST /api/v1/auth/reset-password": () => ({ status: 200, body: { message: "Password updated successfully" } }),
+        "POST /api/v1/auth/reset-password": reply,
       });
       await press("Forgot password?");
-      await type("Email address", "ada.placeholder@example.com");
-      await press("Send Recovery Email");
+      await type("Email address", " ada.placeholder@example.com ");
+      await press("Send Reset Code");
       await screen.findByText(/Enter the 5-digit code we emailed to/);
+      return rig;
+    }
+    const fillReset = async (code = "13579", password = "a-new-password") => {
+      await type("Reset code", code);
+      await type("Create new password", password);
+      await type("Confirm new password", password);
+      await press("Reset Password");
+    };
+    const coded = (status: number, code: string, message: string, headers?: Record<string, string>) => () => ({
+      status,
+      body: { detail: { code, message } },
+      headers,
+    });
+
+    it("reset: checks the code and passwords, sends {email, code, new_password}, then back to Login", async () => {
+      const { calls, view } = await openResetStep(() => ({ status: 200, body: { message: "Password updated successfully" } }));
 
       await press("Reset Password");
       expect(await screen.findByText("Enter the 5-digit code")).toBeTruthy();
@@ -227,28 +244,84 @@ describe("auth flows", () => {
       await type("Confirm new password", "a-new-password");
       await press("Reset Password");
       expect(await screen.findByText("Your password has been reset. Log in with your new password.")).toBeTruthy();
-      // The one adapter: today's endpoint takes `token`, so the 5-digit code goes there until the backend slice lands.
-      expect(calls.find((c) => c.path === "/api/v1/auth/reset-password")?.body).toEqual({ token: "13579", new_password: "a-new-password" });
+      expect(screen.getByText("You've been signed out on your other devices.")).toBeTruthy();
+      // The email is the trimmed string the code was requested with; no `token` field exists any more.
+      expect(calls.find((c) => c.path === "/api/v1/auth/password-recovery")?.body).toEqual({ email: "ada.placeholder@example.com" });
+      expect(calls.find((c) => c.path === "/api/v1/auth/reset-password")?.body).toEqual({
+        email: "ada.placeholder@example.com",
+        code: "13579",
+        new_password: "a-new-password",
+      });
       await press("Go to Login");
       expect(await screen.findByText("Sign in to your Oakly Health account")).toBeTruthy();
       view.unmount();
     });
 
-    it("reset: today's backend refuses a 5-digit code as the token (400 'Invalid token'), shown as sent", async () => {
-      const { view } = await renderSignedOut({
-        "POST /api/v1/auth/password-recovery": () => ({ status: 200, body: { message: "Password recovery email sent" } }),
-        "POST /api/v1/auth/reset-password": () => ({ status: 400, body: { detail: "Invalid token" } }),
-      });
-      await press("Forgot password?");
-      await type("Email address", "ada.placeholder@example.com");
-      await press("Send Recovery Email");
-      await screen.findByText(/Enter the 5-digit code we emailed to/);
-      await type("Reset code", "13579");
-      await type("Create new password", "a-new-password");
-      await type("Confirm new password", "a-new-password");
-      await press("Reset Password");
-      expect(await screen.findByText("Invalid token")).toBeTruthy();
+    it("reset: a wrong or expired code (400 invalid_or_expired_code) says so under the boxes, clears them and keeps Resend", async () => {
+      const { view } = await openResetStep(
+        coded(400, "invalid_or_expired_code", "This code is incorrect or has expired. Request a new code."),
+      );
+      await fillReset();
+      expect(await screen.findByText("That code isn't right or has expired. Request a new one.")).toBeTruthy();
+      expect(screen.getByLabelText("Reset code").props.value).toBe("");
+      expect(screen.getByRole("button", { name: /^Resend code/ })).toBeTruthy();
       view.unmount();
+    });
+
+    it("reset: a weak password (400 weak_password) shows the server's sentence under the password and keeps the code", async () => {
+      const { view } = await openResetStep(coded(400, "weak_password", "Password is too repetitive."));
+      await fillReset("13579", "aaaaaaaaaa");
+      expect(await screen.findByText("Password is too repetitive.")).toBeTruthy();
+      expect(screen.getByLabelText("Reset code").props.value).toBe("13579");
+      view.unmount();
+    });
+
+    it("reset: five wrong codes (429 too_many_attempts) ask for a new code and keep Resend", async () => {
+      const { view } = await openResetStep(coded(429, "too_many_attempts", "Too many incorrect attempts. Request a new code."));
+      await fillReset();
+      expect(await screen.findByText("Too many tries. Request a new code.")).toBeTruthy();
+      expect(screen.getByRole("button", { name: /^Resend code/ })).toBeTruthy();
+      view.unmount();
+    });
+
+    it("reset: the 24-hour budget (429 with Retry-After) says when to come back and hides Resend", async () => {
+      const { view } = await openResetStep(
+        coded(429, "too_many_attempts", "Please try again later.", { "Retry-After": "3600" }),
+      );
+      await fillReset();
+      expect(await screen.findByText("Too many tries. Try again in 60 minutes.")).toBeTruthy();
+      expect(screen.queryByRole("button", { name: /^Resend code/ })).toBeNull();
+      expect(screen.getByRole("button", { name: "Reset Password" })).toBeDisabled();
+      view.unmount();
+    });
+
+    it("reset: a server failure is shown as a plain sentence, never the raw body", async () => {
+      const { view } = await openResetStep(() => ({ status: 500, body: { detail: "boom" } }));
+      await fillReset();
+      expect(await screen.findByText("Something went wrong on our side. Please try again in a moment.")).toBeTruthy();
+      view.unmount();
+    });
+
+    it("reset: Resend code is closed for a minute, then asks for a new code with the same email and says to use the newest", async () => {
+      jest.useFakeTimers();
+      try {
+        const { calls, view } = await openResetStep(() => ({ status: 200, body: {} }));
+        expect(screen.getByRole("button", { name: "Resend code (60s)" })).toBeDisabled();
+        // The countdown re-arms a one-second timer after every render, so it is ticked one second at a time.
+        for (let second = 0; second < 60; second += 1) {
+          await act(async () => {
+            jest.advanceTimersByTime(1000);
+          });
+        }
+        await press("Resend code");
+        expect(await screen.findByText(/we've sent a new code\. Use the newest email and check your spam folder\./)).toBeTruthy();
+        const recoveries = calls.filter((c) => c.path === "/api/v1/auth/password-recovery");
+        expect(recoveries.map((c) => c.body)).toEqual([{ email: "ada.placeholder@example.com" }, { email: "ada.placeholder@example.com" }]);
+        expect(screen.getByRole("button", { name: "Resend code (60s)" })).toBeDisabled();
+        view.unmount();
+      } finally {
+        jest.useRealTimers();
+      }
     });
 
     it("recovery: shows a network failure instead of moving on", async () => {
@@ -260,7 +333,7 @@ describe("auth flows", () => {
       });
       await press("Forgot password?");
       await type("Email address", "ada.placeholder@example.com");
-      await press("Send Recovery Email");
+      await press("Send Reset Code");
       expect(await screen.findByText("Can't reach Oakly. Check your internet connection and try again.")).toBeTruthy();
       view.unmount();
     });

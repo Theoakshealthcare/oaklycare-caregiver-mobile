@@ -55,6 +55,12 @@ const VitalEntryModal: React.FC<{
   const [context, setContext] = useState<GlucoseContext | undefined>(undefined);
   const [error, setError] = useState<string | null>(null);
 
+  // An old error ("must be between 50 and 260") must not stay on screen once the caregiver is correcting the reading.
+  const edit = <T,>(set: (v: T) => void) => (v: T) => {
+    set(v);
+    setError(null);
+  };
+
   const save = () => {
     const userId = me.data?.id;
     if (!userId) {
@@ -102,7 +108,7 @@ const VitalEntryModal: React.FC<{
                 placeholder="120"
                 keyboardType="number-pad"
                 value={value}
-                onChangeText={setValue}
+                onChangeText={edit(setValue)}
                 testID="entry-systolic"
               />
               <Text variant="h3">/</Text>
@@ -112,7 +118,7 @@ const VitalEntryModal: React.FC<{
                 placeholder="80"
                 keyboardType="number-pad"
                 value={diastolic}
-                onChangeText={setDiastolic}
+                onChangeText={edit(setDiastolic)}
                 testID="entry-diastolic"
               />
             </View>
@@ -122,7 +128,7 @@ const VitalEntryModal: React.FC<{
               placeholder="0"
               keyboardType="decimal-pad"
               value={value}
-              onChangeText={setValue}
+              onChangeText={edit(setValue)}
               testID="entry-value"
             />
           )}
@@ -130,7 +136,7 @@ const VitalEntryModal: React.FC<{
           {info.units.length > 1 ? (
             <View style={{ flexDirection: "row", gap: theme.spacing.sm }}>
               {info.units.map((u) => (
-                <Chip key={u} label={u} selected={unit === u} onPress={() => setUnit(u)} testID={`unit-${u}`} />
+                <Chip key={u} label={u} selected={unit === u} onPress={() => edit(setUnit)(u)} testID={`unit-${u}`} />
               ))}
             </View>
           ) : null}
@@ -146,7 +152,7 @@ const VitalEntryModal: React.FC<{
                     key={c}
                     label={`${c} · ${GLUCOSE_CONTEXT_LABEL[c]}`}
                     selected={context === c}
-                    onPress={() => setContext(context === c ? undefined : c)}
+                    onPress={() => edit(setContext)(context === c ? undefined : c)}
                     testID={`context-${c}`}
                   />
                 ))}

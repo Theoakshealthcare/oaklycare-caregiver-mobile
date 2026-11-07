@@ -13,4 +13,23 @@ export const vitalsService = {
   create(body: Schemas["PatientVitalCreate"]) {
     return unwrap(api.POST("/api/v1/vitals/", { body }));
   },
+
+  /**
+   * `GET /vitals/access/list`: the caregivers THIS patient has shared with (active grants only; `caregiver_name` is the name to
+   * show). The patient and caregiver ids are the PROFILE ids (`/auth/me` -> `patient.id`, a booking's `caregiver_id`), never the
+   * user id.
+   */
+  accessList() {
+    return unwrap(api.GET("/api/v1/vitals/access/list"));
+  },
+
+  /** `POST /vitals/access/grant`. Granting twice returns the same grant. The caregiver can read and add vitals straight away. */
+  grant(patientId: string, caregiverId: string) {
+    return unwrap(api.POST("/api/v1/vitals/access/grant", { body: { patient_id: patientId, caregiver_id: caregiverId } }));
+  },
+
+  /** `POST /vitals/access/revoke`. Ends the grant at once; a visit already in progress still gives that caregiver access. */
+  revoke(patientId: string, caregiverId: string) {
+    return unwrap(api.POST("/api/v1/vitals/access/revoke", { body: { patient_id: patientId, caregiver_id: caregiverId } }));
+  },
 };
