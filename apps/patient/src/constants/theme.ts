@@ -40,7 +40,11 @@ export const theme = {
     warningText: "#856404",
     infoText: "#0C5460",
     primaryLight: "#F2FDFD",
-    soft: "#F8F8FC"
+    soft: "#F8F8FC",
+    /** Floating bottom bar. */
+    dark: "#1D1F24",
+    warningLight: "#FDF6EC",
+    errorLight: "#FCEDEB",
   },
   spacing: {
     xs: scale(4),

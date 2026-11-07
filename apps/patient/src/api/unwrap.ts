@@ -25,7 +25,7 @@ async function settle<T>(call: Promise<FetchResult<T>>): Promise<FetchResult<T>>
         : null;
     const header = Number(result.response.headers.get("Retry-After"));
     const retryAfter = Number.isFinite(header) && header > 0 ? header : null;
-    throw new ApiError(status, body, messageForStatus(status, detail, body, "default"), retryAfter);
+    throw new ApiError(status, body, messageForStatus(status, detail, body, "default", retryAfter), retryAfter);
   }
   return result;
 }

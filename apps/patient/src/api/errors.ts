@@ -7,7 +7,7 @@
 import { errorMessage } from "@oakly/api-client";
 
 /** Where an error happened; the same status code reads differently on login and elsewhere. */
-export type ErrorContext = "default" | "login";
+export type ErrorContext = "default" | "login" | "register";
 
 export class ApiError extends Error {
   /** HTTP status, or 0 when the request never reached the server (offline, DNS, timeout). */
@@ -35,23 +35,38 @@ export const SESSION_EXPIRED_MESSAGE = "Your session has expired. Please sign in
 const SERVER_MESSAGE = "Something went wrong on our side. Please try again in a moment.";
 const FALLBACK_MESSAGE = "Something went wrong. Please try again.";
 
+/** "45 seconds", "3 minutes": how long a 429 `Retry-After` asks the person to wait. */
+export function waitText(seconds: number): string {
+  const s = Math.max(1, Math.ceil(seconds));
+  if (s < 90) return `${s} ${s === 1 ? "second" : "seconds"}`;
+  const minutes = Math.ceil(s / 60);
+  return `${minutes} minutes`;
+}
+
 export function messageForStatus(
   status: number,
   detail: string | null,
   body: unknown,
   context: ErrorContext,
+  retryAfterSeconds: number | null = null,
 ): string {
   if (status === 0) return NETWORK_MESSAGE;
   if (status === 401) {
     return context === "login" ? "Incorrect email or password." : SESSION_EXPIRED_MESSAGE;
   }
-  if (status === 429) return "Too many attempts. Please wait a moment and try again.";
+  if (status === 429) {
+    return retryAfterSeconds
+      ? `Too many attempts. Please try again in ${waitText(retryAfterSeconds)}.`
+      : "Too many attempts. Please wait a moment and try again.";
+  }
   if (status >= 500) return SERVER_MESSAGE;
   return errorMessage(body, detail ?? FALLBACK_MESSAGE);
 }
 
 /** Turns anything thrown by the data layer into a message that is safe to show a user. */
 export function messageForError(error: unknown, context: ErrorContext = "default"): string {
-  if (error instanceof ApiError) return messageForStatus(error.status, error.detail, error.body, context);
+  if (error instanceof ApiError) {
+    return messageForStatus(error.status, error.detail, error.body, context, error.retryAfterSeconds);
+  }
   return FALLBACK_MESSAGE;
 }
