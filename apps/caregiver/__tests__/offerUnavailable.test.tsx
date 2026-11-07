@@ -20,8 +20,12 @@ const offer: Offer = {
   area: "Lagos, Lagos",
 };
 
+const clients: QueryClient[] = [];
+afterEach(() => clients.splice(0).forEach((c) => c.clear()));
+
 async function renderOffer(response?: string | null) {
   const client = new QueryClient({ defaultOptions: { queries: { retry: false } } });
+  clients.push(client);
   const props = {
     route: { params: { bookingId: "b1", offer: { ...offer, ...(response !== undefined ? { response } : {}) } } },
     navigation: { navigate: jest.fn(), replace: jest.fn(), goBack: jest.fn() },
