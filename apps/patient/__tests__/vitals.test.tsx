@@ -4,6 +4,7 @@ import { queryClient } from "../src/api/queryClient";
 import { toCreateBody, toReading, validateEntry } from "../src/domain/vitals";
 import { disableCacheGcForTests } from "../test-utils/fakeApi";
 import { live, liveBody, liveReply } from "../test-utils/live";
+import { capture } from "../test-utils/captures";
 import { renderSignedIn } from "../test-utils/renderApp";
 
 jest.mock("expo-font", () => ({
@@ -233,14 +234,136 @@ describe("vitals (live-shaped)", () => {
       expect(screen.queryByText(/shows sample information/)).toBeNull();
       view.unmount();
     });
+  });
 
-    it("caregiver access says 'Coming soon' and offers nothing to tap (the backend id bug)", async () => {
-      const { calls, view } = await renderSignedIn({ [LIST]: () => liveReply("vitals-empty") }, me());
+  describe("who can see my vitals (the backend's grant / list / revoke, fixed in backend #43)", () => {
+    const GRANT = "POST /api/v1/vitals/access/grant";
+    const REVOKE = "POST /api/v1/vitals/access/revoke";
+    const ACCESS_LIST = "GET /api/v1/vitals/access/list";
+    const BOOKINGS = "GET /api/v1/booking/patient/bookings";
+    // Real answers from `backend/docs/fe-captures/patient-profile-vitals` (copied to `test-utils/captures`). Their ids are the
+    // backend run's own; the screen is driven with the same ones so the request bodies can be compared exactly.
+    const grantCap = capture("pv-301-grant");
+    // `capture()` returns only the response; the request body of the grant is in the same file.
+    const GRANT_BODY = require("../test-utils/captures/pv-301-grant.json").request.body;
+    const listCap = capture("pv-303-patient-lists-grants");
+    const revokeCap = capture("pv-320-revoke");
+    const CAREGIVER_ID: string = grantCap.body.caregiver_id;
+    const NAME: string = listCap.body[0].caregiver_name;
+    const booking = (over: object = {}) => ({
+      ...capture("023-p-bookings-list-accepted").body[0],
+      caregiver_id: CAREGIVER_ID,
+      caregiver_details: { ...capture("023-p-bookings-list-accepted").body[0].caregiver_details, full_name: NAME },
+      ...over,
+    });
+    // `/auth/me` of the capture run's patient, so the request carries the patient id the capture used.
+    const meForGrant = () => ({ ...me(), patient: { ...me().patient, id: grantCap.body.patient_id } });
+    const open = async (extra: Record<string, any> = {}) => {
+      const rendered = await renderSignedIn({ [LIST]: () => liveReply("vitals-empty"), [BOOKINGS]: () => ({ status: 200, body: [booking()] }), ...extra }, meForGrant());
       await tab("Vitals");
       await fireEvent.press(await screen.findByRole("button", { name: "Who can see my vitals" }));
-      expect(await screen.findByText("Coming soon")).toBeTruthy();
-      expect(screen.queryByRole("button", { name: /Grant access|Revoke access/ })).toBeNull();
-      expect(calls.some((c) => c.path.includes("/vitals/access"))).toBe(false);
+      return rendered;
+    };
+
+    it("lists nobody yet and offers the caregivers from the person's own bookings", async () => {
+      const { view } = await open({ [ACCESS_LIST]: () => ({ status: 200, body: [] }) });
+      expect(await screen.findByText("Nobody yet")).toBeTruthy();
+      expect(await screen.findByRole("button", { name: `Share my vitals with ${NAME}` })).toBeTruthy();
+      expect(screen.queryByText("Coming soon")).toBeNull();
+      view.unmount();
+    });
+
+    it("asks before sharing (the warning names the caregiver), then sends the PROFILE ids and shows them as sharing", async () => {
+      let shared = false;
+      const { calls, view } = await open({
+        [ACCESS_LIST]: () => ({ status: 200, body: shared ? listCap.body : [] }),
+        [GRANT]: () => {
+          shared = true;
+          return { status: grantCap.status, body: grantCap.body };
+        },
+      });
+      await fireEvent.press(await screen.findByRole("button", { name: `Share my vitals with ${NAME}` }));
+      expect(await screen.findByText("Share your vitals?")).toBeTruthy();
+      expect(screen.getByText(`${NAME} will be able to see and add to your vitals until you stop sharing.`)).toBeTruthy();
+      expect(calls.some((c) => c.path === "/api/v1/vitals/access/grant")).toBe(false); // nothing sent until confirmed
+      await press("Share");
+      expect(await screen.findByText(`You're now sharing your vitals with ${NAME}.`)).toBeTruthy();
+      expect(calls.find((c) => c.path === "/api/v1/vitals/access/grant")?.body).toEqual(GRANT_BODY);
+      // The list is read again: the caregiver moves from "share with" to "sharing now".
+      expect(await screen.findByRole("button", { name: `Stop sharing with ${NAME}` })).toBeTruthy();
+      expect(screen.queryByRole("button", { name: `Share my vitals with ${NAME}` })).toBeNull();
+      view.unmount();
+    });
+
+    it("stopping asks first, sends the same ids, and says it took effect at once but a visit in progress still counts", async () => {
+      let active = true;
+      const { calls, view } = await open({
+        [ACCESS_LIST]: () => ({ status: 200, body: active ? listCap.body : [] }),
+        [REVOKE]: () => {
+          active = false;
+          return { status: revokeCap.status, body: revokeCap.body };
+        },
+      });
+      await fireEvent.press(await screen.findByRole("button", { name: `Stop sharing with ${NAME}` }));
+      expect(await screen.findByText("Stop sharing?")).toBeTruthy();
+      await fireEvent.press(screen.getAllByRole("button", { name: "Stop sharing" }).at(-1) as never);
+      expect(await screen.findByText(/It took effect straight away\. They can still see your vitals while a visit of theirs with you is in progress\./)).toBeTruthy();
+      expect(calls.find((c) => c.path === "/api/v1/vitals/access/revoke")?.body).toEqual(GRANT_BODY);
+      expect(await screen.findByText("Nobody yet")).toBeTruthy();
+      view.unmount();
+    });
+
+    it("cancelling the confirmation sends nothing", async () => {
+      const { calls, view } = await open({ [ACCESS_LIST]: () => ({ status: 200, body: [] }) });
+      await fireEvent.press(await screen.findByRole("button", { name: `Share my vitals with ${NAME}` }));
+      await screen.findByText("Share your vitals?");
+      await press("Cancel");
+      await waitFor(() => expect(screen.queryByText("Share your vitals?")).toBeNull());
+      expect(calls.some((c) => c.path === "/api/v1/vitals/access/grant")).toBe(false);
+      view.unmount();
+    });
+
+    it("an unknown caregiver (404 'Caregiver not found.') and a revoke with nothing to revoke are said plainly", async () => {
+      const gone = capture("pv-312-grant-unknown-caregiver");
+      expect(gone.status).toBe(404);
+      const nothing = capture("pv-322-revoke-again");
+      expect(nothing.status).toBe(404);
+      const { view } = await open({
+        [ACCESS_LIST]: () => ({ status: 200, body: [] }),
+        [GRANT]: () => ({ status: gone.status, body: gone.body }),
+      });
+      await fireEvent.press(await screen.findByRole("button", { name: `Share my vitals with ${NAME}` }));
+      await press("Share");
+      expect(await screen.findByText("We couldn't find that caregiver any more, so nothing was shared.")).toBeTruthy();
+      view.unmount();
+
+      const second = await open({
+        [ACCESS_LIST]: () => ({ status: 200, body: listCap.body }),
+        [REVOKE]: () => ({ status: nothing.status, body: nothing.body }),
+      });
+      await fireEvent.press(await screen.findByRole("button", { name: `Stop sharing with ${NAME}` }));
+      await fireEvent.press(screen.getAllByRole("button", { name: "Stop sharing" }).at(-1) as never);
+      expect(await screen.findByText("You had already stopped sharing with this caregiver.")).toBeTruthy();
+      second.view.unmount();
+    });
+
+    it("leaves out cancelled bookings and caregivers already shared with, and says what appears here when nobody is left", async () => {
+      const { view } = await open({
+        [BOOKINGS]: () => ({ status: 200, body: [booking({ status: "cancelled" })] }),
+        [ACCESS_LIST]: () => ({ status: 200, body: [] }),
+      });
+      expect(await screen.findByText(/Caregivers you have had a visit with will appear here/)).toBeTruthy();
+      expect(screen.queryByRole("button", { name: `Share my vitals with ${NAME}` })).toBeNull();
+      view.unmount();
+    });
+
+    it("a failed list read says so and can retry", async () => {
+      let fail = true;
+      const { view } = await open({ [ACCESS_LIST]: () => (fail ? { status: 403, body: { detail: "Access denied" } } : { status: 200, body: [] }) });
+      expect(await screen.findByText("We couldn't load who can see your vitals")).toBeTruthy();
+      fail = false;
+      await fireEvent.press(screen.getAllByRole("button", { name: "Try again" })[0]);
+      expect(await screen.findByText("Nobody yet")).toBeTruthy();
       view.unmount();
     });
   });

@@ -1,7 +1,7 @@
 import type React from "react";
 import { useState } from "react";
 
-import { messageForError } from "@/src/api/errors";
+import { bookingErrorMessage } from "@/src/api/bookingErrors";
 import Button from "@/src/components/ui/button";
 import { Card, DetailRow } from "@/src/components/ui/card";
 import ErrorDialog from "@/src/components/ui/ErrorDialog";
@@ -40,7 +40,7 @@ const BookingSummary: React.FC = () => {
           routes: [{ name: "Tabs", params: { tab: "bookings", at: Date.now() } }, { name: "PaymentResult", params: { bookingId: booking.id, open: true } }],
         });
       },
-      onError: (e) => setDialog(messageForError(e)),
+      onError: (e) => setDialog(bookingErrorMessage(e)),
     });
 
   const q = quote.data;
@@ -85,7 +85,7 @@ const BookingSummary: React.FC = () => {
         ) : quote.isError ? (
           <>
             <Text color={theme.colors.secondary} accessibilityRole="alert">
-              {messageForError(quote.error)}
+              {bookingErrorMessage(quote.error)}
             </Text>
             <Button small variant="outline" title="Try again" onPress={() => void quote.refetch()} />
           </>

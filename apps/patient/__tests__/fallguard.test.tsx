@@ -1,8 +1,10 @@
 import { fireEvent, screen, waitFor } from "@testing-library/react-native";
 
 import { queryClient } from "../src/api/queryClient";
-import { maxScore, toQuestions, toResult, toSubmitBody } from "../src/domain/fallguard";
+import { ApiError } from "../src/api/errors";
+import { fallguardRefusal, maxScore, toQuestions, toResult, toSubmitBody } from "../src/domain/fallguard";
 import { disableCacheGcForTests } from "../test-utils/fakeApi";
+import { capture } from "../test-utils/captures";
 import { live, liveBody, liveReply } from "../test-utils/live";
 import { renderSignedIn } from "../test-utils/renderApp";
 
@@ -15,6 +17,14 @@ const press = (name: string | RegExp) => fireEvent.press(screen.getByRole("butto
 const tab = (name: string) => fireEvent.press(screen.getByRole("tab", { name }));
 
 const QUESTIONS: any[] = liveBody("fallguard-questions");
+/** The real 422 answers of the server-scoring backend (`backend/docs/fe-captures/patient-fallguard`, copied to `test-utils/captures`). */
+const CODES: Record<string, string> = {
+  fallguard_no_answers: "008-p-submit-empty",
+  fallguard_duplicate_question: "009-p-submit-duplicate-question",
+  fallguard_unknown_question: "010-p-submit-unknown-question",
+  fallguard_invalid_option: "011-p-submit-invalid-option",
+};
+const refusal = (code: string) => ({ status: capture(`fg-${CODES[code]}`).status, body: capture(`fg-${CODES[code]}`).body });
 const SUBMIT = live("fallguard-submit");
 
 /** Opens the assessment and answers every question with option `i % options` (what the capture script answered). */
@@ -41,10 +51,24 @@ describe("FallGuard (live-shaped)", () => {
       expect(maxScore(questions)).toBe(40);
     });
 
-    it("builds the captured submit body: question id, the option's text, the option's score", () => {
+    it("builds the submit body from question ids and the options' exact text, and sends NO score (the server scores)", () => {
       const questions = toQuestions(QUESTIONS);
       const answers = Object.fromEntries(questions.map((q, i) => [q.id, i % q.options.length]));
-      expect(toSubmitBody(questions, answers)).toEqual(SUBMIT.request.body);
+      const body = toSubmitBody(questions, answers);
+      expect(body.answers).toHaveLength(24);
+      expect(body.answers.every((a) => !("score" in a))).toBe(true);
+      // Same ids and answer texts as the captured (older) body, without its `score` fields.
+      expect(body).toEqual({ answers: (SUBMIT.request.body as any).answers.map(({ score: _ignored, ...rest }: any) => rest) });
+    });
+
+    it("reads the four 422 codes of the new guide and nothing else", () => {
+      const coded = (code: string) => new ApiError(422, capture(`fg-${CODES[code]}`).body, "");
+      expect(fallguardRefusal(coded("fallguard_no_answers"))).toEqual({ kind: "message", message: "Please answer at least one question before you submit." });
+      expect(fallguardRefusal(coded("fallguard_unknown_question"))?.kind).toBe("reload");
+      expect(fallguardRefusal(coded("fallguard_invalid_option"))?.kind).toBe("reload");
+      expect(fallguardRefusal(coded("fallguard_duplicate_question"))?.kind).toBe("message");
+      expect(fallguardRefusal(new ApiError(500, { detail: "boom" }, ""))).toBeNull();
+      expect(fallguardRefusal(new Error("x"))).toBeNull();
     });
 
     it("treats the backend's 'Unable to analyze' stand-in as no summary", () => {
@@ -83,14 +107,17 @@ describe("FallGuard (live-shaped)", () => {
       view.unmount();
     });
 
-    it("submits the captured body (the server sums the scores the app sends) and shows the server's score", async () => {
+    it("submits question ids and option texts only (the server scores) and shows the server's score", async () => {
       const { calls, view } = await renderSignedIn(routes({ "POST /api/v1/fallguard/submit": () => liveReply("fallguard-submit") }));
       await answerAll();
       await press("Submit");
       expect(await screen.findByText("Total risk score")).toBeTruthy();
       expect(screen.getByText("20")).toBeTruthy();
       expect(screen.getByText("out of 40")).toBeTruthy();
-      expect(calls.find((c) => c.method === "POST" && c.path === "/api/v1/fallguard/submit")?.body).toEqual(SUBMIT.request.body);
+      const sent: any = calls.find((c) => c.method === "POST" && c.path === "/api/v1/fallguard/submit")?.body;
+      expect(sent.answers).toHaveLength(24);
+      expect(sent.answers.some((a: any) => "score" in a)).toBe(false);
+      expect(sent.answers.map((a: any) => [a.question_id, a.answer])).toEqual((SUBMIT.request.body as any).answers.map((a: any) => [a.question_id, a.answer]));
       // the captured AI answer was the failure stand-in: no summary card, and a plain line instead of invented advice
       expect(screen.queryByText(/Unable to analy/i)).toBeNull();
       expect(screen.getByText(/could not prepare personal advice/)).toBeTruthy();
@@ -115,14 +142,38 @@ describe("FallGuard (live-shaped)", () => {
       view.unmount();
     });
 
-    it("keeps the person on the last question with the server's refusal when the submit fails (captured 500)", async () => {
-      const { view } = await renderSignedIn(routes({ "POST /api/v1/fallguard/submit": () => liveReply("fallguard-submit-unknown-question") }));
+    it("a failed submit (500) keeps the person on the last question with a plain sentence", async () => {
+      const { view } = await renderSignedIn(routes({ "POST /api/v1/fallguard/submit": () => ({ status: 500, body: { detail: "Internal Server Error" } }) }));
       await answerAll();
       await press("Submit");
       expect(await screen.findByText("Could not submit")).toBeTruthy();
       expect(screen.getByText("Something went wrong on our side. Please try again in a moment.")).toBeTruthy();
       expect(screen.queryByText("Total risk score")).toBeNull();
       expect(screen.getByText("24 of 24 questions")).toBeTruthy();
+      view.unmount();
+    });
+
+    it("an unknown question or option (422, nothing stored) says the questions changed, reloads them and starts again at question 1", async () => {
+      for (const code of ["fallguard_unknown_question", "fallguard_invalid_option"]) {
+        const { calls, view } = await renderSignedIn(routes({ "POST /api/v1/fallguard/submit": () => refusal(code) }));
+        await answerAll();
+        const readsBefore = calls.filter((c) => c.path === "/api/v1/fallguard/questions").length;
+        await press("Submit");
+        expect(await screen.findByText(/The questions have been updated since you started/)).toBeTruthy();
+        expect(await screen.findByText("1 of 24 questions")).toBeTruthy();
+        await waitFor(() => expect(calls.filter((c) => c.path === "/api/v1/fallguard/questions").length).toBeGreaterThan(readsBefore));
+        // the answers were dropped: Next is closed again until the person picks an option
+        expect(screen.getByRole("button", { name: "Next" })).toBeDisabled();
+        view.unmount();
+      }
+    });
+
+    it("a duplicate question (422) is shown as a plain sentence, without the raw code", async () => {
+      const { view } = await renderSignedIn(routes({ "POST /api/v1/fallguard/submit": () => refusal("fallguard_duplicate_question") }));
+      await answerAll();
+      await press("Submit");
+      expect(await screen.findByText(/Something went wrong with your answers/)).toBeTruthy();
+      expect(screen.queryByText(/fallguard_duplicate_question/)).toBeNull();
       view.unmount();
     });
 
