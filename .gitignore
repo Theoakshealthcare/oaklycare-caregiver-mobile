@@ -36,3 +36,9 @@ yarn-error.*
 
 # Local agent worktrees / tooling
 .claude/
+
+# Firebase / Google credentials: never commit (the admin SDK key is a secret; google-services.json goes in as an EAS file env var)
+*firebase-adminsdk*.json
+*service-account*.json
+google-services.json
+GoogleService-Info.plist
