@@ -5,7 +5,7 @@ import { StyleSheet, View } from "react-native";
 
 import Button from "@/src/components/ui/button";
 import { Card, EmptyState } from "@/src/components/ui/card";
-import SampleNotice from "@/src/components/ui/sample-notice";
+import QueryError from "@/src/components/ui/query-error";
 import Screen from "@/src/components/ui/screen";
 import SegmentedControl from "@/src/components/ui/segmented-control";
 import Text from "@/src/components/ui/text";
@@ -41,7 +41,7 @@ const VitalDetail: React.FC<Props> = ({ navigation, route }) => {
 
   return (
     <Screen title={meta.label} scroll>
-      <SampleNotice what="This vital" />
+      {readings.isError ? <QueryError what="this vital" error={readings.error} onRetry={() => void readings.refetch()} /> : null}
       <Card tone="tint">
         <Text variant="small" color={theme.colors.textLight}>
           Latest reading

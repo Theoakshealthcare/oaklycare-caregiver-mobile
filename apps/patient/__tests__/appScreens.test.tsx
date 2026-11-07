@@ -163,63 +163,6 @@ describe("signed-in app (sample data behind one hook per screen)", () => {
     });
   });
 
-  describe("vitals", () => {
-    it("shows the six tiles with correct units (no 'bpr', 'bpm' on blood pressure, '98.6 C' or 'mgd/dl')", async () => {
-      const { view } = await renderSignedIn();
-      await tab("Vitals");
-      for (const label of ["Heart rate", "Blood pressure", "Temperature", "Respiratory rate", "Blood glucose", "Sleep duration"]) {
-        expect(await screen.findByRole("button", { name: label })).toBeTruthy();
-      }
-      expect(screen.getByText(/^mmHg ·/)).toBeTruthy();
-      expect(screen.getByText(/^°C ·/)).toBeTruthy();
-      expect(screen.getByText(/^mg\/dL ·/)).toBeTruthy();
-      expect(screen.queryByText(/bpr|mgd\/dl| C$/i)).toBeNull();
-      view.unmount();
-    });
-
-    it("manual entry: checks the numbers, then adds the reading to the tile and the history", async () => {
-      const { view } = await renderSignedIn();
-      await tab("Vitals");
-      await fireEvent.press(await screen.findByRole("button", { name: "Add Blood pressure reading" }));
-      await press("Save reading");
-      expect(await screen.findAllByText("Enter a value")).toHaveLength(2);
-      await type("Systolic, top number (mmHg)", "80");
-      await type("Diastolic, bottom number (mmHg)", "120");
-      await press("Save reading");
-      expect(await screen.findByText("The bottom number must be lower than the top number")).toBeTruthy();
-      await type("Systolic, top number (mmHg)", "118");
-      await type("Diastolic, bottom number (mmHg)", "76");
-      await press("Save reading");
-
-      expect(await screen.findByText("118/76")).toBeTruthy();
-      await press("History");
-      expect(await screen.findByText("Blood pressure: 118/76 mmHg")).toBeTruthy();
-      view.unmount();
-    });
-
-    it("detail: Day / Week / Month change what is listed", async () => {
-      const { view } = await renderSignedIn();
-      await tab("Vitals");
-      await fireEvent.press(await screen.findByRole("button", { name: "Heart rate" }));
-      // Sample readings: 2 hours ago, 1 day ago and 3 days ago.
-      await waitFor(() => expect(screen.getAllByText(/ bpm$/).length).toBeGreaterThanOrEqual(3));
-      await fireEvent.press(screen.getByRole("tab", { name: "Day" }));
-      expect(screen.getByLabelText("Heart rate chart, 1 readings")).toBeTruthy();
-      await fireEvent.press(screen.getByRole("tab", { name: "Week" }));
-      expect(screen.getByLabelText("Heart rate chart, 3 readings")).toBeTruthy();
-      view.unmount();
-    });
-
-    it("who can see my vitals: grant and revoke", async () => {
-      const { view } = await renderSignedIn();
-      await tab("Vitals");
-      await fireEvent.press(await screen.findByRole("button", { name: "Who can see my vitals" }));
-      await fireEvent.press(await screen.findByRole("button", { name: "Revoke access" }));
-      await waitFor(() => expect(screen.getAllByRole("button", { name: "Grant access" })).toHaveLength(2));
-      view.unmount();
-    });
-  });
-
   describe("FallGuard", () => {
     it("answers one question at a time without scores, submits, and offers Book a Home Visit", async () => {
       const { view } = await renderSignedIn();

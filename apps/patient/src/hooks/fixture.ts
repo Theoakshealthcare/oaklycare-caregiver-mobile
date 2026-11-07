@@ -14,6 +14,4 @@ export function useFixtureQuery<T>(key: readonly string[], produce: () => T) {
 export const sampleKeys = {
   bookings: ["sample", "bookings"] as const,
   chat: (bookingId: string) => ["sample", "chat", bookingId] as const,
-  readings: ["sample", "readings"] as const,
-  access: ["sample", "access"] as const,
 };

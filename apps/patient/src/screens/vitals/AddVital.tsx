@@ -2,15 +2,15 @@ import type { StackScreenProps } from "@react-navigation/stack";
 import type React from "react";
 import { useState } from "react";
 
+import { messageForError } from "@/src/api/errors";
 import Button from "@/src/components/ui/button";
+import ChipSelect from "@/src/components/ui/chip-select";
+import ErrorDialog from "@/src/components/ui/ErrorDialog";
 import Input from "@/src/components/ui/input";
-import SampleNotice from "@/src/components/ui/sample-notice";
 import Screen from "@/src/components/ui/screen";
 import Text from "@/src/components/ui/text";
-import { messageForError } from "@/src/api/errors";
-import ErrorDialog from "@/src/components/ui/ErrorDialog";
 import { theme } from "@/src/constants/theme";
-import { ENTRY_FIELDS, validateEntry, vitalMeta } from "@/src/domain/vitals";
+import { ENTRY_FIELDS, GLUCOSE_CONTEXTS, entryToInput, validateEntry, vitalMeta, type GlucoseContext } from "@/src/domain/vitals";
 import { useAddVital } from "@/src/hooks/useVitals";
 import type { ScreenParamLists } from "@/src/navigation/Navigations";
 
@@ -22,6 +22,7 @@ const AddVital: React.FC<Props> = ({ navigation, route }) => {
   const meta = vitalMeta(kind);
   const [values, setValues] = useState<Record<string, string>>({});
   const [errors, setErrors] = useState<Record<string, string>>({});
+  const [glucoseContext, setGlucoseContext] = useState<GlucoseContext>("RBS");
   const [dialog, setDialog] = useState<string | null>(null);
   const add = useAddVital();
 
@@ -29,17 +30,18 @@ const AddVital: React.FC<Props> = ({ navigation, route }) => {
     const found = validateEntry(kind, values);
     setErrors(found);
     if (Object.keys(found).length > 0) return;
-    const parse = (key: string) => Number((values[key] ?? "").trim().replace(",", "."));
-    add.mutate(
-      { kind, value: parse("value"), secondary: ENTRY_FIELDS[kind].some((f) => f.key === "secondary") ? parse("secondary") : undefined },
-      { onSuccess: () => navigation.goBack(), onError: (e) => setDialog(messageForError(e)) },
-    );
+    add.mutate(entryToInput(kind, values, glucoseContext), {
+      onSuccess: () => navigation.goBack(),
+      onError: (e) => setDialog(messageForError(e)),
+    });
   };
 
   return (
     <Screen title={`Add ${meta.label.toLowerCase()}`} scroll>
-      <SampleNotice what="Saving" />
       <Text color={theme.colors.textLight}>Enter the reading you just took.</Text>
+      {kind === "blood_glucose" ? (
+        <ChipSelect label="When was it taken?" options={GLUCOSE_CONTEXTS} value={glucoseContext} onChange={(v) => setGlucoseContext(v as GlucoseContext)} />
+      ) : null}
       {ENTRY_FIELDS[kind].map((field) => (
         <Input
           key={field.key}
@@ -50,7 +52,7 @@ const AddVital: React.FC<Props> = ({ navigation, route }) => {
             setValues((prev) => ({ ...prev, [field.key]: v }));
             setErrors((prev) => ({ ...prev, [field.key]: "" }));
           }}
-          keyboardType="decimal-pad"
+          keyboardType={field.type === "time" ? "numbers-and-punctuation" : "decimal-pad"}
           error={errors[field.key] || undefined}
         />
       ))}

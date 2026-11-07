@@ -1,9 +1,8 @@
 import type React from "react";
-import { View } from "react-native";
 
-import { messageForError } from "@/src/api/errors";
 import Button from "@/src/components/ui/button";
 import { Card, EmptyState } from "@/src/components/ui/card";
+import QueryError from "@/src/components/ui/query-error";
 import Screen from "@/src/components/ui/screen";
 import Text from "@/src/components/ui/text";
 import { theme } from "@/src/constants/theme";
@@ -29,10 +28,7 @@ const Notifications: React.FC = () => {
   return (
     <Screen title="Notifications" scroll>
       {feed.isError && !feed.data ? (
-        <View style={{ gap: theme.spacing.md }}>
-          <EmptyState title="We couldn't load your notifications" message={messageForError(feed.error)} />
-          <Button title="Try again" onPress={() => void feed.refetch()} />
-        </View>
+        <QueryError what="your notifications" error={feed.error} onRetry={() => void feed.refetch()} />
       ) : feed.isLoading ? null : items.length === 0 ? (
         <EmptyState title="No notifications yet" message="Updates about your bookings will show up here." />
       ) : (

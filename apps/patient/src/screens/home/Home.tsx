@@ -45,7 +45,7 @@ const Home: React.FC = () => {
         <Text color={theme.colors.textLight}>What would you like to do today?</Text>
       </View>
 
-      <SampleNotice what="Your appointments and vitals" />
+      <SampleNotice what="Your appointments" />
 
       <Card tone="warm" style={styles.start}>
         <Text variant="h3" weight="bold">
