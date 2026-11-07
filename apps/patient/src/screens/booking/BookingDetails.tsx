@@ -2,34 +2,62 @@ import type { StackScreenProps } from "@react-navigation/stack";
 import type React from "react";
 import { View } from "react-native";
 
+import { messageForError } from "@/src/api/errors";
 import VisitCodeCard from "@/src/components/booking/VisitCodeCard";
 import Button from "@/src/components/ui/button";
 import { Card, Chip, DetailRow, EmptyState } from "@/src/components/ui/card";
-import SampleNotice from "@/src/components/ui/sample-notice";
 import Screen from "@/src/components/ui/screen";
+import Text from "@/src/components/ui/text";
 import { theme } from "@/src/constants/theme";
-import { canCancel, canTrack, showsVisitCode, statusLabel } from "@/src/domain/booking";
+import {
+  canCancel,
+  canTrack,
+  needsPayment,
+  refundText,
+  REFUND_DESTINATION_TEXT,
+  showsVisitCode,
+  statusLabel,
+  type Booking,
+} from "@/src/domain/booking";
 import { formatDate, formatNaira, formatTime } from "@/src/domain/format";
 import { useBooking } from "@/src/hooks/useBookings";
 import type { ScreenParamLists } from "@/src/navigation/Navigations";
 
 type Props = StackScreenProps<ScreenParamLists, "BookingDetails">;
 
+const paymentChip = (booking: Booking) =>
+  booking.paymentStatus === "paid"
+    ? { label: "PAID", tone: "success" as const }
+    : booking.paymentStatus === "refunded" || booking.paymentStatus === "partially_refunded"
+      ? { label: "REFUNDED", tone: "neutral" as const }
+      : booking.paymentStatus === "failed"
+        ? { label: "PAYMENT FAILED", tone: "error" as const }
+        : { label: "PAYMENT PENDING", tone: "warning" as const };
+
 const BookingDetails: React.FC<Props> = ({ navigation, route }) => {
   const { id } = route.params;
-  const { data: booking, isLoading } = useBooking(id);
+  const { data: booking, isLoading, isError, error, refetch } = useBooking(id);
 
   if (!booking) {
     return (
       <Screen title="Booking details">
-        {isLoading ? null : <EmptyState title="We couldn't find this booking" />}
+        {isLoading ? (
+          <Text color={theme.colors.textLight}>Loading…</Text>
+        ) : isError ? (
+          <Card tone="warm">
+            <Text accessibilityRole="alert">{messageForError(error)}</Text>
+            <Button small variant="outline" title="Try again" onPress={() => void refetch()} />
+          </Card>
+        ) : (
+          <EmptyState title="We couldn't find this booking" />
+        )}
       </Screen>
     );
   }
 
+  const chip = paymentChip(booking);
   return (
     <Screen title="Booking details" scroll>
-      <SampleNotice what="This booking" />
       {showsVisitCode(booking) && booking.visitCode ? <VisitCodeCard code={booking.visitCode} /> : null}
       <Card>
         <DetailRow label="Booking ID" value={booking.reference} />
@@ -40,16 +68,35 @@ const BookingDetails: React.FC<Props> = ({ navigation, route }) => {
         <DetailRow label="Time" value={formatTime(booking.scheduledAt)} />
         <DetailRow label="Duration" value={`${booking.durationHours} ${booking.durationHours === 1 ? "hour" : "hours"}`} />
         <DetailRow label="Address" value={booking.address} />
-        {booking.caregiver ? <DetailRow label="Caregiver" value={booking.caregiver.name} /> : null}
+        {booking.caregiver ? <DetailRow label="Caregiver" value={booking.caregiver.firstName} /> : null}
         <DetailRow label="Amount" value={formatNaira(booking.amount)} />
         <View>
-          <Chip
-            label={booking.paymentStatus === "paid" ? "PAID" : booking.paymentStatus === "refunded" ? "REFUNDED" : "PAYMENT PENDING"}
-            tone={booking.paymentStatus === "paid" ? "success" : booking.paymentStatus === "refunded" ? "neutral" : "warning"}
-          />
+          <Chip label={chip.label} tone={chip.tone} />
         </View>
       </Card>
+      {booking.status === "cancelled" && booking.cancelFee !== null ? (
+        <Card tone="tint">
+          <Text weight="bold">Cancellation</Text>
+          <DetailRow label="Cancellation fee" value={booking.cancelFee === 0 ? "Free" : formatNaira(booking.cancelFee)} />
+          {booking.refund ? (
+            <>
+              <DetailRow label="Refund" value={booking.refund.amount === null ? "Amount to be confirmed" : formatNaira(booking.refund.amount)} />
+              <Text>{refundText(booking.refund)}</Text>
+              <Text variant="small" color={theme.colors.textLight}>
+                {REFUND_DESTINATION_TEXT}
+              </Text>
+            </>
+          ) : (
+            <Text variant="small" color={theme.colors.textLight}>
+              Nothing was charged, so there is nothing to refund.
+            </Text>
+          )}
+        </Card>
+      ) : null}
       <View style={{ gap: theme.spacing.sm }}>
+        {needsPayment(booking) ? (
+          <Button title="Pay now" onPress={() => navigation.navigate("PaymentResult", { bookingId: id, open: true })} />
+        ) : null}
         {canTrack(booking) ? <Button title="Track caregiver" onPress={() => navigation.navigate("CaregiverDetail", { id })} /> : null}
         {booking.caregiver ? <Button title="Chat with caregiver" variant="outline" onPress={() => navigation.navigate("Chat", { id })} /> : null}
         {canCancel(booking) ? <Button title="Cancel booking" variant="danger" onPress={() => navigation.navigate("CancelBooking", { id })} /> : null}

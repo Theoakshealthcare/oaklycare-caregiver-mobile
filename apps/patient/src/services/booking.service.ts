@@ -1,0 +1,96 @@
+import { api } from "@/src/api/client";
+import { ApiError } from "@/src/api/errors";
+import { unwrap } from "@/src/api/unwrap";
+import type { Booking, BookingDraft, BookingQuote, CancelResult, CancelTerms } from "@/src/domain/booking";
+
+import { toBooking, toCancelResult, toCancelTerms, toCreateBody, toQuote } from "./bookingMapper";
+
+/** What `POST /booking/create` gives back: the booking, and where to pay for it. */
+export interface CreatedBooking {
+  booking: Booking;
+  /** The Paystack checkout URL. Only this response carries it; no other endpoint gives it again. */
+  paymentUrl: string | null;
+  /** Set when the payment could not be started: the backend cancelled the booking and marked payment failed. */
+  paymentError: string | null;
+}
+
+/**
+ * What `POST /booking/booking/{id}/verify-payment` says. The route is untyped in the OpenAPI (it answers `unknown`),
+ * so the shape is read from the live responses in `backend/docs/fe-captures` and the route's code: `status` is
+ * "success" (paid), "pending" (Paystack says not paid yet) or "error" (Paystack could not confirm).
+ */
+export type PaymentCheck =
+  | { kind: "paid" }
+  /** Paid, but the booking stays cancelled (the payment link had expired): a refund is coming. */
+  | { kind: "paid_refund_required" }
+  | { kind: "not_paid"; message: string };
+
+export function readPaymentCheck(body: unknown): PaymentCheck {
+  const b = body && typeof body === "object" ? (body as Record<string, unknown>) : {};
+  if (b.status === "success" && b.refund_required === true) return { kind: "paid_refund_required" };
+  if (b.status === "success" && b.payment_status === "paid") return { kind: "paid" };
+  return { kind: "not_paid", message: typeof b.message === "string" ? b.message : "Payment not confirmed yet" };
+}
+
+/** `detail.terms` of a `409 terms_changed`: the new fee to show before asking again. Null for any other error. */
+export function termsFromChangedError(error: unknown): CancelTerms | null {
+  if (!(error instanceof ApiError) || error.code !== "terms_changed") return null;
+  const detail = (error.body as { detail?: { terms?: Parameters<typeof toCancelTerms>[0] } }).detail;
+  return detail?.terms ? toCancelTerms(detail.terms) : null;
+}
+
+export const bookingService = {
+  /** The price. Public route; location is optional but changes surge pricing and availability. */
+  async preview(input: { durationHours: number; latitude: number | null; longitude: number | null }): Promise<BookingQuote> {
+    const body = await unwrap(
+      api.POST("/api/v1/booking/preview", {
+        body: {
+          service_type: "nurse",
+          duration_hours: input.durationHours,
+          patient_latitude: input.latitude,
+          patient_longitude: input.longitude,
+        },
+      }),
+    );
+    return toQuote(body);
+  },
+
+  async create(draft: BookingDraft): Promise<CreatedBooking> {
+    const body = await unwrap(api.POST("/api/v1/booking/create", { body: toCreateBody(draft) }));
+    return { booking: toBooking(body), paymentUrl: body.payment_url ?? null, paymentError: body.payment_error ?? null };
+  },
+
+  async list(): Promise<Booking[]> {
+    const body = await unwrap(api.GET("/api/v1/booking/patient/bookings", { params: { query: {} } }));
+    return body.map(toBooking);
+  },
+
+  /** The detail is the only response that carries the visit code. (The path really has "booking" twice.) */
+  async get(id: string): Promise<Booking> {
+    const body = await unwrap(api.GET("/api/v1/booking/booking/{booking_id}", { params: { path: { booking_id: id } } }));
+    return toBooking(body);
+  },
+
+  async verifyPayment(id: string): Promise<PaymentCheck> {
+    const body = await unwrap(
+      api.POST("/api/v1/booking/booking/{booking_id}/verify-payment", { params: { path: { booking_id: id } } }),
+    );
+    return readPaymentCheck(body);
+  },
+
+  async cancelTerms(id: string): Promise<CancelTerms> {
+    const body = await unwrap(api.GET("/api/v1/booking/{booking_id}/cancel-terms", { params: { path: { booking_id: id } } }));
+    return toCancelTerms(body);
+  },
+
+  /** Always sends `accepted_fee_kobo`: if the fee is higher by now nothing is cancelled and the answer is 409 `terms_changed`. */
+  async cancel(id: string, input: { acceptedFeeKobo: number; reason?: string }): Promise<CancelResult> {
+    const body = await unwrap(
+      api.POST("/api/v1/booking/{booking_id}/cancel", {
+        params: { path: { booking_id: id } },
+        body: { accepted_fee_kobo: input.acceptedFeeKobo, ...(input.reason ? { reason: input.reason } : {}) },
+      }),
+    );
+    return toCancelResult(body);
+  },
+};

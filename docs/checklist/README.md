@@ -146,7 +146,7 @@ Owner decisions (2026-11-07): move the old app into the monorepo on SDK 57, copi
   - [x] Screens: intro, auth (6), home, notifications, bookings tabs, booking details with the **visit code**, cancel with the fee tier shown first, booking steps 1 and 2 and summary, payment result, track, chat, vitals (tiles, entry, detail, history, who can see), FallGuard (intro, one generic question screen, result), profile (menu, edit, contact, account and data)
   - [x] Design mistakes fixed (units, typos, currency, no scores, no Critical chips); dead code not carried (24 FallGuard files, wallet, prescriptions, call, AI note taker)
   - [x] Every screen reads one `useXxx` hook over sample data and draws a "shows sample information" notice; the wiring slices below delete the notice
-  - [ ] Still to wire, per slice: booking + payment (P5, needs backend #39 and a Paystack WebView), tracking map and chat (P9), vitals (P6), FallGuard (P7), notifications (P8), profile edit and change password, FAQs / About copy, Terms / Privacy links
+  - [ ] Still to wire, per slice: tracking map and chat (P9), vitals (P6), FallGuard (P7), notifications (P8), profile edit and change password, FAQs / About copy, Terms / Privacy links
   - [ ] Device pass: layouts, fonts, the keyboard helpers on a phone, intro slides
 - [ ] P2 Security: archive the old repo and rotate the old upload key (owner: was `com.oakly.oaklypatient` ever published, is the old repo public?); full logout also unregisters push
 - [ ] P3 Auth correctness (partly done 2026-11-07, same branch and SOP as P1b; Jest only, **not device-verified**)
@@ -156,7 +156,15 @@ Owner decisions (2026-11-07): move the old app into the monorepo on SDK 57, copi
   - [ ] Change password screen; profile edit refetches `/auth/me`; deep link scheme for the emailed link
   - [ ] Live capture of register / verify / resend / forgot / delete against the running backend (owed; the FE guide rule), device pass
 - [ ] P4-BE Backend: `GET cancel-terms` + `POST cancel` with fee tiers, cancel/refund state on the booking, FE guide with live captures
-- [ ] P5 Booking complete: booking detail with the **visit code**, all statuses and `dispatch_state`, cancel with fee confirm, payment polling cap and resume
+- [x] P5 Booking on the real backend (2026-11-07, branch `feature/patient-booking`, stacked on #23, see docs/sop/2026-11-07-patient-booking-wiring-and-device-proof.md; **proved on the iOS simulator** against a scratch backend with a fake Paystack, ledger `LEDGER-device-patient-booking.md`; not pushed)
+  - [x] Preview price (backend only), create with the phone's location, language / gender in the special instructions, chip date and time
+  - [x] Paystack checkout in the system browser, capped backend confirm, "Payment not confirmed yet", Pay now (in memory)
+  - [x] List and detail: every status and `dispatch_state`, caregiver first name, visit code (20 s refresh while open and active), Pay now for an unpaid booking
+  - [x] Cancel: terms first, `accepted_fee_kobo`, `terms_changed`, every `detail.code` in a sentence, refund summary from the booking; no wallet wording
+  - [x] One error place: "Can't reach Oakly" only for a request that never completed (copy of the #22 classifier)
+  - [x] `ios-debug.sh --app patient`
+  - [ ] **Backend: a fresh payment link** (Pay now after an app restart), **coordinates from the address** (the phone's location is used today), caregiver phone in the booking
+  - [ ] Not run: physical phone, Android, live Paystack
 - [ ] P6 / P6-BE Vitals fix: insights shape, caregiver access list/grant/revoke (backend patient-id vs user-id bug at `vitals.py:151,164,180`)
 - [ ] P7 / P7-BE FallGuard tidy: align types, score computed server-side
 - [ ] P8-BE / P8 Patient notifications feed + push for app bookers, real Home, Expo push token (owner: Apple / FCM keys)
