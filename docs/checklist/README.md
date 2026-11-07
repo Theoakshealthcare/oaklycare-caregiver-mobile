@@ -27,6 +27,11 @@ channel) lives in the backend repo: `docs/checklist/MASTER_CHECKLIST.md`. Update
 - [ ] Welcome slide 3 art replacement (shows a "BOOK NOW" phone); sign-up "Create Account" clip after errors and bank picker top inset (DP1-31 remainder); Android pass
 - [ ] Leave alone until decided: DP1-10, 16, 21, 22, 23, 33
 
+## Device pass 2 (2026-11-07)
+- [x] Second simulator walk of the caregiver app: accept/decline offers, "No longer available", wallet pending/available/on hold, bank add/change and 24 h pause, payslip, vitals entry, normal and short visit completion, under-review / changes-requested / rejected states, note taker with the mic, logout, Home, Job Details, offers list. 9 findings (1 major, 4 minor, 2 polish, 1 note), 2 fixed on `fix/caregiver-device-pass-2` (decline copy says a decline is final; vitals entry clears an old error); see docs/sop/2026-11-07-caregiver-device-pass-2.md and ledgers/LEDGER-device-pass-2.md
+- [ ] DP2-01 (major): tell the caregiver, before and after completing, that a visit under half its booked time is held for Finance review (owner wording; backend earning status in the `complete` response)
+- [ ] Still unwalked: "I've arrived" step, reset-by-code screens, cancel/drop-out, Android, push, location, keyboard re-check
+
 ## Caregiver vitals (Client care v1, part 1)
 - [x] Vitals tab: six-vital grid for the patient on the in-progress visit; "available during an active visit" on 403 or before the visit starts (2026-10-27, see docs/sop/2026-10-27-caregiver-vitals-tab.md)
 - [x] Per-vital chart (Day / Week / Month) and history; manual entry for all six (glucose mg/dL / mmol/L with RBS / FBS / PP); report download then native share, temp file deleted
