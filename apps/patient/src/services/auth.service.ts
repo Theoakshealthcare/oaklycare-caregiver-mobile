@@ -6,6 +6,7 @@ import { queryKeys } from "@/src/api/keys";
 import { queryClient } from "@/src/api/queryClient";
 import { unwrap } from "@/src/api/unwrap";
 import { session } from "@/src/auth";
+import { forgetPushToken } from "@/src/push/forget";
 
 export type User = Schemas["UserWithTypeData"];
 
@@ -80,18 +81,21 @@ export const authService = {
   /**
    * DELETE /auth/profile: the backend erases the person's data and refuses with 409 and a plain-language `detail`
    * while bookings or money are still open (shown as sent). The session is cleared only after the delete succeeded,
-   * so a refusal leaves the person signed in.
+   * so a refusal leaves the person signed in. The push token is forgotten first, while the account still exists.
    */
   async deleteAccount(): Promise<void> {
+    await forgetPushToken();
     await unwrap(api.DELETE("/api/v1/auth/profile"));
     await session.signOut();
   },
 
   /**
-   * Logs out: clears the keychain tokens, the in-memory session and every cached query (the session's
-   * `onSignedOut` hook clears the query cache). No server-side logout route exists today.
+   * Logs out: first (best effort, never blocking) tells the server to stop pushing to this device, then clears the
+   * keychain tokens, the in-memory session and every cached query (the session's `onSignedOut` hook clears the query
+   * cache). No server-side logout route exists today.
    */
   async logout(): Promise<void> {
+    await forgetPushToken();
     await session.signOut();
   },
 };

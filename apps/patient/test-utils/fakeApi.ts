@@ -31,6 +31,8 @@ export const tokens = { access_token: "access-1", refresh_token: "refresh-1", to
 export interface RecordedCall {
   method: string;
   path: string;
+  /** The query string, with its leading `?` (empty when there is none). */
+  search: string;
   authorization: string | null;
   body: unknown;
 }
@@ -47,6 +49,7 @@ export function routeFetch(routes: Record<string, Handler>): RecordedCall[] {
     const call: RecordedCall = {
       method: input.method,
       path: url.pathname,
+      search: url.search,
       authorization: input.headers.get("Authorization"),
       body: text ? JSON.parse(text) : null,
     };

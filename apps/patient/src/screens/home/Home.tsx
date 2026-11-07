@@ -1,6 +1,7 @@
 import type React from "react";
 import { Pressable, StyleSheet, View } from "react-native";
 
+import NotificationBell from "@/src/components/NotificationBell";
 import Button from "@/src/components/ui/button";
 import { Card, Chip, EmptyState } from "@/src/components/ui/card";
 import Icon from "@/src/components/ui/icon";
@@ -34,9 +35,7 @@ const Home: React.FC = () => {
         <Pressable accessibilityRole="button" accessibilityLabel="Open profile" hitSlop={8} onPress={() => navigation.navigate("Profile")}>
           <Icon name="menu" size={26} />
         </Pressable>
-        <Pressable accessibilityRole="button" accessibilityLabel="Notifications" hitSlop={8} onPress={() => navigation.navigate("Notifications")}>
-          <Icon name="notifications-outline" size={26} />
-        </Pressable>
+        <NotificationBell />
       </View>
 
       <View>

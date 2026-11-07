@@ -4,6 +4,7 @@ import { session } from "../src/auth";
 
 import App from "../App";
 import { patientUser, routeFetch, setIntroSeen, type FakeUser } from "./fakeApi";
+import { liveReply } from "./live";
 
 type Routes = Parameters<typeof routeFetch>[0];
 
@@ -12,7 +13,12 @@ export async function renderSignedIn(extra: Routes = {}, user: FakeUser = patien
   await session.signOut();
   await setIntroSeen(true);
   await session.signIn({ accessToken: "access-stored", refreshToken: "refresh-stored" });
-  const calls = routeFetch({ "GET /api/v1/auth/me": () => ({ status: 200, body: user }), ...extra });
+  // The bell reads the (real, captured) empty feed unless a test routes its own.
+  const calls = routeFetch({
+    "GET /api/v1/auth/me": () => ({ status: 200, body: user }),
+    "GET /api/v1/patient/notifications": () => liveReply("feed-empty"),
+    ...extra,
+  });
   const view = await render(<App />);
   await screen.findByText(`Hello, ${user.full_name.split(" ")[0]}`);
   return { calls, view };

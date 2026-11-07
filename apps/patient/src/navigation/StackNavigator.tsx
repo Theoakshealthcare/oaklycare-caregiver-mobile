@@ -4,6 +4,7 @@ import { useState } from "react";
 import { useSession } from "../auth";
 import { useOnboarding } from "../auth/onboarding";
 import { useMe } from "../hooks/queries";
+import { usePushEffects } from "../push/native";
 import GateMessage from "../screens/GateMessage";
 import Splash from "../screens/Splash";
 import { authService } from "../services/auth.service";
@@ -14,6 +15,12 @@ import { APP_SCREENS, AUTH_SCREENS, VERIFY_SCREENS, type ScreenDef } from "./rou
 const Stack = createStackNavigator<ScreenParamLists>();
 
 const signOut = () => void authService.logout();
+
+/** Push registration and tap handling for the signed-in app; renders nothing. */
+const PushEffects = () => {
+  usePushEffects();
+  return null;
+};
 
 const screens = (defs: ScreenDef[]) =>
   defs.map((def) => <Stack.Screen key={def.name} name={def.name} component={def.component} />);
@@ -73,9 +80,12 @@ const StackNavigator = () => {
       return onboarding === "unknown" ? <Splash /> : <SignedOutStack />;
     case "app":
       return (
-        <Stack.Navigator key="app" initialRouteName="Tabs" screenOptions={{ headerShown: false }}>
-          {screens(APP_SCREENS)}
-        </Stack.Navigator>
+        <>
+          <PushEffects />
+          <Stack.Navigator key="app" initialRouteName="Tabs" screenOptions={{ headerShown: false }}>
+            {screens(APP_SCREENS)}
+          </Stack.Navigator>
+        </>
       );
   }
 };
