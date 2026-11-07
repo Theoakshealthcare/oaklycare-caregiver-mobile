@@ -339,6 +339,31 @@ describe("auth flows", () => {
     });
   });
 
+  describe("log in with the keyboard", () => {
+    it("the keyboard's Go key on the password field logs in, like the Login button (which can sit under the keyboard)", async () => {
+      const { calls, view } = await renderSignedOut({
+        "POST /api/v1/auth/login/mobile": () => ({ status: 401, body: { detail: "Incorrect email or password" } }),
+      });
+      await type("Email address", "ada.placeholder@example.com");
+      await type("Password", "placeholder-password");
+      const password = screen.getByLabelText("Password");
+      expect(password.props.returnKeyType).toBe("go");
+      fireEvent(password, "submitEditing");
+      expect(await screen.findByText("Incorrect email or password.")).toBeTruthy();
+      expect(calls.filter((c) => c.path === "/api/v1/auth/login/mobile")).toHaveLength(1);
+      view.unmount();
+    });
+
+    it("Go with an empty password asks for it and does not call the server", async () => {
+      const { calls, view } = await renderSignedOut();
+      await type("Email address", "ada.placeholder@example.com");
+      fireEvent(screen.getByLabelText("Password"), "submitEditing");
+      expect(await screen.findByText("Password is required")).toBeTruthy();
+      expect(calls).toHaveLength(0);
+      view.unmount();
+    });
+  });
+
   describe("sign-in with an unverified account", () => {
     it("lands on the verify step, not the app", async () => {
       const { view } = await renderSignedOut({
