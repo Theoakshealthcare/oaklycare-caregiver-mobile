@@ -25,12 +25,20 @@ export type SessionStatus = "restoring" | "signedOut" | "signedIn";
 export interface SessionState {
   status: SessionStatus;
   tokens: SessionTokens | null;
+  /**
+   * True when this device has signed in before. A signed-out caregiver who is `returning` lands on
+   * Login; only a brand-new install sees the welcome slides (DP1-12).
+   */
+  returning: boolean;
 }
 
 export interface TokenStorage {
   load(): Promise<SessionTokens | null>;
   save(tokens: SessionTokens): Promise<void>;
   clear(): Promise<void>;
+  /** Whether a caregiver ever signed in on this device. Survives `clear()` (sign-out). */
+  loadReturning?(): Promise<boolean>;
+  markReturning?(): Promise<void>;
 }
 
 export interface SessionDeps {
@@ -56,7 +64,7 @@ export interface Session {
 }
 
 export function createSession(deps: SessionDeps): Session {
-  const store = createStore<SessionState>(() => ({ status: "restoring", tokens: null }));
+  const store = createStore<SessionState>(() => ({ status: "restoring", tokens: null, returning: false }));
   let inflight: Promise<string | null> | null = null;
 
   async function persist(tokens: SessionTokens): Promise<void> {
@@ -68,7 +76,7 @@ export function createSession(deps: SessionDeps): Session {
   }
 
   async function signOut(): Promise<void> {
-    store.setState({ status: "signedOut", tokens: null });
+    store.setState({ status: "signedOut", tokens: null, returning: true });
     try {
       await deps.storage.clear();
     } catch {
@@ -108,11 +116,24 @@ export function createSession(deps: SessionDeps): Session {
       } catch {
         tokens = null;
       }
-      store.setState(tokens ? { status: "signedIn", tokens } : { status: "signedOut", tokens: null });
+      let returning = tokens !== null;
+      if (!returning) {
+        try {
+          returning = (await deps.storage.loadReturning?.()) ?? false;
+        } catch {
+          returning = false;
+        }
+      }
+      store.setState(tokens ? { status: "signedIn", tokens, returning } : { status: "signedOut", tokens: null, returning });
     },
     async signIn(tokens) {
-      store.setState({ status: "signedIn", tokens });
+      store.setState({ status: "signedIn", tokens, returning: true });
       await persist(tokens);
+      try {
+        await deps.storage.markReturning?.();
+      } catch {
+        // Only decides which signed-out screen comes first; losing it is harmless.
+      }
     },
     signOut,
     refresh() {

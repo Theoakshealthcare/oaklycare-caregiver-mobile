@@ -6,7 +6,6 @@ import Home from "../screens/home/Home";
 import { useEffect, useState } from "react";
 import type { StackScreenProps } from "@react-navigation/stack";
 import type { ScreenParamLists } from "./Navigations";
-import Fall from "../screens/fall/Fall";
 import Booking from "../screens/booking/Booking";
 import PagerView, { type PagerViewOnPageSelectedEvent } from "react-native-pager-view";
 import Image from "../components/ui/image";
@@ -42,13 +41,6 @@ const BottomNavigation = ({ route }: Partial<StackScreenProps<ScreenParamLists, 
       label: "Vitals",
       // Fetches only while its tab is showing (the pager keeps every page mounted).
       page: <Vitals active={tab === 2} />,
-    },
-    {
-      id: "fall",
-      icon: require("@/assets/images/tabs/fall.png"),
-      icon_active: require("@/assets/images/tabs/fall-active.png"),
-      label: "Fall",
-      page: <Fall />,
     },
   ];
 

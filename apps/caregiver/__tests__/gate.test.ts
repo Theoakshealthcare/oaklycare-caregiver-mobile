@@ -1,4 +1,4 @@
-import { resolveGate, setupRouteFor, type GateInput } from "../src/navigation/gate";
+import { firstSignedOutRoute, resolveGate, setupRouteFor, type GateInput } from "../src/navigation/gate";
 import {
   parseVerificationStatus,
   type ProfileStatus,
@@ -171,5 +171,12 @@ describe("identity step in the gate (KYC K7a)", () => {
       kind: "status",
       status: "under_review",
     });
+  });
+});
+
+describe("firstSignedOutRoute", () => {
+  it("shows the welcome slides only on a new install; a returning device lands on Login", () => {
+    expect(firstSignedOutRoute(false)).toBe("Onboarding");
+    expect(firstSignedOutRoute(true)).toBe("Login");
   });
 });

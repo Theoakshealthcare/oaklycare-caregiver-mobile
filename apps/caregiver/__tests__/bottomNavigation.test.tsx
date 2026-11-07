@@ -45,16 +45,17 @@ describe("BottomNavigation", () => {
   it("has a page for every tab: none is ever blank", async () => {
     await renderNav();
     const pager = screen.getByTestId("pager");
-    // Home, Booking, Vitals and Fall.
-    expect(pager.children).toHaveLength(4);
+    // Home, Booking and Vitals. FallGuard is patient-side: the caregiver app has no Fall tab (DP1-18).
+    expect(pager.children).toHaveLength(3);
     expect(screen.getByTestId("page-home")).toBeTruthy();
     expect(screen.getByTestId("page-booking")).toBeTruthy();
     // Vitals: with no visit it explains itself rather than showing nothing.
     expect(await screen.findByText("No active visit")).toBeTruthy();
   });
 
-  it("shows FallGuard as coming soon, not blank", async () => {
+  it("has no Fall tab and no FallGuard placeholder", async () => {
     await renderNav();
-    expect(screen.getByText("FallGuard is coming soon")).toBeTruthy();
+    expect(screen.queryByText("Fall")).toBeNull();
+    expect(screen.queryByText(/FallGuard/)).toBeNull();
   });
 });

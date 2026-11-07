@@ -44,13 +44,14 @@ import { authService } from "../services/auth.service";
 import AppRuntime from "./AppRuntime";
 import BottomNavigation from "./BottomNavigation";
 import { kycEnabled } from "../identity/config";
-import { resolveGate, type Gate } from "./gate";
+import { firstSignedOutRoute, resolveGate, type Gate } from "./gate";
 import type { ScreenParamLists } from "./Navigations";
 
 const Stack = createStackNavigator<ScreenParamLists>();
 
-function useGate(): { gate: Gate; retry: () => void } {
+function useGate(): { gate: Gate; returning: boolean; retry: () => void } {
   const sessionStatus = useSession((s) => s.status);
+  const returning = useSession((s) => s.returning);
   const me = useMe();
   const verified = me.data?.user_type === "caregiver" && me.data.is_verified;
   const status = useVerificationStatus(verified);
@@ -62,6 +63,7 @@ function useGate(): { gate: Gate; retry: () => void } {
   });
   return {
     gate,
+    returning,
     retry: () => {
       void me.refetch();
       void status.refetch();
@@ -70,7 +72,7 @@ function useGate(): { gate: Gate; retry: () => void } {
 }
 
 const StackNavigator = () => {
-  const { gate, retry } = useGate();
+  const { gate, returning, retry } = useGate();
 
   switch (gate.kind) {
     case "loading":
@@ -95,7 +97,7 @@ const StackNavigator = () => {
       );
     case "signedOut":
       return (
-        <Stack.Navigator key="signedOut" screenOptions={{ headerShown: false }} initialRouteName="Onboarding">
+        <Stack.Navigator key="signedOut" screenOptions={{ headerShown: false }} initialRouteName={firstSignedOutRoute(returning)}>
           <Stack.Screen name="Onboarding" component={OnboardingScreen} />
           <Stack.Screen name="Login" component={Login} />
           <Stack.Screen name="CreateAccount" component={CreateAccount} />

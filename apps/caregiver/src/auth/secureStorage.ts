@@ -10,6 +10,7 @@ const OPTIONS: SecureStore.SecureStoreOptions = {
 const ACCESS_KEY = "oakly.access_token";
 const REFRESH_KEY = "oakly.refresh_token";
 const PUSH_TOKEN_KEY = "oakly.push_token";
+const RETURNING_KEY = "oakly.returning";
 
 export const secureTokenStorage: TokenStorage = {
   async load(): Promise<SessionTokens | null> {
@@ -24,6 +25,12 @@ export const secureTokenStorage: TokenStorage = {
       SecureStore.setItemAsync(ACCESS_KEY, tokens.accessToken, OPTIONS),
       SecureStore.setItemAsync(REFRESH_KEY, tokens.refreshToken, OPTIONS),
     ]);
+  },
+  async loadReturning() {
+    return (await SecureStore.getItemAsync(RETURNING_KEY, OPTIONS)) === "1";
+  },
+  async markReturning() {
+    await SecureStore.setItemAsync(RETURNING_KEY, "1", OPTIONS);
   },
   async clear() {
     await Promise.all([

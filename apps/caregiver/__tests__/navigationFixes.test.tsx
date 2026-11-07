@@ -34,6 +34,18 @@ describe("onboarding", () => {
   });
 });
 
+describe("welcome slides are for caregivers", () => {
+  it("do not advertise FallGuard or patient-side copy, and there are three of them", async () => {
+    await render(<OnboardingScreen />);
+    expect(screen.queryByText(/FallGuard/i)).toBeNull();
+    expect(screen.queryByText(/Dad/i)).toBeNull();
+    expect(screen.queryByText(/chat with nurses/i)).toBeNull();
+    expect(screen.queryByText(/Book a Nurse/i)).toBeNull();
+    expect(screen.getByText("Care work that")).toBeTruthy();
+    expect(screen.getByText(/Get visit requests near you/)).toBeTruthy();
+  });
+});
+
 describe("visit completed", () => {
   it("Back to home goes to the Home tab", async () => {
     const popTo = jest.fn();
