@@ -17,6 +17,7 @@ import { useVisitCarePlan } from "@/src/hooks/useCarePlans";
 import type { ScreenParamLists } from "@/src/navigation/Navigations";
 import { bookingService } from "@/src/services/booking.service";
 import { ensureBackgroundLocation } from "@/src/supply/permissions";
+import { useLocationPermissions } from "@/src/supply/permissionState";
 import { codeLocks, DROP_OUT_CONFIRM, stepForStatus, submitVisitCode } from "@/src/visit/visitFlow";
 import { formatVisitTime } from "@/src/utils/dates";
 
@@ -34,6 +35,9 @@ const VisitFlow: React.FC<Props> = ({ route, navigation }) => {
   const action = useBookingAction();
   // Only asked once the visit is running; a failed or slow answer never blocks completing the visit.
   const carePlan = useVisitCarePlan(bookingId, booking?.status === "in_progress");
+
+  // What the copy may say about location: only claim sharing when the OS permission is really there.
+  const sharingLocation = useLocationPermissions().foreground;
 
   const [arrived, setArrived] = useState(false);
   const [codeBusy, setCodeBusy] = useState(false);
@@ -100,7 +104,7 @@ const VisitFlow: React.FC<Props> = ({ route, navigation }) => {
       ]);
       return;
     }
-    Alert.alert("Complete this visit?", "This ends the visit and stops sharing your location.", [
+    Alert.alert("Complete this visit?", sharingLocation ? "This ends the visit and stops sharing your location." : "This ends the visit.", [
       { text: "Not yet", style: "cancel" },
       { text: "Complete", onPress: () => run("complete") },
     ]);
@@ -201,10 +205,19 @@ const VisitFlow: React.FC<Props> = ({ route, navigation }) => {
             busy={busy}
             onComplete={confirmComplete}
             onNotes={() => navigation.navigate("AINoteTaker", { bookingId })}
+            sharingLocation={sharingLocation}
+            onCarePlan={
+              carePlan.data?.plan
+                ? () => navigation.navigate("CarePlanDetails", { planId: carePlan.data!.plan!.id })
+                : undefined
+            }
+            onVitals={() =>
+              navigation.navigate("AddVitals", { patientId: booking.patient_id, patientName: booking.patient_details?.full_name })
+            }
           />
         );
       case "done":
-        return <VisitDoneStep onHome={goHome} />;
+        return <VisitDoneStep onHome={goHome} sharedLocation={sharingLocation} />;
       case "closed":
         return <VisitClosedStep status={booking.status} onHome={goHome} />;
     }

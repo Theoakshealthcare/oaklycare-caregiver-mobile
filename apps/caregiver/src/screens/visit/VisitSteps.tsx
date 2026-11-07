@@ -185,7 +185,7 @@ export const VisitCodeStep: React.FC<CodeStepProps> = ({
               textAlign: "center",
             }}
           />
-          {attemptsLeft !== null ? (
+          {attemptsLeft !== null && !error ? (
             <Text variant="small" color={theme.colors.textLight}>
               {attemptsLeft} {attemptsLeft === 1 ? "try" : "tries"} left before the code is locked for 15 minutes.
             </Text>
@@ -213,17 +213,27 @@ export const InProgressStep: React.FC<{
   busy: boolean;
   onComplete: () => void;
   onNotes: () => void;
-}> = ({ visit, busy, onComplete, onNotes }) => (
-  <StepFrame title="Visit in progress" subtitle="Complete the visit when you are done. This stops location sharing.">
+  /** Only claimed when location really is being shared (permission granted); otherwise the copy says nothing about it. */
+  sharingLocation?: boolean;
+  /** Present when the client has a care plan: needed during the visit, not only at clock-out. */
+  onCarePlan?: () => void;
+  onVitals?: () => void;
+}> = ({ visit, busy, onComplete, onNotes, sharingLocation = false, onCarePlan, onVitals }) => (
+  <StepFrame
+    title="Visit in progress"
+    subtitle={sharingLocation ? "Complete the visit when you are done. This stops location sharing." : "Complete the visit when you are done."}
+  >
     <Summary visit={visit} />
-    <Button title="Complete visit" onPress={onComplete} loading={busy} />
+    {onCarePlan ? <Button title="Care plan" variant="outline" onPress={onCarePlan} disabled={busy} /> : null}
+    {onVitals ? <Button title="Record vitals" variant="outline" onPress={onVitals} disabled={busy} /> : null}
     <Button title="Visit notes" variant="outline" onPress={onNotes} disabled={busy} />
+    <Button title="Complete visit" onPress={onComplete} loading={busy} />
   </StepFrame>
 );
 
 /** Step 4 (status `completed`). */
-export const VisitDoneStep: React.FC<{ onHome: () => void }> = ({ onHome }) => (
-  <StepFrame title="Visit completed" subtitle="Thank you. Location sharing has stopped.">
+export const VisitDoneStep: React.FC<{ onHome: () => void; sharedLocation?: boolean }> = ({ onHome, sharedLocation = false }) => (
+  <StepFrame title="Visit completed" subtitle={sharedLocation ? "Thank you. Location sharing has stopped." : "Thank you."}>
     <Button title="Back to home" onPress={onHome} />
   </StepFrame>
 );
