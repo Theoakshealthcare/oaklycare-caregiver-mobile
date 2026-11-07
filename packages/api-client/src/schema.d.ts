@@ -155,8 +155,12 @@ export interface paths {
         put?: never;
         /**
          * Recover Password
-         * @description Password Recovery. Always answers 200 with the same body, whether or not the email belongs to an account (so it
-         *     cannot be used to find out who is registered), and whether or not the mail could be delivered (a failure is logged).
+         * @description Password recovery: emails a 5-digit code (valid 15 minutes) that ``POST /auth/reset-password`` takes with the
+         *     email address. Always answers 200 with the same body: whether or not the email belongs to an account (so it cannot
+         *     be used to find out who is registered), whether or not this address is over its hourly limit (3 emails an hour; the
+         *     rest are answered the same and logged), and whether or not the mail could be delivered (a failure is logged). The
+         *     mail goes out after the reply, so the response time does not depend on the mail server. A new request makes the
+         *     previous code useless.
          */
         post: operations["recover_password_api_v1_auth_password_recovery_post"];
         delete?: never;
@@ -176,7 +180,15 @@ export interface paths {
         put?: never;
         /**
          * Reset Password Route
-         * @description Reset password.
+         * @description Reset the password with the emailed code: ``{email, code, new_password}``. The new password must pass the same
+         *     policy as change-password. Success ends every session of the account (the app signs in again with the new
+         *     password; no tokens are returned). 400 ``detail = {"code", "message"}`` for ``invalid_or_expired_code`` (wrong,
+         *     expired, used, never issued, or no such account: one answer) and ``weak_password`` (the code is not consumed);
+         *     429 ``too_many_attempts`` after 5 wrong codes for the address, until a new code is requested.
+         *
+         *     Deprecated: ``{token, new_password}`` with the long token from the same email still works for the shipped caregiver
+         *     app, with plain-string ``detail`` errors (400 ``Invalid token`` / ``Invalid or expired token`` / the weak-password
+         *     sentence).
          */
         post: operations["reset_password_route_api_v1_auth_reset_password_post"];
         delete?: never;
@@ -1209,6 +1221,33 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/v1/booking/{booking_id}/payment-link": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Get the payment link of a booking that is not paid yet (booker only)
+         * @description The "Pay now" link for a booking created earlier, so it survives an app restart.
+         *
+         *     Same response as ``/create`` (the booking with ``payment_url`` and ``payment_access_code``) plus ``paystack_reference``
+         *     and ``payment_expires_at``. The booking keeps its
+         *     one Paystack reference, so Paystack itself can charge it only once: tapping twice, or paying on an old page and a new
+         *     one, can never charge twice. Paystack is asked first whether the booking was already paid (a late webhook): if so it
+         *     is settled and the answer is 409 ``booking_already_paid``. Nothing is written when a link is handed out. Only for a
+         *     pending booking whose payment window is still open; the window is not extended.
+         */
+        post: operations["get_payment_link_api_v1_booking__booking_id__payment_link_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/v1/booking/caregiver/bookings": {
         parameters: {
             query?: never;
@@ -1820,7 +1859,11 @@ export interface paths {
             path?: never;
             cookie?: never;
         };
-        /** List Caregiver Access */
+        /**
+         * List Caregiver Access
+         * @description A patient: the caregivers they have granted access (with `caregiver_name`). A caregiver: the patients who
+         *     granted them access (with `patient_name`). Active grants only.
+         */
         get: operations["list_caregiver_access_api_v1_vitals_access_list_get"];
         put?: never;
         post?: never;
@@ -6490,8 +6533,14 @@ export interface components {
             /** Last Error */
             last_error?: string | null;
         };
-        /** FallGuardAnswerBase */
-        FallGuardAnswerBase: {
+        /**
+         * FallGuardAnswerInput
+         * @description One answer as the patient app sends it.
+         *
+         *     ``score`` is accepted so the clients already shipped keep working, but it is IGNORED: the server looks the score
+         *     up from the stored option whose ``text`` equals ``answer`` and computes the total itself.
+         */
+        FallGuardAnswerInput: {
             /**
              * Question Id
              * Format: uuid
@@ -6499,8 +6548,11 @@ export interface components {
             question_id: string;
             /** Answer */
             answer: string;
-            /** Score */
-            score: number;
+            /**
+             * Score
+             * @description Ignored. Accepted for older clients; the server scores from the stored options.
+             */
+            score?: number | null;
         };
         /** FallGuardAnswerResponse */
         FallGuardAnswerResponse: {
@@ -6522,7 +6574,7 @@ export interface components {
         /** FallGuardAssessmentCreate */
         FallGuardAssessmentCreate: {
             /** Answers */
-            answers: components["schemas"]["FallGuardAnswerBase"][];
+            answers: components["schemas"]["FallGuardAnswerInput"][];
         };
         /** FallGuardAssessmentResponse */
         FallGuardAssessmentResponse: {
@@ -7356,12 +7408,20 @@ export interface components {
             /** Masked */
             masked: boolean;
         };
-        /** PasswordReset */
+        /**
+         * PasswordReset
+         * @description ``{email, code, new_password}`` (the emailed 5-digit code) or, deprecated, ``{token, new_password}`` (the long
+         *     link token the shipped caregiver app pastes). Exactly one form.
+         */
         PasswordReset: {
-            /** Token */
-            token: string;
             /** New Password */
             new_password: string;
+            /** Email */
+            email?: string | null;
+            /** Code */
+            code?: string | null;
+            /** Token */
+            token?: string | null;
         };
         /** PasswordResetRequest */
         PasswordResetRequest: {
@@ -7475,6 +7535,10 @@ export interface components {
             granted_at: string;
             /** Revoked At */
             revoked_at?: string | null;
+            /** Caregiver Name */
+            caregiver_name?: string | null;
+            /** Patient Name */
+            patient_name?: string | null;
         };
         /** PatientCaregiverAccessRevoke */
         PatientCaregiverAccessRevoke: {
@@ -7732,6 +7796,136 @@ export interface components {
              * Format: date-time
              */
             created_at: string;
+        };
+        /**
+         * PaymentLinkResponse
+         * @description ``POST /booking/{id}/payment-link``: what ``/create`` returns, plus the reference and when the window closes.
+         */
+        PaymentLinkResponse: {
+            /**
+             * Id
+             * Format: uuid
+             */
+            id: string;
+            /** Booking Code */
+            booking_code: string;
+            /**
+             * Channel
+             * @enum {string}
+             */
+            channel: "app" | "whatsapp" | "admin";
+            /**
+             * Patient Id
+             * Format: uuid
+             */
+            patient_id: string;
+            patient_details?: components["schemas"]["PatientDetails"] | null;
+            /** Caregiver Id */
+            caregiver_id?: string | null;
+            caregiver_details?: components["schemas"]["CaregiverDetails"] | null;
+            /** Service Type */
+            service_type: string;
+            /** Assistance Type */
+            assistance_type: string;
+            /** Condition */
+            condition?: string | null;
+            /** Duration Hours */
+            duration_hours: number;
+            /**
+             * Scheduled Date
+             * Format: date-time
+             */
+            scheduled_date: string;
+            /**
+             * Scheduled End Date
+             * Format: date-time
+             */
+            scheduled_end_date: string;
+            /** Patient Address */
+            patient_address?: string | null;
+            /** Patient Latitude */
+            patient_latitude?: number | null;
+            /** Patient Longitude */
+            patient_longitude?: number | null;
+            /** Patient City */
+            patient_city: string;
+            /** Patient State */
+            patient_state: string;
+            status: components["schemas"]["BookingStatus"];
+            payment_status: components["schemas"]["PaymentStatus"];
+            /** Total Amount */
+            total_amount: number;
+            /** Service Fee */
+            service_fee: number;
+            /** Platform Fee */
+            platform_fee: number;
+            /** Special Instructions */
+            special_instructions?: string | null;
+            /** Booking For */
+            booking_for: string;
+            /**
+             * Created At
+             * Format: date-time
+             */
+            created_at: string;
+            /**
+             * Updated At
+             * Format: date-time
+             */
+            updated_at: string;
+            /**
+             * Dispatch State
+             * @description dispatching | matched | unmatched; null before payment or for legacy bookings
+             */
+            dispatch_state?: string | null;
+            /**
+             * Visit Code
+             * @description 4-digit code the patient gives the caregiver to start the visit. Only returned to the booking's own patient from GET /booking/booking/{id}, while the booking is accepted or en_route; null for everyone else and in every other response.
+             * @example 4821
+             */
+            visit_code?: string | null;
+            /**
+             * Cancel Fee Tier
+             * @description Which cancellation fee applied when the booker cancelled (none = free). Null while the booking is not cancelled by its booker, and always null for caregivers.
+             */
+            cancel_fee_tier?: ("none" | "standard" | "late") | null;
+            /**
+             * Cancel Fee
+             * @description Naira the booker was charged for cancelling (0 for a free cancel). Null unless the booker cancelled; patient views only.
+             * @example 8000
+             */
+            cancel_fee?: number | null;
+            /** @description The booking's refund, newest one, when it has one. Patient views only; null for caregivers. */
+            refund?: components["schemas"]["RefundSummary"] | null;
+            /**
+             * Payment Url
+             * @description Paystack payment URL to complete the booking payment
+             * @example https://checkout.paystack.com/abcd1234
+             */
+            payment_url?: string | null;
+            /**
+             * Payment Access Code
+             * @description Paystack access code for the payment
+             * @example abc123xyz
+             */
+            payment_access_code?: string | null;
+            /**
+             * Payment Error
+             * @description Error message if payment initialization failed
+             * @example Payment gateway temporarily unavailable
+             */
+            payment_error?: string | null;
+            /**
+             * Paystack Reference
+             * @description The booking's one Paystack reference (the same for every link)
+             * @example BKG_AB12CD34_0a1b2c3d
+             */
+            paystack_reference: string;
+            /**
+             * Payment Expires At
+             * @description When the unpaid booking is cancelled if it is still not paid (UTC)
+             */
+            payment_expires_at?: string | null;
         };
         /** PaymentOut */
         PaymentOut: {
@@ -11444,15 +11638,18 @@ export interface operations {
                     "application/json": components["schemas"]["HTTPValidationError"];
                 };
             };
-            /** @description Booking settings not configured */
-            500: {
+            /** @description No pricing version exists yet (a new environment). detail.code is booking_settings_not_configured */
+            503: {
                 headers: {
                     [name: string]: unknown;
                 };
                 content: {
                     /**
                      * @example {
-                     *       "detail": "Booking settings not configured"
+                     *       "detail": {
+                     *         "code": "booking_settings_not_configured",
+                     *         "message": "Pricing is not available right now. Please try again later."
+                     *       }
                      *     }
                      */
                     "application/json": unknown;
@@ -11518,6 +11715,13 @@ export interface operations {
                      */
                     "application/json": unknown;
                 };
+            };
+            /** @description No pricing version exists yet. detail.code is booking_settings_not_configured */
+            503: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
             };
         };
     };
@@ -11666,6 +11870,65 @@ export interface operations {
                 };
             };
             /** @description detail.code payment_check_unavailable: Paystack could not be asked; nothing changed, retry */
+            503: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+        };
+    };
+    get_payment_link_api_v1_booking__booking_id__payment_link_post: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                booking_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["PaymentLinkResponse"];
+                };
+            };
+            /** @description Not the booker. detail = {code: not_your_booking, message} */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description No such booking. detail = {code: booking_not_found, message} */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description detail.code is one of booking_already_paid, booking_already_cancelled, booking_not_payable, payment_window_expired, payment_link_in_progress (a first request is still running: retry in a moment) or payment_under_review */
+            409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+            /** @description detail.code payment_check_unavailable (Paystack could not be asked whether it was paid) or payment_link_unavailable (Paystack would not start the payment); nothing changed, retry */
             503: {
                 headers: {
                     [name: string]: unknown;
@@ -13014,14 +13277,12 @@ export interface operations {
                     "application/json": components["schemas"]["FallGuardAssessmentResponse"];
                 };
             };
-            /** @description Validation Error */
+            /** @description detail = {code, message[, question_id]}; code is one of fallguard_no_answers, fallguard_duplicate_question, fallguard_unknown_question, fallguard_invalid_option */
             422: {
                 headers: {
                     [name: string]: unknown;
                 };
-                content: {
-                    "application/json": components["schemas"]["HTTPValidationError"];
-                };
+                content?: never;
             };
         };
     };

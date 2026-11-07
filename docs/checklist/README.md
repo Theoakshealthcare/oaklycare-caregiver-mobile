@@ -73,6 +73,11 @@ channel) lives in the backend repo: `docs/checklist/MASTER_CHECKLIST.md`. Update
   - [ ] Clinician sign-off of the notice wording (go-live gate; one string, `MEDICATION_NOTICE`)
 - [ ] Clinical sign-off of seeded templates and copy (go-live gate)
 
+## Caregiver reset password by code (2026-11-07)
+- [x] Recover and Reset screens moved to the emailed 5-digit code (`{email, code, new_password}`; no long-token field left), Resend with a 60 s cooldown, `detail.code` sentences, "signed out on your other devices" on success; branch `feature/apps-reset-by-code`, see docs/sop/2026-11-07-apps-reset-password-by-code.md; Jest only, **not device-verified**
+- [ ] Walk it on a device with a real inbox (caregiver second device pass)
+- [ ] Backend env `PASSWORD_RESET_LEGACY_TOKEN_ENABLED=false` once the previously installed caregiver build (which pastes the long token) is retired: **not flipped by this change**
+
 ## Caregiver change password
 - [x] Change password screen from Profile settings: current / new / confirm, inline errors per backend code, Retry-After countdown, stays signed in on the returned tokens (2026-10-30, branch `feature/change-password-screen`, see docs/sop/2026-10-30-caregiver-change-password.md; Jest only, **not device-verified**; backend endpoint is backend#37)
 - [ ] Device pass; pause the query client during the change (tiny in-flight 401 window, see the SOP follow-ups)
@@ -158,8 +163,8 @@ Owner decisions (2026-11-07): move the old app into the monorepo on SDK 57, copi
 - [ ] P2 Security: archive the old repo and rotate the old upload key (owner: was `com.oakly.oaklypatient` ever published, is the old repo public?); full logout also unregisters push
 - [ ] P3 Auth correctness (partly done 2026-11-07, same branch and SOP as P1b; Jest only, **not device-verified**)
   - [x] Register (email path; the backend's real 400 duplicate-email and 422 messages), verify email with the 5-digit code (auto-submit, 400 shown, boxes clear), resend with a 30 s cooldown and a `Retry-After` path, unverified login lands on the verify step, forgot password (same 200 for any email), delete account with the backend's 409 text
-  - [x] Reset password: 5-box code UI and `resetPassword({ code, newPassword })` adapter in `auth.service.ts` that sends the code as today's `token`
-  - [ ] **Reset cannot finish live** until the backend reset-by-code slice lands (today's route takes the long emailed token, a 5-digit code gets 400 `Invalid token`); then edit only the adapter
+  - [x] Reset password by the emailed 5-digit code (2026-11-07, branch `feature/apps-reset-by-code`, see docs/sop/2026-11-07-apps-reset-password-by-code.md; Jest only, **not device-verified**): `resetPassword({ email, code, newPassword })` against backend #42, 5-box code UI, Resend with a 60 s cooldown, plain sentences read from `detail.code` (`invalid_or_expired_code`, `weak_password`, `too_many_attempts` with and without `Retry-After`), "signed out on your other devices" on success
+  - [ ] Walk reset on a device against a real mailbox (the backend's mail transport was faked in its captures) in the patient device pass
   - [x] Change password screen; profile edit refetches `/auth/me` (2026-11-07, branch `feature/patient-wiring-b`)
   - [ ] Deep link scheme for the emailed link
   - [ ] Live capture of register / verify / resend / forgot / delete against the running backend (owed; the FE guide rule), device pass

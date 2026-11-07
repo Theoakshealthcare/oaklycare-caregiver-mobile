@@ -35,7 +35,7 @@ const RecoverPassword: React.FC = () => {
 
   return (
     <Screen title="Recover Password" scroll>
-      <Text color={theme.colors.textLight}>Enter the email you signed up with and we will email you a way to reset your password.</Text>
+      <Text color={theme.colors.textLight}>Enter the email you signed up with and we will email you a 5-digit code to reset your password.</Text>
       <Input
         label="Email address"
         placeholder="Your email address"
@@ -50,7 +50,7 @@ const RecoverPassword: React.FC = () => {
         autoComplete="email"
         error={error}
       />
-      <Button title="Send Recovery Email" onPress={submit} loading={request.isPending} />
+      <Button title="Send Reset Code" onPress={submit} loading={request.isPending} />
       <ErrorDialog visible={dialog !== null} message={dialog ?? ""} onClose={() => setDialog(null)} />
     </Screen>
   );
