@@ -6,6 +6,7 @@ import { messageForError } from "@/src/api/errors";
 import OfferCard from "@/src/components/booking/OfferCard";
 import Button from "@/src/components/ui/button";
 import Text from "@/src/components/ui/text";
+import { DECLINE_MESSAGE, DECLINE_TITLE } from "@/src/constants/offerCopy";
 import { theme } from "@/src/constants/theme";
 import { useBookingsTab, type BookingsTab } from "@/src/hooks/queries";
 import Navigation from "@/src/hooks/use-navigation";
@@ -195,10 +196,10 @@ const CaregiverBookings: React.FC = () => {
                 <Feather name="x" size={24} color={theme.colors.textLight} />
               </TouchableOpacity>
               <Text variant="h2" weight="bold" center style={{ marginBottom: 8 }}>
-                Decline this job?
+                {DECLINE_TITLE}
               </Text>
               <Text variant="body" color={theme.colors.textLight} center style={{ marginBottom: 24 }}>
-                It will be removed from your requests and offered to other caregivers.
+                {DECLINE_MESSAGE}
               </Text>
               <View style={{ flexDirection: "row", gap: 16 }}>
                 <Button title="No, Go Back" variant="neutral" style={{ flex: 1 }} onPress={() => setDeclineId(null)} />
