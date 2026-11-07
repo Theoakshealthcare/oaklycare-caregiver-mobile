@@ -103,6 +103,7 @@ const CaregiverSetupStep1 = () => {
               onChange={(iso) => updateFormData("date_of_birth", iso)}
               error={errors.date_of_birth}
               maximumDate={new Date()}
+              initialDate={new Date(new Date().getFullYear() - 30, 0, 1)}
             />
 
             <Select

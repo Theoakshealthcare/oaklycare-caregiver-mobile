@@ -40,6 +40,13 @@ describe("DateField", () => {
     expect(onChange).toHaveBeenCalledWith("1985-12-24");
   });
 
+  it("starts the wheel at initialDate while empty (a date of birth does not start at today)", async () => {
+    Platform.OS = "ios";
+    await render(<DateField testID="dob" label="Date of birth" value="" initialDate={new Date(1996, 0, 1)} onChange={jest.fn()} />);
+    await fireEvent.press(screen.getByTestId("dob"));
+    expect((mockPickerProps.value as Date).getFullYear()).toBe(1996);
+  });
+
   it("shows the placeholder while empty", async () => {
     await render(<DateField testID="dob" label="Date of birth" value="" placeholder="Enter your DOB" onChange={jest.fn()} />);
     expect(screen.getByText("Enter your DOB")).toBeTruthy();

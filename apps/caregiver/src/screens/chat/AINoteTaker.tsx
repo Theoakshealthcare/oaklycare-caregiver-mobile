@@ -205,7 +205,7 @@ const AINoteTaker: React.FC<StackScreenProps<ScreenParamLists, "AINoteTaker">> =
   )
 
   return (
-    <View style={{ flex: 1, backgroundColor: theme.colors.background }}>
+    <View style={{ flex: 1, backgroundColor: theme.colors.white }}>
       <KeyboardScrollView>
         <View style={globalStyles.container}>
           <HeaderBack />

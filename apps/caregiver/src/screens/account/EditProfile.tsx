@@ -195,6 +195,7 @@ const EditForm: React.FC<{ profile: CaregiverProfile }> = ({ profile }) => {
           placeholder="Select your date of birth"
           error={errors.dateOfBirth}
           maximumDate={new Date()}
+          initialDate={new Date(new Date().getFullYear() - 30, 0, 1)}
         />
         <Select
           label="State"

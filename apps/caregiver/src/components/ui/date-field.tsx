@@ -17,6 +17,8 @@ interface Props {
   error?: string;
   minimumDate?: Date;
   maximumDate?: Date;
+  /** Where the wheel starts while no date is chosen (a date of birth starts decades back, not today). */
+  initialDate?: Date;
   testID?: string;
 }
 
@@ -30,12 +32,12 @@ function dateFromIso(iso: string): Date {
  * format, hands back "YYYY-MM-DD" for the API. iOS: the spinner sits in a bottom sheet with Done
  * (so it never floats mid-form); Android: the system dialog.
  */
-const DateField: React.FC<Props> = ({ label, value, onChange, placeholder = "Select a date", error, minimumDate, maximumDate, testID }) => {
+const DateField: React.FC<Props> = ({ label, value, onChange, placeholder = "Select a date", error, minimumDate, maximumDate, initialDate, testID }) => {
   const [open, setOpen] = useState(false);
   const [draft, setDraft] = useState<Date>(() => dateFromIso(value));
 
   const show = () => {
-    setDraft(value ? dateFromIso(value) : (maximumDate ?? new Date()));
+    setDraft(value ? dateFromIso(value) : (initialDate ?? maximumDate ?? new Date()));
     setOpen(true);
   };
 
