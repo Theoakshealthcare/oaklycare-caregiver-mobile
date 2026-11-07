@@ -27,6 +27,9 @@ channel) lives in the backend repo: `docs/checklist/MASTER_CHECKLIST.md`. Update
 - [ ] Welcome slide 3 art replacement (shows a "BOOK NOW" phone); sign-up "Create Account" clip after errors and bank picker top inset (DP1-31 remainder); Android pass
 - [ ] Leave alone until decided: DP1-10, 16, 21, 22, 23, 33
 
+## Device pass 2 follow-ups (2026-11-07)
+- [x] DP2-02 readable payslip with pending and held rows (text, built from the Wallet's payments; empty month says so), DP2-03 held amount on Home, Wallet "Total earned / Paid out to your bank" and one payout banner, DP2-06 bank form spacing and picker inset + Back, DP2-07 no dead Back arrow on Login after a sign-out (`HeaderBack` reads its navigator's state). Branch `fix/caregiver-pass-2-followups`, **device-verified on the simulator**; see docs/sop/2026-11-07-caregiver-pass-2-followups.md and the addendum in ledgers/LEDGER-device-pass-2.md
+
 ## Caregiver vitals (Client care v1, part 1)
 - [x] Vitals tab: six-vital grid for the patient on the in-progress visit; "available during an active visit" on 403 or before the visit starts (2026-10-27, see docs/sop/2026-10-27-caregiver-vitals-tab.md)
 - [x] Per-vital chart (Day / Week / Month) and history; manual entry for all six (glucose mg/dL / mmol/L with RBS / FBS / PP); report download then native share, temp file deleted
