@@ -25,6 +25,8 @@ export type ScreenParamLists = {
   ChatScreen: { bookingId: string; patientName?: string };
   CallScreen: { bookingId: string; patientName?: string; isVideo?: boolean };
   AINoteTaker: { bookingId: string };
+  /** Check, edit and save the draft of a voice note (only reachable while the voice note flow is on). */
+  VoiceNoteReview: { bookingId: string; noteId: string };
   Notifications: undefined;
   Profile: undefined;
   EditProfile: undefined;

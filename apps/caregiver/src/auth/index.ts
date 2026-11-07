@@ -3,6 +3,7 @@ import { useStore } from "zustand";
 
 import { API_BASE_URL } from "@/src/api/config";
 import { queryClient } from "@/src/api/queryClient";
+import { forgetAllLocalRecordings } from "@/src/voiceNotes/localAudio";
 
 import { secureTokenStorage } from "./secureStorage";
 import { createSession, type SessionState, type SessionTokens } from "./session";
@@ -25,7 +26,11 @@ async function refreshRequest(refreshToken: string): Promise<SessionTokens | nul
 export const session = createSession({
   storage: secureTokenStorage,
   refreshRequest,
-  onSignedOut: () => queryClient.clear(),
+  onSignedOut: () => {
+    queryClient.clear();
+    // A voice recording is the client's voice: it does not stay on the phone after sign-out.
+    forgetAllLocalRecordings();
+  },
 });
 
 export function useSession<T>(selector: (state: SessionState) => T): T {

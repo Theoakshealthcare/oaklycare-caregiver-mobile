@@ -27,6 +27,12 @@ channel) lives in the backend repo: `docs/checklist/MASTER_CHECKLIST.md`. Update
 - [ ] Welcome slide 3 art replacement (shows a "BOOK NOW" phone); sign-up "Create Account" clip after errors and bank picker top inset (DP1-31 remainder); Android pass
 - [ ] Leave alone until decided: DP1-10, 16, 21, 22, 23, 33
 
+## Caregiver AI voice notes (design done, app side built on a fake; **not wired to a real backend**)
+- [x] Plan, API contract, data model and test plan written in the backend repo: `docs/plans/2026-11-07-ai-note-transcription.md` (migration `0026` reserved)
+- [x] App side against that contract (2026-11-07, branch `feature/caregiver-ai-notes-ui`, see docs/sop/2026-11-07-caregiver-ai-voice-notes-ui.md): consent card (exact line, naming an external AI service, remembered per visit), record, upload, transcribing with retry and `detail.code` sentences, edit screen with Save and Discard (discard deletes server-side), saved voice notes show the final text, typed note unchanged. Jest only; **no device run**; off unless `EXPO_PUBLIC_VOICE_NOTES=fake`
+- [ ] Backend phase B (B1 to B4: model and provider, routes and worker job, patient and admin reads with sweeper and audit, live Gemini smoke)
+- [ ] After the backend: `pnpm api:sync`, real service, `live` mode on by default, device pass, FE guide from live captures
+- [ ] Counsel review of the consent copy and the NDPA position; owner answers on retention, patient transcript view and patient opt-out
 ## Device pass 2 (2026-11-07)
 - [x] Second simulator walk of the caregiver app: accept/decline offers, "No longer available", wallet pending/available/on hold, bank add/change and 24 h pause, payslip, vitals entry, normal and short visit completion, under-review / changes-requested / rejected states, note taker with the mic, logout, Home, Job Details, offers list. 9 findings (1 major, 4 minor, 2 polish, 1 note), 2 fixed on `fix/caregiver-device-pass-2` (decline copy says a decline is final; vitals entry clears an old error); see docs/sop/2026-11-07-caregiver-device-pass-2.md and ledgers/LEDGER-device-pass-2.md
 - [ ] DP2-01 (major): tell the caregiver, before and after completing, that a visit under half its booked time is held for Finance review (owner wording; backend earning status in the `complete` response)

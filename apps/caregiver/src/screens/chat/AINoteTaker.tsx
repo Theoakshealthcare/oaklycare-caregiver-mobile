@@ -1,8 +1,9 @@
 "use client"
 
 import type React from "react"
-import { useState, useEffect } from "react"
+import { useState, useEffect, useCallback } from "react"
 import { View, TouchableOpacity, Alert, TextInput, Linking } from "react-native"
+import { useQueryClient } from "@tanstack/react-query"
 import { Feather } from "@expo/vector-icons"
 import type { StackScreenProps } from "@react-navigation/stack"
 import {
@@ -21,6 +22,29 @@ import { globalStyles } from "@/src/constants/styles"
 import { messageForError } from "@/src/api/errors"
 import { formatStamp } from "@/src/utils/dates"
 import { useCreateNote, useNotes } from "@/src/hooks/queries"
+import { queryKeys } from "@/src/api/keys"
+import { voiceNotesMode } from "@/src/config/voiceNotes"
+import useNavigation from "@/src/hooks/use-navigation"
+import {
+  useDiscardVoiceNote,
+  useRetryVoiceNote,
+  useSubmitRecording,
+  useVisitVoiceNotes,
+  type RecordingJob,
+} from "@/src/hooks/useVoiceNotes"
+import { deleteLocalFile, forgetLocalRecording, newRequestId } from "@/src/voiceNotes/localAudio"
+import { voiceNoteErrorMessage } from "@/src/voiceNotes/messages"
+import { useVisitConsent } from "@/src/voiceNotes/useVisitConsent"
+import { RECORDING_MIME, VOICE_NOTE_LIMITS, type VoiceNote, type VoiceNoteLanguage } from "@/src/voiceNotes/types"
+import ConsentCard from "@/src/screens/chat/voice/ConsentCard"
+import {
+  FailedCard,
+  PendingUploadCard,
+  ReadyCard,
+  SavedVoiceNoteCard,
+  TranscribingCard,
+  UnsentCard,
+} from "@/src/screens/chat/voice/VoiceNoteCards"
 import type { BookingNote } from "@/src/services/booking.service"
 import type { ScreenParamLists } from "@/src/navigation/Navigations"
 
@@ -34,6 +58,66 @@ const AINoteTaker: React.FC<StackScreenProps<ScreenParamLists, "AINoteTaker">> =
   const [currentNote, setCurrentNote] = useState("")
   const [noteTitle, setNoteTitle] = useState("")
   const [recordingDuration, setRecordingDuration] = useState(0)
+
+  // The voice note flow (consent, upload, transcribe, review). Off by default: the screen then behaves as it always has.
+  const voiceOn = voiceNotesMode() !== "off"
+  const { navigation } = useNavigation()
+  const client = useQueryClient()
+  const consent = useVisitConsent(bookingId, voiceOn)
+  const [language, setLanguage] = useState<VoiceNoteLanguage>("en")
+  const [pending, setPending] = useState<RecordingJob | null>(null)
+  const [activeNoteId, setActiveNoteId] = useState<string | null>(null)
+  const voiceNotes = useVisitVoiceNotes(bookingId).data ?? []
+  const submit = useSubmitRecording(bookingId)
+  const retry = useRetryVoiceNote(bookingId)
+  const discard = useDiscardVoiceNote(bookingId)
+  const [actionError, setActionError] = useState<string | null>(null)
+
+  const sendRecording = (job: RecordingJob) => {
+    setPending(job)
+    setActionError(null)
+    submit.mutate(job, {
+      onSuccess: (note) => {
+        setPending(null)
+        setActiveNoteId(note.id)
+      },
+    })
+  }
+
+  const discardPending = () => {
+    if (pending) deleteLocalFile(pending.recording.uri)
+    setPending(null)
+    submit.reset()
+  }
+
+  const discardNote = (noteId: string) => {
+    setActionError(null)
+    discard.mutate(noteId, { onError: (e) => setActionError(voiceNoteErrorMessage(e)) })
+  }
+
+  const retryNote = (noteId: string) => {
+    setActionError(null)
+    retry.mutate(noteId, { onError: (e) => setActionError(voiceNoteErrorMessage(e)) })
+  }
+
+  const openReview = useCallback(
+    (noteId: string) => navigation.navigate("VoiceNoteReview", { bookingId, noteId }),
+    [navigation, bookingId],
+  )
+
+  // A note that finished: the phone's copy of the audio is no longer needed, and the one the caregiver just recorded
+  // opens straight on the review screen.
+  const onSettled = useCallback(
+    (note: VoiceNote) => {
+      if (note.status === "ready") forgetLocalRecording(note.id)
+      void client.invalidateQueries({ queryKey: queryKeys.voiceNotes(bookingId) })
+      if (note.status === "ready" && note.id === activeNoteId) {
+        setActiveNoteId(null)
+        openReview(note.id)
+      }
+    },
+    [client, bookingId, activeNoteId, openReview],
+  )
 
   useEffect(() => {
     let interval: ReturnType<typeof setInterval> | undefined
@@ -49,6 +133,11 @@ const AINoteTaker: React.FC<StackScreenProps<ScreenParamLists, "AINoteTaker">> =
       if (interval) clearInterval(interval)
     }
   }, [isRecording])
+
+  useEffect(() => {
+    if (voiceOn && isRecording && recordingDuration >= VOICE_NOTE_LIMITS.maxSeconds) void stopRecording()
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [recordingDuration, isRecording, voiceOn])
 
   const startRecording = async () => {
     try {
@@ -77,12 +166,33 @@ const AINoteTaker: React.FC<StackScreenProps<ScreenParamLists, "AINoteTaker">> =
 
   const stopRecording = async () => {
     if (!isRecording) return
+    const seconds = recordingDuration
 
     try {
       setIsRecording(false)
       await recorder.stop()
 
-      // There is no audio upload or transcription endpoint yet, so a recording is not saved and no
+      if (voiceOn) {
+        const uri = recorder.uri
+        if (!uri) {
+          Alert.alert("Error", "The recording could not be saved. Please try again.")
+          return
+        }
+        if (seconds < VOICE_NOTE_LIMITS.minSeconds) {
+          deleteLocalFile(uri)
+          Alert.alert("Recording too short", "Record a little longer, or type your note.")
+          return
+        }
+        sendRecording({
+          clientRequestId: newRequestId(),
+          recording: { uri, mime: RECORDING_MIME },
+          durationSeconds: Math.min(seconds, VOICE_NOTE_LIMITS.maxSeconds),
+          language,
+        })
+        return
+      }
+
+      // Voice notes are off: there is no audio upload or transcription in this build, so a recording is not saved and no
       // transcript is invented. The caregiver writes the note by hand.
       Alert.alert("Recording stopped", "Voice transcription isn't available yet. Please type your note below.")
     } catch (error) {
@@ -215,9 +325,66 @@ const AINoteTaker: React.FC<StackScreenProps<ScreenParamLists, "AINoteTaker">> =
               AI Note Taker
             </Text>
             <Text variant="body" color={theme.colors.textLight}>
-              Write notes for this visit. Voice recordings are not transcribed yet.
+              {voiceOn
+                ? "Record or write notes for this visit. A recording becomes text you can check and edit before you save it."
+                : "Write notes for this visit. Voice recordings are not transcribed yet."}
             </Text>
+            {voiceNotesMode() === "fake" ? (
+              <Text variant="small" color={theme.colors.warningText} testID="fake-mode-banner" style={{ marginTop: 8 }}>
+                Test mode: voice notes use sample text. Nothing you record leaves this phone.
+              </Text>
+            ) : null}
           </View>
+
+          {voiceOn ? (
+            <View>
+              {consent.loaded && !consent.consented ? <ConsentCard checked={false} onChange={consent.setConsented} /> : null}
+              {consent.consented ? (
+                <View style={[globalStyles.row, { marginBottom: 12, justifyContent: "space-between" }]} testID="consent-given">
+                  <Text variant="small" color={theme.colors.textLight} style={{ flex: 1 }}>
+                    You confirmed the client agreed to recording for this visit.
+                  </Text>
+                  <TouchableOpacity testID="consent-undo" accessibilityRole="button" onPress={() => consent.setConsented(false)}>
+                    <Text variant="small" color={theme.colors.primary} weight="bold">
+                      Undo
+                    </Text>
+                  </TouchableOpacity>
+                </View>
+              ) : null}
+              {pending ? (
+                <PendingUploadCard
+                  sending={submit.isPending}
+                  message={submit.isError ? voiceNoteErrorMessage(submit.error) : null}
+                  onRetry={() => sendRecording(pending)}
+                  onDiscard={discardPending}
+                />
+              ) : null}
+              {actionError ? (
+                <Text variant="body" color={theme.colors.error} testID="voice-action-error" accessibilityRole="alert" style={{ marginBottom: 12 }}>
+                  {actionError}
+                </Text>
+              ) : null}
+              {voiceNotes
+                .filter((note) => note.status !== "saved")
+                .map((note) => {
+                  if (note.status === "processing") return <TranscribingCard key={note.id} note={note} onSettled={onSettled} onDiscard={discardNote} />
+                  if (note.status === "ready") return <ReadyCard key={note.id} onReview={() => openReview(note.id)} onDiscard={() => discardNote(note.id)} />
+                  if (note.status === "failed") {
+                    return (
+                      <FailedCard
+                        key={note.id}
+                        note={note}
+                        retrying={retry.isPending}
+                        onRetry={retryNote}
+                        onDiscard={discardNote}
+                        onType={() => discardNote(note.id)}
+                      />
+                    )
+                  }
+                  return pending ? null : <UnsentCard key={note.id} onDiscard={() => discardNote(note.id)} />
+                })}
+            </View>
+          ) : null}
 
           {/* Note Input */}
           <View
@@ -256,14 +423,41 @@ const AINoteTaker: React.FC<StackScreenProps<ScreenParamLists, "AINoteTaker">> =
               }}
             />
 
+            {voiceOn && !isRecording ? (
+              <View style={[globalStyles.row, { justifyContent: "center", gap: 8, marginBottom: 12 }]}>
+                {(["en", "pcm"] as const).map((code) => (
+                  <TouchableOpacity
+                    key={code}
+                    testID={`language-${code}`}
+                    accessibilityRole="radio"
+                    accessibilityState={{ selected: language === code }}
+                    onPress={() => setLanguage(code)}
+                    style={{
+                      paddingHorizontal: 16,
+                      paddingVertical: 8,
+                      borderRadius: 16,
+                      backgroundColor: language === code ? theme.colors.primary : theme.colors.background,
+                    }}
+                  >
+                    <Text variant="small" weight="bold" color={language === code ? theme.colors.white : theme.colors.text}>
+                      {code === "en" ? "English" : "Pidgin"}
+                    </Text>
+                  </TouchableOpacity>
+                ))}
+              </View>
+            ) : null}
+
             {/* Recording Controls */}
             <View style={[globalStyles.row, { justifyContent: "center", marginBottom: 16 }]}>
               <TouchableOpacity
                 testID="mic-button"
                 accessibilityRole="button"
                 accessibilityLabel={isRecording ? "Stop recording" : "Start recording"}
+                accessibilityState={{ disabled: voiceOn && !consent.consented && !isRecording }}
+                disabled={voiceOn && !consent.consented && !isRecording}
                 onPress={isRecording ? stopRecording : startRecording}
                 style={{
+                  opacity: voiceOn && !consent.consented && !isRecording ? 0.4 : 1,
                   width: 80,
                   height: 80,
                   borderRadius: 40,
@@ -296,6 +490,20 @@ const AINoteTaker: React.FC<StackScreenProps<ScreenParamLists, "AINoteTaker">> =
 
             <Button title="Save Note" onPress={saveTextNote} loading={createNote.isPending} />
           </View>
+
+          {/* Saved voice notes: the final text the caregiver saved */}
+          {voiceOn && voiceNotes.some((note) => note.status === "saved") ? (
+            <View testID="saved-voice-notes">
+              <Text variant="h3" weight="bold" style={{ marginBottom: 16 }}>
+                Voice notes
+              </Text>
+              {voiceNotes
+                .filter((note) => note.status === "saved")
+                .map((note) => (
+                  <SavedVoiceNoteCard key={note.id} note={note} />
+                ))}
+            </View>
+          ) : null}
 
           {/* Previous Notes */}
           <View>
