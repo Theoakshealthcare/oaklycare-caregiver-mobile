@@ -43,7 +43,7 @@ const FallResult: React.FC<Props> = ({ navigation, route }) => {
         ))
       ) : (
         <Card>
-          <Text variant="small">We could not prepare personal advice just now. Your score has been saved with your account.</Text>
+          <Text variant="small">Your score is saved to your account. Personal tips are not available right now. If you are worried about falls, please speak to your doctor or nurse.</Text>
         </Card>
       )}
       <Text variant="h3" weight="bold">
