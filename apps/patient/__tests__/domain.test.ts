@@ -33,7 +33,7 @@ describe("domain helpers", () => {
     // Cancel is offered while looking, accepted or on the way; the visit under way is a handover to support.
     expect(all.filter((status) => canCancel({ status }))).toEqual(["pending", "accepted", "en_route"]);
     expect(all.filter((status) => canTrack({ status }))).toEqual(["accepted", "en_route", "in_progress"]);
-    expect(all.filter((status) => isActive({ status }))).toEqual(["pending", "accepted", "en_route"]);
+    expect(all.filter((status) => isActive({ status }))).toEqual(["pending", "accepted", "en_route", "in_progress"]);
   });
 
   it("words every status and dispatch state, reading status first (dispatch_state is not cleared on a cancelled booking)", () => {

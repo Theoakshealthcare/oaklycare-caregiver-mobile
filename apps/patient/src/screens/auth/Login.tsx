@@ -70,6 +70,9 @@ const Login: React.FC = () => {
           secureTextEntry
           autoCapitalize="none"
           autoComplete="current-password"
+          // The Login button can sit under the keyboard: the keyboard's own key finishes the job.
+          returnKeyType="go"
+          onSubmitEditing={submit}
           error={errors.password}
         />
         <View style={styles.forgot}>
