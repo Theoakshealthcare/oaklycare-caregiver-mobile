@@ -99,16 +99,18 @@ export function createOaklyClient(options: OaklyClientOptions) {
    * A rejection from `fetch` means the request never completed (offline, DNS, refused, timeout) and is
    * passed up as is. Resolves like openapi-fetch: `{ data }` on 2xx, `{ error }` otherwise, plus `response`.
    */
-  async function uploadMultipart<T = unknown>(
+  async function sendBody<T = unknown>(
     path: string,
-    form: FormData,
-    method: "POST" | "PUT" | "PATCH" = "POST",
+    body: BodyInit,
+    method: "POST" | "PUT" | "PATCH",
+    contentType?: string,
   ): Promise<{ data?: T; error?: unknown; response: Response }> {
     const url = `${baseUrl}${path}`;
     const attempt = (token: string | null): Promise<Response> => {
       const headers: Record<string, string> = { Accept: "application/json" };
+      if (contentType) headers["Content-Type"] = contentType;
       if (token) headers.Authorization = `Bearer ${token}`;
-      return send(url, { method, headers, body: form });
+      return send(url, { method, headers, body });
     };
 
     const token = await options.getAccessToken();
@@ -119,19 +121,41 @@ export function createOaklyClient(options: OaklyClientOptions) {
     }
 
     const text = await response.text();
-    let body: unknown = undefined;
+    let parsed: unknown = undefined;
     if (text) {
       try {
-        body = JSON.parse(text) as unknown;
+        parsed = JSON.parse(text) as unknown;
       } catch {
-        body = undefined;
+        parsed = undefined;
       }
     }
     // The caller names the response type from the generated schema; the body is not validated here.
-    return response.ok ? { data: body as T | undefined, response } : { error: body ?? {}, response };
+    return response.ok ? { data: parsed as T | undefined, response } : { error: parsed ?? {}, response };
   }
 
-  return Object.assign(client, { uploadMultipart });
+  async function uploadMultipart<T = unknown>(
+    path: string,
+    form: FormData,
+    method: "POST" | "PUT" | "PATCH" = "POST",
+  ): Promise<{ data?: T; error?: unknown; response: Response }> {
+    return sendBody<T>(path, form, method);
+  }
+
+  /**
+   * A raw request body (an audio recording), sent the same way as `uploadMultipart`: plain `fetch(url, init)`, never a `Request`,
+   * with the bearer token and one refresh-and-retry on 401 (the same bytes are re-sent). `Content-Type` is the file's own type.
+   * A rejection from `fetch` means the request never completed and is passed up as is.
+   */
+  async function uploadBytes<T = unknown>(
+    path: string,
+    bytes: Uint8Array,
+    contentType: string,
+    method: "POST" | "PUT" | "PATCH" = "PUT",
+  ): Promise<{ data?: T; error?: unknown; response: Response }> {
+    return sendBody<T>(path, bytes as unknown as BodyInit, method, contentType);
+  }
+
+  return Object.assign(client, { uploadMultipart, uploadBytes });
 }
 
 export type OaklyClient = ReturnType<typeof createOaklyClient>;

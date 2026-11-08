@@ -1085,6 +1085,98 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/v1/caregiver/visits/{booking_id}/voice-notes": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * List Voice Notes
+         * @description The caller's own notes for a visit, newest first, so the app can resume after a restart.
+         */
+        get: operations["list_voice_notes_api_v1_caregiver_visits__booking_id__voice_notes_get"];
+        put?: never;
+        /**
+         * Create Voice Note
+         * @description Make a note in `awaiting_audio` and store the consent. Idempotent on `client_request_id` (a repeat answers 200 with the same note).
+         */
+        post: operations["create_voice_note_api_v1_caregiver_visits__booking_id__voice_notes_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/caregiver/voice-notes/{note_id}/audio": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        /**
+         * Send Voice Note Audio
+         * @description Send the recording. Allowed from `awaiting_audio` and from `failed`. Resolves with the note in `processing`.
+         */
+        put: operations["send_voice_note_audio_api_v1_caregiver_voice_notes__note_id__audio_put"];
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/caregiver/voice-notes/{note_id}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Get Voice Note
+         * @description The poll: one of the caller's own notes.
+         */
+        get: operations["get_voice_note_api_v1_caregiver_voice_notes__note_id__get"];
+        /**
+         * Save Voice Note
+         * @description Save the caregiver's version of a `ready` note. The same text again is a 200; different text is `409 already_saved`.
+         */
+        put: operations["save_voice_note_api_v1_caregiver_voice_notes__note_id__put"];
+        post?: never;
+        /**
+         * Delete Voice Note
+         * @description Discard an unsaved note, or delete a saved one inside the edit window: text, parked audio and row.
+         */
+        delete: operations["delete_voice_note_api_v1_caregiver_voice_notes__note_id__delete"];
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/caregiver/voice-notes/{note_id}/retry": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Retry Voice Note
+         * @description Run a failed note again. Only for a retryable failure whose audio is still stored; else `409 audio_expired` / `invalid_state`.
+         */
+        post: operations["retry_voice_note_api_v1_caregiver_voice_notes__note_id__retry_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/v1/devices/push-token": {
         parameters: {
             query?: never;
@@ -2224,6 +2316,23 @@ export interface paths {
          * @description Mark one notification read. Idempotent: reading it again keeps the original ``read_at``.
          */
         post: operations["mark_read_api_v1_patient_notifications__notification_id__read_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/patient/bookings/{booking_id}/voice-notes": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Booker Voice Notes */
+        get: operations["booker_voice_notes_api_v1_patient_bookings__booking_id__voice_notes_get"];
+        put?: never;
+        post?: never;
         delete?: never;
         options?: never;
         head?: never;
@@ -3502,6 +3611,23 @@ export interface paths {
          * @description Sign a template off (`approved`) or take the sign-off back (`pending`); records the reviewer and time. Audited.
          */
         post: operations["review_template_api_v1_admin_care_plan_templates__template_id__review_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/admin/bookings/{booking_id}/voice-notes": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Admin Voice Notes */
+        get: operations["admin_voice_notes_api_v1_admin_bookings__booking_id__voice_notes_get"];
+        put?: never;
+        post?: never;
         delete?: never;
         options?: never;
         head?: never;
@@ -6403,6 +6529,13 @@ export interface components {
             rejection_reason?: string | null;
             /** Changes Requested */
             changes_requested?: unknown | null;
+        };
+        /** Detail */
+        Detail: {
+            /** Code */
+            code: string;
+            /** Message */
+            message: string;
         };
         /** DetailResponse */
         DetailResponse: {
@@ -9359,6 +9492,155 @@ export interface components {
          * @enum {string}
          */
         VitalSource: "manual" | "wearable";
+        /** VoiceNoteCreate */
+        VoiceNoteCreate: {
+            /** Consent Confirmed */
+            consent_confirmed: boolean;
+            /** Consent Version */
+            consent_version: string;
+            /**
+             * Language
+             * @enum {string}
+             */
+            language: "en" | "pcm";
+            /** Duration Seconds */
+            duration_seconds: number;
+            /** Client Request Id */
+            client_request_id?: string | null;
+        };
+        /** VoiceNoteError */
+        VoiceNoteError: {
+            /** Code */
+            code: string;
+            /** Message */
+            message: string;
+            /** Retryable */
+            retryable: boolean;
+        };
+        /**
+         * VoiceNoteErrorBody
+         * @description The shape of every error of these routes: ``{"detail": {"code", "message"}}``.
+         */
+        VoiceNoteErrorBody: {
+            detail: components["schemas"]["Detail"];
+        };
+        /** VoiceNoteList */
+        VoiceNoteList: {
+            /** Items */
+            items: components["schemas"]["VoiceNoteOut"][];
+        };
+        /** VoiceNoteOut */
+        VoiceNoteOut: {
+            /**
+             * Id
+             * Format: uuid
+             */
+            id: string;
+            /**
+             * Booking Id
+             * Format: uuid
+             */
+            booking_id: string;
+            /**
+             * Status
+             * @enum {string}
+             */
+            status: "awaiting_audio" | "processing" | "ready" | "failed" | "saved";
+            /**
+             * Language
+             * @enum {string}
+             */
+            language: "en" | "pcm";
+            /** Transcript */
+            transcript?: string | null;
+            /** Summary */
+            summary?: string | null;
+            /** Summary Available */
+            summary_available: boolean;
+            /** Edited */
+            edited: boolean;
+            error?: components["schemas"]["VoiceNoteError"] | null;
+            /** Duration Seconds */
+            duration_seconds: number;
+            /** Consent Version */
+            consent_version: string;
+            /**
+             * Consent Confirmed At
+             * Format: date-time
+             */
+            consent_confirmed_at: string;
+            /**
+             * Created At
+             * Format: date-time
+             */
+            created_at: string;
+            /** Ready At */
+            ready_at?: string | null;
+            /** Saved At */
+            saved_at?: string | null;
+            /** Expires At */
+            expires_at?: string | null;
+        };
+        /** VoiceNoteReadList */
+        VoiceNoteReadList: {
+            /** Items */
+            items: components["schemas"]["VoiceNoteReadOut"][];
+        };
+        /**
+         * VoiceNoteReadOut
+         * @description A saved note as the rest of the care team sees it: no error, expiry or consent fields.
+         */
+        VoiceNoteReadOut: {
+            /**
+             * Id
+             * Format: uuid
+             */
+            id: string;
+            /**
+             * Booking Id
+             * Format: uuid
+             */
+            booking_id: string;
+            /**
+             * Status
+             * @enum {string}
+             */
+            status: "awaiting_audio" | "processing" | "ready" | "failed" | "saved";
+            /**
+             * Language
+             * @enum {string}
+             */
+            language: "en" | "pcm";
+            /** Transcript */
+            transcript?: string | null;
+            /** Summary */
+            summary?: string | null;
+            /** Summary Available */
+            summary_available: boolean;
+            /** Edited */
+            edited: boolean;
+            /** Duration Seconds */
+            duration_seconds: number;
+            /**
+             * Created At
+             * Format: date-time
+             */
+            created_at: string;
+            /** Ready At */
+            ready_at?: string | null;
+            /** Saved At */
+            saved_at?: string | null;
+        };
+        /** VoiceNoteSave */
+        VoiceNoteSave: {
+            /** Transcript */
+            transcript: string;
+            /**
+             * Summary
+             * @default
+             */
+            summary: string;
+        };
         /** WaveOut */
         WaveOut: {
             /** Wave No */
@@ -11558,6 +11840,522 @@ export interface operations {
                 };
                 content: {
                     "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    list_voice_notes_api_v1_caregiver_visits__booking_id__voice_notes_get: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                booking_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["VoiceNoteList"];
+                };
+            };
+            /** @description `not_found`: one answer for no access of any kind. */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["VoiceNoteErrorBody"];
+                };
+            };
+            /** @description `visit_not_active`, `already_processing`, `invalid_state`, `not_ready`, `already_saved`, `audio_expired`, `consent_missing`. */
+            409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["VoiceNoteErrorBody"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+            /** @description `note_limit_reached` or `daily_limit_reached` (with Retry-After). */
+            429: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["VoiceNoteErrorBody"];
+                };
+            };
+            /** @description `transcription_unavailable`: switched off, no capacity, or the audio store is down. */
+            503: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["VoiceNoteErrorBody"];
+                };
+            };
+        };
+    };
+    create_voice_note_api_v1_caregiver_visits__booking_id__voice_notes_post: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                booking_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["VoiceNoteCreate"];
+            };
+        };
+        responses: {
+            /** @description The note already existed for this `client_request_id`. */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description Successful Response */
+            201: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["VoiceNoteOut"];
+                };
+            };
+            /** @description `not_found`: one answer for no access of any kind. */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["VoiceNoteErrorBody"];
+                };
+            };
+            /** @description `visit_not_active`, `already_processing`, `invalid_state`, `not_ready`, `already_saved`, `audio_expired`, `consent_missing`. */
+            409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["VoiceNoteErrorBody"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+            /** @description `note_limit_reached` or `daily_limit_reached` (with Retry-After). */
+            429: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["VoiceNoteErrorBody"];
+                };
+            };
+            /** @description `transcription_unavailable`: switched off, no capacity, or the audio store is down. */
+            503: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["VoiceNoteErrorBody"];
+                };
+            };
+        };
+    };
+    send_voice_note_audio_api_v1_caregiver_voice_notes__note_id__audio_put: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                note_id: string;
+            };
+            cookie?: never;
+        };
+        /** @description The recording itself as the raw request body (not multipart). `Content-Type` is the audio type. */
+        requestBody: {
+            content: {
+                "audio/mp4": string;
+                "audio/x-m4a": string;
+                "audio/aac": string;
+                "audio/mpeg": string;
+                "audio/wav": string;
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            202: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["VoiceNoteOut"];
+                };
+            };
+            /** @description `audio_empty`. */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["VoiceNoteErrorBody"];
+                };
+            };
+            /** @description `not_found`: one answer for no access of any kind. */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["VoiceNoteErrorBody"];
+                };
+            };
+            /** @description `visit_not_active`, `already_processing`, `invalid_state`, `not_ready`, `already_saved`, `audio_expired`, `consent_missing`. */
+            409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["VoiceNoteErrorBody"];
+                };
+            };
+            /** @description `audio_too_large`. */
+            413: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["VoiceNoteErrorBody"];
+                };
+            };
+            /** @description `unsupported_audio_type`. */
+            415: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["VoiceNoteErrorBody"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+            /** @description `note_limit_reached` or `daily_limit_reached` (with Retry-After). */
+            429: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["VoiceNoteErrorBody"];
+                };
+            };
+            /** @description `transcription_unavailable`: switched off, no capacity, or the audio store is down. */
+            503: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["VoiceNoteErrorBody"];
+                };
+            };
+        };
+    };
+    get_voice_note_api_v1_caregiver_voice_notes__note_id__get: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                note_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["VoiceNoteOut"];
+                };
+            };
+            /** @description `not_found`: one answer for no access of any kind. */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["VoiceNoteErrorBody"];
+                };
+            };
+            /** @description `visit_not_active`, `already_processing`, `invalid_state`, `not_ready`, `already_saved`, `audio_expired`, `consent_missing`. */
+            409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["VoiceNoteErrorBody"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+            /** @description `note_limit_reached` or `daily_limit_reached` (with Retry-After). */
+            429: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["VoiceNoteErrorBody"];
+                };
+            };
+            /** @description `transcription_unavailable`: switched off, no capacity, or the audio store is down. */
+            503: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["VoiceNoteErrorBody"];
+                };
+            };
+        };
+    };
+    save_voice_note_api_v1_caregiver_voice_notes__note_id__put: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                note_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["VoiceNoteSave"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["VoiceNoteOut"];
+                };
+            };
+            /** @description `not_found`: one answer for no access of any kind. */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["VoiceNoteErrorBody"];
+                };
+            };
+            /** @description `visit_not_active`, `already_processing`, `invalid_state`, `not_ready`, `already_saved`, `audio_expired`, `consent_missing`. */
+            409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["VoiceNoteErrorBody"];
+                };
+            };
+            /** @description Text limits. */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description `note_limit_reached` or `daily_limit_reached` (with Retry-After). */
+            429: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["VoiceNoteErrorBody"];
+                };
+            };
+            /** @description `transcription_unavailable`: switched off, no capacity, or the audio store is down. */
+            503: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["VoiceNoteErrorBody"];
+                };
+            };
+        };
+    };
+    delete_voice_note_api_v1_caregiver_voice_notes__note_id__delete: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                note_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            204: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description `not_found`: one answer for no access of any kind. */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["VoiceNoteErrorBody"];
+                };
+            };
+            /** @description `visit_not_active`, `already_processing`, `invalid_state`, `not_ready`, `already_saved`, `audio_expired`, `consent_missing`. */
+            409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["VoiceNoteErrorBody"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+            /** @description `note_limit_reached` or `daily_limit_reached` (with Retry-After). */
+            429: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["VoiceNoteErrorBody"];
+                };
+            };
+            /** @description `transcription_unavailable`: switched off, no capacity, or the audio store is down. */
+            503: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["VoiceNoteErrorBody"];
+                };
+            };
+        };
+    };
+    retry_voice_note_api_v1_caregiver_voice_notes__note_id__retry_post: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                note_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            202: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["VoiceNoteOut"];
+                };
+            };
+            /** @description `not_found`: one answer for no access of any kind. */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["VoiceNoteErrorBody"];
+                };
+            };
+            /** @description `visit_not_active`, `already_processing`, `invalid_state`, `not_ready`, `already_saved`, `audio_expired`, `consent_missing`. */
+            409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["VoiceNoteErrorBody"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+            /** @description `note_limit_reached` or `daily_limit_reached` (with Retry-After). */
+            429: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["VoiceNoteErrorBody"];
+                };
+            };
+            /** @description `transcription_unavailable`: switched off, no capacity, or the audio store is down. */
+            503: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["VoiceNoteErrorBody"];
                 };
             };
         };
@@ -13804,6 +14602,46 @@ export interface operations {
                 };
                 content: {
                     "application/json": components["schemas"]["NotificationOut"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    booker_voice_notes_api_v1_patient_bookings__booking_id__voice_notes_get: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                booking_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["VoiceNoteReadList"];
+                };
+            };
+            /** @description `not_found`: not the booker, or no such booking. */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["VoiceNoteErrorBody"];
                 };
             };
             /** @description Validation Error */
@@ -16528,6 +17366,46 @@ export interface operations {
                     [name: string]: unknown;
                 };
                 content?: never;
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    admin_voice_notes_api_v1_admin_bookings__booking_id__voice_notes_get: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                booking_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["VoiceNoteReadList"];
+                };
+            };
+            /** @description `not_found`: no such booking. */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["VoiceNoteErrorBody"];
+                };
             };
             /** @description Validation Error */
             422: {

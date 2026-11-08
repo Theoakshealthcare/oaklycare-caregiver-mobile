@@ -1,6 +1,7 @@
 import { voiceNotesMode } from "@/src/config/voiceNotes";
 
 import { FakeVoiceNoteService } from "./fakeService";
+import { realVoiceNoteService } from "./realService";
 import type { NewVoiceNote, RecordingFile, VoiceNote, VoiceNoteText } from "./types";
 
 /**
@@ -8,8 +9,7 @@ import type { NewVoiceNote, RecordingFile, VoiceNote, VoiceNoteText } from "./ty
  * (backend/docs/plans/2026-11-07-ai-note-transcription.md section 3). Every method either resolves or throws an
  * `ApiError` whose body is `{ detail: { code, message } }`.
  *
- * TODO(phase-B): add `RealVoiceNoteService` next to this file: each method one call through the generated api-client
- * with `unwrap`, the audio sent as a raw body (spec 3.3: no multipart), then make the factory below return it.
+ * `realVoiceNoteService` (realService.ts) is the live one; `FakeVoiceNoteService` stays for tests and the `fake` mode.
  */
 export interface VoiceNoteService {
   /** POST /caregiver/visits/{booking_id}/voice-notes. Records the consent; idempotent on `clientRequestId`. */
@@ -34,12 +34,12 @@ let override: VoiceNoteService | null = null;
 /** The service the screens use. Only called when `voiceNotesMode()` is not `off`. */
 export function getVoiceNoteService(): VoiceNoteService {
   if (override) return override;
-  // TODO(phase-B): `if (voiceNotesMode() === "live") return realVoiceNoteService;`
+  if (voiceNotesMode() === "live") return realVoiceNoteService;
   if (voiceNotesMode() === "fake") {
     fake ??= new FakeVoiceNoteService();
     return fake;
   }
-  throw new Error("Voice notes are off: getVoiceNoteService was called while EXPO_PUBLIC_VOICE_NOTES is not set to fake.");
+  throw new Error("Voice notes are off: getVoiceNoteService was called while EXPO_PUBLIC_VOICE_NOTES is not fake or live.");
 }
 
 /** Tests and previews swap the service here; pass null to go back to the configured one. */

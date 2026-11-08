@@ -138,7 +138,7 @@ const VoiceNoteReview: React.FC<StackScreenProps<ScreenParamLists, "VoiceNoteRev
         <View style={globalStyles.container}>
           {header}
           <Text variant="body" testID="review-not-ready">
-            This note isn't ready to check yet. Go back to the notes screen to see where it is.
+            This note isn&apos;t ready to check yet. Go back to the notes screen to see where it is.
           </Text>
           <Button title="Back" variant="outline" onPress={goBack} style={{ marginTop: 16 }} />
         </View>
@@ -165,7 +165,7 @@ const VoiceNoteReview: React.FC<StackScreenProps<ScreenParamLists, "VoiceNoteRev
           </Text>
           {note.summary_available ? null : (
             <Text variant="small" color={theme.colors.textLight} testID="review-no-summary" style={{ marginBottom: 4 }}>
-              We couldn't write a summary. You can write one, or leave it empty.
+              We couldn&apos;t write a summary. You can write one, or leave it empty.
             </Text>
           )}
           <View style={fieldBox}>
