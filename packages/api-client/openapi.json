@@ -11077,6 +11077,814 @@
           }
         }
       }
+    },
+    "/api/v1/caregiver/visits/{booking_id}/voice-notes": {
+      "post": {
+        "tags": [
+          "caregiver-voice-notes"
+        ],
+        "summary": "Create Voice Note",
+        "description": "Make a note in `awaiting_audio` and store the consent. Idempotent on `client_request_id` (a repeat answers 200 with the same note).",
+        "operationId": "create_voice_note_api_v1_caregiver_visits__booking_id__voice_notes_post",
+        "security": [
+          {
+            "OAuth2PasswordBearer": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "booking_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid",
+              "title": "Booking Id"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/VoiceNoteCreate"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "The note already existed for this `client_request_id`."
+          },
+          "201": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/VoiceNoteOut"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "`not_found`: one answer for no access of any kind.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/VoiceNoteErrorBody"
+                }
+              }
+            }
+          },
+          "409": {
+            "description": "`visit_not_active`, `already_processing`, `invalid_state`, `not_ready`, `already_saved`, `audio_expired`, `consent_missing`.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/VoiceNoteErrorBody"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          },
+          "429": {
+            "description": "`note_limit_reached` or `daily_limit_reached` (with Retry-After).",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/VoiceNoteErrorBody"
+                }
+              }
+            }
+          },
+          "503": {
+            "description": "`transcription_unavailable`: switched off, no capacity, or the audio store is down.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/VoiceNoteErrorBody"
+                }
+              }
+            }
+          }
+        }
+      },
+      "get": {
+        "tags": [
+          "caregiver-voice-notes"
+        ],
+        "summary": "List Voice Notes",
+        "description": "The caller's own notes for a visit, newest first, so the app can resume after a restart.",
+        "operationId": "list_voice_notes_api_v1_caregiver_visits__booking_id__voice_notes_get",
+        "security": [
+          {
+            "OAuth2PasswordBearer": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "booking_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid",
+              "title": "Booking Id"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/VoiceNoteList"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "`not_found`: one answer for no access of any kind.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/VoiceNoteErrorBody"
+                }
+              }
+            }
+          },
+          "409": {
+            "description": "`visit_not_active`, `already_processing`, `invalid_state`, `not_ready`, `already_saved`, `audio_expired`, `consent_missing`.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/VoiceNoteErrorBody"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          },
+          "429": {
+            "description": "`note_limit_reached` or `daily_limit_reached` (with Retry-After).",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/VoiceNoteErrorBody"
+                }
+              }
+            }
+          },
+          "503": {
+            "description": "`transcription_unavailable`: switched off, no capacity, or the audio store is down.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/VoiceNoteErrorBody"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/caregiver/voice-notes/{note_id}/audio": {
+      "put": {
+        "tags": [
+          "caregiver-voice-notes"
+        ],
+        "summary": "Send Voice Note Audio",
+        "description": "Send the recording. Allowed from `awaiting_audio` and from `failed`. Resolves with the note in `processing`.",
+        "operationId": "send_voice_note_audio_api_v1_caregiver_voice_notes__note_id__audio_put",
+        "security": [
+          {
+            "OAuth2PasswordBearer": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "note_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid",
+              "title": "Note Id"
+            }
+          }
+        ],
+        "responses": {
+          "202": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/VoiceNoteOut"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "`audio_empty`.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/VoiceNoteErrorBody"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "`not_found`: one answer for no access of any kind.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/VoiceNoteErrorBody"
+                }
+              }
+            }
+          },
+          "409": {
+            "description": "`visit_not_active`, `already_processing`, `invalid_state`, `not_ready`, `already_saved`, `audio_expired`, `consent_missing`.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/VoiceNoteErrorBody"
+                }
+              }
+            }
+          },
+          "413": {
+            "description": "`audio_too_large`.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/VoiceNoteErrorBody"
+                }
+              }
+            }
+          },
+          "415": {
+            "description": "`unsupported_audio_type`.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/VoiceNoteErrorBody"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          },
+          "429": {
+            "description": "`note_limit_reached` or `daily_limit_reached` (with Retry-After).",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/VoiceNoteErrorBody"
+                }
+              }
+            }
+          },
+          "503": {
+            "description": "`transcription_unavailable`: switched off, no capacity, or the audio store is down.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/VoiceNoteErrorBody"
+                }
+              }
+            }
+          }
+        },
+        "requestBody": {
+          "required": true,
+          "description": "The recording itself as the raw request body (not multipart). `Content-Type` is the audio type.",
+          "content": {
+            "audio/mp4": {
+              "schema": {
+                "type": "string",
+                "format": "binary"
+              }
+            },
+            "audio/x-m4a": {
+              "schema": {
+                "type": "string",
+                "format": "binary"
+              }
+            },
+            "audio/aac": {
+              "schema": {
+                "type": "string",
+                "format": "binary"
+              }
+            },
+            "audio/mpeg": {
+              "schema": {
+                "type": "string",
+                "format": "binary"
+              }
+            },
+            "audio/wav": {
+              "schema": {
+                "type": "string",
+                "format": "binary"
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/caregiver/voice-notes/{note_id}": {
+      "get": {
+        "tags": [
+          "caregiver-voice-notes"
+        ],
+        "summary": "Get Voice Note",
+        "description": "The poll: one of the caller's own notes.",
+        "operationId": "get_voice_note_api_v1_caregiver_voice_notes__note_id__get",
+        "security": [
+          {
+            "OAuth2PasswordBearer": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "note_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid",
+              "title": "Note Id"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/VoiceNoteOut"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "`not_found`: one answer for no access of any kind.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/VoiceNoteErrorBody"
+                }
+              }
+            }
+          },
+          "409": {
+            "description": "`visit_not_active`, `already_processing`, `invalid_state`, `not_ready`, `already_saved`, `audio_expired`, `consent_missing`.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/VoiceNoteErrorBody"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          },
+          "429": {
+            "description": "`note_limit_reached` or `daily_limit_reached` (with Retry-After).",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/VoiceNoteErrorBody"
+                }
+              }
+            }
+          },
+          "503": {
+            "description": "`transcription_unavailable`: switched off, no capacity, or the audio store is down.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/VoiceNoteErrorBody"
+                }
+              }
+            }
+          }
+        }
+      },
+      "put": {
+        "tags": [
+          "caregiver-voice-notes"
+        ],
+        "summary": "Save Voice Note",
+        "description": "Save the caregiver's version of a `ready` note. The same text again is a 200; different text is `409 already_saved`.",
+        "operationId": "save_voice_note_api_v1_caregiver_voice_notes__note_id__put",
+        "security": [
+          {
+            "OAuth2PasswordBearer": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "note_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid",
+              "title": "Note Id"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/VoiceNoteSave"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/VoiceNoteOut"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "`not_found`: one answer for no access of any kind.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/VoiceNoteErrorBody"
+                }
+              }
+            }
+          },
+          "409": {
+            "description": "`visit_not_active`, `already_processing`, `invalid_state`, `not_ready`, `already_saved`, `audio_expired`, `consent_missing`.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/VoiceNoteErrorBody"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Text limits."
+          },
+          "429": {
+            "description": "`note_limit_reached` or `daily_limit_reached` (with Retry-After).",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/VoiceNoteErrorBody"
+                }
+              }
+            }
+          },
+          "503": {
+            "description": "`transcription_unavailable`: switched off, no capacity, or the audio store is down.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/VoiceNoteErrorBody"
+                }
+              }
+            }
+          }
+        }
+      },
+      "delete": {
+        "tags": [
+          "caregiver-voice-notes"
+        ],
+        "summary": "Delete Voice Note",
+        "description": "Discard an unsaved note, or delete a saved one inside the edit window: text, parked audio and row.",
+        "operationId": "delete_voice_note_api_v1_caregiver_voice_notes__note_id__delete",
+        "security": [
+          {
+            "OAuth2PasswordBearer": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "note_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid",
+              "title": "Note Id"
+            }
+          }
+        ],
+        "responses": {
+          "204": {
+            "description": "Successful Response"
+          },
+          "404": {
+            "description": "`not_found`: one answer for no access of any kind.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/VoiceNoteErrorBody"
+                }
+              }
+            }
+          },
+          "409": {
+            "description": "`visit_not_active`, `already_processing`, `invalid_state`, `not_ready`, `already_saved`, `audio_expired`, `consent_missing`.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/VoiceNoteErrorBody"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          },
+          "429": {
+            "description": "`note_limit_reached` or `daily_limit_reached` (with Retry-After).",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/VoiceNoteErrorBody"
+                }
+              }
+            }
+          },
+          "503": {
+            "description": "`transcription_unavailable`: switched off, no capacity, or the audio store is down.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/VoiceNoteErrorBody"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/caregiver/voice-notes/{note_id}/retry": {
+      "post": {
+        "tags": [
+          "caregiver-voice-notes"
+        ],
+        "summary": "Retry Voice Note",
+        "description": "Run a failed note again. Only for a retryable failure whose audio is still stored; else `409 audio_expired` / `invalid_state`.",
+        "operationId": "retry_voice_note_api_v1_caregiver_voice_notes__note_id__retry_post",
+        "security": [
+          {
+            "OAuth2PasswordBearer": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "note_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid",
+              "title": "Note Id"
+            }
+          }
+        ],
+        "responses": {
+          "202": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/VoiceNoteOut"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "`not_found`: one answer for no access of any kind.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/VoiceNoteErrorBody"
+                }
+              }
+            }
+          },
+          "409": {
+            "description": "`visit_not_active`, `already_processing`, `invalid_state`, `not_ready`, `already_saved`, `audio_expired`, `consent_missing`.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/VoiceNoteErrorBody"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          },
+          "429": {
+            "description": "`note_limit_reached` or `daily_limit_reached` (with Retry-After).",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/VoiceNoteErrorBody"
+                }
+              }
+            }
+          },
+          "503": {
+            "description": "`transcription_unavailable`: switched off, no capacity, or the audio store is down.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/VoiceNoteErrorBody"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/patient/bookings/{booking_id}/voice-notes": {
+      "get": {
+        "tags": [
+          "patient-voice-notes"
+        ],
+        "summary": "Booker Voice Notes",
+        "operationId": "booker_voice_notes_api_v1_patient_bookings__booking_id__voice_notes_get",
+        "security": [
+          {
+            "OAuth2PasswordBearer": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "booking_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid",
+              "title": "Booking Id"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/VoiceNoteReadList"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "`not_found`: not the booker, or no such booking.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/VoiceNoteErrorBody"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/admin/bookings/{booking_id}/voice-notes": {
+      "get": {
+        "tags": [
+          "admin-voice-notes"
+        ],
+        "summary": "Admin Voice Notes",
+        "operationId": "admin_voice_notes_api_v1_admin_bookings__booking_id__voice_notes_get",
+        "security": [
+          {
+            "AdminBearer": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "booking_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid",
+              "title": "Booking Id"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/VoiceNoteReadList"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "`not_found`: no such booking.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/VoiceNoteErrorBody"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
     }
   },
   "components": {
@@ -26686,6 +27494,412 @@
           "items"
         ],
         "title": "CandidateList"
+      },
+      "VoiceNoteCreate": {
+        "properties": {
+          "consent_confirmed": {
+            "type": "boolean",
+            "title": "Consent Confirmed"
+          },
+          "consent_version": {
+            "type": "string",
+            "maxLength": 40,
+            "minLength": 1,
+            "title": "Consent Version"
+          },
+          "language": {
+            "type": "string",
+            "enum": [
+              "en",
+              "pcm"
+            ],
+            "title": "Language"
+          },
+          "duration_seconds": {
+            "type": "integer",
+            "maximum": 600,
+            "minimum": 2,
+            "title": "Duration Seconds"
+          },
+          "client_request_id": {
+            "anyOf": [
+              {
+                "type": "string",
+                "format": "uuid"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Client Request Id"
+          }
+        },
+        "additionalProperties": false,
+        "type": "object",
+        "required": [
+          "consent_confirmed",
+          "consent_version",
+          "language",
+          "duration_seconds"
+        ],
+        "title": "VoiceNoteCreate"
+      },
+      "VoiceNoteError": {
+        "properties": {
+          "code": {
+            "type": "string",
+            "title": "Code"
+          },
+          "message": {
+            "type": "string",
+            "title": "Message"
+          },
+          "retryable": {
+            "type": "boolean",
+            "title": "Retryable"
+          }
+        },
+        "type": "object",
+        "required": [
+          "code",
+          "message",
+          "retryable"
+        ],
+        "title": "VoiceNoteError"
+      },
+      "VoiceNoteErrorBody": {
+        "properties": {
+          "detail": {
+            "$ref": "#/components/schemas/Detail"
+          }
+        },
+        "type": "object",
+        "required": [
+          "detail"
+        ],
+        "title": "VoiceNoteErrorBody",
+        "description": "The shape of every error of these routes: ``{\"detail\": {\"code\", \"message\"}}``."
+      },
+      "VoiceNoteList": {
+        "properties": {
+          "items": {
+            "items": {
+              "$ref": "#/components/schemas/VoiceNoteOut"
+            },
+            "type": "array",
+            "title": "Items"
+          }
+        },
+        "type": "object",
+        "required": [
+          "items"
+        ],
+        "title": "VoiceNoteList"
+      },
+      "VoiceNoteOut": {
+        "properties": {
+          "id": {
+            "type": "string",
+            "format": "uuid",
+            "title": "Id"
+          },
+          "booking_id": {
+            "type": "string",
+            "format": "uuid",
+            "title": "Booking Id"
+          },
+          "status": {
+            "type": "string",
+            "enum": [
+              "awaiting_audio",
+              "processing",
+              "ready",
+              "failed",
+              "saved"
+            ],
+            "title": "Status"
+          },
+          "language": {
+            "type": "string",
+            "enum": [
+              "en",
+              "pcm"
+            ],
+            "title": "Language"
+          },
+          "transcript": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Transcript"
+          },
+          "summary": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Summary"
+          },
+          "summary_available": {
+            "type": "boolean",
+            "title": "Summary Available"
+          },
+          "edited": {
+            "type": "boolean",
+            "title": "Edited"
+          },
+          "error": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/VoiceNoteError"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "duration_seconds": {
+            "type": "integer",
+            "title": "Duration Seconds"
+          },
+          "consent_version": {
+            "type": "string",
+            "title": "Consent Version"
+          },
+          "consent_confirmed_at": {
+            "type": "string",
+            "format": "date-time",
+            "title": "Consent Confirmed At"
+          },
+          "created_at": {
+            "type": "string",
+            "format": "date-time",
+            "title": "Created At"
+          },
+          "ready_at": {
+            "anyOf": [
+              {
+                "type": "string",
+                "format": "date-time"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Ready At"
+          },
+          "saved_at": {
+            "anyOf": [
+              {
+                "type": "string",
+                "format": "date-time"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Saved At"
+          },
+          "expires_at": {
+            "anyOf": [
+              {
+                "type": "string",
+                "format": "date-time"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Expires At"
+          }
+        },
+        "type": "object",
+        "required": [
+          "id",
+          "booking_id",
+          "status",
+          "language",
+          "summary_available",
+          "edited",
+          "duration_seconds",
+          "consent_version",
+          "consent_confirmed_at",
+          "created_at"
+        ],
+        "title": "VoiceNoteOut"
+      },
+      "VoiceNoteReadList": {
+        "properties": {
+          "items": {
+            "items": {
+              "$ref": "#/components/schemas/VoiceNoteReadOut"
+            },
+            "type": "array",
+            "title": "Items"
+          }
+        },
+        "type": "object",
+        "required": [
+          "items"
+        ],
+        "title": "VoiceNoteReadList"
+      },
+      "VoiceNoteReadOut": {
+        "properties": {
+          "id": {
+            "type": "string",
+            "format": "uuid",
+            "title": "Id"
+          },
+          "booking_id": {
+            "type": "string",
+            "format": "uuid",
+            "title": "Booking Id"
+          },
+          "status": {
+            "type": "string",
+            "enum": [
+              "awaiting_audio",
+              "processing",
+              "ready",
+              "failed",
+              "saved"
+            ],
+            "title": "Status"
+          },
+          "language": {
+            "type": "string",
+            "enum": [
+              "en",
+              "pcm"
+            ],
+            "title": "Language"
+          },
+          "transcript": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Transcript"
+          },
+          "summary": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Summary"
+          },
+          "summary_available": {
+            "type": "boolean",
+            "title": "Summary Available"
+          },
+          "edited": {
+            "type": "boolean",
+            "title": "Edited"
+          },
+          "duration_seconds": {
+            "type": "integer",
+            "title": "Duration Seconds"
+          },
+          "created_at": {
+            "type": "string",
+            "format": "date-time",
+            "title": "Created At"
+          },
+          "ready_at": {
+            "anyOf": [
+              {
+                "type": "string",
+                "format": "date-time"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Ready At"
+          },
+          "saved_at": {
+            "anyOf": [
+              {
+                "type": "string",
+                "format": "date-time"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Saved At"
+          }
+        },
+        "type": "object",
+        "required": [
+          "id",
+          "booking_id",
+          "status",
+          "language",
+          "summary_available",
+          "edited",
+          "duration_seconds",
+          "created_at"
+        ],
+        "title": "VoiceNoteReadOut",
+        "description": "A saved note as the rest of the care team sees it: no error, expiry or consent fields."
+      },
+      "VoiceNoteSave": {
+        "properties": {
+          "transcript": {
+            "type": "string",
+            "maxLength": 22000,
+            "title": "Transcript"
+          },
+          "summary": {
+            "type": "string",
+            "maxLength": 2500,
+            "title": "Summary",
+            "default": ""
+          }
+        },
+        "additionalProperties": false,
+        "type": "object",
+        "required": [
+          "transcript"
+        ],
+        "title": "VoiceNoteSave"
+      },
+      "Detail": {
+        "properties": {
+          "code": {
+            "type": "string",
+            "title": "Code"
+          },
+          "message": {
+            "type": "string",
+            "title": "Message"
+          }
+        },
+        "type": "object",
+        "required": [
+          "code",
+          "message"
+        ],
+        "title": "Detail"
       }
     },
     "securitySchemes": {

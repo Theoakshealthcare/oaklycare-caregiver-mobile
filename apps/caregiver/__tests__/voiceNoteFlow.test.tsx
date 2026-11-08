@@ -17,7 +17,7 @@ const mockNav = { navigation: { navigate: mockNavigate, goBack: jest.fn() } };
 jest.mock("../src/hooks/use-navigation", () => ({ __esModule: true, default: () => mockNav }));
 jest.mock("../src/components/back/HeaderBack", () => ({ __esModule: true, default: () => null }));
 
-let mockMode: "off" | "fake" = "fake";
+let mockMode: "off" | "fake" | "live" = "fake";
 jest.mock("../src/config/voiceNotes", () => ({ voiceNotesMode: () => mockMode }));
 
 const mockDeleteFile = jest.fn();
@@ -104,6 +104,21 @@ describe("voice notes off (the default)", () => {
     expect(screen.queryByTestId("language-en")).toBeNull();
     expect(screen.getByText(/Voice recordings are not transcribed yet/)).toBeTruthy();
     expect(service.calls).toEqual([]); // off: not even a read
+  });
+});
+
+describe("test-mode banner", () => {
+  it("is shown in fake mode only: a live build says nothing about sample text", async () => {
+    await render();
+    await waitFor(() => expect(screen.getByTestId("fake-mode-banner")).toBeTruthy());
+    expect(screen.getByTestId("fake-mode-banner")).toHaveTextContent(/sample text/);
+  });
+
+  it("live mode shows the same consent step and no banner", async () => {
+    mockMode = "live";
+    await render();
+    await waitFor(() => expect(screen.getByTestId("consent-card")).toBeTruthy());
+    expect(screen.queryByTestId("fake-mode-banner")).toBeNull();
   });
 });
 

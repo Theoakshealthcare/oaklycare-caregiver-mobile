@@ -134,11 +134,6 @@ const AINoteTaker: React.FC<StackScreenProps<ScreenParamLists, "AINoteTaker">> =
     }
   }, [isRecording])
 
-  useEffect(() => {
-    if (voiceOn && isRecording && recordingDuration >= VOICE_NOTE_LIMITS.maxSeconds) void stopRecording()
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [recordingDuration, isRecording, voiceOn])
-
   const startRecording = async () => {
     try {
       // The microphone is asked for only now, when the caregiver taps the mic, never on opening the screen (DP1-17).
@@ -200,6 +195,12 @@ const AINoteTaker: React.FC<StackScreenProps<ScreenParamLists, "AINoteTaker">> =
       Alert.alert("Error", "Failed to stop recording")
     }
   }
+
+  // A recording stops by itself at the longest the backend accepts and is sent as it is.
+  useEffect(() => {
+    if (voiceOn && isRecording && recordingDuration >= VOICE_NOTE_LIMITS.maxSeconds) void stopRecording()
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [recordingDuration, isRecording, voiceOn])
 
   const saveTextNote = () => {
     if (!noteTitle.trim() || !currentNote.trim()) {

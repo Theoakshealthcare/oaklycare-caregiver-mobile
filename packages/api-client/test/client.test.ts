@@ -204,3 +204,52 @@ test("multipart returns the error body for a non-2xx and rethrows a fetch reject
   });
   await assert.rejects(offline.uploadMultipart("/up", new FormData()), TypeError);
 });
+
+test("raw bytes go through plain fetch(url, init) with the file's own Content-Type, auth, and one refresh on 401", async () => {
+  const seen: { input: unknown; init?: RequestInit }[] = [];
+  const fn = (async (input: unknown, init?: RequestInit) => {
+    seen.push({ input, init });
+    const auth = (init?.headers as Record<string, string>).Authorization;
+    return auth === "Bearer new" ? Response.json({ id: "n1" }, { status: 202 }) : Response.json({ detail: "expired" }, { status: 401 });
+  }) as typeof fetch;
+  let refreshes = 0;
+  const api = createOaklyClient({
+    baseUrl: "http://x/",
+    getAccessToken: () => "old",
+    onUnauthorized: async () => (refreshes++, "new"),
+    fetch: fn,
+  });
+  const bytes = new Uint8Array([1, 2, 3]);
+  const { data, response } = await api.uploadBytes("/api/v1/caregiver/voice-notes/n1/audio", bytes, "audio/mp4");
+  assert.equal(response.status, 202);
+  assert.deepEqual(data, { id: "n1" });
+  assert.equal(refreshes, 1);
+  assert.equal(seen.length, 2);
+  assert.equal(seen[0]?.input instanceof Request, false);
+  assert.equal(seen[0]?.input, "http://x/api/v1/caregiver/voice-notes/n1/audio");
+  assert.equal(seen[1]?.init?.body, bytes);
+  assert.equal(seen[1]?.init?.method, "PUT");
+  const headers = seen[1]?.init?.headers as Record<string, string>;
+  assert.equal(headers["Content-Type"], "audio/mp4");
+  assert.equal(headers.Authorization, "Bearer new");
+});
+
+test("raw bytes return the error body of a non-2xx (an object detail) and rethrow a fetch rejection untouched", async () => {
+  const bad = createOaklyClient({
+    baseUrl: "http://x",
+    getAccessToken: () => null,
+    fetch: (async () => Response.json({ detail: { code: "audio_too_large", message: "x" } }, { status: 413 })) as typeof fetch,
+  });
+  const result = await bad.uploadBytes("/up", new Uint8Array(1), "audio/mp4");
+  assert.equal(result.response.status, 413);
+  assert.deepEqual(result.error, { detail: { code: "audio_too_large", message: "x" } });
+
+  const offline = createOaklyClient({
+    baseUrl: "http://x",
+    getAccessToken: () => null,
+    fetch: (async () => {
+      throw new TypeError("Network request failed");
+    }) as typeof fetch,
+  });
+  await assert.rejects(offline.uploadBytes("/up", new Uint8Array(1), "audio/mp4"), TypeError);
+});

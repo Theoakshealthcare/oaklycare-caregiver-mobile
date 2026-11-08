@@ -1,5 +1,7 @@
 # SOP: Caregiver AI voice notes, app side (against a documented contract, fake service only)
 
+> **Update 2026-11-08:** the real service is now wired in code (docs/sop/2026-11-08-caregiver-ai-voice-notes-wiring.md): the `TODO(phase-B)` seams below are done, `live` mode exists, and the types come from the generated client. The flag is still off by default. This page is the record of the UI as first shipped.
+
 | | |
 |---|---|
 | **What shipped** | The caregiver app side of AI note transcription: a consent step, record, upload, a "transcribing" state with retry, an edit screen (transcript and summary), Save and Discard, saved voice notes showing the final text. It is built against the contract in `backend/docs/plans/2026-11-07-ai-note-transcription.md` through a typed service with an in-memory fake. **It is NOT wired to a real backend: the endpoints do not exist yet**, and the feature is **off by default** (`EXPO_PUBLIC_VOICE_NOTES` unset). |

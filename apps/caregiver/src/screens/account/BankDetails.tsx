@@ -183,7 +183,7 @@ const BankDetails: React.FC = () => {
         {notice ? <Banner tone="info" testID="bank-saved-notice">{notice}</Banner> : null}
         {bankAccountState(account) === "needs_resave" ? (
           <Banner tone="warning" testID="bank-resave">
-            Please verify your bank account. Accounts saved before this update can't be paid until you save them again.
+            Please verify your bank account. Accounts saved before this update can&apos;t be paid until you save them again.
           </Banner>
         ) : null}
         {paused && !notice ? (
