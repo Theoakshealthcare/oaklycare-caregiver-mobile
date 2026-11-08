@@ -2,6 +2,7 @@ import React from "react";
 import { Pressable, View } from "react-native";
 import { Feather } from "@expo/vector-icons";
 
+import LegalLink from "@/src/components/ui/legal-link";
 import Text from "@/src/components/ui/text";
 import { theme } from "@/src/constants/theme";
 import { CONSENT_BODY, CONSENT_LABEL, CONSENT_TITLE } from "@/src/identity/identityModel";
@@ -22,8 +23,8 @@ const ConsentBlock: React.FC<{ checked: boolean; onToggle: () => void; disabled?
     <Text testID="identity-consent-text" variant="body" color={theme.colors.text} style={{ lineHeight: 24 }}>
       {CONSENT_BODY}
     </Text>
-    <Text variant="small" color={theme.colors.primary} style={{ textDecorationLine: "underline" }}>
-      Privacy Policy
+    <Text variant="small">
+      <LegalLink page="privacy">Privacy Policy</LegalLink>
     </Text>
     <Pressable
       testID="identity-consent-check"

@@ -246,10 +246,10 @@ describe("profile (live-shaped)", () => {
     });
   });
 
-  describe("FAQs, About, and what is hidden", () => {
+  describe("FAQs and About", () => {
     beforeEach(() => WebBrowser.openBrowserAsync.mockClear());
 
-    it("opens the owner's site for FAQs and About in the in-app browser (not Safari), and shows no Terms or Privacy row", async () => {
+    it("opens the owner's site for FAQs and About in the in-app browser (not Safari)", async () => {
       const safari = jest.spyOn(Linking, "openURL").mockResolvedValue(true);
       const { view } = await renderSignedIn();
       await press("Open profile");
@@ -258,7 +258,6 @@ describe("profile (live-shaped)", () => {
       await press("About us");
       await waitFor(() => expect(WebBrowser.openBrowserAsync).toHaveBeenLastCalledWith("https://oaklycare.com/about", expect.anything()));
       expect(safari).not.toHaveBeenCalled();
-      expect(screen.queryByText(/Terms|Privacy|Cookie/i)).toBeNull();
       safari.mockRestore();
       view.unmount();
     });

@@ -26,7 +26,8 @@ export const CONSENT_TEXT_VERSION = "kyc-2026-10";
 
 /**
  * CONTENT, FOR COUNSEL REVIEW before launch (NDPA 2023 lawful basis for biometric data, DPIA question).
- * Design 10.2, word for word; the "[Privacy Policy]" link has no destination decided yet.
+ * Design 10.2, word for word. The "[Privacy Policy]" link under it (`ConsentBlock`) opens `PRIVACY_URL` in the in-app
+ * browser; making it a link changes no word of the consent, so `CONSENT_TEXT_VERSION` does not move.
  */
 export const CONSENT_TITLE = "Verify your identity";
 /**

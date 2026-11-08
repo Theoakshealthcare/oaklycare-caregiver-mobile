@@ -211,7 +211,7 @@ Owner decisions (2026-11-07): move the old app into the monorepo on SDK 57, copi
   - [ ] History screen is an open owner question
 - [x] P8 Notifications wired (same branch and SOP; needs backend PR #40 for the routes): feed with paging, unread badge on the bell, mark read, read all, tap opens the booking, push registration that skips quietly without an EAS project id, token forgotten on log out and delete
   - [ ] Owner: `eas init` for the patient app, APNs / FCM keys; then a push test on a phone (real push, banner and tap not verified); rebuild the dev build (new native module `expo-notifications`)
-- [x] Profile wired (same branch and SOP): edit profile (re-reads `/auth/me`, keeps `user.patient`), change password (400 codes, 429 countdown, new token pair stored), FAQs and About open oaklycare.com (in the in-app browser since polish 1b); Terms / Privacy hidden until URLs are known
+- [x] Profile wired (same branch and SOP): edit profile (re-reads `/auth/me`, keeps `user.patient`), change password (400 codes, 429 countdown, new token pair stored), FAQs and About open oaklycare.com (in the in-app browser since polish 1b); Terms / Privacy rows were hidden until URLs were known (now added, see "Terms and Privacy links" below)
   - [ ] **Backend: `PUT /auth/profile` does not save name or phone (live capture), and cannot clear a field**; the app says so instead of "updated"
 - [x] P9 Live tracking and chat wired (2026-11-07, branch `feature/patient-tracking-chat`, see docs/sop/2026-11-07-patient-tracking-and-chat.md; **proved on the iOS simulator**, ledger `LEDGER-device-patient-tracking-chat.md`; not pushed)
   - [x] Tracking as text, polled every 15 s while the screen is in front and the caregiver is accepted / on the way: distance, estimated arrival (on the way only), "Updated ... ago", out-of-date warning from 5 min, "Location not shared yet" (404), nothing when closed (409), "Open in Maps" (Apple Maps on iOS, Google Maps link elsewhere)
@@ -230,3 +230,8 @@ Owner decisions (2026-11-07): move the old app into the monorepo on SDK 57, copi
 - [ ] Extract shared auth / theme / ui package (the shell was copied from the caregiver app on purpose; two copies of `session.ts`, `errors.ts`, theme and ui primitives now exist)
 - [ ] Production font licence check for GT Walsheim Pro (the files were copied from the caregiver app)
 
+## Terms and Privacy links (both mobile apps)
+- [x] Real Terms (`https://www.oaklycare.com/terms`) and Privacy (`https://www.oaklycare.com/privacy`) URLs in config (`TERMS_URL`, `PRIVACY_URL`); every Terms / Privacy mention on caregiver sign-up, consent screen, identity consent block and patient sign-up opens in the in-app browser; patient Profile gets Terms of Service and Privacy Policy rows; a failed open shows the app's own error (2026-11-08, branch `feat/terms-privacy-links`, **not pushed, Jest-verified only, not device-verified**; see docs/sop/2026-11-08-terms-privacy-links.md). No consent word or `CONSENT_TEXT_VERSION` changed; admin untouched
+- [ ] **Counsel still has to sign off the consent wording** (identity consent design 10.2 and the background-check consent)
+- [ ] Look at the links on a device (wrapping inside the sign-up sentence, tap size, in-app browser close button)
+- [ ] Owner: Cookies Policy URL (or drop the mention; it is not tappable today); optional Terms/Privacy rows in the caregiver Profile
