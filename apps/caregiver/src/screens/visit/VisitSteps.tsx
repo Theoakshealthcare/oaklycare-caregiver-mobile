@@ -55,14 +55,17 @@ export const OnMyWayStep: React.FC<{
   scheduledDate: string;
   busy: boolean;
   onOnMyWay: () => void;
+  /** "I've arrived": tells the patient (POST action `arrived`); the booking then carries `arrived_at`. */
   onArrived: () => void;
+  /** Set only after "I've arrived" failed: lets the caregiver go on to the code (arrival never blocks the visit). */
+  onSkipToCode?: () => void;
   /** Booking channel: only a WhatsApp booking can be dropped in the app. */
   channel: string;
   onCantMakeIt: () => void;
   onContactSupport: () => void;
   /** Injected so tests can drive the clock. */
   now?: () => number;
-}> = ({ visit, scheduledDate, busy, onOnMyWay, onArrived, channel, onCantMakeIt, onContactSupport, now = Date.now }) => {
+}> = ({ visit, scheduledDate, busy, onOnMyWay, onArrived, onSkipToCode, channel, onCantMakeIt, onContactSupport, now = Date.now }) => {
   const startMs = parseBackendDate(scheduledDate).getTime();
   const [tick, setTick] = useState(now());
   useEffect(() => {
@@ -80,7 +83,12 @@ export const OnMyWayStep: React.FC<{
           {`You can mark yourself on the way from ${formatTime(unlocksAt)}, 2 hours before the visit.`}
         </Text>
       )}
-      <Button title="I've arrived: enter visit code" variant="outline" onPress={onArrived} disabled={busy} />
+      <Button title="I've arrived" variant="outline" onPress={onArrived} disabled={busy} />
+      {onSkipToCode ? (
+        <Text variant="small" color={theme.colors.primary} testID="skip-to-code" onPress={onSkipToCode}>
+          Enter the visit code anyway
+        </Text>
+      ) : null}
       {canDropOut(channel, "accepted", startMs, tick) ? (
         <Button title="I can't make this visit" variant="outline" onPress={onCantMakeIt} disabled={busy} />
       ) : (
@@ -104,6 +112,11 @@ export interface CodeStepProps {
   attemptsLeft: number | null;
   error: string | null;
   onSubmit: (code: string) => void;
+  /**
+   * "I've arrived" for a visit that has not been marked yet, or the done state once `arrived_at` is set
+   * (read from the booking, so it survives a restart). Omitted: no arrival UI at all.
+   */
+  arrival?: { arrived: boolean; busy: boolean; onArrived: () => void };
   /** Injected so tests can drive the countdown. */
   now?: () => number;
 }
@@ -135,6 +148,7 @@ export const VisitCodeStep: React.FC<CodeStepProps> = ({
   attemptsLeft,
   error,
   onSubmit,
+  arrival,
   now = Date.now,
 }) => {
   const [code, setCode] = useState("");
@@ -147,6 +161,15 @@ export const VisitCodeStep: React.FC<CodeStepProps> = ({
       subtitle="Ask the patient for the 4-digit code shown in their Oakly app. It proves you have arrived."
     >
       <Summary visit={visit} />
+      {arrival ? (
+        arrival.arrived ? (
+          <Text variant="small" weight="medium" color={theme.colors.success} testID="arrived-notice">
+            The patient knows you&apos;ve arrived.
+          </Text>
+        ) : (
+          <Button title="I've arrived" variant="outline" onPress={arrival.onArrived} loading={arrival.busy} disabled={arrival.busy} />
+        )
+      ) : null}
       {locked ? (
         <View
           accessibilityRole="alert"

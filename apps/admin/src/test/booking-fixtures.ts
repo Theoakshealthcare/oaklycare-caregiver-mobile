@@ -210,6 +210,7 @@ export const POLICY: BookingPolicy = {
   payout_cadence: "weekly",
   payout_min_naira: 5000,
   finance_refund_limit_naira: 50000,
+  short_visit_min_percent: 50,
   updated_at: "2026-10-07T20:31:25.551552",
   updated_by: null,
 };

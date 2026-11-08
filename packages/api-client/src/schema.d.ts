@@ -1235,8 +1235,8 @@ export interface paths {
          * @description The "Pay now" link for a booking created earlier, so it survives an app restart.
          *
          *     Same response as ``/create`` (the booking with ``payment_url`` and ``payment_access_code``) plus ``paystack_reference``
-         *     and ``payment_expires_at``. The booking keeps its
-         *     one Paystack reference, so Paystack itself can charge it only once: tapping twice, or paying on an old page and a new
+         *     and ``payment_expires_at``. The link is the one Paystack gave when the booking was created (stored on the booking). The
+         *     booking keeps its one Paystack reference, so Paystack itself can charge it only once: tapping twice, or paying on an old page and a new
          *     one, can never charge twice. Paystack is asked first whether the booking was already paid (a late webhook): if so it
          *     is settled and the answer is 409 ``booking_already_paid``. Nothing is written when a link is handed out. Only for a
          *     pending booking whose payment window is still open; the window is not extended.
@@ -4447,7 +4447,7 @@ export interface components {
              * Action
              * @enum {string}
              */
-            action: "accept" | "decline" | "on_my_way" | "start" | "complete" | "cancel";
+            action: "accept" | "decline" | "on_my_way" | "arrived" | "start" | "complete" | "cancel";
             /** Reason */
             reason?: string | null;
             /** Visit Code */
@@ -4857,6 +4857,11 @@ export interface components {
              * @description Largest refund Finance may approve without a Super Admin, in naira (not read yet)
              */
             finance_refund_limit_naira: number;
+            /**
+             * Short Visit Min Percent
+             * @description A completed visit with under this percent of the booked time on site is credited already held for Finance review (50 = under half). Copied onto each booking when it is created
+             */
+            short_visit_min_percent: number;
             /** Updated At */
             updated_at?: string | null;
             /** Updated By */
@@ -4895,6 +4900,8 @@ export interface components {
             payout_min_naira?: number | null;
             /** Finance Refund Limit Naira */
             finance_refund_limit_naira?: number | null;
+            /** Short Visit Min Percent */
+            short_visit_min_percent?: number | null;
         };
         /** BookingPreviewRequest */
         BookingPreviewRequest: {
@@ -5110,6 +5117,17 @@ export interface components {
              * @description dispatching | matched | unmatched; null before payment or for legacy bookings
              */
             dispatch_state?: string | null;
+            /**
+             * Arrived At
+             * @description When the assigned caregiver tapped "I've arrived" (UTC); null until then. The status does not change: the visit still starts with the visit code.
+             */
+            arrived_at?: string | null;
+            /**
+             * Caregiver Earning
+             * @description Naira the assigned caregiver earns for completing this visit (their share of the service fee, from the terms copied onto the booking when it was created). Caregiver views only, for an accepted, en route, in progress or completed booking; null for everyone else and when the booking carries no snapshot.
+             * @example 12000
+             */
+            caregiver_earning?: number | null;
             /**
              * Visit Code
              * @description 4-digit code the patient gives the caregiver to start the visit. Only returned to the booking's own patient from GET /booking/booking/{id}, while the booking is accepted or en_route; null for everyone else and in every other response.
@@ -5827,6 +5845,10 @@ export interface components {
             dispatch_started_at?: string | null;
             /** Visit Code */
             visit_code?: string | null;
+            /** Arrived At */
+            arrived_at?: string | null;
+            /** Caregiver Earning */
+            caregiver_earning?: number | null;
             /**
              * Created At
              * Format: date-time
@@ -8004,6 +8026,17 @@ export interface components {
              * @description dispatching | matched | unmatched; null before payment or for legacy bookings
              */
             dispatch_state?: string | null;
+            /**
+             * Arrived At
+             * @description When the assigned caregiver tapped "I've arrived" (UTC); null until then. The status does not change: the visit still starts with the visit code.
+             */
+            arrived_at?: string | null;
+            /**
+             * Caregiver Earning
+             * @description Naira the assigned caregiver earns for completing this visit (their share of the service fee, from the terms copied onto the booking when it was created). Caregiver views only, for an accepted, en route, in progress or completed booking; null for everyone else and when the booking carries no snapshot.
+             * @example 12000
+             */
+            caregiver_earning?: number | null;
             /**
              * Visit Code
              * @description 4-digit code the patient gives the caregiver to start the visit. Only returned to the booking's own patient from GET /booking/booking/{id}, while the booking is accepted or en_route; null for everyone else and in every other response.

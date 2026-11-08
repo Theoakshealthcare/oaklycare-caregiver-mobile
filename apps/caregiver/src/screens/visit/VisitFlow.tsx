@@ -39,11 +39,13 @@ const VisitFlow: React.FC<Props> = ({ route, navigation }) => {
   // What the copy may say about location: only claim sharing when the OS permission is really there.
   const sharingLocation = useLocationPermissions().foreground;
 
-  const [arrived, setArrived] = useState(false);
+  // Set when "I've arrived" failed, so the code step is still reachable: arrival never blocks the visit.
+  const [skipArrival, setSkipArrival] = useState(false);
   const [codeBusy, setCodeBusy] = useState(false);
   const [codeError, setCodeError] = useState<string | null>(null);
   const [attemptsLeft, setAttemptsLeft] = useState<number | null>(null);
   const [lockedUntil, setLockedUntil] = useState<number | null>(() => codeLocks.get(bookingId));
+  const [arrivalFailed, setArrivalFailed] = useState(false);
   const [stopped, setStopped] = useState<string | null>(null);
 
   const goHome = () => navigation.popTo("BottomNavigation", { tab: "home", at: Date.now() });
@@ -54,14 +56,17 @@ const VisitFlow: React.FC<Props> = ({ route, navigation }) => {
     void client.invalidateQueries({ queryKey: queryKeys.home });
   };
 
-  const run = (kind: "on_my_way" | "complete") =>
+  const run = (kind: "on_my_way" | "arrived" | "complete") =>
     action.mutate(
       { bookingId, action: kind },
       {
         onError: (err) => {
           const message = messageForError(err, "visit");
           if (isSuspendedStop(err)) setStopped(message);
-          else Alert.alert(kind === "on_my_way" ? "Couldn't set off" : "Couldn't complete the visit", message);
+          else if (kind === "arrived") {
+            setArrivalFailed(true);
+            Alert.alert("Couldn't tell the patient", message);
+          } else Alert.alert(kind === "on_my_way" ? "Couldn't set off" : "Couldn't complete the visit", message);
         },
       },
     );
@@ -164,9 +169,12 @@ const VisitFlow: React.FC<Props> = ({ route, navigation }) => {
       when: formatVisitTime(booking.scheduled_date),
     };
     const busy = action.isPending;
+    // From the booking, not a local flag: it survives a restart and is the same on a repeat tap.
+    const arrivedAt = booking.arrived_at;
+    const arrival = { arrived: Boolean(arrivedAt), busy, onArrived: () => run("arrived") };
     switch (stepForStatus(booking.status)) {
       case "on_my_way":
-        return arrived ? (
+        return arrivedAt || skipArrival ? (
           <VisitCodeStep
             visit={visit}
             busy={codeBusy}
@@ -174,6 +182,7 @@ const VisitFlow: React.FC<Props> = ({ route, navigation }) => {
             attemptsLeft={attemptsLeft}
             error={codeError}
             onSubmit={(code) => void submitCode(code)}
+            arrival={arrival}
           />
         ) : (
           <OnMyWayStep
@@ -181,7 +190,8 @@ const VisitFlow: React.FC<Props> = ({ route, navigation }) => {
             scheduledDate={booking.scheduled_date}
             busy={busy}
             onOnMyWay={onMyWay}
-            onArrived={() => setArrived(true)}
+            onArrived={() => run("arrived")}
+            onSkipToCode={arrivalFailed ? () => setSkipArrival(true) : undefined}
             channel={booking.channel}
             onCantMakeIt={confirmDropOut}
             onContactSupport={() => navigation.navigate("Contact")}
@@ -196,6 +206,7 @@ const VisitFlow: React.FC<Props> = ({ route, navigation }) => {
             attemptsLeft={attemptsLeft}
             error={codeError}
             onSubmit={(code) => void submitCode(code)}
+            arrival={arrival}
           />
         );
       case "in_progress":
