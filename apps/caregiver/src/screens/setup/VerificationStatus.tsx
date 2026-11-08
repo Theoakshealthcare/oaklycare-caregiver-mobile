@@ -1,5 +1,5 @@
 import React from "react";
-import { Alert, RefreshControl, ScrollView, View } from "react-native";
+import { Alert, Linking, RefreshControl, ScrollView, View } from "react-native";
 import { useMutation, useQueryClient } from "@tanstack/react-query";
 
 import { messageForError } from "@/src/api/errors";
@@ -8,9 +8,11 @@ import Button from "@/src/components/ui/button";
 import Text from "@/src/components/ui/text";
 import { globalStyles } from "@/src/constants/styles";
 import { theme } from "@/src/constants/theme";
+import { supportUrl } from "@/src/config/contact";
 import { useVerificationStatus } from "@/src/hooks/queries";
 import { kycEnabled } from "@/src/identity/config";
 import Navigation from "@/src/hooks/use-navigation";
+import { RESUBMIT_HINT, resetProfileEdited, useHasEditedProfile } from "@/src/onboarding/reviewEdits";
 import { authService } from "@/src/services/auth.service";
 import { caregiverService, type VerificationStatus } from "@/src/services/caregiver.service";
 
@@ -98,9 +100,15 @@ const VerificationStatusScreen: React.FC = () => {
   const queryClient = useQueryClient();
   const { data, isRefetching, refetch } = useVerificationStatus(true, POLL_MS);
 
+  const edited = useHasEditedProfile();
+
   const resubmit = useMutation({
     mutationFn: () => caregiverService.updateConsent(),
-    onSuccess: () => queryClient.invalidateQueries({ queryKey: queryKeys.verificationStatus }),
+    onSuccess: () => {
+      // Back under review: a later request for changes starts from "nothing changed yet".
+      resetProfileEdited();
+      return queryClient.invalidateQueries({ queryKey: queryKeys.verificationStatus });
+    },
     onError: (error) => Alert.alert("Couldn't resubmit", messageForError(error)),
   });
 
@@ -154,8 +162,28 @@ const VerificationStatusScreen: React.FC = () => {
           {data.profileStatus === "changes_requested" ? (
             <View style={{ gap: 12 }}>
               <Button title="Edit my details" variant="outline" onPress={() => navigation.navigate("CaregiverSetupStep1")} />
-              <Button title="Resubmit for review" onPress={() => resubmit.mutate()} loading={resubmit.isPending} />
+              <Button
+                testID="resubmit-button"
+                title="Resubmit for review"
+                onPress={() => resubmit.mutate()}
+                loading={resubmit.isPending}
+                disabled={!edited}
+              />
+              {!edited ? (
+                <Text testID="resubmit-hint" variant="small" color={theme.colors.textLight} center>
+                  {RESUBMIT_HINT}
+                </Text>
+              ) : null}
             </View>
+          ) : null}
+
+          {data.profileStatus === "rejected" ? (
+            <Button
+              testID="contact-support-button"
+              title="Contact support"
+              variant="outline"
+              onPress={() => void Linking.openURL(supportUrl())}
+            />
           ) : null}
 
           <Button title="Sign out" variant="ghost" onPress={() => void authService.logout()} />

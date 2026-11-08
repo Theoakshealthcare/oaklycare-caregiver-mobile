@@ -3,6 +3,7 @@ import type { Schemas } from "@oakly/api-client";
 import { api } from "@/src/api/client";
 import { appendPickedFile } from "@/src/api/filePart";
 import { unwrap } from "@/src/api/unwrap";
+import { markProfileEdited } from "@/src/onboarding/reviewEdits";
 
 export type CaregiverProfile = Schemas["CaregiverProfile"];
 export type CaregiverProfileStep1 = Schemas["CaregiverProfileStep1"];
@@ -111,12 +112,16 @@ export const caregiverService = {
     return unwrap(api.GET("/api/v1/caregiver/profile"));
   },
 
-  updateProfileStep1(data: CaregiverProfileStep1) {
-    return unwrap(api.PUT("/api/v1/caregiver/profile/step1", { body: data }));
+  async updateProfileStep1(data: CaregiverProfileStep1) {
+    const result = await unwrap(api.PUT("/api/v1/caregiver/profile/step1", { body: data }));
+    markProfileEdited();
+    return result;
   },
 
-  updateProfileStep2(data: CaregiverProfileStep2) {
-    return unwrap(api.PUT("/api/v1/caregiver/profile/step2", { body: data }));
+  async updateProfileStep2(data: CaregiverProfileStep2) {
+    const result = await unwrap(api.PUT("/api/v1/caregiver/profile/step2", { body: data }));
+    markProfileEdited();
+    return result;
   },
 
   /**
@@ -125,8 +130,12 @@ export const caregiverService = {
    * `{ uri, name, type }` for a file. Content-Type is deliberately NOT set: fetch adds
    * `multipart/form-data` with the boundary (a hand-written header would omit it).
    */
-  uploadDocument(file: PickedFile, documentType: string) {
-    return unwrap(api.uploadMultipart<DocumentUploadResponse>("/api/v1/caregiver/documents/upload", buildDocumentForm(file, documentType)));
+  async uploadDocument(file: PickedFile, documentType: string) {
+    const result = await unwrap(
+      api.uploadMultipart<DocumentUploadResponse>("/api/v1/caregiver/documents/upload", buildDocumentForm(file, documentType)),
+    );
+    markProfileEdited();
+    return result;
   },
 
   /** Submits consent, which moves `incomplete` and `changes_requested` to `under_review`. */
