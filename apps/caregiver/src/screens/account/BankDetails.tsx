@@ -1,7 +1,7 @@
 import React, { useState } from "react";
-import { Keyboard, View } from "react-native";
+import { Keyboard, Linking, View } from "react-native";
 
-import { messageForError } from "@/src/api/errors";
+import { isBankNameMismatch, messageForError } from "@/src/api/errors";
 import InfoRow from "@/src/components/account/InfoRow";
 import ScreenShell from "@/src/components/account/ScreenShell";
 import BankPicker from "@/src/components/account/BankPicker";
@@ -9,6 +9,7 @@ import { ErrorState, LoadingState } from "@/src/components/account/StateViews";
 import Button from "@/src/components/ui/button";
 import Input from "@/src/components/ui/input";
 import Text from "@/src/components/ui/text";
+import { supportUrl } from "@/src/config/contact";
 import { theme } from "@/src/constants/theme";
 import { useBankAccount, useBanks, useResolveBankAccount, useSaveBankAccount } from "@/src/hooks/queries";
 import type { Bank, BankAccount, ResolvedAccount } from "@/src/services/wallet.service";
@@ -53,10 +54,18 @@ const BankForm: React.FC<{ hasAccount: boolean; onSaved: (account: BankAccount) 
   const [bankProblem, setBankProblem] = useState<string | undefined>();
   const [numberProblem, setNumberProblem] = useState<string | undefined>();
   const [failure, setFailure] = useState<string | null>(null);
+  // The account is not in the caregiver's own name: only support can change the name on the profile.
+  const [needsSupport, setNeedsSupport] = useState(false);
+
+  const fail = (error: unknown) => {
+    setFailure(messageForError(error, "bank"));
+    setNeedsSupport(isBankNameMismatch(error));
+  };
 
   const reset = () => {
     setResolved(null);
     setFailure(null);
+    setNeedsSupport(false);
   };
 
   const check = async () => {
@@ -69,7 +78,7 @@ const BankForm: React.FC<{ hasAccount: boolean; onSaved: (account: BankAccount) 
     try {
       setResolved(await resolve.mutateAsync({ bank_code: bank.code, account_number: number }));
     } catch (error) {
-      setFailure(messageForError(error, "bank"));
+      fail(error);
     }
   };
 
@@ -78,7 +87,7 @@ const BankForm: React.FC<{ hasAccount: boolean; onSaved: (account: BankAccount) 
     try {
       onSaved(await save.mutateAsync({ bank_code: bank.code, account_number: number }));
     } catch (error) {
-      setFailure(messageForError(error, "bank"));
+      fail(error);
     }
   };
 
@@ -125,6 +134,15 @@ const BankForm: React.FC<{ hasAccount: boolean; onSaved: (account: BankAccount) 
         <Text variant="small" color={theme.colors.error} style={{ marginTop: 12, marginBottom: 12 }} testID="bank-failure">
           {failure}
         </Text>
+      ) : null}
+      {failure && needsSupport ? (
+        <Button
+          testID="bank-contact-support"
+          title="Contact support"
+          variant="ghost"
+          onPress={() => void Linking.openURL(supportUrl())}
+          style={{ marginBottom: 12 }}
+        />
       ) : null}
 
       {resolved ? (
