@@ -6,7 +6,7 @@ import Button from "@/src/components/ui/button";
 import Text from "@/src/components/ui/text";
 import { theme, MAX_FONT_SCALE } from "@/src/constants/theme";
 import { parseBackendDate } from "@/src/utils/dates";
-import { canDropOut, isCompleteCode, isOnMyWayOpen, onMyWayUnlocksAt, sanitizeCode, secondsLeft, VISIT_CODE_LENGTH } from "@/src/visit/visitFlow";
+import { canDropOut, isCompleteCode, isOnMyWayOpen, onMyWayUnlocksAt, sanitizeCode, secondsLeft, shortVisitDoneMessage, VISIT_CODE_LENGTH } from "@/src/visit/visitFlow";
 
 interface StepFrameProps {
   title: string;
@@ -254,12 +254,23 @@ export const InProgressStep: React.FC<{
   </StepFrame>
 );
 
-/** Step 4 (status `completed`). */
-export const VisitDoneStep: React.FC<{ onHome: () => void; sharedLocation?: boolean }> = ({ onHome, sharedLocation = false }) => (
-  <StepFrame title="Visit completed" subtitle={sharedLocation ? "Thank you. Location sharing has stopped." : "Thank you."}>
-    <Button title="Back to home" onPress={onHome} />
-  </StepFrame>
-);
+/**
+ * Step 4 (status `completed`). A short visit's pay is held for Finance review, so it says that instead of
+ * "Thank you"; `earning` is the formatted naira amount when the booking carries it.
+ */
+export const VisitDoneStep: React.FC<{ onHome: () => void; sharedLocation?: boolean; short?: boolean; earning?: string | null }> = ({
+  onHome,
+  sharedLocation = false,
+  short = false,
+  earning = null,
+}) => {
+  const lead = short ? shortVisitDoneMessage(earning) : "Thank you.";
+  return (
+    <StepFrame title="Visit completed" subtitle={sharedLocation ? `${lead} Location sharing has stopped.` : lead}>
+      <Button title="Back to home" onPress={onHome} />
+    </StepFrame>
+  );
+};
 
 /** The booking is no longer an active visit (cancelled, or never accepted). */
 export const VisitClosedStep: React.FC<{ status: string; onHome: () => void }> = ({ status, onHome }) => (

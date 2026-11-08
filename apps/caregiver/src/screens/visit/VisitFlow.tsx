@@ -18,17 +18,19 @@ import type { ScreenParamLists } from "@/src/navigation/Navigations";
 import { bookingService } from "@/src/services/booking.service";
 import { ensureBackgroundLocation } from "@/src/supply/permissions";
 import { useLocationPermissions } from "@/src/supply/permissionState";
-import { codeLocks, DROP_OUT_CONFIRM, stepForStatus, submitVisitCode } from "@/src/visit/visitFlow";
-import { formatVisitTime } from "@/src/utils/dates";
+import { codeLocks, DROP_OUT_CONFIRM, isShortVisit, SHORT_VISIT_CONFIRM_MESSAGE, stepForStatus, submitVisitCode } from "@/src/visit/visitFlow";
+import { formatNaira } from "@/src/home/homeModel";
+import { formatVisitTime, parseBackendDate } from "@/src/utils/dates";
 
 import { InProgressStep, OnMyWayStep, VisitClosedStep, VisitCodeStep, VisitDoneStep, VisitStoppedStep } from "./VisitSteps";
 
-type Props = StackScreenProps<ScreenParamLists, "VisitFlow">;
+/** `now` is injectable so a test fixes the clock; the app reads the real one. */
+type Props = StackScreenProps<ScreenParamLists, "VisitFlow"> & { now?: () => number };
 
 /** The booking detail is polled every 20 s while a visit is active (guide, section 13). */
 const VISIT_POLL_MS = 20_000;
 
-const VisitFlow: React.FC<Props> = ({ route, navigation }) => {
+const VisitFlow: React.FC<Props> = ({ route, navigation, now = Date.now }) => {
   const { bookingId } = route.params;
   const client = useQueryClient();
   const { data: booking, isLoading, error, refetch } = useBooking(bookingId, true, VISIT_POLL_MS);
@@ -98,18 +100,33 @@ const VisitFlow: React.FC<Props> = ({ route, navigation }) => {
       },
     ]);
 
+  /** Under half of the booked time on site: finishing now holds the pay for Finance review, so say so first. */
+  const finishingShort = () =>
+    isShortVisit(
+      booking?.actual_start_time ? parseBackendDate(booking.actual_start_time).getTime() : null,
+      now(),
+      booking?.duration_hours,
+    );
+
   const confirmComplete = () => {
+    const short = finishingShort();
     // A client with an active care plan: remind the caregiver that ticks and notes end with the visit.
     const plan = carePlan.data?.plan;
     if (plan && needsClockOutPrompt(carePlan.data)) {
-      Alert.alert(CLOCK_OUT_PROMPT.title, CLOCK_OUT_PROMPT.message, [
+      const message = short ? `${CLOCK_OUT_PROMPT.message}\n\n${SHORT_VISIT_CONFIRM_MESSAGE}` : CLOCK_OUT_PROMPT.message;
+      Alert.alert(CLOCK_OUT_PROMPT.title, message, [
         { text: CLOCK_OUT_PROMPT.cancel, style: "cancel" },
         { text: CLOCK_OUT_PROMPT.review, onPress: () => navigation.navigate("CarePlanDetails", { planId: plan.id, from: "clock_out" }) },
         { text: CLOCK_OUT_PROMPT.anyway, style: "destructive", onPress: () => run("complete") },
       ]);
       return;
     }
-    Alert.alert("Complete this visit?", sharingLocation ? "This ends the visit and stops sharing your location." : "This ends the visit.", [
+    const message = short
+      ? SHORT_VISIT_CONFIRM_MESSAGE
+      : sharingLocation
+        ? "This ends the visit and stops sharing your location."
+        : "This ends the visit.";
+    Alert.alert("Complete this visit?", message, [
       { text: "Not yet", style: "cancel" },
       { text: "Complete", onPress: () => run("complete") },
     ]);
@@ -228,7 +245,23 @@ const VisitFlow: React.FC<Props> = ({ route, navigation }) => {
           />
         );
       case "done":
-        return <VisitDoneStep onHome={goHome} sharedLocation={sharingLocation} />;
+        return (
+          <VisitDoneStep
+            onHome={goHome}
+            sharedLocation={sharingLocation}
+            // The booking is read after the completion, so `actual_end_time` is the instant the backend judged.
+            short={
+              booking.actual_end_time
+                ? isShortVisit(
+                    booking.actual_start_time ? parseBackendDate(booking.actual_start_time).getTime() : null,
+                    parseBackendDate(booking.actual_end_time).getTime(),
+                    booking.duration_hours,
+                  )
+                : false
+            }
+            earning={booking.caregiver_earning == null ? null : formatNaira(booking.caregiver_earning)}
+          />
+        );
       case "closed":
         return <VisitClosedStep status={booking.status} onHome={goHome} />;
     }

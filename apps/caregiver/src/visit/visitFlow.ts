@@ -147,3 +147,35 @@ export const DROP_OUT_CONFIRM = {
   keep: "Keep visit",
   done: "Thanks for letting us know. We'll let the family know and find another professional.",
 } as const;
+
+/**
+ * A completed visit with under this percent of the booked time on site is credited already held for Finance
+ * review (backend `booking_policy.short_visit_min_percent`, default 50 = under half).
+ * TODO: read the policy value once a response carries it; the booking does not (the policy field is copied onto
+ * the booking's earnings terms, which no caregiver response exposes), so this mirrors the backend default.
+ */
+export const SHORT_VISIT_MIN_PERCENT = 50;
+
+/**
+ * Same rule as the backend (`is_short_visit`): the time on site, `end - start`, is under `minPercent` of the booked
+ * duration. Exactly the minimum is not short, and neither is a visit whose start was never recorded or whose booked
+ * duration is unknown (the time on site cannot be proven short). Times are epoch milliseconds.
+ */
+export function isShortVisit(
+  startMs: number | null,
+  endMs: number,
+  durationHours: number | null | undefined,
+  minPercent: number = SHORT_VISIT_MIN_PERCENT,
+): boolean {
+  if (startMs === null || Number.isNaN(startMs) || Number.isNaN(endMs) || !durationHours || durationHours <= 0) return false;
+  return (endMs - startMs) * 100 < durationHours * 3_600_000 * minPercent;
+}
+
+/** What the confirm dialog says before a caregiver completes a visit that is still short of half the booked time. */
+export const SHORT_VISIT_CONFIRM_MESSAGE =
+  "You have been on site for less than half of the booked time. If you complete now, your pay for this visit is held for Finance review.";
+
+/** The result screen's line for a short visit; `amount` is the formatted naira earning when the booking carries it. */
+export function shortVisitDoneMessage(amount: string | null): string {
+  return `${amount ? `Your ${amount}` : "Your earning"} is under review by Finance, and we will tell you when it is decided.`;
+}
