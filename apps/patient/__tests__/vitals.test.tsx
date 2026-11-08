@@ -249,11 +249,13 @@ describe("vitals (live-shaped)", () => {
     const listCap = capture("pv-303-patient-lists-grants");
     const revokeCap = capture("pv-320-revoke");
     const CAREGIVER_ID: string = grantCap.body.caregiver_id;
-    const NAME: string = listCap.body[0].caregiver_name;
+    const FULL_NAME: string = listCap.body[0].caregiver_name; // "Placeholder Caregiver Edited"
+    // This screen (and no other) shows the first name and the last initial (P1-13).
+    const NAME = "Placeholder E.";
     const booking = (over: object = {}) => ({
       ...capture("023-p-bookings-list-accepted").body[0],
       caregiver_id: CAREGIVER_ID,
-      caregiver_details: { ...capture("023-p-bookings-list-accepted").body[0].caregiver_details, full_name: NAME },
+      caregiver_details: { ...capture("023-p-bookings-list-accepted").body[0].caregiver_details, full_name: FULL_NAME },
       ...over,
     });
     // `/auth/me` of the capture run's patient, so the request carries the patient id the capture used.
@@ -265,9 +267,11 @@ describe("vitals (live-shaped)", () => {
       return rendered;
     };
 
-    it("lists nobody yet and offers the caregivers from the person's own bookings", async () => {
+    it("lists nobody yet and offers the caregivers from the person's own bookings, by first name and last initial", async () => {
       const { view } = await open({ [ACCESS_LIST]: () => ({ status: 200, body: [] }) });
       expect(await screen.findByText("Nobody yet")).toBeTruthy();
+      expect(await screen.findByText(NAME)).toBeTruthy();
+      expect(screen.queryByText(FULL_NAME)).toBeNull();
       expect(await screen.findByRole("button", { name: `Share my vitals with ${NAME}` })).toBeTruthy();
       expect(screen.queryByText("Coming soon")).toBeNull();
       view.unmount();

@@ -3,8 +3,9 @@ import { ApiError, FALLBACK_MESSAGE, NETWORK_MESSAGE } from "../src/api/errors";
 import { isNetworkFailure } from "../src/api/networkFailure";
 import { unwrap } from "../src/api/unwrap";
 import { canChat, feeReason, paymentChip, type Booking, type CancelTerms } from "../src/domain/booking";
-import { firstNameOf, specialInstructions, toBooking, toCancelTerms, toCreateBody } from "../src/services/bookingMapper";
+import { specialInstructions, toBooking, toCancelTerms, toCreateBody } from "../src/services/bookingMapper";
 import { readPaymentCheck, termsFromChangedError } from "../src/services/booking.service";
+import { firstNameOf } from "../src/domain/names";
 import { EMPTY_DRAFT } from "../src/hooks/bookingDraft";
 import { capture } from "../test-utils/captures";
 
