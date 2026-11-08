@@ -214,7 +214,10 @@ describe("profile (live-shaped)", () => {
       const alert = jest.spyOn(Alert, "alert").mockImplementation(() => undefined);
       const { calls, view } = await open(route("password-changed"));
       await fill("Placeholder-Pass-1", "Placeholder-Pass-2x");
-      await waitFor(() => expect(alert).toHaveBeenCalledWith("Password changed", "You have been signed out on your other devices.", expect.any(Array)));
+      // The app's own card dialog, never the native alert (P1-12); OK closes it and goes back to the profile.
+      expect(await screen.findByText("Password changed")).toBeTruthy();
+      expect(screen.getByText("You have been signed out on your other devices.")).toBeTruthy();
+      expect(alert).not.toHaveBeenCalled();
       const sent = calls.find((c) => c.path === "/api/v1/auth/change-password");
       expect(sent?.body).toEqual({ current_password: "Placeholder-Pass-1", new_password: "Placeholder-Pass-2x" });
       // the captured response carries the new pair; it is what the session holds now
@@ -224,6 +227,9 @@ describe("profile (live-shaped)", () => {
       // the next request already uses it
       await queryClient.refetchQueries({ queryKey: queryKeys.me });
       expect(calls.filter((c) => c.path === "/api/v1/auth/me").at(-1)?.authorization).toBe(`Bearer ${pair.access_token}`);
+      await press("OK");
+      await waitFor(() => expect(screen.queryByLabelText("Current password")).toBeNull());
+      alert.mockRestore();
       view.unmount();
     });
 
