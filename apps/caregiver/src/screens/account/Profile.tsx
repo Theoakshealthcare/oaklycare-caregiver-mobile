@@ -1,5 +1,5 @@
 import React from "react";
-import { Alert, Linking, Pressable, ScrollView, View } from "react-native";
+import { Alert, Pressable, ScrollView, View } from "react-native";
 import { Feather } from "@expo/vector-icons";
 
 import { messageForError } from "@/src/api/errors";
@@ -12,6 +12,11 @@ import { theme } from "@/src/constants/theme";
 import { useMe } from "@/src/hooks/queries";
 import useNavigation from "@/src/hooks/use-navigation";
 import { authService } from "@/src/services/auth.service";
+import { openPage } from "@/src/services/inAppBrowser";
+
+/** FAQs and About us open inside the app; a page that cannot open says so in the app's usual alert. */
+const openInApp = (title: string, url: string) =>
+  void openPage(url).catch(() => Alert.alert(`Couldn't open ${title}`, "Check your internet connection and try again."));
 
 type IconName = React.ComponentProps<typeof Feather>["name"];
 
@@ -126,8 +131,8 @@ const Profile: React.FC = () => {
           <MenuRow icon="user" label="Edit personal information" onPress={() => navigation.navigate("EditProfile")} />
           <MenuRow icon="lock" label="Change password" onPress={() => navigation.navigate("ChangePassword")} />
           <MenuRow icon="credit-card" label="Payment & earnings" onPress={() => navigation.navigate("Wallet")} />
-          <MenuRow icon="info" label="About us" onPress={() => void Linking.openURL(ABOUT_URL)} />
-          <MenuRow icon="help-circle" label="FAQs" onPress={() => void Linking.openURL(FAQ_URL)} />
+          <MenuRow icon="info" label="About us" onPress={() => openInApp("About us", ABOUT_URL)} />
+          <MenuRow icon="help-circle" label="FAQs" onPress={() => openInApp("FAQs", FAQ_URL)} />
           <MenuRow icon="mail" label="Contact us" onPress={() => navigation.navigate("Contact")} />
           <MenuRow icon="log-out" label="Logout" onPress={confirmLogout} danger />
           <MenuRow icon="trash-2" label="Delete account" onPress={confirmDelete} danger />

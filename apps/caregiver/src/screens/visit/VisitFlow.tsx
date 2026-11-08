@@ -18,17 +18,27 @@ import type { ScreenParamLists } from "@/src/navigation/Navigations";
 import { bookingService } from "@/src/services/booking.service";
 import { ensureBackgroundLocation } from "@/src/supply/permissions";
 import { useLocationPermissions } from "@/src/supply/permissionState";
-import { codeLocks, DROP_OUT_CONFIRM, stepForStatus, submitVisitCode } from "@/src/visit/visitFlow";
-import { formatVisitTime } from "@/src/utils/dates";
+import {
+  codeLocks,
+  DROP_OUT_CONFIRM,
+  isShortVisit,
+  SHORT_VISIT_CONFIRM_MESSAGE,
+  stepForStatus,
+  submitVisitCode,
+  visitStarts,
+} from "@/src/visit/visitFlow";
+import { formatNaira } from "@/src/home/homeModel";
+import { formatVisitTime, parseBackendDate } from "@/src/utils/dates";
 
 import { InProgressStep, OnMyWayStep, VisitClosedStep, VisitCodeStep, VisitDoneStep, VisitStoppedStep } from "./VisitSteps";
 
-type Props = StackScreenProps<ScreenParamLists, "VisitFlow">;
+/** `now` is injectable so a test fixes the clock; the app reads the real one. */
+type Props = StackScreenProps<ScreenParamLists, "VisitFlow"> & { now?: () => number };
 
 /** The booking detail is polled every 20 s while a visit is active (guide, section 13). */
 const VISIT_POLL_MS = 20_000;
 
-const VisitFlow: React.FC<Props> = ({ route, navigation }) => {
+const VisitFlow: React.FC<Props> = ({ route, navigation, now = Date.now }) => {
   const { bookingId } = route.params;
   const client = useQueryClient();
   const { data: booking, isLoading, error, refetch } = useBooking(bookingId, true, VISIT_POLL_MS);
@@ -47,6 +57,8 @@ const VisitFlow: React.FC<Props> = ({ route, navigation }) => {
   const [lockedUntil, setLockedUntil] = useState<number | null>(() => codeLocks.get(bookingId));
   const [arrivalFailed, setArrivalFailed] = useState(false);
   const [stopped, setStopped] = useState<string | null>(null);
+  // Set by the `complete` answer: did the backend judge this visit short (pay held for Finance review)?
+  const [completedShort, setCompletedShort] = useState(false);
 
   const goHome = () => navigation.popTo("BottomNavigation", { tab: "home", at: Date.now() });
 
@@ -60,6 +72,18 @@ const VisitFlow: React.FC<Props> = ({ route, navigation }) => {
     action.mutate(
       { bookingId, action: kind },
       {
+        onSuccess: (result) => {
+          if (kind !== "complete") return;
+          // Same rule as the backend, on the two instants it stamped: no clock of ours is involved.
+          setCompletedShort(
+            result.actualEndTime !== null &&
+              isShortVisit(
+                result.actualStartTime ? parseBackendDate(result.actualStartTime).getTime() : visitStarts.get(bookingId),
+                parseBackendDate(result.actualEndTime).getTime(),
+                booking?.duration_hours,
+              ),
+          );
+        },
         onError: (err) => {
           const message = messageForError(err, "visit");
           if (isSuspendedStop(err)) setStopped(message);
@@ -98,18 +122,28 @@ const VisitFlow: React.FC<Props> = ({ route, navigation }) => {
       },
     ]);
 
+  /** Under half of the booked time on site: finishing now holds the pay for Finance review, so say so first. */
+  const finishingShort = () => isShortVisit(visitStarts.get(bookingId), now(), booking?.duration_hours);
+
   const confirmComplete = () => {
+    const short = finishingShort();
     // A client with an active care plan: remind the caregiver that ticks and notes end with the visit.
     const plan = carePlan.data?.plan;
     if (plan && needsClockOutPrompt(carePlan.data)) {
-      Alert.alert(CLOCK_OUT_PROMPT.title, CLOCK_OUT_PROMPT.message, [
+      const message = short ? `${CLOCK_OUT_PROMPT.message}\n\n${SHORT_VISIT_CONFIRM_MESSAGE}` : CLOCK_OUT_PROMPT.message;
+      Alert.alert(CLOCK_OUT_PROMPT.title, message, [
         { text: CLOCK_OUT_PROMPT.cancel, style: "cancel" },
         { text: CLOCK_OUT_PROMPT.review, onPress: () => navigation.navigate("CarePlanDetails", { planId: plan.id, from: "clock_out" }) },
         { text: CLOCK_OUT_PROMPT.anyway, style: "destructive", onPress: () => run("complete") },
       ]);
       return;
     }
-    Alert.alert("Complete this visit?", sharingLocation ? "This ends the visit and stops sharing your location." : "This ends the visit.", [
+    const message = short
+      ? SHORT_VISIT_CONFIRM_MESSAGE
+      : sharingLocation
+        ? "This ends the visit and stops sharing your location."
+        : "This ends the visit.";
+    Alert.alert("Complete this visit?", message, [
       { text: "Not yet", style: "cancel" },
       { text: "Complete", onPress: () => run("complete") },
     ]);
@@ -120,7 +154,11 @@ const VisitFlow: React.FC<Props> = ({ route, navigation }) => {
     setCodeError(null);
     try {
       const result = await submitVisitCode(bookingId, code, {
-        start: (id, c) => bookingService.act(id, "start", c),
+        start: async (id, c) => {
+          const result = await bookingService.act(id, "start", c);
+          visitStarts.record(id, result.actualStartTime);
+          return result;
+        },
       });
       switch (result.kind) {
         case "started":
@@ -228,7 +266,14 @@ const VisitFlow: React.FC<Props> = ({ route, navigation }) => {
           />
         );
       case "done":
-        return <VisitDoneStep onHome={goHome} sharedLocation={sharingLocation} />;
+        return (
+          <VisitDoneStep
+            onHome={goHome}
+            sharedLocation={sharingLocation}
+            short={completedShort}
+            earning={booking.caregiver_earning == null ? null : formatNaira(booking.caregiver_earning)}
+          />
+        );
       case "closed":
         return <VisitClosedStep status={booking.status} onHome={goHome} />;
     }

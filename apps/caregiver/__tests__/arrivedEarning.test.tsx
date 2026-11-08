@@ -279,9 +279,9 @@ describe("the visit screen: I've arrived", () => {
     const act = jest.spyOn(bookingService, "act").mockImplementation(async (_id, action) => {
       if (action === "arrived") {
         current = { ...current, arrived_at: current.arrived_at ?? "2026-11-07T21:43:15.761844" };
-        return { status: current.status, arrivedAt: current.arrived_at ?? null };
+        return { status: current.status, arrivedAt: current.arrived_at ?? null, actualStartTime: null, actualEndTime: null };
       }
-      return { status: current.status, arrivedAt: null };
+      return { status: current.status, arrivedAt: null, actualStartTime: null, actualEndTime: null };
     });
     return act;
   }

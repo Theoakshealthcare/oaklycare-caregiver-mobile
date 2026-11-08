@@ -1,9 +1,11 @@
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { act, waitFor, fireEvent, render, screen } from "@testing-library/react-native";
 import React from "react";
-import { Keyboard, StyleSheet } from "react-native";
+import { Keyboard, Linking, StyleSheet } from "react-native";
 
-import { ApiError } from "../src/api/errors";
+import { ApiError, BANK_NAME_MISMATCH_MESSAGE, isBankNameMismatch } from "../src/api/errors";
+import { unwrap } from "../src/api/unwrap";
+import { supportUrl } from "../src/config/contact";
 import { session } from "../src/auth";
 import BankDetails from "../src/screens/account/BankDetails";
 import { walletService } from "../src/services/wallet.service";
@@ -220,6 +222,72 @@ describe("BankDetails screen", () => {
     await fireEvent.changeText(screen.getByPlaceholderText("Search banks"), "micro");
     expect(await screen.findByText("Sample Microfinance Bank")).toBeTruthy();
     expect(screen.queryByText("Placeholder Bank")).toBeNull();
+  });
+});
+
+// What the backend answers when the resolved account name is not the caregiver's own (DP2-05): HTTP 422 with a
+// structured detail. Built through the real `unwrap`, so the app's own error construction is what is tested.
+// The shape comes from the backend branch brief, not from a live capture: that branch is not merged yet.
+const nameMismatch = () =>
+  unwrap(
+    Promise.resolve({
+      error: { detail: { code: "bank_account_name_mismatch", message: "Account name does not match your profile." } },
+      response: { ok: false, status: 422, headers: new Headers() } as Response,
+    }),
+  ).then(
+    () => {
+      throw new Error("expected the call to be refused");
+    },
+    (error: unknown) => error as ApiError,
+  );
+
+describe("bank account name mismatch (DP2-05)", () => {
+  it("is read from detail.code, whatever the backend's sentence says", async () => {
+    const err = await nameMismatch();
+    expect(err.status).toBe(422);
+    expect(isBankNameMismatch(err)).toBe(true);
+    expect(isBankNameMismatch(new ApiError(422, { detail: "Some other 422" }, "x"))).toBe(false);
+    expect(isBankNameMismatch(new ApiError(400, { detail: { code: "bank_account_name_mismatch" } }, "x"))).toBe(false);
+    expect(isBankNameMismatch(new Error("x"))).toBe(false);
+  });
+
+  it("shows the inline message with a Contact support link when saving is refused", async () => {
+    const mismatch = await nameMismatch();
+    jest.spyOn(walletService, "resolveBankAccount").mockResolvedValue(resolved);
+    jest.spyOn(walletService, "updateBankAccount").mockRejectedValue(mismatch);
+    const open = jest.spyOn(Linking, "openURL").mockResolvedValue(true);
+    await renderScreen();
+    await fillAndCheck();
+    await fireEvent.press(await screen.findByText("Yes, this is my account"));
+
+    expect(await screen.findByTestId("bank-failure")).toHaveTextContent(
+      "The account name must match the name on your Oakly profile. If your name is different, contact support.",
+    );
+    expect(BANK_NAME_MISMATCH_MESSAGE).toBe(
+      "The account name must match the name on your Oakly profile. If your name is different, contact support.",
+    );
+    await fireEvent.press(screen.getByTestId("bank-contact-support"));
+    expect(open).toHaveBeenCalledWith(supportUrl());
+  });
+
+  it("also covers a refusal at the lookup step, and clears when the caregiver changes the details", async () => {
+    jest.spyOn(walletService, "resolveBankAccount").mockRejectedValue(await nameMismatch());
+    await renderScreen();
+    await fillAndCheck();
+    expect(await screen.findByTestId("bank-failure")).toHaveTextContent(/must match the name on your Oakly profile/);
+    expect(screen.getByTestId("bank-contact-support")).toBeTruthy();
+
+    await fireEvent.changeText(screen.getByPlaceholderText("10 digits"), "000000000");
+    expect(screen.queryByTestId("bank-failure")).toBeNull();
+    expect(screen.queryByTestId("bank-contact-support")).toBeNull();
+  });
+
+  it("gives no support link for other bank failures", async () => {
+    jest.spyOn(walletService, "resolveBankAccount").mockRejectedValue(new ApiError(400, { detail: "Could not resolve account" }, "x"));
+    await renderScreen();
+    await fillAndCheck();
+    expect(await screen.findByTestId("bank-failure")).toHaveTextContent("Could not resolve account");
+    expect(screen.queryByTestId("bank-contact-support")).toBeNull();
   });
 });
 
