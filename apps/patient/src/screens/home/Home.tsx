@@ -118,7 +118,8 @@ const Home: React.FC = () => {
 };
 
 const styles = StyleSheet.create({
-  content: { padding: theme.spacing.lg, gap: theme.spacing.md },
+  // Extra bottom room: the last row must clear the floating tab bar without scrolling past it.
+  content: { padding: theme.spacing.lg, paddingBottom: theme.spacing.xxl, gap: theme.spacing.md },
   topBar: { flexDirection: "row", justifyContent: "space-between", alignItems: "center" },
   start: { gap: theme.spacing.sm },
   sectionHead: { flexDirection: "row", justifyContent: "space-between", alignItems: "center" },

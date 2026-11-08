@@ -79,7 +79,8 @@ const styles = StyleSheet.create({
     borderBottomLeftRadius: theme.borderRadius.xxl,
     borderBottomRightRadius: theme.borderRadius.xxl,
   },
-  content: { padding: theme.spacing.lg, gap: theme.spacing.md },
+  // Extra bottom room: the last row must clear the floating tab bar without scrolling past it.
+  content: { padding: theme.spacing.lg, paddingBottom: theme.spacing.xxl, gap: theme.spacing.md },
   grid: { flexDirection: "row", flexWrap: "wrap", gap: theme.spacing.md },
   tile: { width: "47%", flexGrow: 1 },
   tileTop: { flexDirection: "row", justifyContent: "space-between", alignItems: "center" },

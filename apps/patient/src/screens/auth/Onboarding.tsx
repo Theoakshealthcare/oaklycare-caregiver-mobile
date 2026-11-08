@@ -10,6 +10,7 @@ import {
   type NativeScrollEvent,
   type NativeSyntheticEvent,
 } from "react-native";
+import { useSafeAreaInsets } from "react-native-safe-area-context";
 
 import { useOnboarding } from "@/src/auth/onboarding";
 import Button from "@/src/components/ui/button";
@@ -53,10 +54,17 @@ const SLIDES = [
   },
 ] as const;
 
+/**
+ * The app root keeps every screen inside the safe area on a white background, which left a white band under these slides.
+ * Growing the colour into the home-indicator area (negative margin, same amount of padding) keeps the content where it was.
+ */
+const bleedBelow = (inset: number) => ({ marginBottom: -inset, paddingBottom: inset });
+
 /** Four intro slides, shown once per install. Skip, Get Started and Login all end the intro. */
 const Onboarding: React.FC = () => {
   const navigation = useNav();
   const { width } = useWindowDimensions();
+  const bottomInset = useSafeAreaInsets().bottom;
   const complete = useOnboarding((s) => s.complete);
   const scroller = useRef<ScrollView>(null);
   const [index, setIndex] = useState(0);
@@ -77,7 +85,7 @@ const Onboarding: React.FC = () => {
   };
 
   return (
-    <View style={[styles.screen, { backgroundColor: slide.color }]}>
+    <View style={[styles.screen, { backgroundColor: slide.color }, bleedBelow(bottomInset)]}>
       <View style={styles.top}>
         <Pressable accessibilityRole="button" accessibilityLabel="Skip" hitSlop={8} onPress={() => leaveTo("Login")}>
           <Text weight="bold" color={theme.colors.white}>
