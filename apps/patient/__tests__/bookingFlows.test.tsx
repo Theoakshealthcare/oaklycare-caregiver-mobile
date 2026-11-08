@@ -196,6 +196,19 @@ describe("bookings (real backend calls, answered with captured bodies)", () => {
       view.unmount();
     });
 
+    it("a cancelled booking shows its refund state instead of PAID and offers no chat (P1-08)", async () => {
+      // Capture 037: cancelled, paid, caregiver still on the record, refund under review.
+      const body = capture("037-p-b2-detail-after-cancel").body;
+      const { view } = await renderSignedIn({ [LIST]: () => ({ status: 200, body: [{ ...listItem(), id: body.id }] }), [`GET /api/v1/booking/booking/${body.id}`]: () => ({ status: 200, body }) });
+      await tab("Booking");
+      await fireEvent.press(await screen.findByRole("button", { name: "Booking Details" }));
+      expect(await screen.findByText("REFUND PENDING")).toBeTruthy();
+      expect(screen.queryByText("PAID")).toBeNull();
+      expect(screen.queryByRole("button", { name: "Chat with caregiver" })).toBeNull();
+      expect(screen.getByText("Your refund is being reviewed.")).toBeTruthy();
+      view.unmount();
+    });
+
     it("shows it while en route and never once the visit has started", async () => {
       let body = capture("043-p-b3-detail-en-route").body;
       const id = body.id;

@@ -11,28 +11,20 @@ import Text from "@/src/components/ui/text";
 import { theme } from "@/src/constants/theme";
 import {
   canCancel,
+  canChat,
   canTrack,
   needsPayment,
+  paymentChip,
   refundText,
   REFUND_DESTINATION_TEXT,
   showsVisitCode,
   statusLabel,
-  type Booking,
 } from "@/src/domain/booking";
 import { formatDate, formatNaira, formatTime } from "@/src/domain/format";
 import { useBooking } from "@/src/hooks/useBookings";
 import type { ScreenParamLists } from "@/src/navigation/Navigations";
 
 type Props = StackScreenProps<ScreenParamLists, "BookingDetails">;
-
-const paymentChip = (booking: Booking) =>
-  booking.paymentStatus === "paid"
-    ? { label: "PAID", tone: "success" as const }
-    : booking.paymentStatus === "refunded" || booking.paymentStatus === "partially_refunded"
-      ? { label: "REFUNDED", tone: "neutral" as const }
-      : booking.paymentStatus === "failed"
-        ? { label: "PAYMENT FAILED", tone: "error" as const }
-        : { label: "PAYMENT PENDING", tone: "warning" as const };
 
 const BookingDetails: React.FC<Props> = ({ navigation, route }) => {
   const { id } = route.params;
@@ -98,7 +90,7 @@ const BookingDetails: React.FC<Props> = ({ navigation, route }) => {
           <Button title="Pay now" onPress={() => navigation.navigate("PaymentResult", { bookingId: id, open: true })} />
         ) : null}
         {canTrack(booking) ? <Button title="Track caregiver" onPress={() => navigation.navigate("CaregiverDetail", { id })} /> : null}
-        {booking.caregiver ? <Button title="Chat with caregiver" variant="outline" onPress={() => navigation.navigate("Chat", { id })} /> : null}
+        {canChat(booking) ? <Button title="Chat with caregiver" variant="outline" onPress={() => navigation.navigate("Chat", { id })} /> : null}
         {canCancel(booking) ? <Button title="Cancel booking" variant="danger" onPress={() => navigation.navigate("CancelBooking", { id })} /> : null}
       </View>
     </Screen>

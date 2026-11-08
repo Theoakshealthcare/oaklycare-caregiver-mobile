@@ -91,6 +91,40 @@ export function canCancel(booking: Pick<Booking, "status">): boolean {
   return booking.status === "pending" || booking.status === "accepted" || booking.status === "en_route";
 }
 
+/** The chat is for the visit: once a booking is cancelled there is nobody left to talk to about it. */
+export function canChat(booking: Pick<Booking, "status" | "caregiver">): boolean {
+  return booking.caregiver !== null && booking.status !== "cancelled";
+}
+
+export type ChipTone = "primary" | "success" | "warning" | "error" | "neutral";
+
+/**
+ * The money chip on the booking detail. A cancelled booking is never "PAID": the chip says where the refund is, or just
+ * "CANCELED" when nothing was charged, so it can never sit beside the status line and contradict it.
+ */
+export function paymentChip(booking: Pick<Booking, "status" | "paymentStatus" | "refund">): { label: string; tone: ChipTone } {
+  if (booking.status === "cancelled") {
+    const refund = booking.refund;
+    if (refund?.status === "refunded") return { label: "REFUNDED", tone: "neutral" };
+    if (refund?.status === "declined") return { label: "REFUND DECLINED", tone: "error" };
+    if (refund) return { label: "REFUND PENDING", tone: "warning" };
+    if (booking.paymentStatus === "refunded" || booking.paymentStatus === "partially_refunded") return { label: "REFUNDED", tone: "neutral" };
+    if (booking.paymentStatus === "failed") return { label: "PAYMENT FAILED", tone: "error" };
+    return { label: "CANCELED", tone: "neutral" };
+  }
+  switch (booking.paymentStatus) {
+    case "paid":
+      return { label: "PAID", tone: "success" };
+    case "refunded":
+    case "partially_refunded":
+      return { label: "REFUNDED", tone: "neutral" };
+    case "failed":
+      return { label: "PAYMENT FAILED", tone: "error" };
+    case "pending":
+      return { label: "PAYMENT PENDING", tone: "warning" };
+  }
+}
+
 export function canTrack(booking: Pick<Booking, "status">): boolean {
   return booking.status === "accepted" || booking.status === "en_route" || booking.status === "in_progress";
 }
