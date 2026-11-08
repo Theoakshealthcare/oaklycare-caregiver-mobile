@@ -10,26 +10,30 @@ interface ChipSelectProps {
   options: readonly { value: string; label: string }[];
   value: string;
   onChange: (value: string) => void;
+  /** Choices that are shown but cannot be picked (a start time that has already passed today). */
+  disabledValues?: readonly string[];
   error?: string;
 }
 
 /** A labelled row of pill choices that scrolls sideways (date and time pickers without a native module). */
-const ChipSelect: React.FC<ChipSelectProps> = ({ label, options, value, onChange, error }) => (
+const ChipSelect: React.FC<ChipSelectProps> = ({ label, options, value, onChange, disabledValues, error }) => (
   <View style={styles.wrap}>
     <Text variant="small">{label}</Text>
     <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={styles.row} accessibilityLabel={label}>
       {options.map((option) => {
         const selected = option.value === value;
+        const disabled = disabledValues?.includes(option.value) ?? false;
         return (
           <Pressable
             key={option.value}
             accessibilityRole="button"
             accessibilityLabel={option.label}
-            accessibilityState={{ selected }}
+            accessibilityState={{ selected, disabled }}
+            disabled={disabled}
             onPress={() => onChange(option.value)}
-            style={[styles.chip, selected && styles.selected]}
+            style={[styles.chip, selected && styles.selected, disabled && styles.disabled]}
           >
-            <Text variant="small" weight="bold" color={selected ? theme.colors.white : theme.colors.text}>
+            <Text variant="small" weight="bold" color={disabled ? theme.colors.textLight : selected ? theme.colors.white : theme.colors.text}>
               {option.label}
             </Text>
           </Pressable>
@@ -55,6 +59,7 @@ const styles = StyleSheet.create({
     paddingVertical: theme.spacing.sm,
   },
   selected: { backgroundColor: theme.colors.primary, borderColor: theme.colors.primary },
+  disabled: { opacity: 0.4 },
 });
 
 export default ChipSelect;

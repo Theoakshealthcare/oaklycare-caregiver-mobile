@@ -7,7 +7,7 @@ import Input from "@/src/components/ui/input";
 import Screen from "@/src/components/ui/screen";
 import Text from "@/src/components/ui/text";
 import { theme } from "@/src/constants/theme";
-import { dateOptions, timeOptions, toLocalDate } from "@/src/domain/slots";
+import { dateOptions, isPastSlot, timeOptions } from "@/src/domain/slots";
 import { useBookingDraft } from "@/src/hooks/bookingDraft";
 import { useNav } from "@/src/navigation/Navigations";
 
@@ -27,13 +27,22 @@ const BookingStep1: React.FC = () => {
     setErrors((prev) => ({ ...prev, [field]: undefined }));
   };
 
+  // Today's earlier start times are shown but cannot be picked; read at render, so the list follows the clock.
+  const pastTimes = draft.date ? TIMES.filter((t) => isPastSlot(draft.date, t.value)).map((t) => t.value) : [];
+
+  // Choosing today after an earlier-day time that has since passed would leave a selected, disabled chip: clear it.
+  const chooseDate = (date: string) => {
+    const timePassed = draft.time !== "" && isPastSlot(date, draft.time);
+    set(timePassed ? { date, time: "" } : { date }, "date");
+  };
+
   const next = () => {
     const found: Partial<Record<Field, string>> = {};
     if (!draft.forWhom.trim()) found.forWhom = "Tell us who the visit is for";
     if (!draft.assistance.trim()) found.assistance = "Tell us what help is needed";
     if (!draft.date) found.date = "Choose a date";
     if (!draft.time) found.time = "Choose a start time";
-    else if (draft.date && toLocalDate(draft.date, draft.time).getTime() < Date.now()) found.time = "Choose a time that has not passed";
+    else if (draft.date && isPastSlot(draft.date, draft.time)) found.time = "Choose a time that has not passed";
     const hours = Number(draft.durationHours);
     if (!draft.durationHours.trim()) found.durationHours = "Enter how many hours";
     else if (!Number.isInteger(hours) || hours < 1 || hours > 24) found.durationHours = "Enter a whole number of hours from 1 to 24";
@@ -65,8 +74,15 @@ const BookingStep1: React.FC = () => {
         value={draft.condition}
         onChangeText={(v) => patch({ condition: v })}
       />
-      <ChipSelect label="Preferred date" options={DATES} value={draft.date} onChange={(v) => set({ date: v }, "date")} error={errors.date} />
-      <ChipSelect label="Start time" options={TIMES} value={draft.time} onChange={(v) => set({ time: v }, "time")} error={errors.time} />
+      <ChipSelect label="Preferred date" options={DATES} value={draft.date} onChange={chooseDate} error={errors.date} />
+      <ChipSelect
+        label="Start time"
+        options={TIMES}
+        value={draft.time}
+        onChange={(v) => set({ time: v }, "time")}
+        disabledValues={pastTimes}
+        error={errors.time}
+      />
       <Input
         label="Duration (hours)"
         placeholder="1 to 24"
