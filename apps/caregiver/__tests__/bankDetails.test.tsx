@@ -234,7 +234,12 @@ const nameMismatch = () =>
       error: { detail: { code: "bank_account_name_mismatch", message: "Account name does not match your profile." } },
       response: { ok: false, status: 422, headers: new Headers() } as Response,
     }),
-  ).catch((error: unknown) => error as ApiError);
+  ).then(
+    () => {
+      throw new Error("expected the call to be refused");
+    },
+    (error: unknown) => error as ApiError,
+  );
 
 describe("bank account name mismatch (DP2-05)", () => {
   it("is read from detail.code, whatever the backend's sentence says", async () => {

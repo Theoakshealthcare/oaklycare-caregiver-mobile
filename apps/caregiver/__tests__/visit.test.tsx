@@ -345,7 +345,7 @@ describe("caregiver drop-out", () => {
   });
 
   it("a successful cancel refetches the lists, the booking and home", async () => {
-    jest.spyOn(bookingService, "act").mockResolvedValue({ status: "pending", arrivedAt: null });
+    jest.spyOn(bookingService, "act").mockResolvedValue({ status: "pending", arrivedAt: null, actualStartTime: null, actualEndTime: null });
     const client = new QueryClient({ defaultOptions: { queries: { retry: false }, mutations: { retry: false } } });
     const invalidate = jest.spyOn(client, "invalidateQueries");
     const wrapper = ({ children }: { children: React.ReactNode }) => (

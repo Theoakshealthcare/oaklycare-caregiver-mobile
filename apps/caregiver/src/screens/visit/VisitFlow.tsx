@@ -18,7 +18,15 @@ import type { ScreenParamLists } from "@/src/navigation/Navigations";
 import { bookingService } from "@/src/services/booking.service";
 import { ensureBackgroundLocation } from "@/src/supply/permissions";
 import { useLocationPermissions } from "@/src/supply/permissionState";
-import { codeLocks, DROP_OUT_CONFIRM, isShortVisit, SHORT_VISIT_CONFIRM_MESSAGE, stepForStatus, submitVisitCode } from "@/src/visit/visitFlow";
+import {
+  codeLocks,
+  DROP_OUT_CONFIRM,
+  isShortVisit,
+  SHORT_VISIT_CONFIRM_MESSAGE,
+  stepForStatus,
+  submitVisitCode,
+  visitStarts,
+} from "@/src/visit/visitFlow";
 import { formatNaira } from "@/src/home/homeModel";
 import { formatVisitTime, parseBackendDate } from "@/src/utils/dates";
 
@@ -49,6 +57,8 @@ const VisitFlow: React.FC<Props> = ({ route, navigation, now = Date.now }) => {
   const [lockedUntil, setLockedUntil] = useState<number | null>(() => codeLocks.get(bookingId));
   const [arrivalFailed, setArrivalFailed] = useState(false);
   const [stopped, setStopped] = useState<string | null>(null);
+  // Set by the `complete` answer: did the backend judge this visit short (pay held for Finance review)?
+  const [completedShort, setCompletedShort] = useState(false);
 
   const goHome = () => navigation.popTo("BottomNavigation", { tab: "home", at: Date.now() });
 
@@ -62,6 +72,18 @@ const VisitFlow: React.FC<Props> = ({ route, navigation, now = Date.now }) => {
     action.mutate(
       { bookingId, action: kind },
       {
+        onSuccess: (result) => {
+          if (kind !== "complete") return;
+          // Same rule as the backend, on the two instants it stamped: no clock of ours is involved.
+          setCompletedShort(
+            result.actualEndTime !== null &&
+              isShortVisit(
+                result.actualStartTime ? parseBackendDate(result.actualStartTime).getTime() : visitStarts.get(bookingId),
+                parseBackendDate(result.actualEndTime).getTime(),
+                booking?.duration_hours,
+              ),
+          );
+        },
         onError: (err) => {
           const message = messageForError(err, "visit");
           if (isSuspendedStop(err)) setStopped(message);
@@ -101,12 +123,7 @@ const VisitFlow: React.FC<Props> = ({ route, navigation, now = Date.now }) => {
     ]);
 
   /** Under half of the booked time on site: finishing now holds the pay for Finance review, so say so first. */
-  const finishingShort = () =>
-    isShortVisit(
-      booking?.actual_start_time ? parseBackendDate(booking.actual_start_time).getTime() : null,
-      now(),
-      booking?.duration_hours,
-    );
+  const finishingShort = () => isShortVisit(visitStarts.get(bookingId), now(), booking?.duration_hours);
 
   const confirmComplete = () => {
     const short = finishingShort();
@@ -137,7 +154,11 @@ const VisitFlow: React.FC<Props> = ({ route, navigation, now = Date.now }) => {
     setCodeError(null);
     try {
       const result = await submitVisitCode(bookingId, code, {
-        start: (id, c) => bookingService.act(id, "start", c),
+        start: async (id, c) => {
+          const result = await bookingService.act(id, "start", c);
+          visitStarts.record(id, result.actualStartTime);
+          return result;
+        },
       });
       switch (result.kind) {
         case "started":
@@ -249,16 +270,7 @@ const VisitFlow: React.FC<Props> = ({ route, navigation, now = Date.now }) => {
           <VisitDoneStep
             onHome={goHome}
             sharedLocation={sharingLocation}
-            // The booking is read after the completion, so `actual_end_time` is the instant the backend judged.
-            short={
-              booking.actual_end_time
-                ? isShortVisit(
-                    booking.actual_start_time ? parseBackendDate(booking.actual_start_time).getTime() : null,
-                    parseBackendDate(booking.actual_end_time).getTime(),
-                    booking.duration_hours,
-                  )
-                : false
-            }
+            short={completedShort}
             earning={booking.caregiver_earning == null ? null : formatNaira(booking.caregiver_earning)}
           />
         );

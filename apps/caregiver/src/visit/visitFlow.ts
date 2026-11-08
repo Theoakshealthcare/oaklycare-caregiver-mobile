@@ -3,6 +3,7 @@
  * Pure logic; the screens in `src/screens/visit` only render it.
  */
 import { isSuspendedStop, messageForError, visitCodeFailure } from "@/src/api/errors";
+import { parseBackendDate } from "@/src/utils/dates";
 
 export type VisitStep = "on_my_way" | "enter_code" | "in_progress" | "done" | "closed";
 
@@ -179,3 +180,28 @@ export const SHORT_VISIT_CONFIRM_MESSAGE =
 export function shortVisitDoneMessage(amount: string | null): string {
   return `${amount ? `Your ${amount}` : "Your earning"} is under review by Finance, and we will tell you when it is decided.`;
 }
+
+/**
+ * When each visit really started (the instant the visit code was accepted), as the `start` response reported it.
+ * The booking GET does not carry `actual_start_time`, so the app keeps what it saw: it lasts until the app closes,
+ * and a visit resumed after a restart simply gets today's plain dialog (the hold still happens; the result screen
+ * is judged from the `complete` response, which carries both times).
+ * TODO: drop this once the booking response exposes `actual_start_time`.
+ */
+export function createVisitStarts() {
+  const started = new Map<string, number>();
+  return {
+    record(bookingId: string, iso: string | null | undefined): void {
+      const at = iso ? parseBackendDate(iso).getTime() : Number.NaN;
+      if (!Number.isNaN(at)) started.set(bookingId, at);
+    },
+    get(bookingId: string): number | null {
+      return started.get(bookingId) ?? null;
+    },
+    clear(): void {
+      started.clear();
+    },
+  };
+}
+
+export const visitStarts = createVisitStarts();

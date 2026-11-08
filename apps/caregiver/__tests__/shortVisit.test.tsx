@@ -1,11 +1,20 @@
-import { fireEvent, screen, waitFor } from "@testing-library/react-native";
+import { act, fireEvent, screen, waitFor } from "@testing-library/react-native";
 import React from "react";
 import { Alert } from "react-native";
 
 import { session } from "../src/auth";
 import VisitFlow from "../src/screens/visit/VisitFlow";
 import { carePlansService } from "../src/services/carePlans.service";
-import { isShortVisit, SHORT_VISIT_CONFIRM_MESSAGE, SHORT_VISIT_MIN_PERCENT, shortVisitDoneMessage } from "../src/visit/visitFlow";
+import { bookingService } from "../src/services/booking.service";
+import {
+  createVisitStarts,
+  isShortVisit,
+  SHORT_VISIT_CONFIRM_MESSAGE,
+  SHORT_VISIT_MIN_PERCENT,
+  shortVisitDoneMessage,
+  submitVisitCode,
+  visitStarts,
+} from "../src/visit/visitFlow";
 import { renderWithClient } from "../test-utils/carePlanHarness";
 import { BOOKING, visitPlan } from "../test-utils/carePlanFixtures";
 
@@ -20,7 +29,9 @@ jest.mock("../src/hooks/queries", () => ({
   useBookingAction: () => ({ isPending: false, mutate: mockAct }),
 }));
 
-// A 4 hour booking that started at 10:00 UTC: the half-way mark is 12:00 UTC. The backend sends naive UTC.
+// A 4 hour booking whose visit started at 10:00 UTC: the half-way mark is 12:00 UTC. The backend sends naive UTC.
+// The booking the screen reads has NO actual times (the booking GET does not carry them): the app learns the start
+// from the `start` answer and the end from the `complete` answer.
 const STARTED = "2026-11-08T10:00:00";
 const at = (isoUtc: string) => () => Date.parse(`${isoUtc}Z`);
 
@@ -30,12 +41,12 @@ const inProgress = (extra: Record<string, unknown> = {}) => ({
   patient_address: "1 Test Street",
   scheduled_date: STARTED,
   duration_hours: 4,
-  actual_start_time: STARTED,
   channel: "app",
   ...extra,
 });
 
 beforeEach(async () => {
+  visitStarts.clear();
   jest.spyOn(carePlansService, "getVisitPlan").mockResolvedValue(visitPlan({ plan: null }));
   await session.signIn({ accessToken: "access", refreshToken: "refresh" });
 });
@@ -83,6 +94,7 @@ describe("isShortVisit (the backend rule)", () => {
 describe("Complete tap: confirm dialog", () => {
   it("warns that pay is held when less than half of the booked time was on site", async () => {
     mockBooking.value = inProgress();
+    visitStarts.record(BOOKING, STARTED);
     const alert = jest.spyOn(Alert, "alert").mockImplementation(() => {});
     await renderVisit(at("2026-11-08T10:30:00")); // 30 minutes of 4 hours
     await fireEvent.press(await screen.findByText("Complete visit"));
@@ -100,6 +112,7 @@ describe("Complete tap: confirm dialog", () => {
 
   it("keeps today's dialog once half of the booked time has passed", async () => {
     mockBooking.value = inProgress();
+    visitStarts.record(BOOKING, STARTED);
     const alert = jest.spyOn(Alert, "alert").mockImplementation(() => {});
     await renderVisit(at("2026-11-08T12:00:00")); // exactly half
     await fireEvent.press(await screen.findByText("Complete visit"));
@@ -108,8 +121,8 @@ describe("Complete tap: confirm dialog", () => {
     expect(alert.mock.calls[0][1]).not.toMatch(/Finance/);
   });
 
-  it("keeps today's dialog when the booking has no recorded start", async () => {
-    mockBooking.value = inProgress({ actual_start_time: null });
+  it("keeps today's dialog when the app never saw the start (a visit resumed after a restart)", async () => {
+    mockBooking.value = inProgress();
     const alert = jest.spyOn(Alert, "alert").mockImplementation(() => {});
     await renderVisit(at("2026-11-08T10:01:00"));
     await fireEvent.press(await screen.findByText("Complete visit"));
@@ -117,35 +130,73 @@ describe("Complete tap: confirm dialog", () => {
   });
 });
 
-describe("Result screen after completing", () => {
-  const completed = (end: string, extra: Record<string, unknown> = {}) => ({
-    ...inProgress(),
-    status: "completed",
-    actual_end_time: end,
-    caregiver_earning: 40000,
-    ...extra,
+describe("the start the app remembers", () => {
+  it("records the start the `start` answer reports, and nothing else", async () => {
+    const starts = createVisitStarts();
+    starts.record("b1", "2026-11-08T10:00:00");
+    starts.record("b2", null);
+    starts.record("b3", "not a date");
+    expect(starts.get("b1")).toBe(Date.parse("2026-11-08T10:00:00Z"));
+    expect(starts.get("b2")).toBeNull();
+    expect(starts.get("b3")).toBeNull();
   });
 
+  it("is filled when the visit code is accepted", async () => {
+    jest.spyOn(bookingService, "act").mockResolvedValue({
+      status: "in_progress",
+      arrivedAt: null,
+      actualStartTime: STARTED,
+      actualEndTime: null,
+    });
+    mockBooking.value = { ...inProgress(), status: "en_route" };
+    const result = await submitVisitCode(BOOKING, "1234", {
+      start: async (id, code) => {
+        const answer = await bookingService.act(id, "start", code);
+        visitStarts.record(id, answer.actualStartTime);
+        return answer;
+      },
+    });
+    expect(result).toEqual({ kind: "started" });
+    expect(visitStarts.get(BOOKING)).toBe(Date.parse(`${STARTED}Z`));
+  });
+});
+
+describe("Result screen after completing", () => {
+  /** Presses Complete in the dialog and plays the backend's `complete` answer back to the screen. */
+  const complete = async (answer: { actualStartTime: string | null; actualEndTime: string | null }, booking: Record<string, unknown>) => {
+    mockBooking.value = inProgress();
+    jest.spyOn(Alert, "alert").mockImplementation((_t, _m, buttons) => void buttons?.[1]?.onPress?.());
+    await renderVisit(at("2026-11-08T14:00:00"));
+    await fireEvent.press(await screen.findByText("Complete visit"));
+    expect(mockAct).toHaveBeenCalledTimes(1);
+    const options = mockAct.mock.calls[0][1] as { onSuccess: (result: unknown) => void };
+    // The booking is refetched as completed; the answer carries the two instants the backend judged.
+    mockBooking.value = { ...inProgress(), status: "completed", caregiver_earning: 40000, ...booking };
+    await act(async () => options.onSuccess({ status: "completed", arrivedAt: null, ...answer }));
+  };
+
   it("says the earning is under review for a short visit, with the real amount", async () => {
-    mockBooking.value = completed("2026-11-08T10:05:00");
-    await renderVisit(at("2026-11-08T10:06:00"));
+    await complete({ actualStartTime: STARTED, actualEndTime: "2026-11-08T10:05:00" }, {});
     expect(await screen.findByText("Visit completed")).toBeTruthy();
     expect(screen.getByText(/^Your ₦40,000(\.00)? is under review by Finance, and we will tell you when it is decided\./)).toBeTruthy();
     expect(screen.queryByText(/Thank you/)).toBeNull();
   });
 
   it("says 'your earning' when the booking carries no amount", async () => {
-    mockBooking.value = completed("2026-11-08T10:05:00", { caregiver_earning: null });
-    await renderVisit(at("2026-11-08T10:06:00"));
+    await complete({ actualStartTime: STARTED, actualEndTime: "2026-11-08T10:05:00" }, { caregiver_earning: null });
     expect(await screen.findByText("Your earning is under review by Finance, and we will tell you when it is decided.")).toBeTruthy();
     expect(shortVisitDoneMessage(null)).toBe("Your earning is under review by Finance, and we will tell you when it is decided.");
   });
 
   it("keeps 'Thank you' for a normal visit", async () => {
-    mockBooking.value = completed("2026-11-08T14:00:00");
-    await renderVisit(at("2026-11-08T14:01:00"));
+    await complete({ actualStartTime: STARTED, actualEndTime: "2026-11-08T14:00:00" }, {});
     await waitFor(() => expect(screen.getByText("Visit completed")).toBeTruthy());
     expect(screen.getByText(/^Thank you\./)).toBeTruthy();
     expect(screen.queryByText(/under review/)).toBeNull();
+  });
+
+  it("keeps 'Thank you' when the answer carries no times to judge", async () => {
+    await complete({ actualStartTime: null, actualEndTime: null }, {});
+    await waitFor(() => expect(screen.getByText(/^Thank you\./)).toBeTruthy());
   });
 });

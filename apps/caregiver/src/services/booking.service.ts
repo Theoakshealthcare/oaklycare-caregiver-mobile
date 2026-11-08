@@ -95,7 +95,7 @@ export const bookingService = {
     bookingId: string,
     action: BookingAction | VisitAction,
     visitCode?: string,
-  ): Promise<{ status: string | null; arrivedAt: string | null }> {
+  ): Promise<{ status: string | null; arrivedAt: string | null; actualStartTime: string | null; actualEndTime: string | null }> {
     const raw: unknown = await unwrap(
       api.POST("/api/v1/booking/caregiver/action/{booking_id}", {
         params: { path: { booking_id: bookingId } },
@@ -104,11 +104,17 @@ export const bookingService = {
       }),
     );
     const booking = raw && typeof raw === "object" ? (raw as { booking?: unknown }).booking : undefined;
-    const fields = booking && typeof booking === "object" ? (booking as { status?: unknown; arrived_at?: unknown }) : {};
+    const fields =
+      booking && typeof booking === "object"
+        ? (booking as { status?: unknown; arrived_at?: unknown; actual_start_time?: unknown; actual_end_time?: unknown })
+        : {};
     return {
       status: typeof fields.status === "string" ? fields.status : null,
       // Stamped by `arrived` (the same value on a repeat tap); null for every other action until it is set.
       arrivedAt: typeof fields.arrived_at === "string" ? fields.arrived_at : null,
+      // Stamped by `start` and `complete`. Only the action response carries them: the booking GET does not.
+      actualStartTime: typeof fields.actual_start_time === "string" ? fields.actual_start_time : null,
+      actualEndTime: typeof fields.actual_end_time === "string" ? fields.actual_end_time : null,
     };
   },
 

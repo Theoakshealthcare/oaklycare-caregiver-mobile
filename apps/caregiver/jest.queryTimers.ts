@@ -39,6 +39,6 @@ afterEach(cancelPending);
 // unmount is what arms the gc timer of every query the screen was watching. So sweep once more when the file ends,
 // after a tick for calls that settle while the last screen unmounts.
 afterAll(async () => {
-  await new Promise((resolve) => setImmediate(resolve));
+  await new Promise<void>((resolve) => setImmediate(resolve));
   cancelPending();
 });
