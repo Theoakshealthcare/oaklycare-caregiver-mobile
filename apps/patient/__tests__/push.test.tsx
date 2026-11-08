@@ -86,6 +86,7 @@ describe("push registration", () => {
       await fireEvent.press(screen.getByRole("button", { name: "Open profile" }));
       await fireEvent.press(await screen.findByRole("button", { name: "Account and data" }));
       await fireEvent.press(await screen.findByRole("button", { name: "Log out" }));
+      await fireEvent.press(await screen.findByRole("button", { name: "Yes, log out" }));
       await waitFor(() => expect(calls.some((c) => c.method === "DELETE" && c.path === "/api/v1/devices/push-token")).toBe(true));
       expect(calls.find((c) => c.method === "DELETE")?.body).toEqual({ token: registerRequest.token });
       await waitFor(() => expect(keychainKeys()).toEqual([]));

@@ -14,6 +14,7 @@ import { authService } from "@/src/services/auth.service";
 /** Log out, and delete the account for good. */
 const AccountData: React.FC = () => {
   const [confirming, setConfirming] = useState(false);
+  const [loggingOut, setLoggingOut] = useState(false);
   const [problem, setProblem] = useState<string | null>(null);
 
   // On success the session ends and the auth gate swaps the whole app for the login screen.
@@ -25,7 +26,7 @@ const AccountData: React.FC = () => {
   return (
     <Screen title="Account and data">
       <View>
-        <MenuRow icon="log-out-outline" label="Log out" destructive onPress={() => void authService.logout()} />
+        <MenuRow icon="log-out-outline" label="Log out" destructive onPress={() => setLoggingOut(true)} />
         <MenuRow
           icon="trash-outline"
           label="Delete account"
@@ -36,6 +37,18 @@ const AccountData: React.FC = () => {
           }}
         />
       </View>
+      <ConfirmDialog
+        visible={loggingOut}
+        title="Log out?"
+        message="You will need to sign in again to use Oakly."
+        confirmLabel="Yes, log out"
+        cancelLabel="No, stay signed in"
+        onConfirm={() => {
+          setLoggingOut(false);
+          void authService.logout();
+        }}
+        onCancel={() => setLoggingOut(false)}
+      />
       <ConfirmDialog
         visible={confirming}
         title="Delete your account?"
