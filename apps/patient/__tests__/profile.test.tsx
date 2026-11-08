@@ -14,6 +14,9 @@ jest.mock("expo-font", () => ({
   ...jest.requireActual("expo-font"),
   useFonts: () => [true, null],
 }));
+jest.mock("expo-web-browser", () => ({ openBrowserAsync: jest.fn(async () => ({ type: "dismiss" })) }));
+
+const WebBrowser = jest.requireMock("expo-web-browser") as { openBrowserAsync: jest.Mock };
 
 const press = (name: string | RegExp) => fireEvent.press(screen.getByRole("button", { name }));
 const type = (label: string, value: string) => fireEvent.changeText(screen.getByLabelText(label), value);
@@ -244,15 +247,30 @@ describe("profile (live-shaped)", () => {
   });
 
   describe("FAQs, About, and what is hidden", () => {
-    it("opens the owner's site for FAQs and About, and shows no Terms or Privacy row", async () => {
-      const open = jest.spyOn(Linking, "openURL").mockResolvedValue(true);
+    beforeEach(() => WebBrowser.openBrowserAsync.mockClear());
+
+    it("opens the owner's site for FAQs and About in the in-app browser (not Safari), and shows no Terms or Privacy row", async () => {
+      const safari = jest.spyOn(Linking, "openURL").mockResolvedValue(true);
       const { view } = await renderSignedIn();
       await press("Open profile");
       await press("FAQs");
-      expect(open).toHaveBeenLastCalledWith("https://oaklycare.com/faq");
+      await waitFor(() => expect(WebBrowser.openBrowserAsync).toHaveBeenLastCalledWith("https://oaklycare.com/faq", expect.anything()));
       await press("About us");
-      expect(open).toHaveBeenLastCalledWith("https://oaklycare.com/about");
+      await waitFor(() => expect(WebBrowser.openBrowserAsync).toHaveBeenLastCalledWith("https://oaklycare.com/about", expect.anything()));
+      expect(safari).not.toHaveBeenCalled();
       expect(screen.queryByText(/Terms|Privacy|Cookie/i)).toBeNull();
+      safari.mockRestore();
+      view.unmount();
+    });
+
+    it("falls back to the phone's browser only if the in-app one cannot open", async () => {
+      WebBrowser.openBrowserAsync.mockRejectedValueOnce(new Error("no browser"));
+      const safari = jest.spyOn(Linking, "openURL").mockResolvedValue(true);
+      const { view } = await renderSignedIn();
+      await press("Open profile");
+      await press("FAQs");
+      await waitFor(() => expect(safari).toHaveBeenCalledWith("https://oaklycare.com/faq"));
+      safari.mockRestore();
       view.unmount();
     });
   });
