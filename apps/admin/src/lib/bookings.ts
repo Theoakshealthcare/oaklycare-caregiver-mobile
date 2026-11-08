@@ -12,6 +12,7 @@ export type BookingDetail = Schemas["BookingDetail"];
 export type UnmatchedItem = Schemas["UnmatchedItem"];
 export type Candidate = Schemas["CandidateOut"];
 export type BookingPolicy = Schemas["BookingPolicyOut"];
+export type CancelTerms = Schemas["CancelTermsOut"];
 export type BookingActionResult = Schemas["BookingActionOut"];
 export type BookingStatus = BookingDetail["status"];
 export type PaymentStatus = BookingListItem["payment_status"];

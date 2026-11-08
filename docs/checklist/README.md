@@ -125,8 +125,10 @@ channel) lives in the backend repo: `docs/checklist/MASTER_CHECKLIST.md`. Update
 - [x] Booking detail: visit, people, address, clinical (gated), price and payment, no-show, dispatch waves/offers, timeline; never polled
 - [x] Actions from `available_actions` only: re-dispatch, assign (force for Super Admin), reassign, cancel (refund choice + policy guide), confirm address, flag no-show, correct status
 - [ ] Live browser pass against the local backend
-- [ ] Backend: cancel terms on the admin detail so the policy guide is exact
-- [ ] Booking-policy edit screen, audit log screen, Overview attention panel
+- [x] Backend: cancel terms on the admin detail (`cancel_terms`, backend branch `fix/arrived-errors-admin-cancel-terms`); the booking detail now has a "Cancellation terms" card (2026-11-08, branch `feat/admin-booking-policy-short-visit`, see docs/sop/2026-11-08-admin-booking-policy-and-cancel-terms.md). The cancel dialog's own client-side estimate is unchanged (follow-up: use the server's `would_apply_now`)
+- [x] Booking policy screen `/settings/booking-policy` (nav "Booking policy", `bookings.read`): every policy value read-only, the short-visit threshold editable with a reason for `settings.write` (2026-11-08, same SOP). Other fields stay read-only for now
+- [ ] Edit the other policy fields, audit log screen, Overview attention panel
+- [ ] Live browser pass of the new card and policy screen against a local backend
 
 ## Admin console: refunds (A3 slice 3 UI)
 - [x] Nav "Refunds" for `refunds.request` / `refunds.approve` / `payments.read` (2026-10-27, see docs/sop/2026-10-27-admin-refunds-console.md)

@@ -73,6 +73,7 @@ export const NAV: NavGroup[] = [
     label: "Admin",
     items: [
       { label: "Users", href: "/admin/users", anyOf: ["admins.manage"], available: true },
+      { label: "Booking policy", href: "/settings/booking-policy", anyOf: ["bookings.read"], available: true },
       { label: "Audit", href: "/admin/audit", anyOf: ["audit.read"], available: false },
     ],
   },

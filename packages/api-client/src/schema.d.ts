@@ -4627,6 +4627,7 @@ export interface components {
             clinical: components["schemas"]["ClinicalOut"];
             price: components["schemas"]["PriceOut"];
             payment: components["schemas"]["PaymentOut"];
+            cancel_terms: components["schemas"]["CancelTermsOut"];
             dispatch: components["schemas"]["DispatchOut"];
             /** Events */
             events: components["schemas"]["EventOut"][];
@@ -5270,6 +5271,21 @@ export interface components {
          * @enum {string}
          */
         BookingStatus: "pending" | "accepted" | "en_route" | "in_progress" | "completed" | "cancelled" | "declined";
+        /**
+         * CancelAppliedOut
+         * @description Set only after a booker cancel: the tier that was applied and the fee it cost.
+         */
+        CancelAppliedOut: {
+            /**
+             * Tier
+             * @enum {string}
+             */
+            tier: "none" | "standard" | "late";
+            /** Fee Kobo */
+            fee_kobo?: number | null;
+            /** Late Cancel Compensable */
+            late_cancel_compensable?: boolean | null;
+        };
         /** CancelBookingRequest */
         CancelBookingRequest: {
             /**
@@ -5375,6 +5391,44 @@ export interface components {
              */
             late_fee_percent: number;
         };
+        /**
+         * CancelTermsNowOut
+         * @description What the booker would pay to cancel at ``as_of`` (read-only; the cancel itself decides again under a lock).
+         */
+        CancelTermsNowOut: {
+            /** Allowed */
+            allowed: boolean;
+            /** Refusal */
+            refusal?: ("in_progress" | "closed" | "unpaid") | null;
+            /** Tier */
+            tier?: ("none" | "standard" | "late") | null;
+            /** Fee Percent */
+            fee_percent: number;
+            /** Fee Kobo */
+            fee_kobo: number;
+            /** Refund Kobo */
+            refund_kobo: number;
+            /**
+             * As Of
+             * Format: date-time
+             */
+            as_of: string;
+        };
+        /**
+         * CancelTermsOut
+         * @description The booking's own cancel terms. These are the *booker's* terms; an admin cancel chooses its own refund (see POST cancel).
+         */
+        CancelTermsOut: {
+            /**
+             * Policy Source
+             * @enum {string}
+             */
+            policy_source: "booking_snapshot" | "live_policy";
+            policy: components["schemas"]["CancelTiersOut"];
+            snapshot?: components["schemas"]["CancelTiersOut"] | null;
+            would_apply_now: components["schemas"]["CancelTermsNowOut"];
+            applied?: components["schemas"]["CancelAppliedOut"] | null;
+        };
         /** CancelTermsResponse */
         CancelTermsResponse: {
             /**
@@ -5453,6 +5507,21 @@ export interface components {
              * @description When these terms were worked out (UTC). They can change: confirm with accepted_fee_kobo.
              */
             as_of: string;
+        };
+        /**
+         * CancelTiersOut
+         * @description The booker-cancel tiers (admin booking policy fields): free before ``free_hours`` to the start, ``fee_percent`` of the
+         *     service fee between ``late_hours`` and ``free_hours``, ``late_fee_percent`` inside ``late_hours`` (or once on the way).
+         */
+        CancelTiersOut: {
+            /** Free Hours */
+            free_hours: number;
+            /** Late Hours */
+            late_hours: number;
+            /** Fee Percent */
+            fee_percent: number;
+            /** Late Fee Percent */
+            late_fee_percent: number;
         };
         /** Candidate */
         Candidate: {
