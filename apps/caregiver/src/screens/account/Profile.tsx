@@ -12,11 +12,10 @@ import { theme } from "@/src/constants/theme";
 import { useMe } from "@/src/hooks/queries";
 import useNavigation from "@/src/hooks/use-navigation";
 import { authService } from "@/src/services/auth.service";
-import { openPage } from "@/src/services/inAppBrowser";
+import { openPageOrAlert } from "@/src/services/openPageOrAlert";
 
 /** FAQs and About us open inside the app; a page that cannot open says so in the app's usual alert. */
-const openInApp = (title: string, url: string) =>
-  void openPage(url).catch(() => Alert.alert(`Couldn't open ${title}`, "Check your internet connection and try again."));
+const openInApp = openPageOrAlert;
 
 type IconName = React.ComponentProps<typeof Feather>["name"];
 

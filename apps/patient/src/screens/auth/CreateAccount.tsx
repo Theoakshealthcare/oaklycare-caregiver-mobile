@@ -8,11 +8,13 @@ import Button from "@/src/components/ui/button";
 import ErrorDialog from "@/src/components/ui/ErrorDialog";
 import Icon from "@/src/components/ui/icon";
 import Input from "@/src/components/ui/input";
+import LegalLink from "@/src/components/ui/legal-link";
 import Screen from "@/src/components/ui/screen";
 import Text from "@/src/components/ui/text";
 import TextLink from "@/src/components/ui/text-link";
 import { theme } from "@/src/constants/theme";
 import { isEmail, passwordProblem } from "@/src/domain/validation";
+import { usePageOpener } from "@/src/hooks/usePageOpener";
 import { useNav } from "@/src/navigation/Navigations";
 import { authService } from "@/src/services/auth.service";
 
@@ -35,6 +37,11 @@ const CreateAccount: React.FC = () => {
   });
 
   const clear = (field: Field) => setErrors((prev) => ({ ...prev, [field]: undefined }));
+  const toggleAgreed = () => {
+    setAgreed((value) => !value);
+    clear("terms");
+  };
+  const { open, dialog: pageDialog } = usePageOpener();
 
   const submit = () => {
     const next: Partial<Record<Field, string>> = {};
@@ -92,21 +99,25 @@ const CreateAccount: React.FC = () => {
       />
 
       <View>
-        <Pressable
-          accessibilityRole="checkbox"
-          accessibilityState={{ checked: agreed }}
-          accessibilityLabel="I agree to the Privacy Policy and Cookies Policy"
-          onPress={() => {
-            setAgreed((value) => !value);
-            clear("terms");
-          }}
-          style={styles.terms}
-        >
-          <Icon name={agreed ? "checkbox" : "square-outline"} size={24} color={theme.colors.primary} />
-          <Text variant="small" style={styles.termsText}>
-            I agree to the Privacy Policy and Cookies Policy
+        <View style={styles.terms}>
+          <Pressable
+            accessibilityRole="checkbox"
+            accessibilityState={{ checked: agreed }}
+            accessibilityLabel="I agree to the Privacy Policy and Cookies Policy"
+            hitSlop={8}
+            onPress={toggleAgreed}
+          >
+            <Icon name={agreed ? "checkbox" : "square-outline"} size={24} color={theme.colors.primary} />
+          </Pressable>
+          {/* The sentence still ticks the box when tapped; the Privacy Policy link inside it opens the page and does not. */}
+          <Text variant="small" style={styles.termsText} onPress={toggleAgreed}>
+            I agree to the{" "}
+            <LegalLink page="privacy" onOpen={open}>
+              Privacy Policy
+            </LegalLink>{" "}
+            and Cookies Policy
           </Text>
-        </Pressable>
+        </View>
         {errors.terms ? (
           <Text variant="small" color={theme.colors.secondary}>
             {errors.terms}
@@ -128,6 +139,7 @@ const CreateAccount: React.FC = () => {
         message={dialog ?? ""}
         onClose={() => setDialog(null)}
       />
+      {pageDialog}
     </Screen>
   );
 };

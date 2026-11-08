@@ -6,6 +6,7 @@ import { View, ScrollView, TouchableOpacity, Alert } from "react-native"
 import { theme } from "@/src/constants/theme"
 import Text from "@/src/components/ui/text"
 import Button from "@/src/components/ui/button"
+import LegalLink from "@/src/components/ui/legal-link"
 import StepIndicator, { consentStepNumber } from "@/src/components/ui/step-indicator"
 import HeaderBack from "@/src/components/back/HeaderBack"
 import { globalStyles } from "@/src/constants/styles"
@@ -41,15 +42,9 @@ const ConsentScreen = () => {
             <View>
               <Text variant="body" style={{ lineHeight: 24 }}>
                 By tapping Give Consent and Submit, you agree to our{" "}
-                <Text variant="body" color={theme.colors.primary}>
-                  Terms of Services
-                </Text>
+                <LegalLink page="terms">Terms of Services</LegalLink>
                 . Learn how we process your data in our{" "}
-                <TouchableOpacity>
-                  <Text variant="body" color={theme.colors.primary} style={{ textDecorationLine: "underline" }}>
-                    Privacy Policy
-                  </Text>
-                </TouchableOpacity>{" "}
+                <LegalLink page="privacy">Privacy Policy</LegalLink>{" "}
                 and{" "}
                 <TouchableOpacity>
                   <Text variant="body" color={theme.colors.primary} style={{ textDecorationLine: "underline" }}>
@@ -67,8 +62,8 @@ const ConsentScreen = () => {
 
               <View style={{ marginTop: 20 }}>
                 <Text variant="body" style={{ lineHeight: 24 }}>
-                  Your personal information will be processed in accordance with applicable data protection laws and our
-                  privacy policy.
+                  Your personal information will be processed in accordance with applicable data protection laws and our{" "}
+                  <LegalLink page="privacy">privacy policy</LegalLink>.
                 </Text>
               </View>
             </View>

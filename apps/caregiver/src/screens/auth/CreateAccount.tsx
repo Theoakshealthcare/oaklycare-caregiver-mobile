@@ -15,6 +15,7 @@ import HeaderBack from '@/src/components/back/HeaderBack';
 import ScreenSize from '@/src/hooks/screen-size';
 import Icon from '@/src/components/ui/icon';
 import ErrorDialog from '@/src/components/ui/ErrorDialog';
+import LegalLink from '@/src/components/ui/legal-link';
 import { messageForError } from '@/src/api/errors';
 import { authService } from '@/src/services/auth.service';
 
@@ -173,15 +174,10 @@ const CreateAccount: React.FC = () => {
 
               <View style={{ flex: 1 }}>
                 <Text variant="small" style={{ lineHeight: 18 }}>
-                  By tapping Create Account, you agree to our Terms of Services.
-                  Learn how we process your data in our{' '}
-                  <Text
-                    variant="small"
-                    color={theme.colors.primary}
-                    style={{ marginBottom: -7 }}
-                  >
-                    Privacy Policy
-                  </Text>
+                  By tapping Create Account, you agree to our{' '}
+                  <LegalLink page="terms">Terms of Services</LegalLink>.
+                  {' '}Learn how we process your data in our{' '}
+                  <LegalLink page="privacy">Privacy Policy</LegalLink>
                   {' '}and{' '}
                   <Text
                     variant="small"

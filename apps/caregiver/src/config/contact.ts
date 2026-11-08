@@ -23,3 +23,6 @@ export function supportUrl(number: string = WHATSAPP_NUMBER): string {
 /** Public pages on the Oakly website, opened in the phone's browser. */
 export const ABOUT_URL = "https://www.oaklycare.com/about";
 export const FAQ_URL = "https://www.oaklycare.com/faq";
+/** The legal pages (supplied by the owner, 2026-11-08). The wording of what a person agrees to lives on these pages, not here. */
+export const TERMS_URL = "https://www.oaklycare.com/terms";
+export const PRIVACY_URL = "https://www.oaklycare.com/privacy";
