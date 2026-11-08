@@ -73,9 +73,12 @@ export function statusLabel(booking: Pick<Booking, "status" | "dispatchState" | 
   }
 }
 
-/** A booking that is still moving: the detail refreshes while it is open. */
+/**
+ * A booking that is still moving: the detail and the lists refresh while it is open. A visit under way counts: it is the last
+ * step before "completed", and a screen that stops reading at "in progress" still says so long after the visit has ended.
+ */
 export function isActive(booking: Pick<Booking, "status">): boolean {
-  return booking.status === "pending" || booking.status === "accepted" || booking.status === "en_route";
+  return booking.status === "pending" || booking.status === "accepted" || booking.status === "en_route" || booking.status === "in_progress";
 }
 
 /** The visit code is only for the patient to read out, and only until the visit starts. */

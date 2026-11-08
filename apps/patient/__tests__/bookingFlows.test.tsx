@@ -1,7 +1,7 @@
 import { fireEvent, screen, waitFor } from "@testing-library/react-native";
 
 import { queryClient } from "../src/api/queryClient";
-import { detailRefresh } from "../src/hooks/useBookings";
+import { detailRefresh, listRefresh } from "../src/hooks/useBookings";
 import { paymentPolling } from "../src/hooks/usePaymentCheck";
 import { paymentLinkRetry } from "../src/hooks/fetchPaymentLink";
 import { usePaymentLinks } from "../src/hooks/paymentLinks";
@@ -113,6 +113,53 @@ describe("bookings (real backend calls, answered with captured bodies)", () => {
     });
   });
 
+  describe("staying current", () => {
+    // The lists live on screens that stay mounted: they must not wait for the app to leave and return to the foreground.
+    const staleAtOnce = () => {
+      const defaults = queryClient.getDefaultOptions();
+      queryClient.setDefaultOptions({ ...defaults, queries: { ...defaults.queries, staleTime: 0 } });
+      return () => queryClient.setDefaultOptions(defaults);
+    };
+
+    it("reads the list again when a tab is shown again (a caregiver accepted while the patient was elsewhere)", async () => {
+      const restore = staleAtOnce();
+      try {
+        let list: unknown[] = [];
+        const { view } = await renderSignedIn({ [LIST]: () => ({ status: 200, body: list }) });
+        await tab("Booking");
+        await screen.findByText("No upcoming bookings");
+
+        list = [listItem()];
+        await tab("Home");
+        await tab("Booking");
+        expect(await screen.findByText(listItem().booking_code)).toBeTruthy();
+        view.unmount();
+      } finally {
+        restore();
+      }
+    });
+
+    it("keeps reading the list in front while a booking is still moving, and goes quiet once none is", async () => {
+      listRefresh.intervalMs = 60;
+      try {
+        let list: unknown[] = [listItem()];
+        const { view, calls } = await renderSignedIn({ [LIST]: () => ({ status: 200, body: list }) });
+        await tab("Booking");
+        await waitFor(() => expect(countOf(calls, LIST)).toBeGreaterThanOrEqual(3));
+
+        list = [{ ...listItem(), status: "completed" }];
+        await screen.findByText("Completed");
+        await new Promise((resolve) => setTimeout(resolve, 150));
+        const settled = countOf(calls, LIST);
+        await new Promise((resolve) => setTimeout(resolve, 250));
+        expect(countOf(calls, LIST)).toBe(settled);
+        view.unmount();
+      } finally {
+        listRefresh.intervalMs = 20_000;
+      }
+    });
+  });
+
   describe("home", () => {
     it("lists the real upcoming visit with Track and Chat, and no sample notice for it", async () => {
       const { view } = await renderSignedIn({ [LIST]: answer("023-p-bookings-list-accepted") });
@@ -182,6 +229,20 @@ describe("bookings (real backend calls, answered with captured bodies)", () => {
       const settled = countOf(calls, `GET ${DETAIL}`);
       await new Promise((resolve) => setTimeout(resolve, 250));
       expect(countOf(calls, `GET ${DETAIL}`)).toBe(settled);
+      view.unmount();
+    });
+
+    it("keeps reading the detail while the visit is in progress, so an open screen follows it to 'Completed'", async () => {
+      detailRefresh.intervalMs = 60;
+      let body = { ...accepted(), status: "in_progress", visit_code: null };
+      const { view, calls } = await renderSignedIn({ [LIST]: answer("023-p-bookings-list-accepted"), [`GET ${DETAIL}`]: () => ({ status: 200, body }) });
+      await tab("Booking");
+      await fireEvent.press(await screen.findByRole("button", { name: "Booking Details" }));
+      await screen.findByText("Visit in progress");
+      await waitFor(() => expect(countOf(calls, `GET ${DETAIL}`)).toBeGreaterThanOrEqual(3));
+
+      body = { ...body, status: "completed" };
+      await screen.findByText("Completed");
       view.unmount();
     });
 

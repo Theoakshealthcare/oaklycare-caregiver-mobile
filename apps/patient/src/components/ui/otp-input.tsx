@@ -1,5 +1,5 @@
 import type React from "react";
-import { useRef } from "react";
+import { useEffect, useRef } from "react";
 import { Pressable, StyleSheet, TextInput, View } from "react-native";
 
 import { MAX_FONT_SCALE, theme } from "@/src/constants/theme";
@@ -25,6 +25,12 @@ interface OtpInputProps {
  */
 const OtpInput: React.FC<OtpInputProps> = ({ value, onChange, onComplete, length = 5, editable = true, label = "Verification code" }) => {
   const ref = useRef<TextInput>(null);
+  const hadFocus = useRef(false);
+  // While a code is being checked the input is not editable, and iOS then drops its focus (and the keyboard) for good: after a
+  // wrong code the boxes looked ready but typing went nowhere until they were tapped. Take the focus back when editing resumes.
+  useEffect(() => {
+    if (editable && hadFocus.current) ref.current?.focus();
+  }, [editable]);
   const handleChange = (text: string) => {
     const next = digitsOnly(text, length);
     onChange(next);
@@ -49,6 +55,14 @@ const OtpInput: React.FC<OtpInputProps> = ({ value, onChange, onComplete, length
         autoComplete="one-time-code"
         maxLength={length}
         editable={editable}
+        onFocus={() => {
+          hadFocus.current = true;
+        }}
+        onBlur={() => {
+          // The blur that switching editing off causes arrives with the props of that render (editable is already false): it is not
+          // the person leaving the field.
+          if (editable) hadFocus.current = false;
+        }}
         caretHidden
         maxFontSizeMultiplier={MAX_FONT_SCALE}
         style={styles.hidden}
