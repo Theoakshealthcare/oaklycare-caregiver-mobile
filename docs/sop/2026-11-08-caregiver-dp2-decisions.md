@@ -2,8 +2,8 @@
 
 | | |
 |---|---|
-| **What shipped** | Four app-side items from the device-pass-2 ledger, built on the lead's recommendations because the owner had not answered: (1) **DP2-01** the caregiver is told before and after completing a short visit that the pay is held for Finance review; (2) **DP2-04** "Resubmit for review" stays disabled until something was changed, and the rejected screen has "Contact support"; (3) **DP2-05** the bank add/change flow maps the backend's `bank_account_name_mismatch` 422 to an inline message with a support link; (4) **P1-20** the caregiver Jest suite now exits on its own (5 min 59 s wall before, 37 s after). |
-| **Branch / commits** | `fix/caregiver-dp2-decisions`, cut from `oakly/main` `58535ec`. Five commits (Jest exit, DP2-01, DP2-04, DP2-05, DP2-01 correction). **Not pushed, no PR.** |
+| **What shipped** | Five app-side items from the device-pass-2 ledger, built on the lead's recommendations because the owner had not answered: (1) **DP2-01** the caregiver is told before and after completing a short visit that the pay is held for Finance review; (2) **DP2-04** "Resubmit for review" stays disabled until something was changed, and the rejected screen has "Contact support"; (3) **DP2-05** the bank add/change flow maps the backend's `bank_account_name_mismatch` 422 to an inline message with a support link; (4) **P1-20** the caregiver Jest suite now exits on its own (5 min 59 s wall before, 37 s after); (5) **owner addition** FAQs and About us on the Profile screen open in the in-app browser, not Safari. |
+| **Branch / commits** | `fix/caregiver-dp2-decisions`, cut from `oakly/main` `58535ec`. Seven commits (Jest exit, DP2-01, DP2-04, DP2-05, DP2-01 correction, docs, in-app browser). **Not pushed, no PR.** |
 | **Device-verified** | **No.** Jest only (no simulator by instruction). The things that cross the native boundary here are `Linking.openURL` for WhatsApp/mail and `Alert.alert`; both are mocked in the tests. Show them on a device before release. |
 | **Backend dependency** | DP2-05 needs the backend branch that answers 422 `detail = {code: "bank_account_name_mismatch", message}`. It is not merged and not in `packages/api-client/openapi.json` yet; the app handles the shape without touching generated files. Until it ships, the new branch is simply never taken. |
 
@@ -32,6 +32,8 @@ Fix: `apps/caregiver/jest.queryTimers.ts` (new `setupFilesAfterEnv`) hands React
 
 **DP2-05.** `src/api/errors.ts`: `detailCodeOf(body)` reads `detail.code` (the backend convention for structured errors), `isBankNameMismatch(error)` is 422 + `bank_account_name_mismatch`, and `messageForStatus` in the `bank` context returns the app's own sentence "The account name must match the name on your Oakly profile. If your name is different, contact support." (the code is the contract, the backend's wording may change). `BankDetails.tsx` shows it in the existing failure slot at both steps (lookup and save) with a "Contact support" button that opens `supportUrl()`; it clears when the caregiver changes the bank or number.
 
+**In-app browser (owner addition).** `src/services/inAppBrowser.ts` (`openPage(url)` = `WebBrowser.openBrowserAsync(url, { dismissButtonStyle: "close" })`, the patient app's style from `7c3cc97`) replaces `Linking.openURL(ABOUT_URL/FAQ_URL)` in `src/screens/account/Profile.tsx`. A failed open shows the app's usual alert ("Couldn't open FAQs", "Check your internet connection and try again."; the caregiver app has no toast component, `Alert.alert` is its error surface) and does **not** fall back to Safari (the patient app does fall back; the owner asked for not-Safari). tel:, mailto:, WhatsApp and Maps stay on `Linking`. Tests: new `__tests__/profileLinks.test.tsx` (3, `expo-web-browser` mocked: both rows open with `{dismissButtonStyle: "close"}`, `Linking` never called, failure alert); `account.test.tsx` now expects the in-app opener. Not shown on a device (the browser sheet is native).
+
 ## What's involved
 
 | Area | Files |
@@ -40,6 +42,7 @@ Fix: `apps/caregiver/jest.queryTimers.ts` (new `setupFilesAfterEnv`) hands React
 | DP2-01 | `src/visit/visitFlow.ts` (`isShortVisit`, `SHORT_VISIT_MIN_PERCENT`, `SHORT_VISIT_CONFIRM_MESSAGE`, `shortVisitDoneMessage`, `visitStarts`), `src/screens/visit/VisitFlow.tsx`, `VisitSteps.tsx` (`VisitDoneStep`), `src/services/booking.service.ts` (`act` returns the two times) |
 | DP2-04 | `src/onboarding/reviewEdits.ts` (new), `src/screens/setup/VerificationStatus.tsx`, `src/services/caregiver.service.ts`, `src/auth/index.ts`, `src/config/contact.ts` (`supportUrl`) |
 | DP2-05 | `src/api/errors.ts`, `src/screens/account/BankDetails.tsx` |
+| In-app browser | `src/services/inAppBrowser.ts` (new), `src/screens/account/Profile.tsx`, tests `__tests__/profileLinks.test.tsx` (new, 3), `account.test.tsx` |
 | Tests | new `__tests__/shortVisit.test.tsx` (13), `__tests__/onboardingGate.test.tsx` (8); extended `bankDetails.test.tsx` (+4); `arrivedEarning.test.tsx` and `visit.test.tsx` only for the widened `act` mock shape |
 
 ## Verification
@@ -52,7 +55,7 @@ All commands run in `wt-caregiver-left` on the final head:
 | `pnpm api:generate` + `git diff --exit-code packages/api-client/src/schema.d.ts` | no drift |
 | `pnpm typecheck` (all workspaces) | green (it caught the missing `actual_start_time`) |
 | `pnpm lint` (all workspaces) | green |
-| caregiver `jest --runInBand` | 70 suites, 968 tests pass, **36.7 s wall, exits by itself** (baseline on `oakly/main`: 68 suites, 943 tests, 5 min 59 s with "did not exit") |
+| caregiver `jest --runInBand` | 71 suites, 971 tests pass (after the in-app browser change), **36.2 s wall, exits by itself** (baseline on `oakly/main`: 68 suites, 943 tests, 5 min 59 s with "did not exit") |
 | caregiver `jest` (default workers) | 968 pass, 12.9 s, no "failed to exit gracefully" |
 | `jest --detectOpenHandles` | 968 pass, 59.5 s, nothing reported |
 

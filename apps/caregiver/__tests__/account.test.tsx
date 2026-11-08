@@ -1,7 +1,7 @@
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { act, fireEvent, render, screen, waitFor } from "@testing-library/react-native";
 import React from "react";
-import { Alert, Linking } from "react-native";
+import { Alert } from "react-native";
 
 import { api } from "../src/api/client";
 import { ApiError } from "../src/api/errors";
@@ -12,6 +12,7 @@ import Profile from "../src/screens/account/Profile";
 import { accountService } from "../src/services/account.service";
 import { authService } from "../src/services/auth.service";
 import { caregiverService } from "../src/services/caregiver.service";
+import * as inAppBrowser from "../src/services/inAppBrowser";
 
 const mockNavigate = jest.fn();
 const mockGoBack = jest.fn();
@@ -131,8 +132,8 @@ describe("Profile screen", () => {
   it.each([
     ["About us", "https://www.oaklycare.com/about"],
     ["FAQs", "https://www.oaklycare.com/faq"],
-  ])("%s opens the website page %s", async (row, url) => {
-    const open = jest.spyOn(Linking, "openURL").mockResolvedValue(true);
+  ])("%s opens the website page %s in the in-app browser", async (row, url) => {
+    const open = jest.spyOn(inAppBrowser, "openPage").mockResolvedValue(undefined);
     await renderWith(<Profile />);
     await fireEvent.press(screen.getByText(row));
     expect(open).toHaveBeenCalledWith(url);
