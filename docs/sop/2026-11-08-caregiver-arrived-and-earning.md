@@ -43,3 +43,22 @@ Pure app change, no config. Revert the commit; the generated client changes are 
 - Booking has no completion time: ask the backend for `completed_at` (or the earning status on the booking) so the status line needs no wallet lookup.
 - The patient app does not yet render `caregiver_arrived` specially (it is in the feed); not run on a patient simulator.
 - DP2-01 (a warning before completing a short visit) is still open: this slice shows the held state only after completion.
+
+## Update 2026-11-08 (later): the arrived errors as `{code, message}`, and the arrival window
+
+**What shipped.** The app reads the backend's new "I've arrived" errors from `detail.code` instead of matching sentences, and explains the new early-tap refusal. Branch `fix/caregiver-arrived-error-codes` (cut from `oakly/main` `e24f43d`; not pushed). Needs the backend branch `fix/arrived-errors-admin-cancel-terms` (the `422 arrived_too_early` rule and the coded errors); the backend SOP is `docs/sop/2026-11-08-arrival-window.md` in the backend repo.
+
+| Decision | Why |
+|---|---|
+| `src/api/errors.ts` reads `detail.code` for `booking_not_assigned`, `caregiver_not_approved`, `booking_not_arrivable`, `booking_not_found`, `caregiver_profile_not_found` and `arrived_too_early`; the existing plain-string matching stays | An older backend (plain strings) and every other action (still strings) keep working; the code is the contract, the sentence may change |
+| The app's own wording is shown, not the backend's `message`, except as the fallback for `arrived_too_early` | Same rule as the bank-name error: the wording is the app's; the message is only a fallback |
+| `arrived_too_early`: "It's too early to mark yourself as arrived. You can do it from <local day and time>." built from `earliest_at` (naive UTC, parsed as UTC, shown in the phone's local time via the existing `formatStamp`) | The window is 60 minutes today but a server setting, so the app never hard-codes it |
+| The early tap keeps the button, sets `arrivalFailed` so the caregiver can still go on to the visit code, and uses the alert title "Too early to mark arrival" | Arrival never blocks a visit (unchanged) |
+| A `caregiver_not_approved` code stops the visit like the plain string did (`isSuspendedStop`) | Same behaviour on the new shape |
+| API types were **not** regenerated | `pnpm api:sync` from the backend branch changed only the admin `cancel_terms` schemas (the action errors are not in the OpenAPI document); those belong to the admin console branch |
+
+**Files.** `apps/caregiver/src/api/errors.ts`, `apps/caregiver/src/screens/visit/VisitFlow.tsx`, `apps/caregiver/__tests__/arrivedEarning.test.tsx`.
+
+**Verification.** `arrivedEarning`, `errors`, `visit` and `shortVisit` suites pass (111 tests, run single-worker, the process exits); typecheck and lint pass for all three apps. New tests cover every code, a reworded message still mapping by code, the plain-string fallback, the suspended stop on the code, the early message built from `earliest_at` (asserted by calling the same formatter, no typed clock text, so it holds in Lagos and in UTC), the fallbacks without a usable time, a validation 422 list not being read as early, and the screen alert plus the way on to the code. **Not verified:** nothing was run on a simulator or device against the real backend; the full caregiver Jest suite was not run (CI runs it).
+
+**Follow-ups.** Disable the button, or show "available from <time>", before the window opens (needs `scheduled_date` minus the window: the app does not know the setting, so ask the backend to send it on the booking, or accept the refusal as the signal). Ship this app change before or with the backend deploy.

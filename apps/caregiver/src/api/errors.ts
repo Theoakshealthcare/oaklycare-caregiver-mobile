@@ -1,11 +1,13 @@
 /**
  * API errors and their user-facing messages.
  *
- * The backend answers with FastAPI's `{ "detail": ... }` (a string for almost every error, a list of
- * objects for 422). Status codes and `detail` strings below come from the backend's verified FE guide
+ * The backend answers with FastAPI's `{ "detail": ... }` (a string for most errors, a list of objects for a
+ * validation 422, and `{ code, message }` for the newer ones: the "I've arrived" errors since 2026-11-08). Status codes and `detail` strings below come from the backend's verified FE guide
  * (`fe-integration-guide-caregiver.md`, section 11).
  */
 import { errorMessage } from "@oakly/api-client";
+
+import { formatStamp, parseBackendDate } from "@/src/utils/dates";
 
 /** Where an error happened; the same status code reads differently on accept and on login. */
 export type ErrorContext = "default" | "login" | "accept" | "decline" | "availability" | "visit" | "bank";
@@ -90,7 +92,11 @@ export function visitCodeFailure(error: unknown): VisitCodeFailure | null {
 
 /** True when the backend refused a visit action because the caregiver is no longer approved (suspended). */
 export function isSuspendedStop(error: unknown): boolean {
-  return error instanceof ApiError && error.status === 403 && error.detail === DETAIL.notApprovedToStartVisits;
+  return (
+    error instanceof ApiError &&
+    error.status === 403 &&
+    (error.detail === DETAIL.notApprovedToStartVisits || detailCodeOf(error.body) === ARRIVED_CODE.notApproved)
+  );
 }
 
 /** "45 seconds", "3 minutes": how long a 429 `Retry-After` asks the person to wait. */
@@ -107,7 +113,18 @@ export function formatCountdown(totalSeconds: number): string {
   return `${m}:${s.toString().padStart(2, "0")}`;
 }
 
-function visitMessage(status: number, detail: string | null, retryAfterSeconds: number | null): string | null {
+function visitMessage(status: number, detail: string | null, body: unknown, retryAfterSeconds: number | null): string | null {
+  // The "I've arrived" errors are `{ code, message }` objects: read the code. A plain-string `detail` (an older backend,
+  // or any other action) falls through to the sentence matching below.
+  const code = detailCodeOf(body);
+  if (code) {
+    if (status === 422 && code === ARRIVED_TOO_EARLY_CODE) return arrivedTooEarlyMessage(body);
+    if (status === 403 && code === ARRIVED_CODE.notApproved) return `${DETAIL.notApprovedToStartVisits}. Contact Oakly support.`;
+    if (status === 403 && code === ARRIVED_CODE.notAssigned) return "This visit isn't assigned to you.";
+    if (status === 409 && code === ARRIVED_CODE.notArrivable) return "This visit has already moved past this step. We've refreshed it.";
+    if (status === 404 && code === ARRIVED_CODE.bookingNotFound) return "This booking could not be found. It may have been removed.";
+    if (status === 404 && code === ARRIVED_CODE.profileNotFound) return "We couldn't find your caregiver profile. Please contact Oakly support.";
+  }
   if (status === 403) {
     if (detail === DETAIL.notApprovedToStartVisits) {
       return `${DETAIL.notApprovedToStartVisits}. Contact Oakly support.`;
@@ -150,6 +167,47 @@ export function detailCodeOf(body: unknown): string | null {
   return typeof code === "string" ? code : null;
 }
 
+/** `detail.message` of a structured error, else null. */
+function detailMessageOf(body: unknown): string | null {
+  const detail = body && typeof body === "object" ? (body as { detail?: unknown }).detail : undefined;
+  const message = detail && typeof detail === "object" ? (detail as { message?: unknown }).message : undefined;
+  return typeof message === "string" ? message : null;
+}
+
+/** `detail.earliest_at` (UTC, no "Z") of an `arrived_too_early` error, else null. */
+function earliestAtOf(body: unknown): string | null {
+  const detail = body && typeof body === "object" ? (body as { detail?: unknown }).detail : undefined;
+  const at = detail && typeof detail === "object" ? (detail as { earliest_at?: unknown }).earliest_at : undefined;
+  return typeof at === "string" ? at : null;
+}
+
+/** `detail.code` of the "I've arrived" refusal for an early tap (HTTP 422). */
+export const ARRIVED_TOO_EARLY_CODE = "arrived_too_early";
+
+/** The `{ code, message }` codes of the "I've arrived" action (backend guide, section 7, "Your earning, I've arrived..."). */
+const ARRIVED_CODE = {
+  notAssigned: "booking_not_assigned",
+  notApproved: "caregiver_not_approved",
+  notArrivable: "booking_not_arrivable",
+  bookingNotFound: "booking_not_found",
+  profileNotFound: "caregiver_profile_not_found",
+} as const;
+
+/** True when a visit refusal is the "I've arrived" tap before its window opens. */
+export function isArrivedTooEarly(error: unknown): boolean {
+  return error instanceof ApiError && error.status === 422 && detailCodeOf(error.body) === ARRIVED_TOO_EARLY_CODE;
+}
+
+/** Plain wording for the early tap: the opening time in the phone's local time, else the backend's sentence. */
+function arrivedTooEarlyMessage(body: unknown): string {
+  const at = earliestAtOf(body);
+  const when = at ? parseBackendDate(at) : null;
+  if (when && !Number.isNaN(when.getTime())) {
+    return `It's too early to mark yourself as arrived. You can do it from ${formatStamp(when)}.`;
+  }
+  return detailMessageOf(body) ?? "It's too early to mark yourself as arrived. Try again closer to the visit.";
+}
+
 /** HTTP 422 `detail.code` when the resolved bank account name does not match the caregiver's profile name. */
 export const BANK_NAME_MISMATCH_CODE = "bank_account_name_mismatch";
 
@@ -190,7 +248,7 @@ export function messageForStatus(
   if (context === "bank" && status === 422 && detailCodeOf(body) === BANK_NAME_MISMATCH_CODE) return BANK_NAME_MISMATCH_MESSAGE;
 
   if (context === "visit") {
-    const mapped = visitMessage(status, detail, retryAfterSeconds);
+    const mapped = visitMessage(status, detail, body, retryAfterSeconds);
     if (mapped) return mapped;
   }
 

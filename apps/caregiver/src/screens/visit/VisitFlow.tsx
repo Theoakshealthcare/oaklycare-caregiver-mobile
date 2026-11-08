@@ -3,7 +3,7 @@ import { ActivityIndicator, Alert, View } from "react-native";
 import { useQueryClient } from "@tanstack/react-query";
 import type { StackScreenProps } from "@react-navigation/stack";
 
-import { isSuspendedStop, messageForError } from "@/src/api/errors";
+import { isArrivedTooEarly, isSuspendedStop, messageForError } from "@/src/api/errors";
 import { queryKeys } from "@/src/api/keys";
 import HeaderBack from "@/src/components/back/HeaderBack";
 import Button from "@/src/components/ui/button";
@@ -89,7 +89,7 @@ const VisitFlow: React.FC<Props> = ({ route, navigation, now = Date.now }) => {
           if (isSuspendedStop(err)) setStopped(message);
           else if (kind === "arrived") {
             setArrivalFailed(true);
-            Alert.alert("Couldn't tell the patient", message);
+            Alert.alert(isArrivedTooEarly(err) ? "Too early to mark arrival" : "Couldn't tell the patient", message);
           } else Alert.alert(kind === "on_my_way" ? "Couldn't set off" : "Couldn't complete the visit", message);
         },
       },

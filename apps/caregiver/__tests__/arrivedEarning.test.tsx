@@ -3,7 +3,7 @@ import { cleanup, fireEvent, render, screen, waitFor } from "@testing-library/re
 import React from "react";
 import { Alert } from "react-native";
 
-import { ApiError, messageForError, isSuspendedStop } from "../src/api/errors";
+import { ApiError, isArrivedTooEarly, isSuspendedStop, messageForError } from "../src/api/errors";
 import { session } from "../src/auth";
 import BookingDetails from "../src/screens/booking/BookingDetails";
 import VisitFlow from "../src/screens/visit/VisitFlow";
@@ -11,6 +11,7 @@ import { OnMyWayStep, VisitCodeStep } from "../src/screens/visit/VisitSteps";
 import { bookingService, type Booking } from "../src/services/booking.service";
 import { walletService, type CaregiverTransaction } from "../src/services/wallet.service";
 import { bookingEarningView, earningMonthFor, findEarningRow, HELD_EARNING_NOTE } from "../src/wallet/bookingEarning";
+import { formatStamp, parseBackendDate } from "../src/utils/dates";
 import { transactionView } from "../src/wallet/walletModel";
 
 const mockNavigate = jest.fn();
@@ -128,6 +129,59 @@ describe("I've arrived: error sentences (exact backend strings)", () => {
   it("a suspended caregiver is stopped, as for start", () => {
     const error = new ApiError(403, { detail: "Your account is not approved to start visits" }, "x");
     expect(isSuspendedStop(error)).toBe(true);
+  });
+
+  // Since 2026-11-08 the arrived errors are `detail = { code, message }` (backend captures 800 to 810). The app reads the code,
+  // and still reads the plain strings above (an older backend, or the same sentence from another action).
+  describe("as { code, message } objects", () => {
+    const coded = (status: number, code: string, message: string, extra: object = {}) =>
+      new ApiError(status, { detail: { code, message, ...extra } }, message);
+
+    it.each([
+      [403, "booking_not_assigned", "This booking is not assigned to you", "This visit isn't assigned to you."],
+      [409, "booking_not_arrivable", "Only an accepted booking can be marked as arrived", "This visit has already moved past this step. We've refreshed it."],
+      [404, "booking_not_found", "Booking not found", "This booking could not be found. It may have been removed."],
+      [404, "caregiver_profile_not_found", "Caregiver profile not found", "We couldn't find your caregiver profile. Please contact Oakly support."],
+      [403, "caregiver_not_approved", "Your account is not approved to start visits", "Your account is not approved to start visits. Contact Oakly support."],
+    ])("%i %s", (status, code, message, expected) => {
+      expect(messageForError(coded(status, code, message), "visit")).toBe(expected);
+    });
+
+    it("reads the code, not the wording: a reworded message still maps", () => {
+      expect(messageForError(coded(409, "booking_not_arrivable", "Some reworded sentence"), "visit")).toBe(
+        "This visit has already moved past this step. We've refreshed it.",
+      );
+    });
+
+    it("a suspended caregiver is stopped from the code too", () => {
+      expect(isSuspendedStop(coded(403, "caregiver_not_approved", "x"))).toBe(true);
+      expect(isSuspendedStop(coded(403, "booking_not_assigned", "x"))).toBe(false);
+    });
+
+    it("arrived_too_early names the opening time in the phone's local time (compared with the formatter, not typed)", () => {
+      const earliest = "2026-11-08T17:53:01";
+      const error = coded(422, "arrived_too_early", "You can mark yourself as arrived from 60 minutes before the visit starts.", {
+        earliest_at: earliest,
+      });
+      expect(isArrivedTooEarly(error)).toBe(true);
+      const message = messageForError(error, "visit");
+      expect(message).toBe(`It's too early to mark yourself as arrived. You can do it from ${formatStamp(parseBackendDate(earliest))}.`);
+      expect(message).not.toContain("T17:53"); // never the raw ISO text
+    });
+
+    it("arrived_too_early without a usable time falls back to the backend's sentence, then to a generic one", () => {
+      const sentence = "You can mark yourself as arrived from 60 minutes before the visit starts.";
+      expect(messageForError(coded(422, "arrived_too_early", sentence), "visit")).toBe(sentence);
+      expect(messageForError(coded(422, "arrived_too_early", sentence, { earliest_at: "garbage" }), "visit")).toBe(sentence);
+      expect(messageForError(new ApiError(422, { detail: { code: "arrived_too_early" } }, "x"), "visit")).toBe(
+        "It's too early to mark yourself as arrived. Try again closer to the visit.",
+      );
+    });
+
+    it("a validation 422 (a list) is not read as too early", () => {
+      const error = new ApiError(422, { detail: [{ loc: ["body", "action"], msg: "bad", type: "x" }] }, "x");
+      expect(isArrivedTooEarly(error)).toBe(false);
+    });
   });
 
   it("offline reads as a network problem", () => {
@@ -323,6 +377,41 @@ describe("the visit screen: I've arrived", () => {
       expect(Alert.alert).toHaveBeenCalledWith("Couldn't tell the patient", "This visit has already moved past this step. We've refreshed it."),
     );
     expect(screen.getByText("I've arrived")).toBeTruthy();
+  });
+
+  it("a coded 409 shows the same sentence as the plain string did", async () => {
+    jest.spyOn(bookingService, "getBooking").mockResolvedValue(booking());
+    jest.spyOn(bookingService, "act").mockRejectedValue(
+      new ApiError(409, { detail: { code: "booking_not_arrivable", message: "Only an accepted booking can be marked as arrived" } }, "x"),
+    );
+    await renderScreen(<VisitFlow {...flowProps} />);
+    await fireEvent.press(await screen.findByText("I've arrived"));
+    await waitFor(() =>
+      expect(Alert.alert).toHaveBeenCalledWith("Couldn't tell the patient", "This visit has already moved past this step. We've refreshed it."),
+    );
+  });
+
+  it("an early tap explains when arrival opens, keeps the button and still lets the caregiver go on to the code", async () => {
+    const earliest = "2026-11-08T17:53:01";
+    jest.spyOn(bookingService, "getBooking").mockResolvedValue(booking());
+    jest.spyOn(bookingService, "act").mockRejectedValue(
+      new ApiError(
+        422,
+        { detail: { code: "arrived_too_early", message: "You can mark yourself as arrived from 60 minutes before the visit starts.", earliest_at: earliest } },
+        "x",
+      ),
+    );
+    await renderScreen(<VisitFlow {...flowProps} />);
+    await fireEvent.press(await screen.findByText("I've arrived"));
+    await waitFor(() =>
+      expect(Alert.alert).toHaveBeenCalledWith(
+        "Too early to mark arrival",
+        `It's too early to mark yourself as arrived. You can do it from ${formatStamp(parseBackendDate(earliest))}.`,
+      ),
+    );
+    expect(screen.queryByTestId("arrived-notice")).toBeNull();
+    await fireEvent.press(await screen.findByTestId("skip-to-code"));
+    expect(await screen.findByTestId("visit-code-input")).toBeTruthy();
   });
 
   it("when the call fails the caregiver can still go on to the visit code", async () => {
