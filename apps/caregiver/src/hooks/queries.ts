@@ -4,13 +4,14 @@ import { queryKeys } from "@/src/api/keys";
 import { useSession } from "@/src/auth";
 import { authService } from "@/src/services/auth.service";
 import { homePollInterval } from "@/src/home/homeModel";
-import { bookingService, type BookingAction, type VisitAction } from "@/src/services/booking.service";
+import { bookingService, type Booking, type BookingAction, type VisitAction } from "@/src/services/booking.service";
 import { clientsService } from "@/src/services/clients.service";
 import { caregiverService } from "@/src/services/caregiver.service";
 import { notificationService } from "@/src/services/notification.service";
 import { vitalsService, type NewVital } from "@/src/services/vitals.service";
 import { walletService, type BankAccountInput } from "@/src/services/wallet.service";
 import { historyStart } from "@/src/vitals/vitalsModel";
+import { earningMonthFor, findEarningRow } from "@/src/wallet/bookingEarning";
 import { locationService } from "@/src/supply/locationService";
 
 function useSignedIn(): boolean {
@@ -142,6 +143,21 @@ export function useWalletTransactions(month: string) {
     queryFn: () => walletService.getTransactions(month),
     enabled,
   });
+}
+
+/**
+ * The wallet row of a completed visit's earning, so Job Details can say "Under review" for a held
+ * (short-visit) earning. Fetches nothing before the visit is completed; reuses the wallet's month query.
+ */
+export function useBookingEarningRow(booking: Booking | undefined) {
+  const enabled = useSignedIn();
+  const month = booking ? earningMonthFor(booking) : null;
+  const rows = useQuery({
+    queryKey: queryKeys.walletTransactions(month ?? ""),
+    queryFn: () => walletService.getTransactions(month ?? undefined),
+    enabled: enabled && month !== null,
+  });
+  return booking ? findEarningRow(rows.data, booking.id) : undefined;
 }
 
 /** `null` data means no account is saved yet (404), not an error. */

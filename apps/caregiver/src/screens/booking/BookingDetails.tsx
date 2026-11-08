@@ -9,13 +9,15 @@ import Text from "@/src/components/ui/text";
 import { globalStyles } from "@/src/constants/styles";
 import { DECLINE_MESSAGE, DECLINE_TITLE } from "@/src/constants/offerCopy";
 import { theme } from "@/src/constants/theme";
-import { useBooking } from "@/src/hooks/queries";
+import { useBooking, useBookingEarningRow } from "@/src/hooks/queries";
 import { useOfferActions } from "@/src/hooks/useOfferActions";
 import type { ScreenParamLists } from "@/src/navigation/Navigations";
 import type { Booking, Offer } from "@/src/services/booking.service";
+import type { CaregiverTransaction } from "@/src/services/wallet.service";
 import { buildDirectionsUrl, directionsTarget } from "@/src/utils/maps";
 import { formatDuration, formatVisitTime } from "@/src/utils/dates";
 import { bookingStatusLabel, serviceName } from "@/src/utils/labels";
+import { bookingEarningView } from "@/src/wallet/bookingEarning";
 
 type Props = StackScreenProps<ScreenParamLists, "BookingDetails">;
 
@@ -83,13 +85,16 @@ const OfferDetails: React.FC<{ offer: Offer; busy: boolean; onAccept: () => void
 /** Assigned view: this is now the caregiver's job, so the backend returns the full booking. */
 const AssignedDetails: React.FC<{
   booking: Booking;
+  /** The visit's earning row in the wallet, once completed; says "Under review" for a held earning. */
+  earningRow?: CaregiverTransaction;
   onChat: () => void;
   onNotes: () => void;
   onClient: () => void;
   onVisit: () => void;
-}> = ({ booking, onChat, onNotes, onClient, onVisit }) => {
+}> = ({ booking, earningRow, onChat, onNotes, onClient, onVisit }) => {
   // Only for an active assignment whose booking really carries coordinates.
   const destination = directionsTarget(booking);
+  const earning = bookingEarningView(booking, earningRow);
   return (
   <>
     <Text variant="h3" weight="bold" style={{ marginBottom: 16 }}>
@@ -102,8 +107,36 @@ const AssignedDetails: React.FC<{
     <Row label="When" value={formatVisitTime(booking.scheduled_date)} />
     <Row label="Duration" value={formatDuration(booking.duration_hours)} />
     <Row label="Status" value={bookingStatusLabel(booking.status)} />
-    {/* No earning row: the booking carries the family's service fee, not the caregiver's share, and
-        showing it read as the caregiver's pay (DP1-15). Needs a caregiver_earning field from the API. */}
+    {booking.arrived_at ? <Row label="Arrival" value="Patient told you've arrived" /> : null}
+    {earning ? (
+      // The caregiver's own share, from the backend (never the family's service fee, DP1-15).
+      <View testID="booking-earning" style={{ marginBottom: 16 }}>
+        <View style={[globalStyles.row, { justifyContent: "space-between" }]}>
+          <Text variant="body" color={theme.colors.textLight}>
+            Your earning
+          </Text>
+          <Text variant="body" weight="bold" testID="booking-earning-amount">
+            {earning.amount}
+          </Text>
+        </View>
+        {earning.statusLabel ? (
+          <Text
+            variant="small"
+            weight="medium"
+            testID="booking-earning-status"
+            color={earning.note ? theme.colors.warningText : theme.colors.textLight}
+            style={{ textAlign: "right", marginTop: 2 }}
+          >
+            {earning.statusLabel}
+          </Text>
+        ) : null}
+        {earning.note ? (
+          <Text variant="small" color={theme.colors.textLight} testID="booking-earning-note" style={{ textAlign: "right" }}>
+            {earning.note}
+          </Text>
+        ) : null}
+      </View>
+    ) : null}
 
     <Text variant="h3" weight="bold" style={{ marginTop: 16, marginBottom: 16 }}>
       Location
@@ -142,6 +175,7 @@ const BookingDetails: React.FC<Props> = ({ route, navigation }) => {
   const { bookingId, offer } = route.params;
   const isOffer = offer !== undefined;
   const { data: booking, isLoading, error, refetch } = useBooking(bookingId, !isOffer);
+  const earningRow = useBookingEarningRow(booking);
 
   const { accept, decline, busyId } = useOfferActions({
     onAccepted: (id) => navigation.replace("BookingDetails", { bookingId: id }),
@@ -179,6 +213,7 @@ const BookingDetails: React.FC<Props> = ({ route, navigation }) => {
     return (
       <AssignedDetails
         booking={booking}
+        earningRow={earningRow}
         onChat={() =>
           navigation.navigate("ChatScreen", { bookingId, patientName: booking.patient_details?.full_name })
         }

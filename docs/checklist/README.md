@@ -23,7 +23,8 @@ channel) lives in the backend repo: `docs/checklist/MASTER_CHECKLIST.md`. Update
 
 ## Device pass 1 minors and visit-rule follow-ups (2026-11-07)
 - [x] Fall tab removed, caregiver welcome slides, logout lands on Login (DP1-18, 11, 12); one truthful location sentence and no stale-location warning before location is shared (DP1-13, 14); Job Details wording, notification rows, declined offers "No longer available", held earning "Under review" (DP1-15, 20, 06); visit screens and care plan / vitals links (DP1-19, 32); shared date formatter and `DateField`, care-plan form defaults (DP1-28, 25); care-plan back stack and client "View all" push (DP1-26, 30); multi-select areas and 4-step onboarding (DP1-29, 09); AI note taker mic on tap (DP1-17); Contact us and delete-account copy (DP1-24, 27). Branch `fix/caregiver-device-pass-minors`, **device-verified on the simulator**, see docs/sop/2026-11-07-caregiver-device-pass-minors.md and ledgers/LEDGER-device-caregiver-minors.md
-- [ ] Backend asks: caregiver earning on the booking (Job Details "You earn"), no ETA / a `distance_km` field in offer notifications, `status_reason` on the wallet list
+- [x] Caregiver earning on Job Details and a real "I've arrived" (2026-11-08, branch `feature/caregiver-arrived-earning-ui`, needs backend #48; **device-verified on the simulator**, see docs/sop/2026-11-08-caregiver-arrived-and-earning.md and ledgers/LEDGER-device-caregiver-arrived.md)
+- [ ] Backend asks: no ETA / a `distance_km` field in offer notifications, `status_reason` on the wallet list
 - [ ] Welcome slide 3 art replacement (shows a "BOOK NOW" phone); sign-up "Create Account" clip after errors and bank picker top inset (DP1-31 remainder); Android pass
 - [ ] Leave alone until decided: DP1-10, 16, 21, 22, 23, 33
 
@@ -38,7 +39,7 @@ channel) lives in the backend repo: `docs/checklist/MASTER_CHECKLIST.md`. Update
 ## Device pass 2 (2026-11-07)
 - [x] Second simulator walk of the caregiver app: accept/decline offers, "No longer available", wallet pending/available/on hold, bank add/change and 24 h pause, payslip, vitals entry, normal and short visit completion, under-review / changes-requested / rejected states, note taker with the mic, logout, Home, Job Details, offers list. 9 findings (1 major, 4 minor, 2 polish, 1 note), 2 fixed on `fix/caregiver-device-pass-2` (decline copy says a decline is final; vitals entry clears an old error); see docs/sop/2026-11-07-caregiver-device-pass-2.md and ledgers/LEDGER-device-pass-2.md
 - [ ] DP2-01 (major): tell the caregiver, before and after completing, that a visit under half its booked time is held for Finance review (owner wording; backend earning status in the `complete` response)
-- [ ] Still unwalked: "I've arrived" step, reset-by-code screens, cancel/drop-out, Android, push, location, keyboard re-check
+- [ ] Still unwalked (the "I've arrived" step now is): reset-by-code screens, cancel/drop-out, Android, push, location, keyboard re-check
 
 ## Caregiver vitals (Client care v1, part 1)
 - [x] Vitals tab: six-vital grid for the patient on the in-progress visit; "available during an active visit" on 403 or before the visit starts (2026-10-27, see docs/sop/2026-10-27-caregiver-vitals-tab.md)
