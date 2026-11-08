@@ -85,6 +85,12 @@ describe("auth gate (App)", () => {
     await fireEvent.press(screen.getByRole("button", { name: "Open profile" }));
     await fireEvent.press(await screen.findByRole("button", { name: "Account and data" }));
     await fireEvent.press(await screen.findByRole("button", { name: "Log out" }));
+    // Log out asks first (P1-09): "No, stay signed in" changes nothing, "Yes, log out" ends the session.
+    expect(await screen.findByText("Log out?")).toBeTruthy();
+    await fireEvent.press(screen.getByRole("button", { name: "No, stay signed in" }));
+    expect(session.getAccessToken()).not.toBeNull();
+    await fireEvent.press(screen.getByRole("button", { name: "Log out" }));
+    await fireEvent.press(await screen.findByRole("button", { name: "Yes, log out" }));
 
     expect(await screen.findByText("Sign in to your Oakly Health account")).toBeTruthy();
     expect(keychainKeys()).toEqual([]);

@@ -1,7 +1,6 @@
 import { useMutation } from "@tanstack/react-query";
 import type React from "react";
 import { useEffect, useState } from "react";
-import { Alert } from "react-native";
 
 import {
   SUCCESS_MESSAGE,
@@ -13,7 +12,9 @@ import {
 } from "@/src/account/changePasswordModel";
 import { messageForError } from "@/src/api/errors";
 import Button from "@/src/components/ui/button";
+import ErrorDialog from "@/src/components/ui/ErrorDialog";
 import Input from "@/src/components/ui/input";
+import NoticeDialog from "@/src/components/ui/notice-dialog";
 import Screen from "@/src/components/ui/screen";
 import Text from "@/src/components/ui/text";
 import { theme } from "@/src/constants/theme";
@@ -32,6 +33,9 @@ const ChangePassword: React.FC = () => {
   /** After too many wrong current passwords: when the backend will answer again (epoch ms). */
   const [waitUntil, setWaitUntil] = useState<number | null>(null);
   const [now, setNow] = useState(() => Date.now());
+  /** The app's own dialogs (not the native alert): the success card, and a problem that has no field to sit under. */
+  const [changed, setChanged] = useState(false);
+  const [problem, setProblem] = useState<string | null>(null);
 
   const secondsLeft = waitUntil === null ? 0 : Math.max(0, Math.ceil((waitUntil - now) / 1000));
   const waiting = secondsLeft > 0;
@@ -49,7 +53,7 @@ const ChangePassword: React.FC = () => {
   const change = useMutation({
     mutationFn: () => authService.changePassword(current, next),
     onSuccess: () => {
-      Alert.alert(SUCCESS_TITLE, SUCCESS_MESSAGE, [{ text: "OK", onPress: () => navigation.goBack() }]);
+      setChanged(true);
     },
     onError: (error) => {
       const failure = changePasswordFailure(error);
@@ -60,7 +64,7 @@ const ChangePassword: React.FC = () => {
         setNow(Date.now());
         setWaitUntil(Date.now() + failure.seconds * 1000);
       } else {
-        Alert.alert("Couldn't change your password", messageForError(error));
+        setProblem(messageForError(error));
       }
     },
   });
@@ -124,6 +128,16 @@ const ChangePassword: React.FC = () => {
         loading={change.isPending}
         disabled={waiting}
       />
+      <NoticeDialog
+        visible={changed}
+        title={SUCCESS_TITLE}
+        message={SUCCESS_MESSAGE}
+        onClose={() => {
+          setChanged(false);
+          navigation.goBack();
+        }}
+      />
+      <ErrorDialog visible={problem !== null} title="Couldn't change your password" message={problem ?? ""} onClose={() => setProblem(null)} />
     </Screen>
   );
 };

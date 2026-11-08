@@ -120,7 +120,9 @@ describe("FallGuard (live-shaped)", () => {
       expect(sent.answers.map((a: any) => [a.question_id, a.answer])).toEqual((SUBMIT.request.body as any).answers.map((a: any) => [a.question_id, a.answer]));
       // the captured AI answer was the failure stand-in: no summary card, and a plain line instead of invented advice
       expect(screen.queryByText(/Unable to analy/i)).toBeNull();
-      expect(screen.getByText(/could not prepare personal advice/)).toBeTruthy();
+      expect(
+        screen.getByText("Your score is saved to your account. Personal tips are not available right now. If you are worried about falls, please speak to your doctor or nurse."),
+      ).toBeTruthy();
       expect(screen.queryByText(/shows sample information/)).toBeNull();
       view.unmount();
     });

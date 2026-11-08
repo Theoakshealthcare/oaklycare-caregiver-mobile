@@ -62,7 +62,7 @@ const Screen: React.FC<ScreenProps> = ({ title, noBack, headerRight, scroll, bar
   <View style={styles.screen}>
     {bare ? null : <Header title={title} noBack={noBack} right={headerRight} />}
     {scroll ? (
-      <KeyboardScrollView contentContainerStyle={[styles.content, contentStyle]}>{children}</KeyboardScrollView>
+      <KeyboardScrollView contentContainerStyle={[styles.content, styles.scrollContent, contentStyle]}>{children}</KeyboardScrollView>
     ) : (
       <View style={[styles.content, styles.fill, contentStyle]}>{children}</View>
     )}
@@ -91,6 +91,8 @@ const styles = StyleSheet.create({
   },
   title: { flex: 1 },
   content: { padding: theme.spacing.lg, gap: theme.spacing.md },
+  /** Room under the last item, so a button at the end of a long page (the chat button under the visit-code card) is never cut at the edge. */
+  scrollContent: { paddingBottom: theme.spacing.xxl },
   fill: { flex: 1 },
   footer: { padding: theme.spacing.lg, paddingTop: theme.spacing.sm },
 });

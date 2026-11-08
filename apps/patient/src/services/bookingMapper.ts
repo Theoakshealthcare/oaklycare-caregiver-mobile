@@ -1,6 +1,7 @@
 import type { Schemas } from "@oakly/api-client";
 
 import type { Booking, BookingDraft, BookingQuote, CancelResult, CancelTerms, Refund } from "@/src/domain/booking";
+import { firstNameOf } from "@/src/domain/names";
 import { toLocalDate } from "@/src/domain/slots";
 
 type BookingResponse = Schemas["BookingResponse"];
@@ -12,14 +13,6 @@ const SERVICE_LABELS: Record<string, string> = {
   caregiver: "Caregiver visit",
   nutritionist: "Nutrition consult",
 };
-
-const TITLES = /^(dr|mr|mrs|ms|miss|nurse|prof)\.?$/i;
-
-/** "Dr. John Smith" is "John": the family sees a first name, not a title. */
-export function firstNameOf(fullName: string): string {
-  const parts = fullName.trim().split(/\s+/).filter(Boolean);
-  return parts.find((part) => !TITLES.test(part)) ?? parts[0] ?? fullName;
-}
 
 const refundOf = (refund: BookingResponse["refund"]): Refund | null =>
   refund ? { status: refund.status, amount: refund.amount ?? null } : null;

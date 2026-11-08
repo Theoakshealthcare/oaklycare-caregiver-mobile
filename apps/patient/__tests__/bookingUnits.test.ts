@@ -2,9 +2,10 @@ import { bookingErrorMessage, pointsToSupport } from "../src/api/bookingErrors";
 import { ApiError, FALLBACK_MESSAGE, NETWORK_MESSAGE } from "../src/api/errors";
 import { isNetworkFailure } from "../src/api/networkFailure";
 import { unwrap } from "../src/api/unwrap";
-import { feeReason, type CancelTerms } from "../src/domain/booking";
-import { firstNameOf, specialInstructions, toBooking, toCancelTerms, toCreateBody } from "../src/services/bookingMapper";
+import { canChat, feeReason, paymentChip, type Booking, type CancelTerms } from "../src/domain/booking";
+import { specialInstructions, toBooking, toCancelTerms, toCreateBody } from "../src/services/bookingMapper";
 import { readPaymentCheck, termsFromChangedError } from "../src/services/booking.service";
+import { firstNameOf } from "../src/domain/names";
 import { EMPTY_DRAFT } from "../src/hooks/bookingDraft";
 import { capture } from "../test-utils/captures";
 
@@ -176,5 +177,38 @@ describe("mapping the real responses", () => {
     });
     expect(readPaymentCheck({ status: "error", message: "Transaction reference not found" }).kind).toBe("not_paid");
     expect(readPaymentCheck(null).kind).toBe("not_paid");
+  });
+});
+
+describe("booking payment chip and chat (P1-08)", () => {
+  type Money = Pick<Booking, "status" | "paymentStatus" | "refund">;
+  const base: Money = { status: "cancelled", paymentStatus: "paid", refund: null };
+  const chip = (over: Partial<Money> = {}) => paymentChip({ ...base, ...over }).label;
+
+  it("never says PAID on a cancelled booking: the refund state if there is one, else Canceled", () => {
+    expect(chip({ refund: { status: "under_review", amount: 100 } })).toBe("REFUND PENDING");
+    expect(chip({ refund: { status: "processing", amount: 100 } })).toBe("REFUND PENDING");
+    expect(chip({ refund: { status: "needs_bank_details", amount: null } })).toBe("REFUND PENDING");
+    expect(chip({ refund: { status: "contact_support", amount: null } })).toBe("REFUND PENDING");
+    expect(chip({ refund: { status: "refunded", amount: 100 } })).toBe("REFUNDED");
+    expect(chip({ refund: { status: "declined", amount: null } })).toBe("REFUND DECLINED");
+    expect(chip({ paymentStatus: "pending" })).toBe("CANCELED");
+    expect(chip()).toBe("CANCELED");
+    expect(chip({ paymentStatus: "refunded" })).toBe("REFUNDED");
+    expect(chip({ paymentStatus: "failed" })).toBe("PAYMENT FAILED");
+  });
+
+  it("keeps the money chips for a booking that is not cancelled", () => {
+    expect(chip({ status: "accepted" })).toBe("PAID");
+    expect(chip({ status: "pending", paymentStatus: "pending" })).toBe("PAYMENT PENDING");
+    expect(chip({ status: "completed", paymentStatus: "partially_refunded" })).toBe("REFUNDED");
+    expect(chip({ status: "pending", paymentStatus: "failed" })).toBe("PAYMENT FAILED");
+  });
+
+  it("offers the chat only with a caregiver and not once cancelled", () => {
+    expect(canChat({ status: "accepted", caregiver: { firstName: "Grace" } })).toBe(true);
+    expect(canChat({ status: "completed", caregiver: { firstName: "Grace" } })).toBe(true);
+    expect(canChat({ status: "cancelled", caregiver: { firstName: "Grace" } })).toBe(false);
+    expect(canChat({ status: "pending", caregiver: null })).toBe(false);
   });
 });

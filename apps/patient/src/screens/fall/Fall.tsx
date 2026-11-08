@@ -38,7 +38,8 @@ const Fall: React.FC = () => {
 };
 
 const styles = StyleSheet.create({
-  content: { padding: theme.spacing.lg, gap: theme.spacing.md },
+  // Extra bottom room: the last row must clear the floating tab bar without scrolling past it.
+  content: { padding: theme.spacing.lg, paddingBottom: theme.spacing.xxl, gap: theme.spacing.md },
   image: { width: "100%", height: 180 },
 });
 

@@ -29,3 +29,8 @@ export function toLocalDate(date: string, time: string): Date {
   const [hh, mm] = time.split(":").map(Number);
   return new Date(y, m - 1, d, hh, mm);
 }
+
+/** True when the chosen date and time have already passed (so the start-time chip for it cannot be picked). */
+export function isPastSlot(date: string, time: string, now: number = Date.now()): boolean {
+  return toLocalDate(date, time).getTime() < now;
+}

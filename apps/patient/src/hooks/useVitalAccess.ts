@@ -2,6 +2,7 @@ import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 
 import { api } from "@/src/api/client";
 import { unwrap } from "@/src/api/unwrap";
+import { firstNameAndInitial } from "@/src/domain/names";
 import { vitalsService } from "@/src/services/vitals.service";
 
 import { useMe } from "./queries";
@@ -10,6 +11,9 @@ export const accessKeys = {
   list: ["vitals", "access"] as const,
   candidates: ["vitals", "access", "candidates"] as const,
 };
+
+/** This screen alone shows first name and last initial (a consent choice: the patient must tell two caregivers apart). */
+const displayName = (fullName: string | null | undefined): string => (fullName?.trim() ? firstNameAndInitial(fullName) : "Your caregiver");
 
 export interface AccessGrant {
   caregiverId: string;
@@ -22,7 +26,7 @@ export function useVitalAccessList() {
     queryKey: accessKeys.list,
     queryFn: vitalsService.accessList,
     select: (rows): AccessGrant[] =>
-      rows.map((row) => ({ caregiverId: row.caregiver_id, name: row.caregiver_name?.trim() || "Your caregiver" })),
+      rows.map((row) => ({ caregiverId: row.caregiver_id, name: displayName(row.caregiver_name) })),
   });
 }
 
@@ -38,7 +42,7 @@ export function useShareableCaregivers() {
       const seen = new Map<string, AccessGrant>();
       for (const row of rows) {
         if (!row.caregiver_id || row.status === "cancelled" || row.status === "declined" || seen.has(row.caregiver_id)) continue;
-        seen.set(row.caregiver_id, { caregiverId: row.caregiver_id, name: row.caregiver_details?.full_name?.trim() || "Your caregiver" });
+        seen.set(row.caregiver_id, { caregiverId: row.caregiver_id, name: displayName(row.caregiver_details?.full_name) });
       }
       return [...seen.values()];
     },

@@ -14,6 +14,9 @@ jest.mock("expo-font", () => ({
   ...jest.requireActual("expo-font"),
   useFonts: () => [true, null],
 }));
+jest.mock("expo-web-browser", () => ({ openBrowserAsync: jest.fn(async () => ({ type: "dismiss" })) }));
+
+const WebBrowser = jest.requireMock("expo-web-browser") as { openBrowserAsync: jest.Mock };
 
 const press = (name: string | RegExp) => fireEvent.press(screen.getByRole("button", { name }));
 const type = (label: string, value: string) => fireEvent.changeText(screen.getByLabelText(label), value);
@@ -214,7 +217,10 @@ describe("profile (live-shaped)", () => {
       const alert = jest.spyOn(Alert, "alert").mockImplementation(() => undefined);
       const { calls, view } = await open(route("password-changed"));
       await fill("Placeholder-Pass-1", "Placeholder-Pass-2x");
-      await waitFor(() => expect(alert).toHaveBeenCalledWith("Password changed", "You have been signed out on your other devices.", expect.any(Array)));
+      // The app's own card dialog, never the native alert (P1-12); OK closes it and goes back to the profile.
+      expect(await screen.findByText("Password changed")).toBeTruthy();
+      expect(screen.getByText("You have been signed out on your other devices.")).toBeTruthy();
+      expect(alert).not.toHaveBeenCalled();
       const sent = calls.find((c) => c.path === "/api/v1/auth/change-password");
       expect(sent?.body).toEqual({ current_password: "Placeholder-Pass-1", new_password: "Placeholder-Pass-2x" });
       // the captured response carries the new pair; it is what the session holds now
@@ -224,6 +230,9 @@ describe("profile (live-shaped)", () => {
       // the next request already uses it
       await queryClient.refetchQueries({ queryKey: queryKeys.me });
       expect(calls.filter((c) => c.path === "/api/v1/auth/me").at(-1)?.authorization).toBe(`Bearer ${pair.access_token}`);
+      await press("OK");
+      await waitFor(() => expect(screen.queryByLabelText("Current password")).toBeNull());
+      alert.mockRestore();
       view.unmount();
     });
 
@@ -238,15 +247,30 @@ describe("profile (live-shaped)", () => {
   });
 
   describe("FAQs, About, and what is hidden", () => {
-    it("opens the owner's site for FAQs and About, and shows no Terms or Privacy row", async () => {
-      const open = jest.spyOn(Linking, "openURL").mockResolvedValue(true);
+    beforeEach(() => WebBrowser.openBrowserAsync.mockClear());
+
+    it("opens the owner's site for FAQs and About in the in-app browser (not Safari), and shows no Terms or Privacy row", async () => {
+      const safari = jest.spyOn(Linking, "openURL").mockResolvedValue(true);
       const { view } = await renderSignedIn();
       await press("Open profile");
       await press("FAQs");
-      expect(open).toHaveBeenLastCalledWith("https://oaklycare.com/faq");
+      await waitFor(() => expect(WebBrowser.openBrowserAsync).toHaveBeenLastCalledWith("https://oaklycare.com/faq", expect.anything()));
       await press("About us");
-      expect(open).toHaveBeenLastCalledWith("https://oaklycare.com/about");
+      await waitFor(() => expect(WebBrowser.openBrowserAsync).toHaveBeenLastCalledWith("https://oaklycare.com/about", expect.anything()));
+      expect(safari).not.toHaveBeenCalled();
       expect(screen.queryByText(/Terms|Privacy|Cookie/i)).toBeNull();
+      safari.mockRestore();
+      view.unmount();
+    });
+
+    it("falls back to the phone's browser only if the in-app one cannot open", async () => {
+      WebBrowser.openBrowserAsync.mockRejectedValueOnce(new Error("no browser"));
+      const safari = jest.spyOn(Linking, "openURL").mockResolvedValue(true);
+      const { view } = await renderSignedIn();
+      await press("Open profile");
+      await press("FAQs");
+      await waitFor(() => expect(safari).toHaveBeenCalledWith("https://oaklycare.com/faq"));
+      safari.mockRestore();
       view.unmount();
     });
   });
