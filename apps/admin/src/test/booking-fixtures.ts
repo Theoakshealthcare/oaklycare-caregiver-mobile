@@ -3,6 +3,7 @@ import type {
   BookingDetail,
   BookingListItem,
   BookingPolicy,
+  CancelTerms,
   Candidate,
   UnmatchedItem,
 } from "@/lib/bookings";
@@ -67,6 +68,54 @@ export function makeUnmatched(overrides: Partial<UnmatchedItem> = {}): Unmatched
 }
 
 /** Capture 087: Operations' view (address visible, clinical masked), a paid pending booking dispatch gave up on. */
+/** Capture admin/803 (a booking one hour from the start, no stored snapshot): the late tier would apply. */
+export const CANCEL_TERMS_LIVE_POLICY: CancelTerms = {
+  policy_source: "live_policy",
+  policy: { free_hours: 24, late_hours: 6, fee_percent: 25, late_fee_percent: 60 },
+  snapshot: null,
+  would_apply_now: {
+    allowed: true,
+    refusal: null,
+    tier: "late",
+    fee_percent: 60,
+    fee_kobo: 1200000,
+    refund_kobo: 1000000,
+    as_of: "2026-11-08T15:33:55.861139",
+  },
+  applied: null,
+};
+
+/** Capture admin/806 (cancelled by the booker, standard tier): the snapshot the cancel froze and what it applied. */
+export const CANCEL_TERMS_APPLIED: CancelTerms = {
+  policy_source: "booking_snapshot",
+  policy: { free_hours: 24, late_hours: 6, fee_percent: 25, late_fee_percent: 60 },
+  snapshot: { free_hours: 24, late_hours: 6, fee_percent: 25, late_fee_percent: 60 },
+  would_apply_now: {
+    allowed: false,
+    refusal: "closed",
+    tier: null,
+    fee_percent: 0,
+    fee_kobo: 0,
+    refund_kobo: 0,
+    as_of: "2026-11-08T15:33:55.944782",
+  },
+  applied: { tier: "standard", fee_kobo: 500000, late_cancel_compensable: null },
+};
+
+/** Capture admin/805 (unpaid, pending). */
+export const CANCEL_TERMS_UNPAID: CancelTerms = {
+  ...CANCEL_TERMS_LIVE_POLICY,
+  would_apply_now: {
+    allowed: false,
+    refusal: "unpaid",
+    tier: null,
+    fee_percent: 0,
+    fee_kobo: 0,
+    refund_kobo: 0,
+    as_of: "2026-11-08T15:33:55.891793",
+  },
+};
+
 export function makeDetail(overrides: Partial<BookingDetail> = {}): BookingDetail {
   return {
     id: BOOKING_ID,
@@ -114,6 +163,7 @@ export function makeDetail(overrides: Partial<BookingDetail> = {}): BookingDetai
       refund_amount_kobo: null,
       attempts: [],
     },
+    cancel_terms: CANCEL_TERMS_LIVE_POLICY,
     dispatch: { state: "unmatched", started_at: "2026-10-07T19:08:05.522350", waves: [], offers: [] },
     events: [],
     no_show_flagged_at: null,

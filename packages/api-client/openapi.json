@@ -14426,6 +14426,9 @@
           "payment": {
             "$ref": "#/components/schemas/PaymentOut"
           },
+          "cancel_terms": {
+            "$ref": "#/components/schemas/CancelTermsOut"
+          },
           "dispatch": {
             "$ref": "#/components/schemas/DispatchOut"
           },
@@ -14501,6 +14504,7 @@
           "clinical",
           "price",
           "payment",
+          "cancel_terms",
           "dispatch",
           "events",
           "no_show_suspected",
@@ -15914,6 +15918,47 @@
         ],
         "title": "BookingStatus"
       },
+      "CancelAppliedOut": {
+        "properties": {
+          "tier": {
+            "type": "string",
+            "enum": [
+              "none",
+              "standard",
+              "late"
+            ],
+            "title": "Tier"
+          },
+          "fee_kobo": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Fee Kobo"
+          },
+          "late_cancel_compensable": {
+            "anyOf": [
+              {
+                "type": "boolean"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Late Cancel Compensable"
+          }
+        },
+        "type": "object",
+        "required": [
+          "tier"
+        ],
+        "title": "CancelAppliedOut",
+        "description": "Set only after a booker cancel: the tier that was applied and the fee it cost."
+      },
       "CancelBookingRequest": {
         "properties": {
           "reason": {
@@ -16145,6 +16190,119 @@
         ],
         "title": "CancelPolicyOut"
       },
+      "CancelTermsNowOut": {
+        "properties": {
+          "allowed": {
+            "type": "boolean",
+            "title": "Allowed"
+          },
+          "refusal": {
+            "anyOf": [
+              {
+                "type": "string",
+                "enum": [
+                  "in_progress",
+                  "closed",
+                  "unpaid"
+                ]
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Refusal"
+          },
+          "tier": {
+            "anyOf": [
+              {
+                "type": "string",
+                "enum": [
+                  "none",
+                  "standard",
+                  "late"
+                ]
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Tier"
+          },
+          "fee_percent": {
+            "type": "integer",
+            "title": "Fee Percent"
+          },
+          "fee_kobo": {
+            "type": "integer",
+            "title": "Fee Kobo"
+          },
+          "refund_kobo": {
+            "type": "integer",
+            "title": "Refund Kobo"
+          },
+          "as_of": {
+            "type": "string",
+            "format": "date-time",
+            "title": "As Of"
+          }
+        },
+        "type": "object",
+        "required": [
+          "allowed",
+          "fee_percent",
+          "fee_kobo",
+          "refund_kobo",
+          "as_of"
+        ],
+        "title": "CancelTermsNowOut",
+        "description": "What the booker would pay to cancel at ``as_of`` (read-only; the cancel itself decides again under a lock)."
+      },
+      "CancelTermsOut": {
+        "properties": {
+          "policy_source": {
+            "type": "string",
+            "enum": [
+              "booking_snapshot",
+              "live_policy"
+            ],
+            "title": "Policy Source"
+          },
+          "policy": {
+            "$ref": "#/components/schemas/CancelTiersOut"
+          },
+          "snapshot": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/CancelTiersOut"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "would_apply_now": {
+            "$ref": "#/components/schemas/CancelTermsNowOut"
+          },
+          "applied": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/CancelAppliedOut"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          }
+        },
+        "type": "object",
+        "required": [
+          "policy_source",
+          "policy",
+          "would_apply_now"
+        ],
+        "title": "CancelTermsOut",
+        "description": "The booking's own cancel terms. These are the *booker's* terms; an admin cancel chooses its own refund (see POST cancel)."
+      },
       "CancelTermsResponse": {
         "properties": {
           "booking_id": {
@@ -16296,6 +16454,35 @@
           "as_of"
         ],
         "title": "CancelTermsResponse"
+      },
+      "CancelTiersOut": {
+        "properties": {
+          "free_hours": {
+            "type": "integer",
+            "title": "Free Hours"
+          },
+          "late_hours": {
+            "type": "integer",
+            "title": "Late Hours"
+          },
+          "fee_percent": {
+            "type": "integer",
+            "title": "Fee Percent"
+          },
+          "late_fee_percent": {
+            "type": "integer",
+            "title": "Late Fee Percent"
+          }
+        },
+        "type": "object",
+        "required": [
+          "free_hours",
+          "late_hours",
+          "fee_percent",
+          "late_fee_percent"
+        ],
+        "title": "CancelTiersOut",
+        "description": "The booker-cancel tiers (admin booking policy fields): free before ``free_hours`` to the start, ``fee_percent`` of the\nservice fee between ``late_hours`` and ``free_hours``, ``late_fee_percent`` inside ``late_hours`` (or once on the way)."
       },
       "Candidate": {
         "properties": {

@@ -11,6 +11,7 @@ import { Button } from "@/components/ui/button";
 import { ErrorState, Skeleton } from "@/components/ui/states";
 import { errorMessage } from "@/lib/api";
 import { type BookingDetail, BOOKINGS_KEY, fetchBooking } from "@/lib/bookings";
+import { cancelTermsSummary } from "@/lib/cancel-terms";
 import { formatMinutes, formatNaira, formatWat, humanize } from "@/lib/format";
 
 function Section({ title, children }: { title: string; children: React.ReactNode }) {
@@ -92,6 +93,7 @@ export function BookingView({ id }: { id: string }) {
         <AddressCard b={b} />
         <ClinicalCard b={b} />
         <PriceCard b={b} />
+        <CancelTermsCard b={b} />
         <NoShowCard b={b} />
         <DispatchCard b={b} />
         <TimelineCard b={b} />
@@ -255,6 +257,26 @@ function PriceCard({ b }: { b: BookingDetail }) {
           </tbody>
         </table>
       ) : null}
+    </Section>
+  );
+}
+
+function CancelTermsCard({ b }: { b: BookingDetail }) {
+  const t = b.cancel_terms;
+  const summary = cancelTermsSummary(t);
+  return (
+    <Section title="Cancellation terms">
+      <dl className="grid gap-1">
+        <Row label="Terms from">{summary.source}</Row>
+        <Row label="Free">{summary.free}</Row>
+        <Row label="Standard fee">{summary.standard}</Row>
+        <Row label="Late fee">{summary.late}</Row>
+        <Row label="If cancelled now">{summary.now}</Row>
+        {summary.applied ? <Row label="Applied">{summary.applied}</Row> : null}
+      </dl>
+      <p className="text-xs text-muted-foreground">
+        {summary.asOf} These are the family&apos;s terms; cancelling as an admin chooses its own refund.
+      </p>
     </Section>
   );
 }

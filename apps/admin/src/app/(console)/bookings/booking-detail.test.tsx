@@ -4,6 +4,8 @@ import { describe, expect, it, vi } from "vitest";
 
 import {
   BOOKING_ID,
+  CANCEL_TERMS_APPLIED,
+  CANCEL_TERMS_UNPAID,
   CANDIDATES,
   CLINICAL_VISIBLE,
   DISPATCHING,
@@ -55,6 +57,43 @@ describe("BookingView", () => {
     expect(card("Price & payment").getByText("BKG_12FF3CB2_dddf1043")).toBeInTheDocument();
     expect(card("Dispatch").getByText("Unmatched")).toBeInTheDocument();
     expect(card("No-show").getByText(/No no-show/)).toBeInTheDocument();
+  });
+
+  it("shows the booking's cancel terms: tiers, the fee that applies now and where the terms come from", async () => {
+    stubFetch({ [`GET ${PATH}`]: () => jsonResponse(makeDetail({ status: "accepted" })) });
+    render(withAuth(["bookings.read"], <BookingView id={BOOKING_ID} />));
+    await screen.findByRole("heading", { level: 1 });
+    const terms = card("Cancellation terms");
+    expect(terms.getByText("The current booking policy (nothing is saved on this booking yet)")).toBeInTheDocument();
+    expect(terms.getByText("More than 24 h before the visit")).toBeInTheDocument();
+    expect(terms.getByText("25% of the service fee, from 24 h to 6 h before")).toBeInTheDocument();
+    expect(terms.getByText("60% of the service fee, inside 6 h or once the caregiver is on the way")).toBeInTheDocument();
+    expect(
+      terms.getByText("Late fee, 60% of the service fee: the family pays ₦12,000 and is refunded ₦10,000."),
+    ).toBeInTheDocument();
+    expect(terms.queryByText("Applied")).not.toBeInTheDocument();
+    expect(terms.getByText(/cancelling as an admin chooses its own refund/)).toBeInTheDocument();
+  });
+
+  it("shows what a booker cancel applied, from the terms saved on the booking", async () => {
+    stubFetch({
+      [`GET ${PATH}`]: () => jsonResponse(makeDetail({ status: "cancelled", cancel_terms: CANCEL_TERMS_APPLIED })),
+    });
+    render(withAuth(["bookings.read"], <BookingView id={BOOKING_ID} />));
+    await screen.findByRole("heading", { level: 1 });
+    const terms = card("Cancellation terms");
+    expect(terms.getByText("Saved on this booking")).toBeInTheDocument();
+    expect(terms.getByText("Cancelled by the family under the standard fee: ₦5,000 kept.")).toBeInTheDocument();
+    expect(terms.getByText("Not possible: the booking is closed.")).toBeInTheDocument();
+  });
+
+  it("says an unpaid booking has nothing to refund instead of showing a fee", async () => {
+    stubFetch({ [`GET ${PATH}`]: () => jsonResponse(makeDetail({ cancel_terms: CANCEL_TERMS_UNPAID })) });
+    render(withAuth(["bookings.read"], <BookingView id={BOOKING_ID} />));
+    await screen.findByRole("heading", { level: 1 });
+    expect(
+      card("Cancellation terms").getByText("Not applicable: not paid yet, so the family cancels for free."),
+    ).toBeInTheDocument();
   });
 
   it("hides the clinical text from an admin without clinical.read", async () => {
