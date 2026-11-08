@@ -26,6 +26,7 @@ DP1-15 removed the earning row from Job Details because the booking carried the 
 | API client | `packages/api-client/openapi.json`, `src/schema.d.ts` (synced from backend `5fa6326`) |
 | Earning | `apps/caregiver/src/wallet/bookingEarning.ts`, `src/hooks/queries.ts` (`useBookingEarningRow`), `src/screens/booking/BookingDetails.tsx` |
 | Arrived | `src/services/booking.service.ts` (`arrived` action, `arrivedAt`), `src/screens/visit/VisitFlow.tsx`, `VisitSteps.tsx`, `src/api/errors.ts` |
+| Admin | `apps/admin/src/test/booking-fixtures.ts`: the synced types make `short_visit_min_percent` required on the booking policy, so the test fixture gained it (no admin UI for the threshold yet) |
 | Tests | `__tests__/arrivedEarning.test.tsx` (27), `__tests__/visit.test.tsx` (button label, mock shape) |
 
 ## Verification
@@ -38,6 +39,7 @@ Pure app change, no config. Revert the commit; the generated client changes are 
 
 ## Follow-ups
 
+- Admin console: no field to edit `short_visit_min_percent` yet (the API accepts it).
 - Booking has no completion time: ask the backend for `completed_at` (or the earning status on the booking) so the status line needs no wallet lookup.
 - The patient app does not yet render `caregiver_arrived` specially (it is in the feed); not run on a patient simulator.
 - DP2-01 (a warning before completing a short visit) is still open: this slice shows the held state only after completion.
