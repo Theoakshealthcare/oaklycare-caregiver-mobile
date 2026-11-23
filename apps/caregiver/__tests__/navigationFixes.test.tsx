@@ -47,7 +47,7 @@ describe("welcome slides follow the Figma frames (owner, 2026-11-23: exact parit
 });
 
 describe("visit completed", () => {
-  it("Back to home goes to the Home tab", async () => {
+  it("Close on the clocked-out page goes to the Home tab", async () => {
     const popTo = jest.fn();
     const client = new QueryClient();
     await render(
@@ -57,7 +57,7 @@ describe("visit completed", () => {
         />
       </QueryClientProvider>,
     );
-    fireEvent.press(screen.getByText("Back to home"));
+    fireEvent.press(screen.getByLabelText("Close"));
     expect(popTo).toHaveBeenCalledWith("BottomNavigation", expect.objectContaining({ tab: "home" }));
     client.clear();
   });

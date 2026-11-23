@@ -11,6 +11,7 @@ import Input from "@/src/components/ui/input";
 import Text from "@/src/components/ui/text";
 import { supportUrl } from "@/src/config/contact";
 import { theme } from "@/src/constants/theme";
+import { showToast } from "@/src/components/ui/toast";
 import { useBankAccount, useBanks, useResolveBankAccount, useSaveBankAccount } from "@/src/hooks/queries";
 import type { Bank, BankAccount, ResolvedAccount } from "@/src/services/wallet.service";
 import { ACCOUNT_NUMBER_LENGTH, accountNumberProblem, bankAccountState, PAUSE_REASON, payoutsPausedUntil } from "@/src/wallet/walletModel";
@@ -33,6 +34,9 @@ const Banner: React.FC<{ tone: "info" | "warning"; testID: string; children: str
 );
 
 /** What the caregiver is told after a save; the 24 h pause is the backend's anti-fraud rule (guide, 10.3). */
+/** The Figma toast after the bank account is saved. */
+export const PAYMENT_UPDATED_TOAST = "Payment Details has been updated";
+
 function savedNotice(account: BankAccount): string {
   const until = payoutsPausedUntil(account.payouts_blocked_until);
   return until
@@ -190,6 +194,8 @@ const BankDetails: React.FC = () => {
           onSaved={(saved) => {
             setNotice(savedNotice(saved));
             setEditing(false);
+            // Figma's green toast. The banner stays: it also carries the 24 hour payout pause.
+            showToast(PAYMENT_UPDATED_TOAST);
           }}
         />
       );

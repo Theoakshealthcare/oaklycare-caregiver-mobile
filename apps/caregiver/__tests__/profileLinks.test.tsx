@@ -13,6 +13,7 @@ jest.mock("../src/hooks/use-navigation", () => ({
 }));
 jest.mock("../src/hooks/queries", () => ({
   useMe: () => ({ data: { full_name: "Placeholder Nurse", email: "nurse@example.test", profile_image_url: null } }),
+  useCaregiverHome: () => ({ data: undefined }),
 }));
 
 const WebBrowser = jest.requireMock("expo-web-browser") as { openBrowserAsync: jest.Mock };
@@ -23,7 +24,7 @@ afterEach(() => jest.restoreAllMocks());
 describe("Profile: FAQs and About us open in the in-app browser", () => {
   it.each([
     ["FAQs", FAQ_URL],
-    ["About us", ABOUT_URL],
+    ["About Us", ABOUT_URL],
   ])("%s opens in the in-app browser with a close button, never Safari", async (label, url) => {
     const safari = jest.spyOn(Linking, "openURL").mockResolvedValue(true);
     await render(<Profile />);

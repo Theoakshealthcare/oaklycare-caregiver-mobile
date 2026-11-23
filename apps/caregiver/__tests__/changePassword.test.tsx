@@ -8,6 +8,7 @@ import { session } from "../src/auth";
 import ChangePassword from "../src/screens/account/ChangePassword";
 import Profile from "../src/screens/account/Profile";
 import { authService } from "../src/services/auth.service";
+import { locationService } from "../src/supply/locationService";
 
 const mockNavigate = jest.fn();
 const mockGoBack = jest.fn();
@@ -70,10 +71,11 @@ async function fill(current: string, next: string, confirm: string) {
 const submit = async () => fireEvent.press(screen.getAllByText(/^(Change password|Try again in .*)$/).at(-1) as never);
 
 describe("Profile", () => {
-  it("has a Change password row that opens the screen", async () => {
+  it("has a Security row (Figma) that opens the change password screen", async () => {
     jest.spyOn(authService, "getMe").mockResolvedValue({ full_name: "Ada Obi", email: "ada@example.com" } as never);
+    jest.spyOn(locationService, "getHome").mockResolvedValue({ is_available: false, today_visits: [], upcoming_visits: [], open_offers: [], can_author_care_plans: false } as never);
     await renderWith(<Profile />);
-    await fireEvent.press(screen.getByText("Change password"));
+    await fireEvent.press(screen.getByText("Security"));
     expect(mockNavigate).toHaveBeenCalledWith("ChangePassword");
   });
 });

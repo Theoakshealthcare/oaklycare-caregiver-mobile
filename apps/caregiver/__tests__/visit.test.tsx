@@ -392,6 +392,21 @@ describe("visit in progress and completed screens (DP1-19)", () => {
     expect(screen.getByText("Record vitals")).toBeTruthy();
   });
 
+  it("the clocked-out page is the Figma page: title, the part of day, and Close goes home", async () => {
+    const onHome = jest.fn();
+    await render(<VisitDoneStep onHome={onHome} partOfDay="afternoon" />);
+    expect(screen.getByText("You have successfully clocked out of your appointment")).toBeTruthy();
+    expect(screen.getByText("You have ended your afternoon appointment")).toBeTruthy();
+    expect(screen.getByTestId("success-illustration")).toBeTruthy();
+    await fireEvent.press(screen.getByLabelText("Close"));
+    expect(onHome).toHaveBeenCalledTimes(1);
+  });
+
+  it("the clocked-out page names no part of the day when the visit hour is unknown", async () => {
+    await render(<VisitDoneStep onHome={jest.fn()} partOfDay={null} />);
+    expect(screen.getByText("You have ended your appointment")).toBeTruthy();
+  });
+
   it("the completed screen claims 'sharing has stopped' only if it was shared", async () => {
     const first = await render(<VisitDoneStep onHome={jest.fn()} />);
     expect(screen.queryByText(/Location sharing has stopped/)).toBeNull();

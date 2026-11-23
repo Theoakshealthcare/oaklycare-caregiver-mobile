@@ -91,42 +91,47 @@ describe("isShortVisit (the backend rule)", () => {
   });
 });
 
-describe("Complete tap: confirm dialog", () => {
+describe("Complete tap: clock-out dialog", () => {
   it("warns that pay is held when less than half of the booked time was on site", async () => {
     mockBooking.value = inProgress();
     visitStarts.record(BOOKING, STARTED);
     const alert = jest.spyOn(Alert, "alert").mockImplementation(() => {});
     await renderVisit(at("2026-11-08T10:30:00")); // 30 minutes of 4 hours
     await fireEvent.press(await screen.findByText("Complete visit"));
-    expect(alert).toHaveBeenCalledTimes(1);
-    expect(alert.mock.calls[0][0]).toBe("Complete this visit?");
-    expect(alert.mock.calls[0][1]).toBe(
+    expect(alert).not.toHaveBeenCalled(); // the Figma dialog replaced the native alert
+    expect(screen.getByText("Are you sure you want to clock out of this appointment ?")).toBeTruthy();
+    expect(screen.getByTestId("dialog-notice")).toHaveTextContent(SHORT_VISIT_CONFIRM_MESSAGE);
+    expect(SHORT_VISIT_CONFIRM_MESSAGE).toBe(
       "You have been on site for less than half of the booked time. If you complete now, your pay for this visit is held for Finance review.",
     );
-    expect(alert.mock.calls[0][1]).toBe(SHORT_VISIT_CONFIRM_MESSAGE);
-    const buttons = alert.mock.calls[0][2] as { text: string; onPress?: () => void }[];
-    expect(buttons.map((b) => b.text)).toEqual(["Not yet", "Complete"]);
-    buttons[1].onPress?.();
+    expect(mockAct).not.toHaveBeenCalled();
+    await fireEvent.press(screen.getByText("Yes, Clock out"));
     expect(mockAct).toHaveBeenCalledWith({ bookingId: BOOKING, action: "complete" }, expect.anything());
   });
 
-  it("keeps today's dialog once half of the booked time has passed", async () => {
+  it("shows the time on site as a running timer in the dialog", async () => {
     mockBooking.value = inProgress();
     visitStarts.record(BOOKING, STARTED);
-    const alert = jest.spyOn(Alert, "alert").mockImplementation(() => {});
-    await renderVisit(at("2026-11-08T12:00:00")); // exactly half
+    await renderVisit(at("2026-11-08T20:10:00")); // 10 h 10 min after the start
     await fireEvent.press(await screen.findByText("Complete visit"));
-    expect(alert.mock.calls[0][0]).toBe("Complete this visit?");
-    expect(alert.mock.calls[0][1]).toMatch(/^This ends the visit/);
-    expect(alert.mock.calls[0][1]).not.toMatch(/Finance/);
+    expect(screen.getByTestId("dialog-timer")).toHaveTextContent("10:10:00");
   });
 
-  it("keeps today's dialog when the app never saw the start (a visit resumed after a restart)", async () => {
+  it("keeps the plain notice once half of the booked time has passed", async () => {
     mockBooking.value = inProgress();
-    const alert = jest.spyOn(Alert, "alert").mockImplementation(() => {});
+    visitStarts.record(BOOKING, STARTED);
+    await renderVisit(at("2026-11-08T12:00:00")); // exactly half
+    await fireEvent.press(await screen.findByText("Complete visit"));
+    expect(screen.getByTestId("dialog-notice")).toHaveTextContent(/^This ends the visit/);
+    expect(screen.getByTestId("dialog-notice")).not.toHaveTextContent(/Finance/);
+  });
+
+  it("shows no timer, and no invented one, when the app never saw the start (a visit resumed after a restart)", async () => {
+    mockBooking.value = inProgress();
     await renderVisit(at("2026-11-08T10:01:00"));
     await fireEvent.press(await screen.findByText("Complete visit"));
-    expect(alert.mock.calls[0][1]).not.toMatch(/Finance/);
+    expect(screen.queryByTestId("dialog-timer")).toBeNull();
+    expect(screen.getByTestId("dialog-notice")).not.toHaveTextContent(/Finance/);
   });
 });
 
@@ -162,12 +167,12 @@ describe("the start the app remembers", () => {
 });
 
 describe("Result screen after completing", () => {
-  /** Presses Complete in the dialog and plays the backend's `complete` answer back to the screen. */
+  /** Confirms the clock-out dialog and plays the backend's `complete` answer back to the screen. */
   const complete = async (answer: { actualStartTime: string | null; actualEndTime: string | null }, booking: Record<string, unknown>) => {
     mockBooking.value = inProgress();
-    jest.spyOn(Alert, "alert").mockImplementation((_t, _m, buttons) => void buttons?.[1]?.onPress?.());
     await renderVisit(at("2026-11-08T14:00:00"));
     await fireEvent.press(await screen.findByText("Complete visit"));
+    await fireEvent.press(screen.getByText("Yes, Clock out"));
     expect(mockAct).toHaveBeenCalledTimes(1);
     const options = mockAct.mock.calls[0][1] as { onSuccess: (result: unknown) => void };
     // The booking is refetched as completed; the answer carries the two instants the backend judged.
@@ -177,7 +182,7 @@ describe("Result screen after completing", () => {
 
   it("says the earning is under review for a short visit, with the real amount", async () => {
     await complete({ actualStartTime: STARTED, actualEndTime: "2026-11-08T10:05:00" }, {});
-    expect(await screen.findByText("Visit completed")).toBeTruthy();
+    expect(await screen.findByText("You have successfully clocked out of your appointment")).toBeTruthy();
     expect(screen.getByText(/^Your ₦40,000(\.00)? is under review by Finance, and we will tell you when it is decided\./)).toBeTruthy();
     expect(screen.queryByText(/Thank you/)).toBeNull();
   });
@@ -190,7 +195,7 @@ describe("Result screen after completing", () => {
 
   it("keeps 'Thank you' for a normal visit", async () => {
     await complete({ actualStartTime: STARTED, actualEndTime: "2026-11-08T14:00:00" }, {});
-    await waitFor(() => expect(screen.getByText("Visit completed")).toBeTruthy());
+    await waitFor(() => expect(screen.getByText("You have successfully clocked out of your appointment")).toBeTruthy());
     expect(screen.getByText(/^Thank you\./)).toBeTruthy();
     expect(screen.queryByText(/under review/)).toBeNull();
   });

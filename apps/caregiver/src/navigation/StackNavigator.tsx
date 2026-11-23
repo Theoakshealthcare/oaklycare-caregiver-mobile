@@ -4,6 +4,7 @@ import { useSession } from "../auth";
 import { useMe, useVerificationStatus } from "../hooks/queries";
 import BankDetails from "../screens/account/BankDetails";
 import Contact from "../screens/account/Contact";
+import AccountData from "../screens/account/AccountData";
 import ChangePassword from "../screens/account/ChangePassword";
 import EditProfile from "../screens/account/EditProfile";
 import Notifications from "../screens/account/Notifications";
@@ -163,6 +164,7 @@ const StackNavigator = () => {
             <Stack.Screen name="Profile" component={Profile} />
             <Stack.Screen name="EditProfile" component={EditProfile} />
             <Stack.Screen name="ChangePassword" component={ChangePassword} />
+            <Stack.Screen name="AccountData" component={AccountData} />
             <Stack.Screen name="Wallet" component={Wallet} />
             <Stack.Screen name="BankDetails" component={BankDetails} />
             <Stack.Screen name="Contact" component={Contact} />

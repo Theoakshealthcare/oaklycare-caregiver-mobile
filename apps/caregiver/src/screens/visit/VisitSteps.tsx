@@ -1,8 +1,10 @@
 import React, { useEffect, useState } from "react";
-import { TextInput, View } from "react-native";
+import { Pressable, TextInput, View } from "react-native";
+import { Feather } from "@expo/vector-icons";
 
 import { formatCountdown } from "@/src/api/errors";
 import Button from "@/src/components/ui/button";
+import SuccessIllustration from "@/src/components/ui/success-illustration";
 import Text from "@/src/components/ui/text";
 import { theme, MAX_FONT_SCALE } from "@/src/constants/theme";
 import { parseBackendDate } from "@/src/utils/dates";
@@ -255,20 +257,37 @@ export const InProgressStep: React.FC<{
 );
 
 /**
- * Step 4 (status `completed`). A short visit's pay is held for Finance review, so it says that instead of
+ * Step 4 (status `completed`): the full-page "clocked out" success from Figma (check illustration, green title, one line,
+ * Close at the top left). A short visit's pay is held for Finance review, so it says that after the Figma line instead of
  * "Thank you"; `earning` is the formatted naira amount when the booking carries it.
  */
-export const VisitDoneStep: React.FC<{ onHome: () => void; sharedLocation?: boolean; short?: boolean; earning?: string | null }> = ({
-  onHome,
-  sharedLocation = false,
-  short = false,
-  earning = null,
-}) => {
+export const VisitDoneStep: React.FC<{
+  onHome: () => void;
+  sharedLocation?: boolean;
+  short?: boolean;
+  earning?: string | null;
+  /** From the hour the visit was due: "... ended your morning appointment". */
+  partOfDay?: "morning" | "afternoon" | "evening" | null;
+}> = ({ onHome, sharedLocation = false, short = false, earning = null, partOfDay = null }) => {
   const lead = short ? shortVisitDoneMessage(earning) : "Thank you.";
   return (
-    <StepFrame title="Visit completed" subtitle={sharedLocation ? `${lead} Location sharing has stopped.` : lead}>
-      <Button title="Back to home" onPress={onHome} />
-    </StepFrame>
+    <View style={{ flex: 1, paddingTop: 56, paddingHorizontal: 20 }}>
+      <Pressable accessibilityRole="button" accessibilityLabel="Close" onPress={onHome} hitSlop={12} style={{ alignSelf: "flex-start" }}>
+        <Feather name="x-circle" size={26} color={theme.colors.text} />
+      </Pressable>
+      <View style={{ flex: 1, alignItems: "center", justifyContent: "center", gap: 16, paddingBottom: 56 }}>
+        <SuccessIllustration />
+        <Text variant="h2" weight="bold" color={theme.colors.success} center>
+          You have successfully clocked out of your appointment
+        </Text>
+        <Text variant="small" color={theme.colors.text} center>
+          {partOfDay ? `You have ended your ${partOfDay} appointment` : "You have ended your appointment"}
+        </Text>
+        <Text variant="small" color={theme.colors.textLight} center>
+          {sharedLocation ? `${lead} Location sharing has stopped.` : lead}
+        </Text>
+      </View>
+    </View>
   );
 };
 

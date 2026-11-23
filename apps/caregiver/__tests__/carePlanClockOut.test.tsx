@@ -65,41 +65,40 @@ const lookupDone = async (client: { getQueryState: (key: readonly unknown[]) => 
   await act(async () => {});
 };
 
-/**
- * Presses "Complete visit" until the care plan prompt shows. The screen re-renders with the plan lookup a moment
- * after the cache has it, so a single press can land on the old render (which asks the plain question).
- */
-const pressCompleteForPrompt = (alert: jest.SpyInstance) =>
-  waitFor(async () => {
-    await fireEvent.press(screen.getByText("Complete visit"));
-    expect(alert.mock.calls[alert.mock.calls.length - 1][0]).toBe("Add your notes before you finish?");
-  });
+const CLOCK_OUT_TITLE = "Are you sure you want to clock out of this appointment ?";
 
-const buttonsOf = (spy: jest.SpyInstance) => spy.mock.calls[spy.mock.calls.length - 1][2] as { text: string; onPress?: () => void }[];
-
-describe("Clock-out prompt (Complete visit)", () => {
-  it("reminds the caregiver of the care plan before completing, and lets them review it", async () => {
+describe("Clock-out dialog (Complete visit)", () => {
+  it("reminds the caregiver of the care plan inside the dialog, and lets them review it", async () => {
     jest.spyOn(carePlansService, "getVisitPlan").mockResolvedValue(visitPlan({ plan: visitSummary }));
     const alert = jest.spyOn(Alert, "alert").mockImplementation(() => {});
     const { client } = await renderVisit();
     await lookupDone(client);
-    await pressCompleteForPrompt(alert);
-    expect(alert.mock.calls[alert.mock.calls.length - 1][1]).toMatch(/can no longer tick tasks or add notes/);
-    expect(buttonsOf(alert).map((b) => b.text)).toEqual(["Not yet", "Review care plan", "Complete visit"]);
+    await fireEvent.press(screen.getByText("Complete visit"));
+    expect(screen.getByText(CLOCK_OUT_TITLE)).toBeTruthy();
+    expect(screen.getByTestId("dialog-notice")).toHaveTextContent(/can no longer tick tasks or add notes/);
+    expect(alert).not.toHaveBeenCalled(); // no native alert any more
 
-    buttonsOf(alert).find((b) => b.text === "Review care plan")?.onPress?.();
+    await fireEvent.press(screen.getByText("Review care plan"));
     expect(navigate).toHaveBeenCalledWith("CarePlanDetails", { planId: PLAN_ID, from: "clock_out" });
     expect(mockComplete).not.toHaveBeenCalled();
   });
 
-  it("still lets them complete the visit from the prompt", async () => {
+  it("still lets them clock out from the dialog", async () => {
     jest.spyOn(carePlansService, "getVisitPlan").mockResolvedValue(visitPlan({ plan: visitSummary }));
-    const alert = jest.spyOn(Alert, "alert").mockImplementation(() => {});
     const { client } = await renderVisit();
     await lookupDone(client);
-    await pressCompleteForPrompt(alert);
-    buttonsOf(alert).find((b) => b.text === "Complete visit")?.onPress?.();
+    await fireEvent.press(screen.getByText("Complete visit"));
+    await fireEvent.press(screen.getByText("Yes, Clock out"));
     expect(mockComplete).toHaveBeenCalledWith({ bookingId: BOOKING, action: "complete" }, expect.anything());
+  });
+
+  it("'No, Go Back' closes the dialog and completes nothing", async () => {
+    jest.spyOn(carePlansService, "getVisitPlan").mockResolvedValue(visitPlan({ plan: null }));
+    await renderVisit();
+    await fireEvent.press(await screen.findByText("Complete visit"));
+    await fireEvent.press(screen.getByText("No, Go Back"));
+    expect(mockComplete).not.toHaveBeenCalled();
+    await waitFor(() => expect(screen.queryByText(CLOCK_OUT_TITLE)).toBeNull());
   });
 
   it.each([
@@ -107,15 +106,14 @@ describe("Clock-out prompt (Complete visit)", () => {
     ["a completed plan", () => jest.spyOn(carePlansService, "getVisitPlan").mockResolvedValue(visitPlan({ plan: { ...visitSummary, status: "completed" } }))],
     ["no access to the plan", () => jest.spyOn(carePlansService, "getVisitPlan").mockRejectedValue(NO_ACCESS)],
     ["a failed lookup", () => jest.spyOn(carePlansService, "getVisitPlan").mockRejectedValue(new ApiError(0, null, "offline"))],
-  ])("asks the plain question when there is %s", async (_name, arrange) => {
-    const get = arrange();
-    const alert = jest.spyOn(Alert, "alert").mockImplementation(() => {});
+  ])("shows the plain dialog, without a care plan reminder, when there is %s", async (_name, arrange) => {
+    arrange();
     const { client } = await renderVisit();
     await lookupDone(client);
     await fireEvent.press(await screen.findByText("Complete visit"));
-    await waitFor(() => expect(alert).toHaveBeenCalled());
-    expect(alert.mock.calls[0][0]).toBe("Complete this visit?");
-    expect(buttonsOf(alert).map((b) => b.text)).toEqual(["Not yet", "Complete"]);
+    expect(screen.getByText(CLOCK_OUT_TITLE)).toBeTruthy();
+    expect(screen.queryByText("Review care plan")).toBeNull();
+    expect(screen.getByTestId("dialog-notice")).toHaveTextContent(/^This ends the visit/);
   });
 
   it("does not look up the plan before the visit is in progress", async () => {
@@ -125,12 +123,13 @@ describe("Clock-out prompt (Complete visit)", () => {
     expect(get).not.toHaveBeenCalled();
   });
 
-  it("never blocks completing while the lookup is still loading", async () => {
+  it("never blocks clocking out while the lookup is still loading", async () => {
     jest.spyOn(carePlansService, "getVisitPlan").mockReturnValue(new Promise(() => {}));
-    const alert = jest.spyOn(Alert, "alert").mockImplementation(() => {});
     await renderVisit();
     await fireEvent.press(await screen.findByText("Complete visit"));
-    expect(alert.mock.calls[0][0]).toBe("Complete this visit?");
+    expect(screen.getByText(CLOCK_OUT_TITLE)).toBeTruthy();
+    await fireEvent.press(screen.getByText("Yes, Clock out"));
+    expect(mockComplete).toHaveBeenCalled();
   });
 });
 
