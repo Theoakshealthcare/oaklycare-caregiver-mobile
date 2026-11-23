@@ -31,7 +31,7 @@ describe("token refresh through the real client", () => {
     });
     const view = await render(<App />);
 
-    expect(await screen.findByText("Sign in to your Oakly Health account")).toBeTruthy();
+    expect(await screen.findByLabelText("Input Password")).toBeTruthy();
     expect(session.store.getState()).toEqual({ status: "signedOut", tokens: null });
     expect(keychainKeys()).toEqual([]);
     // One /auth/me, one refresh, and the retried /auth/me never happens: the refresh verdict ends the session.
@@ -64,7 +64,7 @@ describe("token refresh through the real client", () => {
       },
     });
     const view = await render(<App />);
-    expect(await screen.findByText("Hello, Ada")).toBeTruthy();
+    expect(await screen.findByText(/Hello Ada,/)).toBeTruthy();
     expect(refreshCalls).toBe(1);
     expect(calls.filter((c) => c.path === "/api/v1/auth/me").map((c) => c.authorization)).toEqual([
       "Bearer access-stale",

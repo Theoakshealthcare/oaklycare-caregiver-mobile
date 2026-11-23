@@ -38,7 +38,7 @@ const Tabs: React.FC<Props> = ({ route }) => {
   const Page = (TABS.find((t) => t.id === tab) ?? TABS[0]).Page;
 
   return (
-    <View style={styles.screen}>
+    <View style={[styles.screen, tab === "home" && styles.homeScreen]}>
       <View style={styles.page}>
         <Page />
       </View>
@@ -70,6 +70,8 @@ const Tabs: React.FC<Props> = ({ route }) => {
 
 const styles = StyleSheet.create({
   screen: { flex: 1, backgroundColor: theme.colors.white },
+  // Figma: Home sits on a faint cool white, so the strip behind the floating bar matches it.
+  homeScreen: { backgroundColor: theme.colors.pageTint },
   page: { flex: 1 },
   bar: {
     flexDirection: "row",

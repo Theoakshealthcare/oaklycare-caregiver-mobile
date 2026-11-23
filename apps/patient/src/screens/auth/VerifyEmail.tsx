@@ -7,25 +7,27 @@ import { StyleSheet, View } from "react-native";
 import { ApiError, messageForError } from "@/src/api/errors";
 import { queryKeys } from "@/src/api/keys";
 import { useSession } from "@/src/auth";
+import AuthPage from "@/src/components/ui/auth-page";
 import Button from "@/src/components/ui/button";
-import OtpInput from "@/src/components/ui/otp-input";
-import Screen from "@/src/components/ui/screen";
+import OtpInput, { OtpResendRow } from "@/src/components/ui/otp-input";
 import Text from "@/src/components/ui/text";
 import TextLink from "@/src/components/ui/text-link";
+import { showToast } from "@/src/components/ui/toast";
 import { theme } from "@/src/constants/theme";
 import { useCooldown } from "@/src/hooks/useCooldown";
 import type { ScreenParamLists } from "@/src/navigation/Navigations";
 import { authService } from "@/src/services/auth.service";
 
-/** Seconds before "Resend code" works again after a code was just sent. A 429 from the server overrides it. */
+/** Seconds before "Resend Code" works again after a code was just sent. A 429 from the server overrides it. */
 const RESEND_SECONDS = 30;
 const CODE_LENGTH = 5;
 
 type Props = StackScreenProps<ScreenParamLists, "VerifyEmail">;
 
 /**
- * Two ways in: right after sign-up (signed out; on success go on to "account created" and then Login) and after a
- * login with an unverified email (signed in; on success `/auth/me` is re-read and the auth gate lets the person through).
+ * Two ways in: right after sign-up (signed out; on success go on to "account created") and after a login with an
+ * unverified email (signed in; on success `/auth/me` is re-read and the auth gate lets the person through). Figma has no
+ * Verify button: the code is sent as soon as the fifth digit is in.
  */
 const VerifyEmail: React.FC<Props> = ({ navigation, route }) => {
   const { email } = route.params;
@@ -40,12 +42,15 @@ const VerifyEmail: React.FC<Props> = ({ navigation, route }) => {
   const verify = useMutation({
     mutationFn: (value: string) => authService.verifyEmail(email, value),
     onSuccess: async () => {
-      if (signedIn) await queryClient.invalidateQueries({ queryKey: queryKeys.me });
-      else navigation.reset({ index: 0, routes: [{ name: "AccountCreated" }] });
+      if (signedIn) {
+        showToast("Email Address Verified");
+        await queryClient.invalidateQueries({ queryKey: queryKeys.me });
+      } else navigation.reset({ index: 0, routes: [{ name: "AccountCreated" }] });
     },
     onError: (e) => {
       setError(messageForError(e));
-      setCode("");
+      // A request that never reached the server keeps the code as typed, so Verify can send it again; a wrong code is cleared.
+      if (!(e instanceof ApiError && e.status === 0)) setCode("");
     },
   });
 
@@ -78,52 +83,36 @@ const VerifyEmail: React.FC<Props> = ({ navigation, route }) => {
     if (value) setNotice(null);
   };
 
+  // Only when the last request never reached the server and the typed code is still in the boxes.
+  const canRetry = verify.isError && code.length === CODE_LENGTH;
+
   return (
-    <Screen title="Verify Email Address" noBack={signedIn} scroll>
-      <Text color={theme.colors.textLight}>{`Enter the ${CODE_LENGTH}-digit code we sent to ${email}`}</Text>
-
+    <AuthPage title="Verify Email Address" subtitle={`Enter the OTP code sent to your mail, ${email}.`} scroll={false}>
       <View style={styles.code}>
-        <OtpInput value={code} onChange={typeCode} onComplete={submit} length={CODE_LENGTH} editable={!verify.isPending} />
-        {error ? (
-          <Text variant="small" color={theme.colors.secondary} center accessibilityRole="alert">
-            {error}
-          </Text>
-        ) : null}
-        {notice ? (
-          <Text variant="small" color={theme.colors.success} center>
-            {notice}
-          </Text>
-        ) : null}
+        <OtpInput value={code} onChange={typeCode} onComplete={submit} length={CODE_LENGTH} editable={!verify.isPending} autoFocus />
+        <OtpResendRow cooldown={cooldown} sending={resend.isPending} disabled={verify.isPending} onResend={() => resend.mutate()} />
       </View>
 
-      <Button
-        title="Verify"
-        onPress={() => submit(code)}
-        loading={verify.isPending}
-        disabled={code.length !== CODE_LENGTH}
-      />
-
-      <View style={styles.resend}>
-        <Text variant="small" color={theme.colors.textLight}>
-          Didn&apos;t receive a code?
+      {error ? (
+        <Text variant="small" color={theme.colors.secondary} center accessibilityRole="alert">
+          {error}
         </Text>
-        <TextLink
-          label={resend.isPending ? "Sending code..." : cooldown > 0 ? `Resend code (${cooldown}s)` : "Resend code"}
-          onPress={() => resend.mutate()}
-          disabled={cooldown > 0 || resend.isPending || verify.isPending}
-        />
-      </View>
-
-      {signedIn ? (
-        <TextLink center label="Use a different account" onPress={() => void authService.logout()} />
       ) : null}
-    </Screen>
+      {notice ? (
+        <Text variant="small" color={theme.colors.success} center>
+          {notice}
+        </Text>
+      ) : null}
+      {canRetry ? <Button title="Verify" onPress={() => submit(code)} loading={verify.isPending} /> : null}
+
+      {signedIn ? <TextLink center label="Use a different account" onPress={() => void authService.logout()} /> : null}
+    </AuthPage>
   );
 };
 
 const styles = StyleSheet.create({
-  code: { gap: theme.spacing.md, marginVertical: theme.spacing.lg },
-  resend: { flexDirection: "row", justifyContent: "center", alignItems: "center", gap: theme.spacing.xs },
+  // Figma: 84 pt between the boxes and the resend row.
+  code: { gap: 84, marginTop: 4 },
 });
 
 export default VerifyEmail;

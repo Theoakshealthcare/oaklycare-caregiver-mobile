@@ -13,7 +13,8 @@ export const RESEND_SECONDS = 60;
 
 export const INVALID_CODE_MESSAGE = "That code isn't right or has expired. Request a new one.";
 export const SENT_NOTICE = "If that email has an account, we've sent a new code. Use the newest email and check your spam folder.";
-export const SUCCESS_NOTICE = "You've been signed out on your other devices.";
+/** The green toast after a reset (Figma). The server also ends every other session of the account. */
+export const SUCCESS_TOAST = "Password has been Reset Successfully";
 
 export type ResetFailure =
   /** Wrong / expired / used code: clear the boxes, offer Resend. */

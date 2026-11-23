@@ -28,6 +28,7 @@ describe("nothing outside v1 is reachable", () => {
       "VerifyEmail",
       "AccountCreated",
       "RecoverPassword",
+      "RecoverCode",
       "ResetPassword",
     ]);
     expect(APP_SCREENS.map((s) => s.name)).toEqual([

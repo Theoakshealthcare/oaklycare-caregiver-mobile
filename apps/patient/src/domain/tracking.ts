@@ -46,6 +46,17 @@ export function agoText(iso: string, now: number): string {
   return `${days} ${days === 1 ? "day" : "days"} ago`;
 }
 
+/** The short form on Home's vital tiles (Figma): "just now", "10 mins ago", "2 hours ago", "3 days ago". */
+export function shortAgoText(iso: string, now: number): string {
+  const minutes = minutesSince(iso, now);
+  if (minutes < 1) return "just now";
+  if (minutes < 60) return `${minutes} ${minutes === 1 ? "min" : "mins"} ago`;
+  const hours = Math.floor(minutes / 60);
+  if (hours < 24) return `${hours} ${hours === 1 ? "hour" : "hours"} ago`;
+  const days = Math.floor(hours / 24);
+  return `${days} ${days === 1 ? "day" : "days"} ago`;
+}
+
 /** "3.3 km away", "800 m away". */
 export function distanceText(km: number): string {
   if (km < 1) return `${Math.max(50, Math.round((km * 1000) / 50) * 50)} m away`;

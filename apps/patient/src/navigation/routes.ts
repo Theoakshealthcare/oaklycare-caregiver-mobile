@@ -4,6 +4,7 @@ import AccountCreated from "@/src/screens/auth/AccountCreated";
 import CreateAccount from "@/src/screens/auth/CreateAccount";
 import Login from "@/src/screens/auth/Login";
 import Onboarding from "@/src/screens/auth/Onboarding";
+import RecoverCode from "@/src/screens/auth/RecoverCode";
 import RecoverPassword from "@/src/screens/auth/RecoverPassword";
 import ResetPassword from "@/src/screens/auth/ResetPassword";
 import VerifyEmail from "@/src/screens/auth/VerifyEmail";
@@ -50,6 +51,7 @@ export const AUTH_SCREENS: ScreenDef[] = [
   { name: "VerifyEmail", component: VerifyEmail },
   { name: "AccountCreated", component: AccountCreated },
   { name: "RecoverPassword", component: RecoverPassword },
+  { name: "RecoverCode", component: RecoverCode },
   { name: "ResetPassword", component: ResetPassword },
 ];
 

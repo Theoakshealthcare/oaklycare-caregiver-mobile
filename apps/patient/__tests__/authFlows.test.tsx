@@ -1,8 +1,10 @@
 import { act, fireEvent, screen, waitFor } from "@testing-library/react-native";
 
 import { queryClient } from "../src/api/queryClient";
+import { hideToast } from "../src/components/ui/toast";
+import { liveReply } from "../test-utils/live";
 import { disableCacheGcForTests, keychainKeys, patientUser, routeFetch, tokens } from "../test-utils/fakeApi";
-import { renderSignedOut, renderUnverified } from "../test-utils/renderApp";
+import { openCreateAccount, renderSignedOut, renderUnverified } from "../test-utils/renderApp";
 
 jest.mock("expo-font", () => ({
   ...jest.requireActual("expo-font"),
@@ -13,9 +15,9 @@ const press = (name: string) => fireEvent.press(screen.getByRole("button", { nam
 const type = (label: string, value: string) => fireEvent.changeText(screen.getByLabelText(label), value);
 
 async function fillRegistration(email = "new.person@example.com") {
-  await type("Full name", "New Person");
-  await type("Email address", email);
-  await type("Create password", "placeholder-pass");
+  await type("Full Name", "New Person");
+  await type("Email Address", email);
+  await type("Create Password", "placeholder-pass");
   await fireEvent.press(screen.getByRole("checkbox"));
   await press("Create Account");
 }
@@ -23,18 +25,20 @@ async function fillRegistration(email = "new.person@example.com") {
 describe("auth flows", () => {
   beforeAll(() => disableCacheGcForTests(queryClient));
   afterAll(() => queryClient.clear());
+  // The toast host is one global store: a toast from one test must not be on screen in the next.
+  afterEach(() => hideToast());
 
   describe("register", () => {
     it("checks the form before calling the server", async () => {
       const { calls, view } = await renderSignedOut();
-      await press("Create account");
+      await openCreateAccount();
       await press("Create Account");
       expect(await screen.findByText("Full name is required")).toBeTruthy();
       expect(screen.getByText("Email is required")).toBeTruthy();
       expect(screen.getByText("Password is required")).toBeTruthy();
       expect(screen.getByText("Please accept the terms to continue")).toBeTruthy();
-      await type("Email address", "not-an-email");
-      await type("Create password", "short");
+      await type("Email Address", "not-an-email");
+      await type("Create Password", "short");
       await press("Create Account");
       expect(await screen.findByText("Enter a valid email address")).toBeTruthy();
       expect(screen.getByText("Password must be at least 8 characters")).toBeTruthy();
@@ -46,9 +50,9 @@ describe("auth flows", () => {
       const { calls, view } = await renderSignedOut({
         "POST /api/v1/auth/register": () => ({ status: 200, body: { ...patientUser, is_verified: false } }),
       });
-      await press("Create account");
+      await openCreateAccount();
       await fillRegistration();
-      expect(await screen.findByText("Enter the 5-digit code we sent to new.person@example.com")).toBeTruthy();
+      expect(await screen.findByText("Enter the OTP code sent to your mail, new.person@example.com.")).toBeTruthy();
       expect(calls[0]).toMatchObject({
         method: "POST",
         path: "/api/v1/auth/register",
@@ -62,7 +66,7 @@ describe("auth flows", () => {
       const { view } = await renderSignedOut({
         "POST /api/v1/auth/register": () => ({ status: 400, body: { detail: "A user with this email already exists" } }),
       });
-      await press("Create account");
+      await openCreateAccount();
       await fillRegistration("taken@example.com");
       expect(await screen.findByText("A user with this email already exists")).toBeTruthy();
       view.unmount();
@@ -75,7 +79,7 @@ describe("auth flows", () => {
           body: { detail: [{ type: "value_error", loc: ["body", "email"], msg: "value is not a valid email address" }] },
         }),
       });
-      await press("Create account");
+      await openCreateAccount();
       await fillRegistration();
       expect(await screen.findByText("value is not a valid email address")).toBeTruthy();
       view.unmount();
@@ -83,25 +87,48 @@ describe("auth flows", () => {
   });
 
   describe("verify email", () => {
-    it("takes the code, then 'account created', then Login", async () => {
+    it("takes the code, then 'account created', then Start Booking Journey signs in and opens the booking form", async () => {
       const { calls, view } = await renderSignedOut({
         "POST /api/v1/auth/register": () => ({ status: 200, body: { ...patientUser, is_verified: false } }),
         "POST /api/v1/auth/verify-email": () => ({ status: 200, body: { message: "Email verified successfully" } }),
+        "POST /api/v1/auth/login/mobile": () => ({ status: 200, body: tokens }),
+        "GET /api/v1/auth/me": () => ({ status: 200, body: patientUser }),
+        "GET /api/v1/booking/patient/bookings": () => ({ status: 200, body: [] }),
+        "GET /api/v1/patient/notifications": () => liveReply("feed-empty"),
       });
-      await press("Create account");
+      await openCreateAccount();
       await fillRegistration();
-      await screen.findByText("Enter the 5-digit code we sent to new.person@example.com");
+      await screen.findByText("Enter the OTP code sent to your mail, new.person@example.com.");
       // Resend is closed for the first 30 seconds after a code was sent.
-      expect(screen.getByRole("button", { name: "Resend code (30s)" })).toBeDisabled();
+      expect(screen.getByRole("button", { name: "Resend Code (30s)" })).toBeDisabled();
 
       await type("Verification code", "12345");
-      expect(await screen.findByText("Congratulations!")).toBeTruthy();
+      expect(await screen.findByText("Congratulations! Your account setup is complete!")).toBeTruthy();
       expect(calls.find((c) => c.path === "/api/v1/auth/verify-email")?.body).toEqual({
         email: "new.person@example.com",
         code: "12345",
       });
-      await press("Log in to continue");
-      expect(await screen.findByText("Sign in to your Oakly Health account")).toBeTruthy();
+      // The password typed on the sign-up form signs the person in; Home then opens the booking form.
+      await press("Start Booking Journey");
+      expect(await screen.findByText("Book an Appointment")).toBeTruthy();
+      expect(calls.find((c) => c.path === "/api/v1/auth/login/mobile")?.body).toEqual({
+        email_or_phone: "new.person@example.com",
+        password: "placeholder-pass",
+      });
+      view.unmount();
+    });
+
+    it("Start Booking Journey falls back to Login when the sign-in fails", async () => {
+      const { view } = await renderSignedOut({
+        "POST /api/v1/auth/register": () => ({ status: 200, body: { ...patientUser, is_verified: false } }),
+        "POST /api/v1/auth/verify-email": () => ({ status: 200, body: { message: "Email verified successfully" } }),
+        "POST /api/v1/auth/login/mobile": () => ({ status: 401, body: { detail: "Incorrect email or password" } }),
+      });
+      await openCreateAccount();
+      await fillRegistration();
+      await type("Verification code", "12345");
+      await press("Start Booking Journey");
+      expect(await screen.findByLabelText("Input Password")).toBeTruthy();
       view.unmount();
     });
 
@@ -110,9 +137,9 @@ describe("auth flows", () => {
         "POST /api/v1/auth/register": () => ({ status: 200, body: patientUser }),
         "POST /api/v1/auth/verify-email": () => ({ status: 400, body: { detail: "Invalid verification code" } }),
       });
-      await press("Create account");
+      await openCreateAccount();
       await fillRegistration();
-      await screen.findByText("Enter the 5-digit code we sent to new.person@example.com");
+      await screen.findByText("Enter the OTP code sent to your mail, new.person@example.com.");
       await type("Verification code", "1a2b3c4d5e6f");
       await waitFor(() => expect(calls.find((c) => c.path === "/api/v1/auth/verify-email")?.body).toMatchObject({ code: "12345" }));
       view.unmount();
@@ -123,9 +150,9 @@ describe("auth flows", () => {
         "POST /api/v1/auth/register": () => ({ status: 200, body: patientUser }),
         "POST /api/v1/auth/verify-email": () => ({ status: 400, body: { detail: "Invalid verification code" } }),
       });
-      await press("Create account");
+      await openCreateAccount();
       await fillRegistration();
-      await screen.findByText("Enter the 5-digit code we sent to new.person@example.com");
+      await screen.findByText("Enter the OTP code sent to your mail, new.person@example.com.");
       await type("Verification code", "00000");
       expect(await screen.findByText("Invalid verification code")).toBeTruthy();
       expect(screen.getByLabelText("Verification code").props.value).toBe("");
@@ -141,10 +168,10 @@ describe("auth flows", () => {
         const { calls, view } = await openGate({
           "POST /api/v1/auth/resend-verification": () => ({ status: 200, body: { message: "Verification code sent" } }),
         });
-        await press("Resend code");
+        await press("Resend Code");
         expect(await screen.findByText("A new code has been sent to ada.placeholder@example.com.")).toBeTruthy();
         expect(calls.find((c) => c.path === "/api/v1/auth/resend-verification")?.body).toEqual({ email: "ada.placeholder@example.com" });
-        expect(screen.getByRole("button", { name: "Resend code (30s)" })).toBeDisabled();
+        expect(screen.getByRole("button", { name: "Resend Code (30s)" })).toBeDisabled();
         view.unmount();
       });
 
@@ -154,7 +181,7 @@ describe("auth flows", () => {
           answer = () => resolve({ status: 200, body: { message: "Verification code sent" } });
         });
         const { view } = await openGate({ "POST /api/v1/auth/resend-verification": () => slow });
-        await press("Resend code");
+        await press("Resend Code");
         expect(await screen.findByRole("button", { name: "Sending code..." })).toBeDisabled();
         await act(async () => answer());
         expect(await screen.findByText("A new code has been sent to ada.placeholder@example.com.")).toBeTruthy();
@@ -169,9 +196,9 @@ describe("auth flows", () => {
             headers: { "Retry-After": "45" },
           }),
         });
-        await press("Resend code");
+        await press("Resend Code");
         expect(await screen.findByText("Too many attempts. Please try again in 45 seconds.")).toBeTruthy();
-        expect(screen.getByRole("button", { name: "Resend code (45s)" })).toBeDisabled();
+        expect(screen.getByRole("button", { name: "Resend Code (45s)" })).toBeDisabled();
         view.unmount();
       });
 
@@ -179,7 +206,7 @@ describe("auth flows", () => {
         const { view } = await openGate({
           "POST /api/v1/auth/resend-verification": () => ({ status: 400, body: { detail: "Email already verified" } }),
         });
-        await press("Resend code");
+        await press("Resend Code");
         expect(await screen.findByText("Email already verified")).toBeTruthy();
         view.unmount();
       });
@@ -194,43 +221,48 @@ describe("auth flows", () => {
           },
         });
         await type("Verification code", "54321");
-        expect(await screen.findByText("Hello, Ada")).toBeTruthy();
+        expect(await screen.findByText(/Hello Ada,/)).toBeTruthy();
         view.unmount();
       });
     });
   });
 
   describe("forgot and reset password", () => {
-    it("asks for the email, always moves on (the server answers 200 for any address), and shows the 5-box reset step", async () => {
+    it("asks for the email, always moves on (the server answers 200 for any address), and shows the 5-box code step", async () => {
       const { calls, view } = await renderSignedOut({
         "POST /api/v1/auth/password-recovery": () => ({ status: 200, body: { message: "Password recovery email sent" } }),
       });
-      await press("Forgot password?");
-      await press("Send Reset Code");
+      await press("Forgot Password");
+      await press("Send Recovery Link");
       expect(await screen.findByText("Email is required")).toBeTruthy();
-      await type("Email address", "nobody@example.com");
-      await press("Send Reset Code");
-      expect(await screen.findByText(/Enter the 5-digit code we emailed to nobody@example.com/)).toBeTruthy();
+      await type("Email Address", "nobody@example.com");
+      await press("Send Recovery Link");
+      expect(await screen.findByText(/Enter the OTP code sent to your mail, nobody@example.com/)).toBeTruthy();
+      expect(screen.getByLabelText("Reset code")).toBeTruthy();
       expect(calls.find((c) => c.path === "/api/v1/auth/password-recovery")?.body).toEqual({ email: "nobody@example.com" });
       view.unmount();
     });
 
-    /** Signed-out journey to the reset step, with the given reset-password reply. */
-    async function openResetStep(reply: () => { status: number; body?: unknown; headers?: Record<string, string> }) {
+    /** Signed-out journey to the code step, with the given reset-password reply. */
+    async function openCodeStep(reply: () => { status: number; body?: unknown; headers?: Record<string, string> }) {
       const rig = await renderSignedOut({
         "POST /api/v1/auth/password-recovery": () => ({ status: 200, body: { message: "Password recovery email sent" } }),
         "POST /api/v1/auth/reset-password": reply,
       });
-      await press("Forgot password?");
-      await type("Email address", " ada.placeholder@example.com ");
-      await press("Send Reset Code");
-      await screen.findByText(/Enter the 5-digit code we emailed to/);
+      await press("Forgot Password");
+      await type("Email Address", " ada.placeholder@example.com ");
+      await press("Send Recovery Link");
+      await screen.findByText(/Enter the OTP code sent to your mail/);
       return rig;
     }
-    const fillReset = async (code = "13579", password = "a-new-password") => {
+    /** The five digits are collected on the code screen; the server only checks them together with the new password. */
+    const enterCode = async (code = "13579") => {
       await type("Reset code", code);
-      await type("Create new password", password);
-      await type("Confirm new password", password);
+      await screen.findByLabelText("Create New Password");
+    };
+    const fillPasswords = async (password = "a-new-password") => {
+      await type("Create New Password", password);
+      await type("Confirm New Password", password);
       await press("Reset Password");
     };
     const coded = (status: number, code: string, message: string, headers?: Record<string, string>) => () => ({
@@ -239,25 +271,24 @@ describe("auth flows", () => {
       headers,
     });
 
-    it("reset: checks the code and passwords, sends {email, code, new_password}, then back to Login", async () => {
-      const { calls, view } = await openResetStep(() => ({ status: 200, body: { message: "Password updated successfully" } }));
+    it("reset: the code screen hands the code on, the passwords are checked, {email, code, new_password} is sent, then Login with a toast", async () => {
+      const { calls, view } = await openCodeStep(() => ({ status: 200, body: { message: "Password updated successfully" } }));
+      await enterCode();
 
       await press("Reset Password");
-      expect(await screen.findByText("Enter the 5-digit code")).toBeTruthy();
-      expect(screen.getByText("Password is required")).toBeTruthy();
+      expect(await screen.findByText("Password is required")).toBeTruthy();
       expect(screen.getByText("Please confirm your password")).toBeTruthy();
 
-      await type("Reset code", "13579");
-      await type("Create new password", "a-new-password");
-      await type("Confirm new password", "different-password");
+      await type("Create New Password", "a-new-password");
+      await type("Confirm New Password", "different-password");
       await press("Reset Password");
       expect(await screen.findByText("Passwords do not match")).toBeTruthy();
       expect(calls.some((c) => c.path === "/api/v1/auth/reset-password")).toBe(false);
 
-      await type("Confirm new password", "a-new-password");
+      await type("Confirm New Password", "a-new-password");
       await press("Reset Password");
-      expect(await screen.findByText("Your password has been reset. Log in with your new password.")).toBeTruthy();
-      expect(screen.getByText("You've been signed out on your other devices.")).toBeTruthy();
+      expect(await screen.findByLabelText("Input Password")).toBeTruthy();
+      expect(await screen.findByText("Password has been Reset Successfully")).toBeTruthy();
       // The email is the trimmed string the code was requested with; no `token` field exists any more.
       expect(calls.find((c) => c.path === "/api/v1/auth/password-recovery")?.body).toEqual({ email: "ada.placeholder@example.com" });
       expect(calls.find((c) => c.path === "/api/v1/auth/reset-password")?.body).toEqual({
@@ -265,72 +296,73 @@ describe("auth flows", () => {
         code: "13579",
         new_password: "a-new-password",
       });
-      await press("Go to Login");
-      expect(await screen.findByText("Sign in to your Oakly Health account")).toBeTruthy();
       view.unmount();
     });
 
-    it("reset: a wrong or expired code (400 invalid_or_expired_code) says so under the boxes, clears them and keeps Resend", async () => {
-      const { view } = await openResetStep(
+    it("reset: a wrong or expired code (400 invalid_or_expired_code) says so, goes back to the code screen with empty boxes and keeps Resend", async () => {
+      const { view } = await openCodeStep(
         coded(400, "invalid_or_expired_code", "This code is incorrect or has expired. Request a new code."),
       );
-      await fillReset();
+      await enterCode();
+      await fillPasswords();
       expect(await screen.findByText("That code isn't right or has expired. Request a new one.")).toBeTruthy();
       expect(screen.getByLabelText("Reset code").props.value).toBe("");
-      expect(screen.getByRole("button", { name: /^Resend code/ })).toBeTruthy();
+      expect(screen.getByRole("button", { name: /^Resend Code/ })).toBeTruthy();
       view.unmount();
     });
 
-    it("reset: a weak password (400 weak_password) shows the server's sentence under the password and keeps the code", async () => {
-      const { view } = await openResetStep(coded(400, "weak_password", "Password is too repetitive."));
-      await fillReset("13579", "aaaaaaaaaa");
+    it("reset: a weak password (400 weak_password) shows the server's sentence under the password and stays on the reset screen", async () => {
+      const { view } = await openCodeStep(coded(400, "weak_password", "Password is too repetitive."));
+      await enterCode();
+      await fillPasswords("aaaaaaaaaa");
       expect(await screen.findByText("Password is too repetitive.")).toBeTruthy();
-      expect(screen.getByLabelText("Reset code").props.value).toBe("13579");
+      expect(screen.getByLabelText("Create New Password")).toBeTruthy();
       view.unmount();
     });
 
     it("reset: five wrong codes (429 too_many_attempts) ask for a new code and keep Resend", async () => {
-      const { view } = await openResetStep(coded(429, "too_many_attempts", "Too many incorrect attempts. Request a new code."));
-      await fillReset();
+      const { view } = await openCodeStep(coded(429, "too_many_attempts", "Too many incorrect attempts. Request a new code."));
+      await enterCode();
+      await fillPasswords();
       expect(await screen.findByText("Too many tries. Request a new code.")).toBeTruthy();
-      expect(screen.getByRole("button", { name: /^Resend code/ })).toBeTruthy();
+      expect(screen.getByRole("button", { name: /^Resend Code/ })).toBeTruthy();
       view.unmount();
     });
 
-    it("reset: the 24-hour budget (429 with Retry-After) says when to come back and hides Resend", async () => {
-      const { view } = await openResetStep(
+    it("reset: the 24-hour budget (429 with Retry-After) says when to come back", async () => {
+      const { view } = await openCodeStep(
         coded(429, "too_many_attempts", "Please try again later.", { "Retry-After": "3600" }),
       );
-      await fillReset();
+      await enterCode();
+      await fillPasswords();
       expect(await screen.findByText("Too many tries. Try again in 60 minutes.")).toBeTruthy();
-      expect(screen.queryByRole("button", { name: /^Resend code/ })).toBeNull();
-      expect(screen.getByRole("button", { name: "Reset Password" })).toBeDisabled();
       view.unmount();
     });
 
     it("reset: a server failure is shown as a plain sentence, never the raw body", async () => {
-      const { view } = await openResetStep(() => ({ status: 500, body: { detail: "boom" } }));
-      await fillReset();
+      const { view } = await openCodeStep(() => ({ status: 500, body: { detail: "boom" } }));
+      await enterCode();
+      await fillPasswords();
       expect(await screen.findByText("Something went wrong on our side. Please try again in a moment.")).toBeTruthy();
       view.unmount();
     });
 
-    it("reset: Resend code is closed for a minute, then asks for a new code with the same email and says to use the newest", async () => {
+    it("code screen: Resend Code is closed for a minute, then asks for a new code with the same email and says to use the newest", async () => {
       jest.useFakeTimers();
       try {
-        const { calls, view } = await openResetStep(() => ({ status: 200, body: {} }));
-        expect(screen.getByRole("button", { name: "Resend code (60s)" })).toBeDisabled();
+        const { calls, view } = await openCodeStep(() => ({ status: 200, body: {} }));
+        expect(screen.getByRole("button", { name: "Resend Code (60s)" })).toBeDisabled();
         // The countdown re-arms a one-second timer after every render, so it is ticked one second at a time.
         for (let second = 0; second < 60; second += 1) {
           await act(async () => {
             jest.advanceTimersByTime(1000);
           });
         }
-        await press("Resend code");
+        await press("Resend Code");
         expect(await screen.findByText(/we've sent a new code\. Use the newest email and check your spam folder\./)).toBeTruthy();
         const recoveries = calls.filter((c) => c.path === "/api/v1/auth/password-recovery");
         expect(recoveries.map((c) => c.body)).toEqual([{ email: "ada.placeholder@example.com" }, { email: "ada.placeholder@example.com" }]);
-        expect(screen.getByRole("button", { name: "Resend code (60s)" })).toBeDisabled();
+        expect(screen.getByRole("button", { name: "Resend Code (60s)" })).toBeDisabled();
         view.unmount();
       } finally {
         jest.useRealTimers();
@@ -344,9 +376,9 @@ describe("auth flows", () => {
           throw new TypeError("Network request failed");
         },
       });
-      await press("Forgot password?");
-      await type("Email address", "ada.placeholder@example.com");
-      await press("Send Reset Code");
+      await press("Forgot Password");
+      await type("Email Address", "ada.placeholder@example.com");
+      await press("Send Recovery Link");
       expect(await screen.findByText("Can't reach Oakly. Check your internet connection and try again.")).toBeTruthy();
       view.unmount();
     });
@@ -357,9 +389,9 @@ describe("auth flows", () => {
       const { calls, view } = await renderSignedOut({
         "POST /api/v1/auth/login/mobile": () => ({ status: 401, body: { detail: "Incorrect email or password" } }),
       });
-      await type("Email address", "ada.placeholder@example.com");
-      await type("Password", "placeholder-password");
-      const password = screen.getByLabelText("Password");
+      await type("Email Address", "ada.placeholder@example.com");
+      await type("Input Password", "placeholder-password");
+      const password = screen.getByLabelText("Input Password");
       expect(password.props.returnKeyType).toBe("go");
       fireEvent(password, "submitEditing");
       expect(await screen.findByText("Incorrect email or password.")).toBeTruthy();
@@ -369,8 +401,8 @@ describe("auth flows", () => {
 
     it("Go with an empty password asks for it and does not call the server", async () => {
       const { calls, view } = await renderSignedOut();
-      await type("Email address", "ada.placeholder@example.com");
-      fireEvent(screen.getByLabelText("Password"), "submitEditing");
+      await type("Email Address", "ada.placeholder@example.com");
+      fireEvent(screen.getByLabelText("Input Password"), "submitEditing");
       expect(await screen.findByText("Password is required")).toBeTruthy();
       expect(calls).toHaveLength(0);
       view.unmount();
@@ -383,10 +415,10 @@ describe("auth flows", () => {
         "POST /api/v1/auth/login/mobile": () => ({ status: 200, body: tokens }),
         "GET /api/v1/auth/me": () => ({ status: 200, body: { ...patientUser, is_verified: false } }),
       });
-      await type("Email address", "ada.placeholder@example.com");
-      await type("Password", "placeholder-password");
+      await type("Email Address", "ada.placeholder@example.com");
+      await type("Input Password", "placeholder-password");
       await press("Login");
-      expect(await screen.findByText(/Enter the 5-digit code we sent to ada.placeholder@example.com/)).toBeTruthy();
+      expect(await screen.findByText(/Enter the OTP code sent to your mail, ada.placeholder@example.com/)).toBeTruthy();
       view.unmount();
     });
   });

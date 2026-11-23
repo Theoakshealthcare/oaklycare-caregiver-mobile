@@ -20,8 +20,8 @@ jest.mock("expo-font", () => ({
 }));
 
 async function signInThroughTheForm() {
-  await fireEvent.changeText(await screen.findByLabelText("Email address"), "ada.placeholder@example.com");
-  await fireEvent.changeText(screen.getByLabelText("Password"), "placeholder-password");
+  await fireEvent.changeText(await screen.findByLabelText("Email Address"), "ada.placeholder@example.com");
+  await fireEvent.changeText(screen.getByLabelText("Input Password"), "placeholder-password");
   await fireEvent.press(screen.getByRole("button", { name: "Login" }));
 }
 
@@ -43,13 +43,13 @@ describe("auth gate (App)", () => {
     const view = await render(<App />);
     expect(await screen.findByText("AI-Powered Personalized Care")).toBeTruthy();
     await fireEvent.press(screen.getByRole("button", { name: "Skip" }));
-    expect(await screen.findByText("Sign in to your Oakly Health account")).toBeTruthy();
+    expect(await screen.findByLabelText("Input Password")).toBeTruthy();
     view.unmount();
   });
 
   it("does not show the intro again once it has been seen", async () => {
     const view = await render(<App />);
-    expect(await screen.findByText("Sign in to your Oakly Health account")).toBeTruthy();
+    expect(await screen.findByLabelText("Input Password")).toBeTruthy();
     expect(screen.queryByText("AI-Powered Personalized Care")).toBeNull();
     view.unmount();
   });
@@ -72,7 +72,7 @@ describe("auth gate (App)", () => {
     const view = await render(<App />);
     await signInThroughTheForm();
 
-    expect(await screen.findByText("Hello, Ada")).toBeTruthy();
+    expect(await screen.findByText(/Hello Ada,/)).toBeTruthy();
     expect(calls[0]).toMatchObject({
       method: "POST",
       path: "/api/v1/auth/login/mobile",
@@ -92,7 +92,7 @@ describe("auth gate (App)", () => {
     await fireEvent.press(screen.getByRole("button", { name: "Log out" }));
     await fireEvent.press(await screen.findByRole("button", { name: "Yes, log out" }));
 
-    expect(await screen.findByText("Sign in to your Oakly Health account")).toBeTruthy();
+    expect(await screen.findByLabelText("Input Password")).toBeTruthy();
     expect(keychainKeys()).toEqual([]);
     expect(session.getAccessToken()).toBeNull();
     expect(queryClient.getQueryCache().getAll()).toHaveLength(0);
@@ -121,7 +121,7 @@ describe("auth gate (App)", () => {
     // Refused before a session was ever opened: nothing stored, still signed out, Login still on screen.
     expect(keychainKeys()).toEqual([]);
     expect(session.store.getState().status).toBe("signedOut");
-    expect(screen.getByLabelText("Email address")).toBeTruthy();
+    expect(screen.getByLabelText("Email Address")).toBeTruthy();
     view.unmount();
   });
 
@@ -129,7 +129,7 @@ describe("auth gate (App)", () => {
     await session.signIn({ accessToken: "access-stored", refreshToken: "refresh-stored" });
     routeFetch({ "GET /api/v1/auth/me": () => ({ status: 200, body: patientUser }) });
     const view = await render(<App />);
-    expect(await screen.findByText("Hello, Ada")).toBeTruthy();
+    expect(await screen.findByText(/Hello Ada,/)).toBeTruthy();
     view.unmount();
   });
 
@@ -137,10 +137,10 @@ describe("auth gate (App)", () => {
     await session.signIn({ accessToken: "access-stored", refreshToken: "refresh-stored" });
     routeFetch({ "GET /api/v1/auth/me": () => ({ status: 200, body: { ...patientUser, is_verified: false } }) });
     const view = await render(<App />);
-    expect(await screen.findByText(/Enter the 5-digit code we sent to ada.placeholder@example.com/)).toBeTruthy();
+    expect(await screen.findByText(/Enter the OTP code sent to your mail, ada.placeholder@example.com/)).toBeTruthy();
     expect(screen.queryByRole("button", { name: "Go back" })).toBeNull();
     await fireEvent.press(screen.getByRole("button", { name: "Use a different account" }));
-    expect(await screen.findByText("Sign in to your Oakly Health account")).toBeTruthy();
+    expect(await screen.findByLabelText("Input Password")).toBeTruthy();
     expect(keychainKeys()).toEqual([]);
     view.unmount();
   });

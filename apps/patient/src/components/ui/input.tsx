@@ -3,6 +3,7 @@ import { useState } from "react";
 import { Pressable, StyleSheet, TextInput, View, type TextInputProps } from "react-native";
 
 import { MAX_FONT_SCALE, theme } from "../../constants/theme";
+import FieldLabel from "./field-label";
 import Icon from "./icon";
 import Text from "./text";
 
@@ -16,15 +17,12 @@ const Input: React.FC<InputProps> = ({ label, error, secureTextEntry, multiline,
   const [focused, setFocused] = useState(false);
   const [hidden, setHidden] = useState(true);
   const isPassword = Boolean(secureTextEntry);
-  const borderColor = error ? theme.colors.secondary : focused ? theme.colors.primary : theme.colors.border;
+  // Figma draws every field with a teal border at rest; focus is shown by the thicker line.
+  const borderColor = error ? theme.colors.secondary : theme.colors.primary;
   return (
     <View>
-      {label ? (
-        <Text variant="small" style={styles.label}>
-          {label}
-        </Text>
-      ) : null}
-      <View style={[styles.field, { borderColor }, multiline && styles.multiline]}>
+      {label ? <FieldLabel>{label}</FieldLabel> : null}
+      <View style={[styles.field, { borderColor, borderWidth: focused ? 2 : 1 }, multiline && styles.multiline]}>
         <TextInput
           accessibilityLabel={label}
           style={[styles.input, style]}
@@ -43,7 +41,7 @@ const Input: React.FC<InputProps> = ({ label, error, secureTextEntry, multiline,
             hitSlop={8}
             onPress={() => setHidden((value) => !value)}
           >
-            <Icon name={hidden ? "eye-outline" : "eye-off-outline"} size={20} color={theme.colors.textLight} />
+            <Icon name={hidden ? "eye-off-outline" : "eye-outline"} size={20} color={theme.colors.textLight} />
           </Pressable>
         ) : null}
       </View>
@@ -57,11 +55,10 @@ const Input: React.FC<InputProps> = ({ label, error, secureTextEntry, multiline,
 };
 
 const styles = StyleSheet.create({
-  label: { marginBottom: theme.spacing.xs },
   field: {
     flexDirection: "row",
     alignItems: "center",
-    borderWidth: 1,
+    minHeight: 48,
     borderRadius: theme.borderRadius.xl,
     backgroundColor: theme.colors.white,
     paddingHorizontal: theme.spacing.md,
@@ -69,7 +66,7 @@ const styles = StyleSheet.create({
   multiline: { alignItems: "flex-start", minHeight: 96 },
   input: {
     flex: 1,
-    paddingVertical: theme.spacing.md,
+    paddingVertical: theme.spacing.sm + 4,
     fontSize: theme.sizes.body,
     fontFamily: theme.fonts.regular,
     color: theme.colors.text,

@@ -65,7 +65,7 @@ describe("signed-in app (account screens)", () => {
       await press("Account and data");
       await press("Delete account");
       await press("Yes, delete account");
-      expect(await screen.findByText("Sign in to your Oakly Health account")).toBeTruthy();
+      expect(await screen.findByLabelText("Input Password")).toBeTruthy();
       expect(keychainKeys()).toEqual([]);
       expect(queryClient.getQueryCache().getAll()).toHaveLength(0);
       view.unmount();
