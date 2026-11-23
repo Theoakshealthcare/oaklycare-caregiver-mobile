@@ -27,12 +27,53 @@ export interface OaklyClientOptions {
    */
   onUnauthorized?: () => Promise<string | null>;
   fetch?: typeof globalThis.fetch;
+  /** Give up on a request that has not answered after this many milliseconds. Default 20 s. */
+  timeoutMs?: number;
+  /** The same for a file upload, which is allowed longer. Default 120 s. */
+  uploadTimeoutMs?: number;
 }
 
 const RETRIED = "x-oakly-retried";
 
+export const DEFAULT_TIMEOUT_MS = 20_000;
+export const DEFAULT_UPLOAD_TIMEOUT_MS = 120_000;
+
+/**
+ * Wraps a fetch so a request with no answer after `ms` is abandoned. Without this, a stalled connection leaves
+ * the app on a spinner for as long as the OS keeps the socket (minutes: the owner waited 60-300 s on staging).
+ * The failure is a `TypeError("Network request timed out")`, which `isNetworkFailure` already reports as "never
+ * completed", so every screen shows its usual "can't reach Oakly" message. The timer ends when the response
+ * starts, so a slow body read is not cut off. A caller's own abort signal still works.
+ */
+export function withTimeout(getFetch: () => typeof globalThis.fetch, ms: number): typeof globalThis.fetch {
+  return async (input, init) => {
+    const controller = new AbortController();
+    let timedOut = false;
+    const timer = setTimeout(() => {
+      timedOut = true;
+      controller.abort();
+    }, ms);
+    const callerSignal = init?.signal ?? (input instanceof Request ? input.signal : undefined);
+    const onCallerAbort = () => controller.abort();
+    if (callerSignal?.aborted) controller.abort();
+    else callerSignal?.addEventListener("abort", onCallerAbort, { once: true });
+    try {
+      return await getFetch()(input, { ...init, signal: controller.signal });
+    } catch (error) {
+      if (timedOut) throw new TypeError("Network request timed out");
+      throw error;
+    } finally {
+      clearTimeout(timer);
+      callerSignal?.removeEventListener("abort", onCallerAbort);
+    }
+  };
+}
+
 export function createOaklyClient(options: OaklyClientOptions) {
-  const client = createClient<paths>({ baseUrl: options.baseUrl, fetch: options.fetch });
+  // Resolved per call, so a fetch installed after the client was built is used.
+  const baseFetch = () => options.fetch ?? globalThis.fetch;
+  const timedFetch = withTimeout(baseFetch, options.timeoutMs ?? DEFAULT_TIMEOUT_MS);
+  const client = createClient<paths>({ baseUrl: options.baseUrl, fetch: timedFetch });
   // Unread clones of authenticated requests, keyed by the request openapi-fetch sends.
   const unread = new WeakMap<Request, Request>();
 
@@ -70,9 +111,7 @@ export function createOaklyClient(options: OaklyClientOptions) {
       retry.headers.set(RETRIED, "1");
       // Typed structurally: on React Native this is often NOT a global Response, even though the DOM
       // types say fetch always returns one.
-      const retried: Pick<Response, "text" | "status" | "statusText" | "headers"> = await (
-        options.fetch ?? globalThis.fetch
-      )(retry);
+      const retried: Pick<Response, "text" | "status" | "statusText" | "headers"> = await timedFetch(retry);
       if (retried instanceof Response) return retried;
       // Same React Native mismatch: rebuild it as a global Response so openapi-fetch accepts it.
       return new Response(await retried.text(), {
@@ -84,8 +123,7 @@ export function createOaklyClient(options: OaklyClientOptions) {
   };
   client.use(auth);
 
-  // Resolved per call, like the retry above, so a fetch installed after the client was built is used.
-  const send: typeof globalThis.fetch = (input, init) => (options.fetch ?? globalThis.fetch)(input, init);
+  const send = withTimeout(baseFetch, options.uploadTimeoutMs ?? DEFAULT_UPLOAD_TIMEOUT_MS);
   const baseUrl = options.baseUrl.replace(/\/+$/, "");
 
   /**

@@ -20,6 +20,7 @@ channel) lives in the backend repo: `docs/checklist/MASTER_CHECKLIST.md`. Update
 - [ ] Android: the sign-up page (both apps) could not be scrolled above the keyboard; `KeyboardScrollView` fixed for Android on `fix/auth-screens-keyboard`, **not verified on a device** until a new APK is tried ([SOP](../sop/2026-11-23-keyboard-scroll-android.md))
 - [x] Device re-check of DP1-03/04/07 passed (re-check 1); DP1-02 re-proved after its correction
 - [ ] Push-token registration loop (both apps, ~12 POSTs/s, found on staging 2026-11-23): fixed on `fix/push-token-loop`, **not verified on a device** until a new APK is tried ([SOP](../sop/2026-11-23-push-token-registration-loop.md))
+- [ ] Resend and code-screen feedback, and a 20 s request timeout in the shared client (found on staging 2026-11-23): built on `fix/auth-feedback-and-timeout`, **not verified on a device** ([SOP](../sop/2026-11-23-auth-feedback-and-request-timeout.md))
 - [ ] Android keyboard pass; patient app to adopt `filePart` and `isNetworkFailure` when it gets uploads
 - [ ] DP1-05 (visit rules) and DP1-06 (decline semantics): owner decisions pending
 

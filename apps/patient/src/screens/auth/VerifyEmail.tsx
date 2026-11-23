@@ -108,7 +108,7 @@ const VerifyEmail: React.FC<Props> = ({ navigation, route }) => {
           Didn&apos;t receive a code?
         </Text>
         <TextLink
-          label={cooldown > 0 ? `Resend code (${cooldown}s)` : "Resend code"}
+          label={resend.isPending ? "Sending code..." : cooldown > 0 ? `Resend code (${cooldown}s)` : "Resend code"}
           onPress={() => resend.mutate()}
           disabled={cooldown > 0 || resend.isPending || verify.isPending}
         />

@@ -1,7 +1,7 @@
 import assert from "node:assert/strict";
 import { test } from "node:test";
 
-import { createOaklyClient, errorMessage } from "../src/index.ts";
+import { createOaklyClient, errorMessage, isNetworkFailure } from "../src/index.ts";
 
 function fakeFetch(handler: (req: Request) => Response) {
   const calls: Request[] = [];
@@ -252,4 +252,50 @@ test("raw bytes return the error body of a non-2xx (an object detail) and rethro
     }) as typeof fetch,
   });
   await assert.rejects(offline.uploadBytes("/up", new Uint8Array(1), "audio/mp4"), TypeError);
+});
+
+// A fetch that never answers on its own: it only ends when the signal aborts, like a stalled socket.
+function stalledFetch() {
+  const fn = (_input: Request | string | URL, init?: RequestInit) =>
+    new Promise<Response>((_resolve, reject) => {
+      const abort = () => reject(new DOMException("Aborted", "AbortError"));
+      // A real fetch also rejects at once when the signal was aborted before the call.
+      if (init?.signal?.aborted) abort();
+      else init?.signal?.addEventListener("abort", abort);
+    });
+  return fn as typeof fetch;
+}
+
+test("gives up on a request nobody answers, as a network failure the apps already handle", async () => {
+  const api = createOaklyClient({ baseUrl: "http://x", getAccessToken: () => null, fetch: stalledFetch(), timeoutMs: 30 });
+  const started = Date.now();
+  await assert.rejects(
+    () => api.GET("/api/v1/auth/me"),
+    (error: unknown) => {
+      assert.ok(error instanceof TypeError);
+      assert.equal(error.message, "Network request timed out");
+      assert.equal(isNetworkFailure(error), true);
+      return true;
+    },
+  );
+  assert.ok(Date.now() - started < 2000, "returned promptly after the timeout");
+});
+
+test("a request that answers in time is not cut off and leaves no timer behind", async () => {
+  const f = fakeFetch(() => Response.json({ ok: true }));
+  const api = createOaklyClient({ baseUrl: "http://x", getAccessToken: () => null, fetch: f.fn, timeoutMs: 60_000 });
+  const { response } = await api.GET("/api/v1/auth/me");
+  assert.equal(response.status, 200);
+  // If the 60 s timer were still pending, this test file would not exit.
+});
+
+test("a caller's own abort is still an abort, not a timeout", async () => {
+  const api = createOaklyClient({ baseUrl: "http://x", getAccessToken: () => null, fetch: stalledFetch(), timeoutMs: 60_000 });
+  const controller = new AbortController();
+  const call = api.GET("/api/v1/auth/me", { signal: controller.signal });
+  controller.abort();
+  await assert.rejects(call, (error: unknown) => {
+    assert.ok(!(error instanceof TypeError && error.message === "Network request timed out"));
+    return true;
+  });
 });

@@ -148,6 +148,19 @@ describe("auth flows", () => {
         view.unmount();
       });
 
+      it("shows 'Sending code...' while the server has not answered, then says the code was sent", async () => {
+        let answer!: () => void;
+        const slow = new Promise<{ status: number; body: unknown }>((resolve) => {
+          answer = () => resolve({ status: 200, body: { message: "Verification code sent" } });
+        });
+        const { view } = await openGate({ "POST /api/v1/auth/resend-verification": () => slow });
+        await press("Resend code");
+        expect(await screen.findByRole("button", { name: "Sending code..." })).toBeDisabled();
+        await act(async () => answer());
+        expect(await screen.findByText("A new code has been sent to ada.placeholder@example.com.")).toBeTruthy();
+        view.unmount();
+      });
+
       it("shows the wait the server asks for on a 429 (Retry-After)", async () => {
         const { view } = await openGate({
           "POST /api/v1/auth/resend-verification": () => ({

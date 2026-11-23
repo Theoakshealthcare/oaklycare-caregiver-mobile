@@ -6,6 +6,7 @@ import {
   TextInput,
   Pressable,
   Alert,
+  ActivityIndicator,
 } from 'react-native';
 
 import type { StackScreenProps } from '@react-navigation/stack';
@@ -15,11 +16,12 @@ import { theme, MAX_FONT_SCALE } from '@/src/constants/theme';
 import Box from '@/src/components/ui/box';
 import Text from '@/src/components/ui/text';
 import Icon from '@/src/components/ui/icon';
+import Button from '@/src/components/ui/button';
 import HeaderBack from '@/src/components/back/HeaderBack';
 import { globalStyles } from '@/src/constants/styles';
 import Navigation from '@/src/hooks/use-navigation';
 import { authService } from '@/src/services/auth.service';
-import { messageForError } from '@/src/api/errors';
+import { ApiError, messageForError } from '@/src/api/errors';
 import { queryKeys } from '@/src/api/keys';
 import { useSession } from '@/src/auth';
 import type { ScreenParamLists } from '@/src/navigation/Navigations';
@@ -56,7 +58,8 @@ const VerifyEmail: React.FC<StackScreenProps<ScreenParamLists, 'VerifyEmail'>> =
     },
     onError: (error) => {
       Alert.alert('Verification Failed', messageForError(error));
-      setOtp(['', '', '', '', '']);
+      // A request that never reached the server keeps the code as typed, so Verify can send it again; a wrong code is cleared.
+      if (!(error instanceof ApiError && error.status === 0)) setOtp(['', '', '', '', '']);
     },
   });
   const isVerifying = verify.isPending;
@@ -164,18 +167,34 @@ const VerifyEmail: React.FC<StackScreenProps<ScreenParamLists, 'VerifyEmail'>> =
               </Text>
             </Pressable>
 
-            <Pressable onPress={handleResendCode} disabled={timer > 0 || isVerifying}>
-              <Text
-                variant="small"
-                weight="medium"
-                color={
-                  timer > 0 || isVerifying ? theme.colors.textLight : theme.colors.primary
-                }
-              >
-                {timer > 0 ? `Resend Code (${timer}s)` : 'Resend Code'}
-              </Text>
+            <Pressable onPress={handleResendCode} disabled={timer > 0 || isVerifying || resend.isPending}>
+              {resend.isPending ? (
+                <View style={[globalStyles.row, { alignItems: 'center', gap: 8 }]}>
+                  <ActivityIndicator size="small" color={theme.colors.primary} />
+                  <Text variant="small" weight="medium" color={theme.colors.textLight}>
+                    Sending code...
+                  </Text>
+                </View>
+              ) : (
+                <Text
+                  variant="small"
+                  weight="medium"
+                  color={
+                    timer > 0 || isVerifying ? theme.colors.textLight : theme.colors.primary
+                  }
+                >
+                  {timer > 0 ? `Resend Code (${timer}s)` : 'Resend Code'}
+                </Text>
+              )}
             </Pressable>
           </View>
+
+          <Button
+            title="Verify"
+            onPress={() => verifyCode(otp.join(''))}
+            loading={isVerifying}
+            disabled={otp.some((digit) => digit === '')}
+          />
         </View>
 
         {showKeypad && (
