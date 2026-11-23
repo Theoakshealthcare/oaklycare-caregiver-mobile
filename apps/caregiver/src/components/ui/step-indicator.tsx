@@ -22,11 +22,11 @@ export function consentStepNumber(identityStep: boolean = kycEnabled()): number 
  * the fill: four steps with the identity check on (a quarter each), three without.
  */
 const StepIndicator: React.FC<{ step: number; total?: number }> = ({ step, total = onboardingStepCount() }) => (
-  <View style={{ marginTop: 16 }}>
-    <Text variant="caption" color={theme.colors.textLight} testID="step-label">
+  <View style={{ marginTop: 12 }}>
+    <Text variant="fine" color={theme.colors.textLight} testID="step-label">
       {`Step ${step}`}
     </Text>
-    <View style={{ height: 2, backgroundColor: theme.colors.border, marginTop: 8 }}>
+    <View style={{ height: 2, backgroundColor: "#F0F0F0", marginTop: 8 }}>
       <View
         testID="step-bar"
         style={{ height: 2, backgroundColor: theme.colors.primary, width: `${Math.round((step / total) * 100)}%` }}

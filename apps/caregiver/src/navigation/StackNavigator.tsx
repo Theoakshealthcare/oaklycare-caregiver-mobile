@@ -1,6 +1,7 @@
 import { createStackNavigator } from "@react-navigation/stack";
 
 import { useSession } from "../auth";
+import { TEAL_CHROME, WHITE_CHROME, useScreenChrome } from "../components/StatusBar/screenChrome";
 import { useMe, useVerificationStatus } from "../hooks/queries";
 import BankDetails from "../screens/account/BankDetails";
 import Contact from "../screens/account/Contact";
@@ -80,6 +81,9 @@ function useGate(): { gate: Gate; returning: boolean; retry: () => void } {
 const StackNavigator = () => {
   const { gate, returning, retry } = useGate();
   const setupSubmitted = useSetupSubmitted();
+  // Everything before the signed-in app is edge-to-edge white (Figma); the app proper keeps its teal bands.
+  const beforeApp = gate.kind === "signedOut" || gate.kind === "verifyEmail" || gate.kind === "setup" || gate.kind === "status";
+  useScreenChrome(beforeApp ? WHITE_CHROME : TEAL_CHROME);
 
   switch (gate.kind) {
     case "loading":

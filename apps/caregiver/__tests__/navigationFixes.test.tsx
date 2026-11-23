@@ -39,7 +39,10 @@ describe("welcome slides follow the Figma frames (owner, 2026-11-23: exact parit
     await render(<OnboardingScreen />);
     expect(screen.getByText("AI-Powered Personalized")).toBeTruthy();
     expect(screen.getByText("Remote Monitoring &")).toBeTruthy();
-    expect(screen.getByText("Oakly FallGuard™ Fall Predictor–")).toBeTruthy();
+    // Slide 3 is broken into the three lines the Figma frame has: the same words, "Predictor– Predict." sharing a line.
+    expect(screen.getByText("Oakly FallGuard™ Fall")).toBeTruthy();
+    expect(screen.getByText("Predictor– Predict.")).toBeTruthy();
+    expect(screen.getByText("Prevent. Protect.")).toBeTruthy();
     expect(screen.getByText("Book a Nurse Instantly.")).toBeTruthy();
     expect(screen.getByText(/Stay ahead of falls with real-time monitoring/)).toBeTruthy();
     expect(screen.queryByText("Care work that")).toBeNull();

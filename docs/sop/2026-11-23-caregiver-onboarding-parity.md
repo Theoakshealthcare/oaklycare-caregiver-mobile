@@ -41,3 +41,5 @@ Revert the PR. To make the terms line name the real button again, change `TERMS_
 - Figma "Document Scan" / "Face Scan" camera frames (native scan screens) are not built; the check runs on the hosted page.
 - The skipped "Skip, Go to Homepage" link on the account-created page (an unapproved caregiver cannot reach the app).
 - Device pass for all of the above, and a higher-resolution FallGuard illustration from the designer.
+
+> Update 2026-11-23 (visual pass): the Cookies Policy link is no longer bold, see [2026-11-23-caregiver-onboarding-visual.md](2026-11-23-caregiver-onboarding-visual.md). Sign-up now has the terms line under the button.

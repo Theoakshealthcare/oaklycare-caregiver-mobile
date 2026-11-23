@@ -4,7 +4,7 @@ import { theme, lineHeightFor, MAX_FONT_SCALE } from "../../constants/theme"
 import Animated from "react-native-reanimated"
 import useTextAnimation from "@/src/hooks/use-text-animation"
 
-export type TextVariant = "h1" | "h2" | "h3" | "body" | "small" | "caption"
+export type TextVariant = "h1" | "h2" | "h3" | "page" | "body" | "small" | "fine" | "caption"
 export type TextWeight = "regular" | "medium" | "bold"
 
 interface TextProps extends RNTextProps {
@@ -39,6 +39,12 @@ const Text: React.FC<TextProps> = ({
         break
       case "h3":
         baseStyle.push(styles.h3)
+        break
+      case "page":
+        baseStyle.push(styles.page)
+        break
+      case "fine":
+        baseStyle.push(styles.fine)
         break
       case "body":
         baseStyle.push(styles.body)
@@ -104,6 +110,18 @@ const styles = StyleSheet.create({
     lineHeight: lineHeightFor(theme.sizes.title),
     color: theme.colors.text,
     fontFamily: theme.fonts.medium,
+  },
+  page: {
+    fontSize: theme.sizes.pageTitle,
+    lineHeight: lineHeightFor(theme.sizes.pageTitle),
+    color: theme.colors.text,
+    fontFamily: theme.fonts.bold,
+  },
+  fine: {
+    fontSize: theme.sizes.fine,
+    lineHeight: lineHeightFor(theme.sizes.fine) + 2,
+    color: theme.colors.text,
+    fontFamily: theme.fonts.regular,
   },
   body: {
     fontSize: theme.sizes.body,

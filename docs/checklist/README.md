@@ -32,6 +32,7 @@ channel) lives in the backend repo: `docs/checklist/MASTER_CHECKLIST.md`. Update
 - [x] Setup steps 1-3: header, "Step N" bar in quarters, identity step as the Figma two rows; consent screen "Give Consent"; new Profile Setup Completed page
 - [x] Staging build turns the identity step on (`EXPO_PUBLIC_KYC_MODE: "api"` in `eas.json` preview)
 - [ ] **Not device-verified** (Jest, tsc and ESLint only): built on `feat/caregiver-onboarding-parity` ([SOP](../sop/2026-11-23-caregiver-onboarding-parity.md))
+- [x] Visual pass fixes (2026-11-23): teal bands to edge-to-edge white, input borders, labels, slides, success pages, setup fit, toast; **seen on the iOS simulator only (not Android)**; teal/coral tokens deliberately unchanged (Figma PNGs are Display P3). Branch `fix/caregiver-onboarding-visual` ([SOP](../sop/2026-11-23-caregiver-onboarding-visual.md)); open: mock-KYC dead end (B2)
 - [ ] Owner decisions: pre-ticked terms box, "Get Started" in the terms line, the account-created body sentence, the removed consent paragraphs, "Email Address Verified" after a recovery code (needs a backend code-check endpoint); the Cookies Policy URL was supplied and wired on 2026-11-23
 - [ ] Native Document Scan / Face Scan camera frames (the check runs on the hosted Dojah page)
 

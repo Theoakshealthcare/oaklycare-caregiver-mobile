@@ -1,6 +1,9 @@
 import { StyleSheet } from "react-native";
 import { screenSize, theme } from "./theme";
 
+/** Side margin of the onboarding forms (Figma: 20 pt from the screen edge to the fields). */
+export const FORM_PADDING = { paddingHorizontal: 20 };
+
 export const globalStyles = StyleSheet.create({
   safearea: { flex: 1, backgroundColor: theme.colors.primary },
 

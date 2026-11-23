@@ -7,7 +7,8 @@ import HeaderBack from "@/src/components/back/HeaderBack";
 import ConsentBlock from "@/src/components/identity/ConsentBlock";
 import Button from "@/src/components/ui/button";
 import Text from "@/src/components/ui/text";
-import { globalStyles } from "@/src/constants/styles";
+import { globalStyles, FORM_PADDING } from "@/src/constants/styles";
+import FieldLabel from "@/src/components/ui/field-label";
 import { theme } from "@/src/constants/theme";
 import {
   STILL_CHECKING_TEXT,
@@ -88,10 +89,8 @@ const ChooserRow: React.FC<{ testID: string; label: string; placeholder: string;
   disabled,
   onPress,
 }) => (
-  <View style={{ gap: 8 }}>
-    <Text variant="body" weight="medium">
-      {label}
-    </Text>
+  <View>
+    <FieldLabel>{label}</FieldLabel>
     <Pressable
       testID={testID}
       accessibilityRole="button"
@@ -105,10 +104,10 @@ const ChooserRow: React.FC<{ testID: string; label: string; placeholder: string;
         justifyContent: "space-between",
         borderWidth: 1,
         borderColor: theme.colors.primary,
-        borderRadius: theme.borderRadius.lg,
+        borderRadius: 16,
         paddingHorizontal: theme.spacing.md,
-        paddingVertical: theme.spacing.md,
-        opacity: disabled ? 0.5 : 1,
+        minHeight: 48,
+        paddingVertical: 12,
       }}
     >
       <Text variant="body" color={theme.colors.textLight} style={{ flexShrink: 1 }}>
@@ -125,7 +124,7 @@ const IdentityVerificationView: React.FC<IdentityViewProps> = (props) => {
 
   // Both rows start (or resume) the same verification; a new attempt needs the explicit consent below them first.
   const chooser = (
-    <View style={{ gap: 16 }}>
+    <View style={{ gap: 18 }}>
       <ChooserRow
         testID="identity-start"
         label={SCAN_ID_LABEL}
@@ -375,15 +374,15 @@ const IdentityVerificationView: React.FC<IdentityViewProps> = (props) => {
   return (
     <View style={{ flex: 1, backgroundColor: theme.colors.white }}>
       <ScrollView keyboardShouldPersistTaps="handled" contentContainerStyle={{ flexGrow: 1 }}>
-        <View style={[globalStyles.container, { gap: 8 }]}>
+        <View style={[globalStyles.container, FORM_PADDING, { gap: 8, paddingTop: 16 }]}>
           <HeaderBack />
-          <View style={{ marginTop: 16 }}>
-            <Text variant="h2" weight="bold">
+          <View style={{ marginTop: 14 }}>
+            <Text variant="page" weight="bold">
               Set up your Account
             </Text>
             <StepIndicator step={ONBOARDING_STEP.identity} />
           </View>
-          <Text variant="h3" weight="bold" style={{ marginTop: 16 }}>
+          <Text variant="h3" weight="bold" style={{ marginTop: 6, marginBottom: 6 }}>
             Identity Verification
           </Text>
           {props.banner ? (

@@ -14,9 +14,13 @@ import {
 } from "react-native";
 import { Feather } from "@expo/vector-icons";
 import Text from "./text";
+import FieldLabel from "./field-label";
 import { theme, MAX_FONT_SCALE } from "../../constants/theme";
 import Box from "./box";
 import { globalStyles } from "@/src/constants/styles";
+
+/** Corner radius of every form field (Figma: about 16 pt on a 48 pt field). */
+export const FIELD_RADIUS = 16;
 
 interface InputProps extends TextInputProps {
   label?: string;
@@ -57,24 +61,20 @@ const Input: React.FC<InputProps> = ({
 
   const getBorderColor = () => {
     if (error) return theme.colors.secondary;
-    if (isFocused) return theme.colors.primary;
-    return theme.colors.border;
+    // Figma draws every field with a teal border at rest; focus is shown by the thicker line below.
+    return theme.colors.primary;
   };
 
   return (
     <View style={[containerStyle]}>
-      {label && (
-        <Text variant="small" style={{ marginBottom: "2%" }}>
-          {label}
-        </Text>
-      )}
+      {label && <FieldLabel>{label}</FieldLabel>}
 
       <View
         style={[
           globalStyles.row,
           {
-            borderWidth: borderWidth ?? 1,
-            borderRadius: borderRadius ?? 8,
+            borderWidth: borderWidth ?? (isFocused ? 2 : 1),
+            borderRadius: borderRadius ?? FIELD_RADIUS,
             backgroundColor: backgroundColor ?? theme.colors.white,
             borderColor: getBorderColor(),
           },
@@ -131,7 +131,8 @@ const Input: React.FC<InputProps> = ({
 const styles = StyleSheet.create({
   input: {
     flex: 1,
-    paddingVertical: theme.spacing.md,
+    minHeight: 48,
+    paddingVertical: 12,
     paddingHorizontal: theme.spacing.md,
     fontSize: theme.sizes.body,
     color: theme.colors.text,

@@ -13,12 +13,13 @@ import StepIndicator, { onboardingStepCount, ONBOARDING_STEP } from "@/src/compo
 import Input from "@/src/components/ui/input"
 import Select from "@/src/components/ui/select"
 import HeaderBack from "@/src/components/back/HeaderBack"
-import { globalStyles } from "@/src/constants/styles"
+import { globalStyles, FORM_PADDING } from "@/src/constants/styles"
 import Navigation from "@/src/hooks/use-navigation"
 import { caregiverService, type CaregiverProfileStep1 } from "@/src/services/caregiver.service"
 import { useFormOptions } from "@/src/hooks/queries"
 import { messageForError } from "@/src/api/errors"
 import { queryKeys } from "@/src/api/keys"
+import { authService } from "@/src/services/auth.service"
 
 type Gender = CaregiverProfileStep1["gender"]
 
@@ -26,6 +27,9 @@ type Gender = CaregiverProfileStep1["gender"]
 const NIGERIAN_STATES = [
   "Abia", "Adamawa", "Akwa Ibom", "Anambra", "Bauchi", "Bayelsa", "Benue", "Borno", "Cross River", "Delta", "Ebonyi", "Edo", "Ekiti", "Enugu", "Federal Capital Territory", "Gombe", "Imo", "Jigawa", "Kaduna", "Kano", "Katsina", "Kebbi", "Kogi", "Kwara", "Lagos", "Nasarawa", "Niger", "Ogun", "Ondo", "Osun", "Oyo", "Plateau", "Rivers", "Sokoto", "Taraba", "Yobe", "Zamfara"
 ]
+
+/** The emergency number starts as "+234", as drawn in Figma, so only the national number is typed. */
+const PHONE_PREFIX = "+234"
 
 const CaregiverSetupStep1 = () => {
   const { navigation } = Navigation()
@@ -37,7 +41,7 @@ const CaregiverSetupStep1 = () => {
     gender: "" as Gender | "",
     state: "",
     address: "",
-    emergency_contact_phone: "",
+    emergency_contact_phone: PHONE_PREFIX,
   })
 
   const [errors, setErrors] = useState<Record<string, string>>({})
@@ -64,7 +68,7 @@ const CaregiverSetupStep1 = () => {
     if (!formData.gender) newErrors.gender = "Gender is required"
     if (!formData.state) newErrors.state = "State is required"
     if (!formData.address.trim()) newErrors.address = "House address is required"
-    if (!formData.emergency_contact_phone.trim()) newErrors.emergency_contact_phone = "Emergency contact is required"
+    if (formData.emergency_contact_phone.trim() === PHONE_PREFIX || !formData.emergency_contact_phone.trim()) newErrors.emergency_contact_phone = "Emergency contact is required"
     setErrors(newErrors)
     if (Object.keys(newErrors).length > 0 || !formData.gender) return
 
@@ -80,11 +84,19 @@ const CaregiverSetupStep1 = () => {
   return (
     <View style={{ flex: 1, backgroundColor: theme.colors.white }}>
       <KeyboardScrollView>
-        <View style={[globalStyles.container, { flex: 1 }]}>
-          <HeaderBack />
+        <View style={[globalStyles.container, FORM_PADDING, { flex: 1, paddingTop: 16 }]}>
+          {/* Step 1 is the first screen of the setup stack, so Back has no earlier page: it offers to sign out (Figma draws Back here). */}
+          <HeaderBack
+            onFallback={() =>
+              Alert.alert("Sign out?", "Your details are saved. You can carry on with the setup when you sign back in.", [
+                { text: "Stay", style: "cancel" },
+                { text: "Sign out", style: "destructive", onPress: () => void authService.logout() },
+              ])
+            }
+          />
 
-          <View style={{ marginVertical: "5%" }}>
-            <Text variant="h2" weight="bold">
+          <View style={{ marginTop: 22, marginBottom: 14 }}>
+            <Text variant="page" weight="bold">
               Set up your Account
             </Text>
             <Text variant="body" color={theme.colors.textLight}>
@@ -94,8 +106,9 @@ const CaregiverSetupStep1 = () => {
             <StepIndicator step={ONBOARDING_STEP.profile} />
           </View>
 
-          <View style={globalStyles.column}>
+          <View style={[globalStyles.column, { gap: 22 }]}>
             <DateField
+              containerStyle={{ marginBottom: 0 }}
               testID="dob-field"
               label="Date of Birth"
               placeholder="Enter your DOB"
@@ -107,6 +120,7 @@ const CaregiverSetupStep1 = () => {
             />
 
             <Select
+              containerStyle={{ marginBottom: 0 }}
               label="Gender"
               placeholder="Select your Gender"
               value={formData.gender}
@@ -120,6 +134,7 @@ const CaregiverSetupStep1 = () => {
             />
 
             <Select
+              containerStyle={{ marginBottom: 0 }}
               label="State"
               placeholder="Select State"
               value={formData.state}
@@ -154,7 +169,7 @@ const CaregiverSetupStep1 = () => {
               title="Save & Continue"
               onPress={handleSaveAndContinue}
               loading={save.isPending}
-              style={{ marginTop: 20 }}
+              style={{ marginTop: 0 }}
             />
           </View>
 

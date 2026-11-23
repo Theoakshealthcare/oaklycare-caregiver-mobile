@@ -9,7 +9,7 @@ import Button from '@/src/components/ui/button';
 import Input from '@/src/components/ui/input';
 import { showToast } from '@/src/components/ui/toast';
 import HeaderBack from '@/src/components/back/HeaderBack';
-import { globalStyles } from '@/src/constants/styles';
+import { globalStyles, FORM_PADDING } from '@/src/constants/styles';
 import Navigation from '@/src/hooks/use-navigation';
 import { authService } from '@/src/services/auth.service';
 import { messageForError } from '@/src/api/errors';
@@ -78,11 +78,11 @@ const ResetPassword: React.FC<StackScreenProps<ScreenParamLists, 'ResetPassword'
   };
 
   return (
-    <View style={globalStyles.container}>
+    <View style={[globalStyles.container, FORM_PADDING]}>
       <HeaderBack />
 
-      <View style={{ marginVertical: '10%' }}>
-        <Text variant="h2" weight="bold">
+      <View style={{ marginTop: 28, marginBottom: 24 }}>
+        <Text variant="page" weight="bold">
           Reset Password
         </Text>
         <Text variant="body" color={theme.colors.textLight}>
@@ -90,7 +90,7 @@ const ResetPassword: React.FC<StackScreenProps<ScreenParamLists, 'ResetPassword'
         </Text>
       </View>
 
-      <View style={globalStyles.column}>
+      <View style={[globalStyles.column, { gap: 22 }]}>
         <Input
           label="Create New Password"
           placeholder="Enter New Password"

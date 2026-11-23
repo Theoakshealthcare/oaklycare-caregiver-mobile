@@ -28,15 +28,22 @@ const ProfileSetupCompleted: React.FC = () => {
         <Text>Close</Text>
       </Pressable>
 
-      <ScrollView contentContainerStyle={{ flexGrow: 1, alignItems: "center", justifyContent: "center", gap: theme.spacing.lg }}>
+      <ScrollView contentContainerStyle={{ flexGrow: 1, alignItems: "center", paddingTop: theme.spacing.xl }}>
         <SuccessIllustration />
-        <Text variant="h2" weight="bold" color={theme.colors.success} center>
-          {SETUP_COMPLETED_TITLE}
-        </Text>
-        <Text variant="small" color={theme.colors.textLight} center>
-          {SETUP_COMPLETED_BODY}
-        </Text>
-        <Button title="Go to Homepage" onPress={done} style={{ width: "100%", borderRadius: 30 }} />
+
+        <View style={{ marginTop: 32 }}>
+          <Text variant="page" weight="bold" color={theme.colors.successTitle} center>
+            {SETUP_COMPLETED_TITLE}
+          </Text>
+        </View>
+
+        <View style={{ width: "54%", marginTop: 12 }}>
+          <Text variant="fine" color={theme.colors.textLight} center>
+            {SETUP_COMPLETED_BODY}
+          </Text>
+        </View>
+
+        <Button title="Go to Homepage" onPress={done} style={{ width: "72%", minHeight: 52, borderRadius: 26, marginTop: 36 }} />
       </ScrollView>
     </View>
   );

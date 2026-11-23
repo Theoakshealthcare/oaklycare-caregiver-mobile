@@ -113,7 +113,8 @@ describe("identity consent block (design 10.2)", () => {
     await render(<ConsentBlock checked={false} onToggle={jest.fn()} />);
     expect(screen.getByTestId("identity-consent-check").props.accessibilityState.checked).toBe(false);
     expect(screen.getByTestId("identity-consent-text")).toHaveTextContent(CONSENT_BODY);
-    expect(screen.getByText(CONSENT_TITLE)).toBeTruthy();
+    // The Figma identity step has no heading above the consent words.
+    expect(screen.queryByText(CONSENT_TITLE)).toBeNull();
     expect(screen.getByText(CONSENT_LABEL)).toBeTruthy();
     expect(CONSENT_TEXT_VERSION).toBe("kyc-2026-10");
   });

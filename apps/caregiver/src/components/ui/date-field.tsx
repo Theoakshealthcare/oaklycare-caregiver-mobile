@@ -1,5 +1,5 @@
 import React, { useState } from "react";
-import { Modal, Platform, Pressable, StyleSheet, TouchableOpacity, View } from "react-native";
+import { Modal, Platform, Pressable, StyleSheet, TouchableOpacity, View, type StyleProp, type ViewStyle } from "react-native";
 import DateTimePicker from "@react-native-community/datetimepicker";
 import { Feather } from "@expo/vector-icons";
 
@@ -7,6 +7,7 @@ import { theme } from "@/src/constants/theme";
 import { formatDate, toDateOnly } from "@/src/utils/dates";
 
 import Text from "./text";
+import FieldLabel from "./field-label";
 
 interface Props {
   label: string;
@@ -20,6 +21,8 @@ interface Props {
   /** Where the wheel starts while no date is chosen (a date of birth starts decades back, not today). */
   initialDate?: Date;
   testID?: string;
+  /** Overrides the default 16 pt bottom margin. */
+  containerStyle?: StyleProp<ViewStyle>;
 }
 
 function dateFromIso(iso: string): Date {
@@ -32,7 +35,7 @@ function dateFromIso(iso: string): Date {
  * format, hands back "YYYY-MM-DD" for the API. iOS: the spinner sits in a bottom sheet with Done
  * (so it never floats mid-form); Android: the system dialog.
  */
-const DateField: React.FC<Props> = ({ label, value, onChange, placeholder = "Select a date", error, minimumDate, maximumDate, initialDate, testID }) => {
+const DateField: React.FC<Props> = ({ label, value, onChange, placeholder = "Select a date", error, minimumDate, maximumDate, initialDate, testID, containerStyle }) => {
   const [open, setOpen] = useState(false);
   const [draft, setDraft] = useState<Date>(() => dateFromIso(value));
 
@@ -62,17 +65,15 @@ const DateField: React.FC<Props> = ({ label, value, onChange, placeholder = "Sel
   );
 
   return (
-    <View style={{ marginBottom: 16 }}>
-      <Text variant="body" weight="medium" style={{ marginBottom: 8 }}>
-        {label}
-      </Text>
+    <View style={[{ marginBottom: 16 }, containerStyle]}>
+      <FieldLabel>{label}</FieldLabel>
       <TouchableOpacity
         testID={testID}
         accessibilityRole="button"
         accessibilityLabel={`${label}: ${value ? formatDate(value) : placeholder}`}
         onPress={show}
         activeOpacity={0.7}
-        style={[styles.field, { borderColor: error ? theme.colors.secondary : theme.colors.border }]}
+        style={[styles.field, { borderColor: error ? theme.colors.secondary : theme.colors.primary }]}
       >
         <Text variant="body" color={value ? theme.colors.text : theme.colors.textLight}>
           {value ? formatDate(value) : placeholder}
@@ -118,9 +119,10 @@ const DateField: React.FC<Props> = ({ label, value, onChange, placeholder = "Sel
 const styles = StyleSheet.create({
   field: {
     borderWidth: 1,
-    borderRadius: 8,
+    borderRadius: 16,
     paddingHorizontal: 16,
-    paddingVertical: 14,
+    minHeight: 48,
+    paddingVertical: 12,
     backgroundColor: theme.colors.white,
     flexDirection: "row",
     alignItems: "center",

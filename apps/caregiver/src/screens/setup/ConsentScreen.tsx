@@ -7,7 +7,7 @@ import Text from "@/src/components/ui/text"
 import Button from "@/src/components/ui/button"
 import LegalLink from "@/src/components/ui/legal-link"
 import HeaderBack from "@/src/components/back/HeaderBack"
-import { globalStyles } from "@/src/constants/styles"
+import { globalStyles, FORM_PADDING } from "@/src/constants/styles"
 import { caregiverService } from "@/src/services/caregiver.service"
 import { messageForError } from "@/src/api/errors"
 import { queryKeys } from "@/src/api/keys"
@@ -31,17 +31,17 @@ const ConsentScreen = () => {
   })
 
   return (
-    <View style={[globalStyles.container, { flex: 1 }]}>
+    <View style={[globalStyles.container, FORM_PADDING, { flex: 1, paddingTop: 16 }]}>
       <HeaderBack />
 
-      <View style={{ marginVertical: "10%" }}>
-        <Text variant="h2" weight="bold">
+      <View style={{ marginTop: 22, marginBottom: 26 }}>
+        <Text variant="page" weight="bold">
           Background Checks & Data Usage Consent
         </Text>
       </View>
 
       <View style={{ flex: 1, justifyContent: "space-between" }}>
-        <Text variant="small" style={{ lineHeight: 20 }}>
+        <Text variant="fine">
           {`By tapping ${CONSENT_TERMS_ACTION}, you agree to our `}
           <LegalLink page="terms">Terms of Services</LegalLink>
           {". Learn how we process your data in our "}

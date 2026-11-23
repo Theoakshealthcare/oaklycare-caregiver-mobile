@@ -7,7 +7,7 @@ import { theme } from '@/src/constants/theme';
 import Text from '@/src/components/ui/text';
 import { OtpBoxes, OtpResendRow, emptyOtp } from '@/src/components/ui/otp-boxes';
 import HeaderBack from '@/src/components/back/HeaderBack';
-import { globalStyles } from '@/src/constants/styles';
+import { globalStyles, FORM_PADDING } from '@/src/constants/styles';
 import Navigation from '@/src/hooks/use-navigation';
 import { useCooldown } from '@/src/hooks/useCooldown';
 import { authService } from '@/src/services/auth.service';
@@ -49,11 +49,11 @@ const RecoverCode: React.FC<StackScreenProps<ScreenParamLists, 'RecoverCode'>> =
   };
 
   return (
-    <View style={[globalStyles.container, { flex: 1 }]}>
+    <View style={[globalStyles.container, FORM_PADDING, { flex: 1 }]}>
       <HeaderBack />
 
-      <View style={{ marginVertical: '10%' }}>
-        <Text variant="h2" weight="bold">
+      <View style={{ marginTop: 28, marginBottom: 24 }}>
+        <Text variant="page" weight="bold">
           Verify Email Address
         </Text>
         <Text variant="body" color={theme.colors.textLight}>
@@ -61,7 +61,7 @@ const RecoverCode: React.FC<StackScreenProps<ScreenParamLists, 'RecoverCode'>> =
         </Text>
       </View>
 
-      <View style={{ gap: 40 }}>
+      <View style={{ gap: 84 }}>
         <OtpBoxes value={otp} onChange={setOtp} onComplete={(code) => navigation.navigate('ResetPassword', { email, code })} />
         <OtpResendRow cooldown={cooldown} sending={resend.isPending} onResend={handleResend} />
       </View>
