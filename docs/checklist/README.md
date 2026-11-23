@@ -59,6 +59,12 @@ channel) lives in the backend repo: `docs/checklist/MASTER_CHECKLIST.md`. Update
 - [ ] Deferred, needs backend or content: Chats list, FallGuard for caregivers, patient name and price on offers, FAQ and About in-app copy, emergency contact name / address, vitals insights
 - [ ] Owner decisions: medication section collapsed (D4), "Total Amount Paid in / Withdrawn", "Continue Service", lock-screen app name
 
+## Patient app parity with Figma, slice 3: bookings (2026-11-24)
+- [x] Bookings list (provider photo, name, Track chip, month heading and week strip, Chat / Cancel / Booking Details pills), Booking Details sheet, cancel dialogs, Caregiver Details (stage cards, Track opens the phone's maps), chat restyle; branch `feat/patient-bookings-parity` ([SOP](../sop/2026-11-24-patient-bookings-parity.md)); **seen on the iOS simulator only, not Android or a real phone**
+- [ ] Deferred: "Enter Booking Code" (no backend claim endpoint), nurse note after a visit (no patient endpoint), in-app map (no maps key), "Booking Canceled from website"
+- [ ] Not built, stay off (owner rule): Reschedule, Change Care Provider, ratings, calls, AI notetaker, prescription / nutritionist / physio, provider list
+- [ ] Owner decisions: first names only, no verified tick or TAG chip, refund to the original method (not wallet), chat header without "Active", seven-day week strip
+
 ## Patient app parity with Figma, slice 4: profile, vitals and FallGuard (2026-11-24)
 - [x] Profile Settings, Edit Profile (photo upload, gender, age, Update Password row, toast), Account and Data, Contact Us; Vitals home (Download Report, History & Insights), manual-entry sheets (glucose in mg/dL or mmol/L with three boxes, sleep pickers, BP row), "<Vital> Monitoring" pages, History & Insights, report success page; FallGuard intro, questions (sections, progress bar, "Score : N" from the server), result; branch `feat/patient-profile-vitals-parity` ([SOP](../sop/2026-11-24-patient-profile-vitals-fallguard-parity.md)); **Jest only: the simulator was busy, so the visual pass is pending; nothing seen on Android or a real phone**
 - [x] Built and OFF by owner decision: Normal / Critical badges (`domain/vitalStatus.ts`), FallGuard risk band badge and "What does this mean?" (`RISK_BANDS`)

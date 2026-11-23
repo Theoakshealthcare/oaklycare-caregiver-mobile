@@ -1,5 +1,7 @@
 # SOP: Patient app live tracking and chat wired to the backend (P9)
 
+> **Update 2026-11-24:** the screens described here were restyled to the Figma frames (title "Caregiver Details", stage cards, the "Open in Maps" button is now the teal "Track" button, chat header and bubbles). The data, polling and behaviour below are unchanged. See `2026-11-24-patient-bookings-parity.md`.
+
 | | |
 |---|---|
 | **What shipped** | The sample `useChat` hook and the sample tracking screen in `apps/patient` are replaced by real calls: the caregiver's position as text (distance, estimated arrival, how fresh) from `GET /booking/booking/{id}/live-tracking`, polled; and the real chat (`GET .../chat/{id}/messages`, `POST .../chat/{id}/send`), polled. Proved on the iOS simulator against a local backend. |

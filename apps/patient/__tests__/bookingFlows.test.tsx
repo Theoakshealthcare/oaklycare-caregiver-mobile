@@ -78,8 +78,8 @@ describe("bookings (real backend calls, answered with captured bodies)", () => {
       const cancelled = capture("016-p-b1-detail-after-cancel").body;
       const { view, calls } = await renderSignedIn({ [LIST]: () => ({ status: 200, body: [listItem(), unpaid(), { ...cancelled, visit_code: null }] }) });
       await tab("Booking");
-      expect(await screen.findByText("D96F7B66")).toBeTruthy();
-      expect(screen.getByText("UNPAID01")).toBeTruthy();
+      expect(await screen.findByLabelText("Booking D96F7B66")).toBeTruthy();
+      expect(screen.getByLabelText("Booking UNPAID01")).toBeTruthy();
       expect(screen.getByText("Caregiver assigned")).toBeTruthy();
       expect(screen.getByText("Payment pending")).toBeTruthy();
       expect(screen.getAllByRole("button", { name: "Pay now" })).toHaveLength(1);
@@ -137,7 +137,7 @@ describe("bookings (real backend calls, answered with captured bodies)", () => {
         list = [listItem()];
         await tab("Home");
         await tab("Booking");
-        expect(await screen.findByText(listItem().booking_code)).toBeTruthy();
+        expect(await screen.findByLabelText(`Booking ${listItem().booking_code}`)).toBeTruthy();
         view.unmount();
       } finally {
         restore();
@@ -194,7 +194,7 @@ describe("bookings (real backend calls, answered with captured bodies)", () => {
       await fireEvent.press(await screen.findByRole("button", { name: "Booking Details" }));
       expect(await screen.findByLabelText("Visit code 9 8 9 3")).toBeTruthy();
       expect(screen.getByText("Give this code to your caregiver when they arrive")).toBeTruthy();
-      expect(screen.getByText("Placeholder")).toBeTruthy(); // first name only
+      expect(screen.getAllByText("Placeholder").length).toBeGreaterThan(0); // first name only (the list behind the sheet shows it too)
       expect(screen.queryByText("Placeholder Caregiver")).toBeNull();
       expect(screen.queryByText(/\+234/)).toBeNull();
       expect(screen.queryByRole("button", { name: /share|enter (pin|code)/i })).toBeNull();
@@ -401,6 +401,8 @@ describe("bookings (real backend calls, answered with captured bodies)", () => {
       const { view } = await renderSignedIn({ [SERVICES]: services });
       await press("Start Booking");
       await screen.findByText("Book your Appointments in 2 steps");
+      // The button stays off until the catalogue has loaded (and the nurse is chosen for the person): press only then.
+      await waitFor(() => expect(screen.getByRole("button", { name: "What Services are you Booking ?" }).props.accessibilityValue.text).toBe("Nurse visit"));
       await press("Save & Continue");
       for (const message of ["Tell us who the visit is for", "Tell us what help is needed", "Choose a date and time", "Choose how long the visit should be"]) {
         expect(screen.getByText(message)).toBeTruthy();
@@ -699,8 +701,8 @@ describe("bookings (real backend calls, answered with captured bodies)", () => {
       expect(countOf(calls, `GET ${TERMS}`)).toBe(1);
       expect(countOf(calls, `POST ${CANCEL}`)).toBe(0); // nothing is cancelled before the confirm
 
-      await press("Yes, cancel booking");
-      expect(await screen.findByText("Booking canceled")).toBeTruthy();
+      await press("Yes, Cancel");
+      expect(await screen.findByText("Booking Canceled Successfully")).toBeTruthy();
       expect(calls.find((c) => c.method === "POST" && c.path === CANCEL)?.body).toEqual({ accepted_fee_kobo: 1000000 });
       // The refund summary comes from the booking itself (capture 037), not from the cancel answer.
       expect(await screen.findByText("Your refund is being reviewed.")).toBeTruthy();
@@ -734,15 +736,15 @@ describe("bookings (real backend calls, answered with captured bodies)", () => {
         [`GET ${DETAIL}`]: answer("037-p-b2-detail-after-cancel"),
       });
       expect(await screen.findByText("Free cancellation")).toBeTruthy();
-      await press("Yes, cancel booking");
+      await press("Yes, Cancel");
 
       expect(await screen.findByText("The cancellation fee has changed")).toBeTruthy();
       expect(await screen.findByText("A 20% cancellation fee applies")).toBeTruthy();
       expect(screen.getByText("₦10,000")).toBeTruthy();
-      expect(screen.queryByText("Booking canceled")).toBeNull();
+      expect(screen.queryByText("Booking Canceled Successfully")).toBeNull();
 
-      await press("Yes, cancel booking");
-      expect(await screen.findByText("Booking canceled")).toBeTruthy();
+      await press("Yes, Cancel");
+      expect(await screen.findByText("Booking Canceled Successfully")).toBeTruthy();
       const bodies = calls.filter((c) => c.method === "POST" && c.path === CANCEL).map((c) => c.body);
       expect(bodies).toEqual([{ accepted_fee_kobo: 0 }, { accepted_fee_kobo: 1000000 }]);
       view.unmount();
@@ -753,7 +755,7 @@ describe("bookings (real backend calls, answered with captured bodies)", () => {
       expect(await screen.findByText("This booking can't be cancelled")).toBeTruthy();
       expect(screen.getByText(/The visit has already started/)).toBeTruthy();
       expect(screen.getByRole("button", { name: "Contact support" })).toBeTruthy();
-      expect(screen.queryByRole("button", { name: "Yes, cancel booking" })).toBeNull();
+      expect(screen.queryByRole("button", { name: "Yes, Cancel" })).toBeNull();
       view.unmount();
     });
 
@@ -763,7 +765,7 @@ describe("bookings (real backend calls, answered with captured bodies)", () => {
         [`POST ${CANCEL}`]: answer("059-p-u3-cancel-paystack-unreachable"),
       });
       await screen.findByText("A 20% cancellation fee applies");
-      await press("Yes, cancel booking");
+      await press("Yes, Cancel");
       expect(await screen.findByText(/couldn't check your payment with our payment provider, so nothing was cancelled/)).toBeTruthy();
       view.unmount();
 
@@ -772,7 +774,7 @@ describe("bookings (real backend calls, answered with captured bodies)", () => {
         [`POST ${CANCEL}`]: answer("046-p-b3-cancel-in-progress"),
       });
       await screen.findByText("A 20% cancellation fee applies");
-      await press("Yes, cancel booking");
+      await press("Yes, Cancel");
       expect(await screen.findByText(/already started, so it can't be cancelled in the app/)).toBeTruthy();
       second.view.unmount();
     });
@@ -800,8 +802,8 @@ describe("bookings (real backend calls, answered with captured bodies)", () => {
       await fireEvent.press(await screen.findByRole("button", { name: "Cancel" }));
       expect(await screen.findByText("Free cancellation")).toBeTruthy();
       expect(screen.getByText("You have not paid yet, so there is nothing to refund.")).toBeTruthy();
-      await press("Yes, cancel booking");
-      expect(await screen.findByText("Booking canceled")).toBeTruthy();
+      await press("Yes, Cancel");
+      expect(await screen.findByText("Booking Canceled Successfully")).toBeTruthy();
       expect(screen.getByText("You were not charged, so there is nothing to refund.")).toBeTruthy();
       view.unmount();
     });
