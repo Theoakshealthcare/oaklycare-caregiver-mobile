@@ -1,9 +1,11 @@
 import { useMutation } from "@tanstack/react-query";
 import type React from "react";
 import { useState } from "react";
-import { View } from "react-native";
+import { StyleSheet, View } from "react-native";
 
 import { messageForError } from "@/src/api/errors";
+import Button from "@/src/components/ui/button";
+import CardModal from "@/src/components/ui/card-modal";
 import ConfirmDialog from "@/src/components/ui/confirm-dialog";
 import MenuRow from "@/src/components/ui/menu-row";
 import Screen from "@/src/components/ui/screen";
@@ -11,7 +13,7 @@ import Text from "@/src/components/ui/text";
 import { theme } from "@/src/constants/theme";
 import { authService } from "@/src/services/auth.service";
 
-/** Log out, and delete the account for good. */
+/** "Account and Data" (Figma): Delete Account, then Logout in coral. Logout still asks first (audit P1-09), which the design does not show. */
 const AccountData: React.FC = () => {
   const [confirming, setConfirming] = useState(false);
   const [loggingOut, setLoggingOut] = useState(false);
@@ -24,19 +26,19 @@ const AccountData: React.FC = () => {
   });
 
   return (
-    <Screen title="Account and data">
+    <Screen title="Account and Data" centerTitle>
       <View>
-        <MenuRow icon="log-out-outline" label="Log out" destructive onPress={() => setLoggingOut(true)} />
         <MenuRow
           icon="trash-outline"
-          label="Delete account"
-          destructive
+          label="Delete Account"
           onPress={() => {
             setProblem(null);
             setConfirming(true);
           }}
         />
+        <MenuRow icon="log-out-outline" label="Logout" destructive onPress={() => setLoggingOut(true)} />
       </View>
+      {/* Not in the design, kept on purpose: logging out asks first (audit P1-09). */}
       <ConfirmDialog
         visible={loggingOut}
         title="Log out?"
@@ -49,25 +51,29 @@ const AccountData: React.FC = () => {
         }}
         onCancel={() => setLoggingOut(false)}
       />
-      <ConfirmDialog
+      <CardModal
         visible={confirming}
-        title="Delete your account?"
-        message="Your personal details will be erased and you will not be able to sign in again. This cannot be undone."
-        confirmLabel="Yes, delete account"
-        cancelLabel="No, go back"
-        destructive
-        loading={remove.isPending}
-        onConfirm={() => remove.mutate()}
-        onCancel={() => setConfirming(false)}
+        onClose={() => setConfirming(false)}
+        title="Are you sure you want to Delete Account"
+        subtitle="Once you delete your account all your data will be deleted."
       >
         {problem ? (
           <Text color={theme.colors.secondary} center accessibilityRole="alert">
             {problem}
           </Text>
         ) : null}
-      </ConfirmDialog>
+        <View style={styles.buttons}>
+          <Button title="Yes Delete Account" small loading={remove.isPending} onPress={() => remove.mutate()} style={styles.button} />
+          <Button title="No, Go Back" small variant="outline" disabled={remove.isPending} onPress={() => setConfirming(false)} style={styles.button} />
+        </View>
+      </CardModal>
     </Screen>
   );
 };
+
+const styles = StyleSheet.create({
+  buttons: { flexDirection: "row", gap: theme.spacing.sm, marginTop: theme.spacing.sm },
+  button: { flex: 1, paddingHorizontal: theme.spacing.sm },
+});
 
 export default AccountData;

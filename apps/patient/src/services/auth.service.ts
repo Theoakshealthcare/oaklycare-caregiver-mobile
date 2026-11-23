@@ -1,6 +1,7 @@
 import type { Schemas } from "@oakly/api-client";
 
 import { api } from "@/src/api/client";
+import { appendPickedFile } from "@/src/api/filePart";
 import { ApiError } from "@/src/api/errors";
 import { queryKeys } from "@/src/api/keys";
 import { queryClient } from "@/src/api/queryClient";
@@ -81,6 +82,20 @@ export const authService = {
     const fresh = await authService.getMe();
     queryClient.setQueryData(queryKeys.me, fresh);
     return fresh;
+  },
+
+  /**
+   * `POST /auth/profile/upload-image` (multipart, field `file`): the only way to set the photo (`PUT /auth/profile` can only clear it).
+   * Answers `{ profile_image_url }`; `/auth/me` is read again so every screen shows the new photo. The multipart call goes through the
+   * client's plain-fetch path (openapi-fetch's Request wrapper cannot carry a file part).
+   */
+  async uploadProfileImage(image: { uri: string; fileName?: string | null; mimeType?: string | null }): Promise<string | null> {
+    const form = new FormData();
+    appendPickedFile(form, "file", { uri: image.uri, name: image.fileName ?? "profile.jpg", type: image.mimeType ?? "image/jpeg" });
+    const raw: unknown = await unwrap(api.uploadMultipart("/api/v1/auth/profile/upload-image", form));
+    queryClient.setQueryData(queryKeys.me, await authService.getMe());
+    const url = raw && typeof raw === "object" ? (raw as { profile_image_url?: unknown }).profile_image_url : undefined;
+    return typeof url === "string" ? url : null;
   },
 
   getMe() {

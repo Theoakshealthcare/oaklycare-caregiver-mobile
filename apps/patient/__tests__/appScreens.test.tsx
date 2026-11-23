@@ -22,19 +22,19 @@ describe("signed-in app (account screens)", () => {
     it("the menu has only the v1 rows, and Contact shows the email", async () => {
       const { view } = await renderSignedIn();
       await press("Open profile");
-      expect(screen.getByRole("button", { name: "Edit personal information" })).toBeTruthy();
-      expect(screen.getByRole("button", { name: "Contact us" })).toBeTruthy();
-      expect(screen.getByRole("button", { name: "Account and data" })).toBeTruthy();
-      await press("Contact us");
-      expect(await screen.findByText("info@theoakshealthcare.com")).toBeTruthy();
+      expect(screen.getByRole("button", { name: "Edit Personal Information" })).toBeTruthy();
+      expect(screen.getByRole("button", { name: "Contact Us" })).toBeTruthy();
+      expect(screen.getByRole("button", { name: "Account and Data" })).toBeTruthy();
+      await press("Contact Us");
+      expect(await screen.findByText(/info@theoakshealthcare\.com/)).toBeTruthy();
       view.unmount();
     });
 
     it("edit profile: needs a name", async () => {
       const { view } = await renderSignedIn();
       await press("Open profile");
-      await press("Edit personal information");
-      await fireEvent.changeText(await screen.findByLabelText("Full name"), "  ");
+      await press("Edit Personal Information");
+      await fireEvent.changeText(await screen.findByLabelText("Full Name"), "  ");
       await press("Update Profile Details");
       expect(await screen.findByText("Full name is required")).toBeTruthy();
       view.unmount();
@@ -48,9 +48,9 @@ describe("signed-in app (account screens)", () => {
         }),
       });
       await press("Open profile");
-      await press("Account and data");
-      await press("Delete account");
-      await press("Yes, delete account");
+      await press("Account and Data");
+      await press("Delete Account");
+      await press("Yes Delete Account");
       expect(await screen.findByText(/You have an active booking\. Cancel it or wait/)).toBeTruthy();
       expect(calls.some((c) => c.method === "DELETE" && c.path === "/api/v1/auth/profile")).toBe(true);
       expect(session.store.getState().status).toBe("signedIn");
@@ -62,9 +62,9 @@ describe("signed-in app (account screens)", () => {
         "DELETE /api/v1/auth/profile": () => ({ status: 200, body: { detail: "Account deleted successfully." } }),
       });
       await press("Open profile");
-      await press("Account and data");
-      await press("Delete account");
-      await press("Yes, delete account");
+      await press("Account and Data");
+      await press("Delete Account");
+      await press("Yes Delete Account");
       expect(await screen.findByLabelText("Input Password")).toBeTruthy();
       expect(keychainKeys()).toEqual([]);
       expect(queryClient.getQueryCache().getAll()).toHaveLength(0);

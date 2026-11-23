@@ -4,6 +4,7 @@ import { Alert, Linking } from "react-native";
 import { queryClient } from "../src/api/queryClient";
 import { queryKeys } from "../src/api/keys";
 import { session } from "../src/auth";
+import { hideToast } from "../src/components/ui/toast";
 import { formatCountdown, validatePasswordForm } from "../src/account/changePasswordModel";
 import { disableCacheGcForTests } from "../test-utils/fakeApi";
 import { live, liveBody, liveReply } from "../test-utils/live";
@@ -27,15 +28,17 @@ const meWithDetails = () => liveBody("me-after-update");
 describe("profile (live-shaped)", () => {
   beforeAll(() => disableCacheGcForTests(queryClient));
   afterAll(() => queryClient.clear());
+  // The toast host is one global store that keeps a message for 3 seconds: start every test without a leftover one.
+  beforeEach(() => hideToast());
   afterEach(() => jest.restoreAllMocks());
 
   describe("edit profile", () => {
     it("shows what the server holds, from /auth/me's patient object", async () => {
       const { view } = await renderSignedIn({}, meWithDetails());
       await press("Open profile");
-      await press("Edit personal information");
-      expect((await screen.findByLabelText("House address")).props.value).toBe("1 Placeholder Street, Lagos");
-      expect(screen.getByLabelText("Contact name").props.value).toBe("Placeholder Contact");
+      await press("Edit Personal Information");
+      expect((await screen.findByLabelText("House Address")).props.value).toBe("1 Placeholder Street, Lagos");
+      expect(screen.getByLabelText("Emergency Contact Person Name").props.value).toBe("Placeholder Contact");
       expect(screen.queryByText(/shows sample information/)).toBeNull();
       view.unmount();
     });
@@ -53,8 +56,8 @@ describe("profile (live-shaped)", () => {
         meWithDetails(),
       );
       await press("Open profile");
-      await press("Edit personal information");
-      await fireEvent.changeText(await screen.findByLabelText("House address"), "9 New Road, Abuja");
+      await press("Edit Personal Information");
+      await fireEvent.changeText(await screen.findByLabelText("House Address"), "9 New Road, Abuja");
       await press("Update Profile Details");
       expect(await screen.findByText("Profile has been updated")).toBeTruthy();
 
@@ -84,15 +87,15 @@ describe("profile (live-shaped)", () => {
         meWithDetails(),
       );
       await press("Open profile");
-      await press("Edit personal information");
-      await type("Full name", "  Placeholder Patient Edited  ");
-      await type("Phone number", "+234 000 071 8205");
+      await press("Edit Personal Information");
+      await type("Full Name", "  Placeholder Patient Edited  ");
+      await type("Phone Number", "+234 000 071 8205");
       await press("Update Profile Details");
       expect(await screen.findByText("Profile has been updated")).toBeTruthy();
       expect(calls.find((c) => c.method === "PUT")?.body).toEqual({ full_name: "Placeholder Patient Edited", phone_number: "+234 000 071 8205" });
       // The boxes show what the server holds now: trimmed name, phone with the separators removed (captured behaviour).
-      expect(screen.getByLabelText("Full name").props.value).toBe("Placeholder Patient Edited");
-      expect(screen.getByLabelText("Phone number").props.value).toBe("+2340000718205");
+      expect(screen.getByLabelText("Full Name").props.value).toBe("Placeholder Patient Edited");
+      expect(screen.getByLabelText("Phone Number").props.value).toBe("+2340000718205");
       expect(screen.queryByText(/couldn't save/)).toBeNull();
       view.unmount();
     });
@@ -102,11 +105,11 @@ describe("profile (live-shaped)", () => {
       expect(refused.status).toBe(422);
       const { view } = await renderSignedIn({ "PUT /api/v1/auth/profile": () => ({ status: refused.status, body: refused.body }) }, meWithDetails());
       await press("Open profile");
-      await press("Edit personal information");
-      await type("Phone number", "12");
+      await press("Edit Personal Information");
+      await type("Phone Number", "12");
       await press("Update Profile Details");
       expect(await screen.findByText(refused.body.detail[0].msg)).toBeTruthy();
-      expect(screen.getByLabelText("Phone number").props.value).toBe("12");
+      expect(screen.getByLabelText("Phone Number").props.value).toBe("12");
       expect(screen.queryByText("Profile has been updated")).toBeNull();
       view.unmount();
     });
@@ -116,8 +119,8 @@ describe("profile (live-shaped)", () => {
       expect(refused.status).toBe(409);
       const { view } = await renderSignedIn({ "PUT /api/v1/auth/profile": () => ({ status: refused.status, body: refused.body }) }, meWithDetails());
       await press("Open profile");
-      await press("Edit personal information");
-      await type("Phone number", "+2340000718205");
+      await press("Edit Personal Information");
+      await type("Phone Number", "+2340000718205");
       await press("Update Profile Details");
       expect(await screen.findByText("That phone number is already used by another account.")).toBeTruthy();
       view.unmount();
@@ -128,8 +131,8 @@ describe("profile (live-shaped)", () => {
       expect(refused.status).toBe(400);
       const { view } = await renderSignedIn({ "PUT /api/v1/auth/profile": () => ({ status: refused.status, body: refused.body }) }, meWithDetails());
       await press("Open profile");
-      await press("Edit personal information");
-      await type("House address", "9 New Road, Abuja");
+      await press("Edit Personal Information");
+      await type("House Address", "9 New Road, Abuja");
       await press("Update Profile Details");
       expect(await screen.findByText("Could not save")).toBeTruthy();
       expect(screen.getByText(refused.body.detail.message)).toBeTruthy();
@@ -140,8 +143,8 @@ describe("profile (live-shaped)", () => {
     it("refuses an emptied phone box on the screen (a phone is removed on purpose, never by a blank)", async () => {
       const { calls, view } = await renderSignedIn({}, { ...meWithDetails(), phone_number: "+2340000718205" });
       await press("Open profile");
-      await press("Edit personal information");
-      await type("Phone number", "");
+      await press("Edit Personal Information");
+      await type("Phone Number", "");
       await press("Update Profile Details");
       expect(await screen.findByText("Enter a phone number, or leave it as it is.")).toBeTruthy();
       expect(calls.some((c) => c.method === "PUT")).toBe(false);
@@ -151,8 +154,8 @@ describe("profile (live-shaped)", () => {
     it("refuses a cleared field instead of pretending to clear it (the backend ignores blanks)", async () => {
       const { calls, view } = await renderSignedIn({}, meWithDetails());
       await press("Open profile");
-      await press("Edit personal information");
-      await type("House address", "");
+      await press("Edit Personal Information");
+      await type("House Address", "");
       await press("Update Profile Details");
       expect(await screen.findByText("This can't be cleared yet. Change it to something else.")).toBeTruthy();
       expect(calls.some((c) => c.method === "PUT")).toBe(false);
@@ -164,7 +167,8 @@ describe("profile (live-shaped)", () => {
     const open = async (extra = {}) => {
       const rendered = await renderSignedIn(extra);
       await press("Open profile");
-      await press("Change password");
+      await press("Edit Personal Information");
+      await press("Update Password");
       await screen.findByLabelText("Current password");
       return rendered;
     };
@@ -255,7 +259,7 @@ describe("profile (live-shaped)", () => {
       await press("Open profile");
       await press("FAQs");
       await waitFor(() => expect(WebBrowser.openBrowserAsync).toHaveBeenLastCalledWith("https://oaklycare.com/faq", expect.anything()));
-      await press("About us");
+      await press("About Us");
       await waitFor(() => expect(WebBrowser.openBrowserAsync).toHaveBeenLastCalledWith("https://oaklycare.com/about", expect.anything()));
       expect(safari).not.toHaveBeenCalled();
       safari.mockRestore();

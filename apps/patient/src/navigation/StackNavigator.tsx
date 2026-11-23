@@ -1,4 +1,4 @@
-import { createStackNavigator, type StackNavigationOptions } from "@react-navigation/stack";
+import { createStackNavigator } from "@react-navigation/stack";
 import { useState } from "react";
 
 import { useSession } from "../auth";
@@ -22,14 +22,8 @@ const PushEffects = () => {
   return null;
 };
 
-/** Screens drawn over the page before them (the booking details sheet, the cancel dialogs), as the designs show them. */
-const OVERLAYS: Partial<Record<keyof ScreenParamLists, StackNavigationOptions>> = {
-  BookingDetails: { presentation: "transparentModal", animation: "slide_from_bottom", cardStyle: { backgroundColor: "transparent" } },
-  CancelBooking: { presentation: "transparentModal", animation: "fade", cardStyle: { backgroundColor: "transparent" } },
-};
-
 const screens = (defs: ScreenDef[]) =>
-  defs.map((def) => <Stack.Screen key={def.name} name={def.name} component={def.component} options={OVERLAYS[def.name]} />);
+  defs.map((def) => <Stack.Screen key={def.name} name={def.name} component={def.component} options={def.options} />);
 
 /** The signed-out stack opens on the intro slides once per install, else on Login. Fixed when the stack first mounts. */
 const SignedOutStack = () => {

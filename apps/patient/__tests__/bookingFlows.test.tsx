@@ -401,6 +401,8 @@ describe("bookings (real backend calls, answered with captured bodies)", () => {
       const { view } = await renderSignedIn({ [SERVICES]: services });
       await press("Start Booking");
       await screen.findByText("Book your Appointments in 2 steps");
+      // The button stays off until the catalogue has loaded (and the nurse is chosen for the person): press only then.
+      await waitFor(() => expect(screen.getByRole("button", { name: "What Services are you Booking ?" }).props.accessibilityValue.text).toBe("Nurse visit"));
       await press("Save & Continue");
       for (const message of ["Tell us who the visit is for", "Tell us what help is needed", "Choose a date and time", "Choose how long the visit should be"]) {
         expect(screen.getByText(message)).toBeTruthy();
