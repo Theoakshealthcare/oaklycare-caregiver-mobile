@@ -1,4 +1,4 @@
-import { render, screen } from "@testing-library/react-native";
+import { fireEvent, render, screen } from "@testing-library/react-native";
 
 import { session } from "../src/auth";
 
@@ -21,7 +21,7 @@ export async function renderSignedIn(extra: Routes = {}, user: FakeUser = patien
     ...extra,
   });
   const view = await render(<App />);
-  await screen.findByText(`Hello, ${user.full_name.split(" ")[0]}`);
+  await screen.findByText(new RegExp(`Hello ${user.full_name.split(" ")[0]},`));
   return { calls, view };
 }
 
@@ -35,7 +35,7 @@ export async function renderUnverified(extra: Routes = {}) {
     ...extra,
   });
   const view = await render(<App />);
-  await screen.findByText(/Enter the 5-digit code we sent to/);
+  await screen.findByText(/Enter the OTP code sent to your mail/);
   return { calls, view };
 }
 
@@ -45,6 +45,16 @@ export async function renderSignedOut(routes: Routes = {}) {
   await setIntroSeen(true);
   const calls = routeFetch(routes);
   const view = await render(<App />);
-  await screen.findByText("Sign in to your Oakly Health account");
+  await screen.findByLabelText("Input Password");
   return { calls, view };
+}
+
+/**
+ * From Login to the sign-up form the way a person gets there: Back to the welcome slides, then Get Started. (Figma's Login has
+ * no "create account" link.) The four slides each draw their own button, so the first one is pressed.
+ */
+export async function openCreateAccount() {
+  await fireEvent.press(screen.getByRole("button", { name: "Back" }));
+  await fireEvent.press((await screen.findAllByRole("button", { name: "Get Started" }))[0]);
+  await screen.findByLabelText("Full Name");
 }

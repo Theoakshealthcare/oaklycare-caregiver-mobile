@@ -36,6 +36,13 @@ channel) lives in the backend repo: `docs/checklist/MASTER_CHECKLIST.md`. Update
 - [ ] Owner decisions: pre-ticked terms box, "Get Started" in the terms line, the account-created body sentence, the removed consent paragraphs, "Email Address Verified" after a recovery code (needs a backend code-check endpoint); the Cookies Policy URL was supplied and wired on 2026-11-23
 - [ ] Native Document Scan / Face Scan camera frames (the check runs on the hosted Dojah page)
 
+## Patient app parity with Figma, slice 1 (2026-11-23)
+- [x] Welcome slides (white art area, coloured panel, Get Started on all four, teal Skip), sign-up, code screen, account created + Start Booking Journey, login, recover (code screen) and reset with the green toast, Home (banner, Quick Service = Book a Nurse, Remote Monitoring tiles, empty state); branch `feat/patient-onboarding-parity` ([SOP](../sop/2026-11-23-patient-onboarding-parity.md)); **seen on the iOS simulator only, not Android or a real phone**
+- [ ] Home items not built, so off: AI search + filter, Medication Reminder, loved-ones carousel, Prescription / Physiotherapy / Nutrition quick tiles
+- [ ] Quick Service artwork export at 3x from the designer (the current circle is a low-res crop of the Figma PNG)
+- [ ] Owner decisions: unticked terms box, no "Create account" link on Login, "learning journey" wording
+- [ ] Slice 2 and later: the remaining 40 patient frames (`ledgers/PARITY-patient-A.md` rows 1-22, 25-26, 35 and B)
+
 ## Caregiver Home, profile menu and visit dialogs parity with Figma (2026-11-23)
 - [x] Home: menu and bell header, greeting and subtitle, weekly availability with the week strip, CarePlan card (nurses), Upcoming Appointments with Clock in / Clock out, New Job Request with Accept / Decline, Earning Summary, Notification block, Client Care Access
 - [x] Shared Figma confirmation dialog: decline (Home and Bookings, "Yes, Decline"), clock in (after the visit code, before it is sent), clock out (running timer, pay-held and care plan notices)

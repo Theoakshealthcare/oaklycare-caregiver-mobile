@@ -3,12 +3,10 @@ import type React from "react";
 import { useState } from "react";
 
 import { messageForError } from "@/src/api/errors";
+import AuthPage from "@/src/components/ui/auth-page";
 import Button from "@/src/components/ui/button";
 import ErrorDialog from "@/src/components/ui/ErrorDialog";
 import Input from "@/src/components/ui/input";
-import Screen from "@/src/components/ui/screen";
-import Text from "@/src/components/ui/text";
-import { theme } from "@/src/constants/theme";
 import { isEmail } from "@/src/domain/validation";
 import { useNav } from "@/src/navigation/Navigations";
 import { authService } from "@/src/services/auth.service";
@@ -22,7 +20,7 @@ const RecoverPassword: React.FC = () => {
   // The server answers 200 for any address, so this always moves on: the screen never says whether the email has an account.
   const request = useMutation({
     mutationFn: () => authService.requestPasswordReset(email.trim()),
-    onSuccess: () => navigation.navigate("ResetPassword", { email: email.trim() }),
+    onSuccess: () => navigation.navigate("RecoverCode", { email: email.trim() }),
     onError: (e) => setDialog(messageForError(e)),
   });
 
@@ -34,11 +32,10 @@ const RecoverPassword: React.FC = () => {
   };
 
   return (
-    <Screen title="Recover Password" scroll>
-      <Text color={theme.colors.textLight}>Enter the email you signed up with and we will email you a 5-digit code to reset your password.</Text>
+    <AuthPage title="Recover Password" subtitle="Provide your email address to recover your password">
       <Input
-        label="Email address"
-        placeholder="Your email address"
+        label="Email Address"
+        placeholder="Provide your Email Address"
         value={email}
         onChangeText={(value) => {
           setEmail(value);
@@ -50,9 +47,9 @@ const RecoverPassword: React.FC = () => {
         autoComplete="email"
         error={error}
       />
-      <Button title="Send Reset Code" onPress={submit} loading={request.isPending} />
+      <Button title="Send Recovery Link" onPress={submit} loading={request.isPending} />
       <ErrorDialog visible={dialog !== null} message={dialog ?? ""} onClose={() => setDialog(null)} />
-    </Screen>
+    </AuthPage>
   );
 };
 

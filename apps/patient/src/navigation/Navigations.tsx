@@ -14,7 +14,9 @@ export type ScreenParamLists = {
   VerifyEmail: { email: string };
   AccountCreated: undefined;
   RecoverPassword: undefined;
-  ResetPassword: { email: string };
+  /** `cleared` changes when the reset screen sends the person back, so the code boxes start empty again; `error` is what it found wrong with the code. */
+  RecoverCode: { email: string; cleared?: number; error?: string };
+  ResetPassword: { email: string; code: string };
   // Signed in, email not verified yet. Its own route name on purpose: the root navigation state outlives a gate switch
   // (signed out to unverified and back), and a shared name would carry the old screen into the other stack.
   GateVerifyEmail: { email: string };

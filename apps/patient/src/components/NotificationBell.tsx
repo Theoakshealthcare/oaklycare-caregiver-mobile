@@ -17,8 +17,9 @@ const NotificationBell: React.FC = () => {
       accessibilityLabel={unread > 0 ? `Notifications, ${unread} unread` : "Notifications"}
       hitSlop={8}
       onPress={() => navigation.navigate("Notifications")}
+      style={styles.round}
     >
-      <Icon name="notifications-outline" size={26} />
+      <Icon name="notifications-outline" size={20} />
       {unread > 0 ? (
         <View style={styles.badge}>
           <Text variant="small" weight="bold" color={theme.colors.white}>
@@ -31,6 +32,8 @@ const NotificationBell: React.FC = () => {
 };
 
 const styles = StyleSheet.create({
+  // Figma: a 40 pt round outline button, the twin of the menu button.
+  round: { width: 40, height: 40, borderRadius: 20, borderWidth: 1, borderColor: theme.colors.text, alignItems: "center", justifyContent: "center" },
   badge: {
     position: "absolute",
     top: -6,

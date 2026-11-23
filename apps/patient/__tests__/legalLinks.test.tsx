@@ -4,7 +4,7 @@ import { Linking } from "react-native";
 import { queryClient } from "../src/api/queryClient";
 import { PRIVACY_URL, TERMS_URL } from "../src/config/links";
 import { disableCacheGcForTests } from "../test-utils/fakeApi";
-import { renderSignedIn, renderSignedOut } from "../test-utils/renderApp";
+import { openCreateAccount, renderSignedIn, renderSignedOut } from "../test-utils/renderApp";
 
 jest.mock("expo-font", () => ({
   ...jest.requireActual("expo-font"),
@@ -34,7 +34,7 @@ describe("Terms and Privacy links", () => {
     it("the Privacy Policy opens in the in-app browser (not Safari) and does not tick the box", async () => {
       const safari = jest.spyOn(Linking, "openURL").mockResolvedValue(true);
       const { view } = await renderSignedOut();
-      await press("Create account");
+      await openCreateAccount();
       expect(checkbox().props.accessibilityState.checked).toBe(false);
       await fireEvent.press(screen.getByText("Privacy Policy"));
       await waitFor(() => expect(WebBrowser.openBrowserAsync).toHaveBeenCalledWith(PRIVACY_URL, CLOSE_BUTTON));
@@ -45,7 +45,7 @@ describe("Terms and Privacy links", () => {
 
     it("a link tap leaves the 'accept the terms' error in place; the box and the sentence still tick it", async () => {
       const { view } = await renderSignedOut();
-      await press("Create account");
+      await openCreateAccount();
       await press("Create Account");
       expect(await screen.findByText("Please accept the terms to continue")).toBeTruthy();
       await fireEvent.press(screen.getByText("Privacy Policy"));
@@ -53,7 +53,7 @@ describe("Terms and Privacy links", () => {
       await fireEvent.press(checkbox());
       expect(checkbox().props.accessibilityState.checked).toBe(true);
       expect(screen.queryByText("Please accept the terms to continue")).toBeNull();
-      await fireEvent.press(screen.getByText(/^I agree to the/));
+      await fireEvent.press(screen.getByText(/^By tapping Get Started/));
       expect(checkbox().props.accessibilityState.checked).toBe(false);
       view.unmount();
     });
@@ -62,7 +62,7 @@ describe("Terms and Privacy links", () => {
       WebBrowser.openBrowserAsync.mockRejectedValueOnce(new Error("no browser"));
       jest.spyOn(Linking, "openURL").mockRejectedValue(new Error("no browser either"));
       const { view } = await renderSignedOut();
-      await press("Create account");
+      await openCreateAccount();
       await fireEvent.press(screen.getByText("Privacy Policy"));
       expect(await screen.findByText("Couldn't open Privacy Policy")).toBeTruthy();
       expect(screen.getByText("Check your internet connection and try again.")).toBeTruthy();

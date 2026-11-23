@@ -3,7 +3,7 @@ import { Text as RNText, StyleSheet, type StyleProp, type TextProps as RNTextPro
 
 import { lineHeightFor, MAX_FONT_SCALE, theme } from "../../constants/theme";
 
-export type TextVariant = "h1" | "h2" | "h3" | "body" | "small";
+export type TextVariant = "h1" | "h2" | "h3" | "page" | "body" | "small" | "fine";
 export type TextWeight = "regular" | "medium" | "bold";
 
 interface TextProps extends RNTextProps {
@@ -28,8 +28,10 @@ const styles = StyleSheet.create({
   h1: { fontSize: theme.sizes.display, lineHeight: lineHeightFor(theme.sizes.display), color: theme.colors.text },
   h2: { fontSize: theme.sizes.heading, lineHeight: lineHeightFor(theme.sizes.heading), color: theme.colors.text },
   h3: { fontSize: theme.sizes.title, lineHeight: lineHeightFor(theme.sizes.title), color: theme.colors.text },
+  page: { fontSize: theme.sizes.pageTitle, lineHeight: lineHeightFor(theme.sizes.pageTitle), color: theme.colors.text },
   body: { fontSize: theme.sizes.body, lineHeight: lineHeightFor(theme.sizes.body), color: theme.colors.text },
   small: { fontSize: theme.sizes.caption, lineHeight: lineHeightFor(theme.sizes.caption), color: theme.colors.text },
+  fine: { fontSize: theme.sizes.fine, lineHeight: lineHeightFor(theme.sizes.fine) + 2, color: theme.colors.text },
   center: { textAlign: "center" },
 });
 

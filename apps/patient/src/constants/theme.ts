@@ -45,6 +45,15 @@ export const theme = {
     dark: "#1D1F24",
     warningLight: "#FDF6EC",
     errorLight: "#FCEDEB",
+    /**
+     * Green of the confirmation toast and title of the success pages. The Figma PNGs are exported in Display P3, so the raw
+     * pixel values (#65C466, #43976F) are not the sRGB values to use; these are the converted ones (same finding as the
+     * caregiver app). The brand teal and coral already match the design, do not change them from pixel readings.
+     */
+    /** Page background of Home (Figma: a faint cool white behind the white cards). */
+    pageTint: "#F9FBFB",
+    toast: "#35C759",
+    successTitle: "#00996C",
   },
   spacing: {
     xs: scale(4),
@@ -64,10 +73,14 @@ export const theme = {
   },
   /** The only font sizes in the app (design values, scaled by width). Raw `fontSize:` numbers are banned. */
   sizes: {
+    /** Legal fine print (the terms line under sign-up; Figma 11 pt). */
+    fine: scale(11),
     caption: scale(13),
     body: scale(15),
     subtitle: scale(17),
     title: scale(20),
+    /** Page title on the auth screens ("Create Your Account", "Login"; Figma 22 pt). */
+    pageTitle: scale(22),
     heading: scale(24),
     display: scale(28),
   },

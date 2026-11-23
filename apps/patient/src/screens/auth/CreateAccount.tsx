@@ -4,14 +4,14 @@ import { useState } from "react";
 import { Pressable, StyleSheet, View } from "react-native";
 
 import { messageForError } from "@/src/api/errors";
+import { rememberPendingSignIn } from "@/src/auth/pendingSignIn";
+import AuthPage from "@/src/components/ui/auth-page";
 import Button from "@/src/components/ui/button";
 import ErrorDialog from "@/src/components/ui/ErrorDialog";
 import Icon from "@/src/components/ui/icon";
 import Input from "@/src/components/ui/input";
 import LegalLink from "@/src/components/ui/legal-link";
-import Screen from "@/src/components/ui/screen";
 import Text from "@/src/components/ui/text";
-import TextLink from "@/src/components/ui/text-link";
 import { theme } from "@/src/constants/theme";
 import { isEmail, passwordProblem } from "@/src/domain/validation";
 import { usePageOpener } from "@/src/hooks/usePageOpener";
@@ -20,11 +20,15 @@ import { authService } from "@/src/services/auth.service";
 
 type Field = "name" | "email" | "password" | "terms";
 
+/** The Figma terms line says "By tapping Get Started"; change this one word if the owner decides it should name the button. */
+export const TERMS_ACTION = "Get Started";
+
 const CreateAccount: React.FC = () => {
   const navigation = useNav();
   const [name, setName] = useState("");
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
+  // Unticked until the person ticks it (owner decision, same as the caregiver app); Figma shows it pre-ticked.
   const [agreed, setAgreed] = useState(false);
   const [errors, setErrors] = useState<Partial<Record<Field, string>>>({});
   const [dialog, setDialog] = useState<string | null>(null);
@@ -32,7 +36,11 @@ const CreateAccount: React.FC = () => {
   const register = useMutation({
     mutationFn: () => authService.register({ fullName: name.trim(), email: email.trim(), password }),
     // The backend has sent the 5-digit code by now; the next screen takes it.
-    onSuccess: () => navigation.navigate("VerifyEmail", { email: email.trim() }),
+    onSuccess: () => {
+      // Kept in memory only, so "Start Booking Journey" after verification can sign in without asking again.
+      rememberPendingSignIn(email.trim(), password);
+      navigation.navigate("VerifyEmail", { email: email.trim() });
+    },
     onError: (error) => setDialog(messageForError(error, "register")),
   });
 
@@ -56,11 +64,11 @@ const CreateAccount: React.FC = () => {
   };
 
   return (
-    <Screen title="Create Your Account" scroll>
-      <Text color={theme.colors.textLight}>Tell us a little about you to get started.</Text>
+    // Scrolls to the end when the keyboard opens, so the button and the terms line stay above it.
+    <AuthPage title="Create Your Account" subtitle="Provide Your Personal Details" scrollToEndOnKeyboardShow>
       <Input
-        label="Full name"
-        placeholder="Your full name"
+        label="Full Name"
+        placeholder="Provide your Full Name"
         value={name}
         onChangeText={(value) => {
           setName(value);
@@ -71,8 +79,8 @@ const CreateAccount: React.FC = () => {
         error={errors.name}
       />
       <Input
-        label="Email address"
-        placeholder="Your email address"
+        label="Email Address"
+        placeholder="Provide your Email Address"
         value={email}
         onChangeText={(value) => {
           setEmail(value);
@@ -85,8 +93,8 @@ const CreateAccount: React.FC = () => {
         error={errors.email}
       />
       <Input
-        label="Create password"
-        placeholder="At least 8 characters"
+        label="Create Password"
+        placeholder="Enter your Password"
         value={password}
         onChangeText={(value) => {
           setPassword(value);
@@ -98,39 +106,45 @@ const CreateAccount: React.FC = () => {
         error={errors.password}
       />
 
+      <Button title="Create Account" onPress={submit} loading={register.isPending} />
+
+      {/* Figma puts the terms line under the button. */}
       <View>
         <View style={styles.terms}>
           <Pressable
             accessibilityRole="checkbox"
             accessibilityState={{ checked: agreed }}
-            accessibilityLabel="I agree to the Privacy Policy and Cookies Policy"
+            accessibilityLabel="I agree to the Terms of Service, Privacy Policy and Cookies Policy"
             hitSlop={8}
             onPress={toggleAgreed}
+            style={[
+              styles.box,
+              { borderColor: errors.terms ? theme.colors.error : theme.colors.primary, backgroundColor: agreed ? theme.colors.primary : theme.colors.white },
+            ]}
           >
-            <Icon name={agreed ? "checkbox" : "square-outline"} size={24} color={theme.colors.primary} />
+            {agreed ? <Icon name="checkmark" size={14} color={theme.colors.white} /> : null}
           </Pressable>
-          {/* The sentence still ticks the box when tapped; the Privacy Policy link inside it opens the page and does not. */}
-          <Text variant="small" style={styles.termsText} onPress={toggleAgreed}>
-            I agree to the{" "}
+          {/* The sentence still ticks the box when tapped; the links inside it open their page and do not. */}
+          <Text variant="fine" style={styles.termsText} onPress={toggleAgreed}>
+            {`By tapping ${TERMS_ACTION}, you agree to our `}
+            <LegalLink page="terms" onOpen={open}>
+              Terms of Service
+            </LegalLink>
+            {". Learn how we process your data in our "}
             <LegalLink page="privacy" onOpen={open}>
               Privacy Policy
-            </LegalLink>{" "}
-            and Cookies Policy
+            </LegalLink>
+            {" and "}
+            <LegalLink page="cookies" onOpen={open}>
+              Cookies Policy
+            </LegalLink>
           </Text>
         </View>
         {errors.terms ? (
-          <Text variant="small" color={theme.colors.secondary}>
+          <Text variant="small" color={theme.colors.secondary} style={styles.termsError}>
             {errors.terms}
           </Text>
         ) : null}
-      </View>
-
-      <Button title="Create Account" onPress={submit} loading={register.isPending} />
-      <View style={styles.footer}>
-        <Text variant="small" color={theme.colors.textLight}>
-          Already have an account?
-        </Text>
-        <TextLink label="Login" onPress={() => navigation.navigate("Login")} />
       </View>
 
       <ErrorDialog
@@ -140,14 +154,15 @@ const CreateAccount: React.FC = () => {
         onClose={() => setDialog(null)}
       />
       {pageDialog}
-    </Screen>
+    </AuthPage>
   );
 };
 
 const styles = StyleSheet.create({
-  terms: { flexDirection: "row", alignItems: "center", gap: theme.spacing.sm },
+  terms: { flexDirection: "row", alignItems: "flex-start", gap: 12 },
+  box: { width: 18, height: 18, borderRadius: 4, borderWidth: 1, marginTop: 1, alignItems: "center", justifyContent: "center" },
   termsText: { flex: 1 },
-  footer: { flexDirection: "row", justifyContent: "center", alignItems: "center", gap: theme.spacing.xs },
+  termsError: { marginTop: theme.spacing.xs },
 });
 
 export default CreateAccount;

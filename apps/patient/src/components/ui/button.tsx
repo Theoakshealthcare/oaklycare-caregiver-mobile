@@ -38,7 +38,8 @@ const Button: React.FC<ButtonProps> = ({
       variant === "outline" && styles.outline,
       variant === "danger" && styles.danger,
       variant === "light" && styles.light,
-      (disabled || loading) && styles.disabled,
+      // Figma: a disabled primary button is flat grey with white text; other variants (and a busy button) just dim.
+      disabled && variant === "primary" ? styles.disabledFill : (disabled || loading) && styles.disabled,
       style,
     ]}
     disabled={disabled || loading}
@@ -72,6 +73,7 @@ const styles = StyleSheet.create({
   danger: { backgroundColor: "transparent", borderWidth: 1, borderColor: theme.colors.secondary },
   light: { backgroundColor: theme.colors.white },
   disabled: { opacity: 0.5 },
+  disabledFill: { backgroundColor: "#9A9A9A" },
   text: { fontSize: theme.sizes.body, fontFamily: theme.fonts.bold },
   smallText: { fontSize: theme.sizes.caption },
 });
