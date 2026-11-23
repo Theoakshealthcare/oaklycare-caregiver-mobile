@@ -240,7 +240,8 @@ describe("states the server can give", () => {
     await renderScreen();
     expect(await screen.findByTestId("identity-expired-note")).toHaveTextContent(/That session timed out/);
     expect(screen.getByText(/didn't use up an attempt/)).toBeTruthy();
-    expect(screen.getByText("Start again")).toBeTruthy();
+    // Figma's two rows start a fresh attempt.
+    expect(screen.getByTestId("identity-start")).toBeTruthy();
   });
 
   it("an attempt that errored on our side says so", async () => {

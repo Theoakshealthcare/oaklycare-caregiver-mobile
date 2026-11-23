@@ -17,16 +17,19 @@ export function consentStepNumber(identityStep: boolean = kycEnabled()): number 
   return onboardingStepCount(identityStep);
 }
 
-/** "Step 2 of 4" and a bar that fills a quarter per step (DP1-09). */
+/**
+ * "Step 2" in small grey type over a thin track with a teal fill that grows by one step each time (Figma). The total only sets
+ * the fill: four steps with the identity check on (a quarter each), three without.
+ */
 const StepIndicator: React.FC<{ step: number; total?: number }> = ({ step, total = onboardingStepCount() }) => (
-  <View style={{ marginTop: 20 }}>
-    <Text variant="body" weight="medium" testID="step-label">
-      {`Step ${step} of ${total}`}
+  <View style={{ marginTop: 16 }}>
+    <Text variant="caption" color={theme.colors.textLight} testID="step-label">
+      {`Step ${step}`}
     </Text>
-    <View style={{ height: 4, backgroundColor: theme.colors.border, borderRadius: 2, marginTop: 8 }}>
+    <View style={{ height: 2, backgroundColor: theme.colors.border, marginTop: 8 }}>
       <View
         testID="step-bar"
-        style={{ height: 4, backgroundColor: theme.colors.primary, borderRadius: 2, width: `${Math.round((step / total) * 100)}%` }}
+        style={{ height: 2, backgroundColor: theme.colors.primary, width: `${Math.round((step / total) * 100)}%` }}
       />
     </View>
   </View>

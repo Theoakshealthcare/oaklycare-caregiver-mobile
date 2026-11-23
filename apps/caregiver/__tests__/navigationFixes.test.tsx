@@ -28,21 +28,21 @@ jest.mock("../src/hooks/queries", () => ({
 describe("onboarding", () => {
   it("shows the Login link on the first slide and navigates to Login", async () => {
     await render(<OnboardingScreen />);
-    expect(screen.getAllByText("Already have an account?").length).toBeGreaterThan(0);
+    expect(screen.getAllByText(/Already have an account \?/).length).toBeGreaterThan(0);
     fireEvent.press(screen.getAllByText("Login")[0]);
     expect(mockNavigate).toHaveBeenCalledWith("Login");
   });
 });
 
-describe("welcome slides are for caregivers", () => {
-  it("do not advertise FallGuard or patient-side copy, and there are three of them", async () => {
+describe("welcome slides follow the Figma frames (owner, 2026-11-23: exact parity, four slides)", () => {
+  it("are the four Figma slides, FallGuard included", async () => {
     await render(<OnboardingScreen />);
-    expect(screen.queryByText(/FallGuard/i)).toBeNull();
-    expect(screen.queryByText(/Dad/i)).toBeNull();
-    expect(screen.queryByText(/chat with nurses/i)).toBeNull();
-    expect(screen.queryByText(/Book a Nurse/i)).toBeNull();
-    expect(screen.getByText("Care work that")).toBeTruthy();
-    expect(screen.getByText(/Get visit requests near you/)).toBeTruthy();
+    expect(screen.getByText("AI-Powered Personalized")).toBeTruthy();
+    expect(screen.getByText("Remote Monitoring &")).toBeTruthy();
+    expect(screen.getByText("Oakly FallGuard™ Fall Predictor–")).toBeTruthy();
+    expect(screen.getByText("Book a Nurse Instantly.")).toBeTruthy();
+    expect(screen.getByText(/Stay ahead of falls with real-time monitoring/)).toBeTruthy();
+    expect(screen.queryByText("Care work that")).toBeNull();
   });
 });
 

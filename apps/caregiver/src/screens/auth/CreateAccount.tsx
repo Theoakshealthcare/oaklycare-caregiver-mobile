@@ -13,11 +13,14 @@ import Navigation from '@/src/hooks/use-navigation';
 import { globalStyles } from '@/src/constants/styles';
 import HeaderBack from '@/src/components/back/HeaderBack';
 import ScreenSize from '@/src/hooks/screen-size';
-import Icon from '@/src/components/ui/icon';
 import ErrorDialog from '@/src/components/ui/ErrorDialog';
 import LegalLink from '@/src/components/ui/legal-link';
 import { messageForError } from '@/src/api/errors';
 import { authService } from '@/src/services/auth.service';
+import { rememberPendingSignIn } from '@/src/auth/pendingSignIn';
+
+/** The Figma terms line says "By tapping Get Started"; change this one word if the owner decides it should name the button. */
+export const TERMS_ACTION = 'Get Started';
 
 const CreateAccount: React.FC = () => {
   const { navigation } = Navigation();
@@ -26,7 +29,6 @@ const CreateAccount: React.FC = () => {
   const [formData, setFormData] = useState({
     fullName: '',
     email: '',
-    phone: '',
     password: '',
   });
   const [isChecked, setIsChecked] = useState<boolean>(false);
@@ -38,11 +40,14 @@ const CreateAccount: React.FC = () => {
       authService.register({
         fullName: formData.fullName.trim(),
         email: formData.email.trim(),
-        phoneNumber: formData.phone.trim() || undefined,
         password: formData.password,
       }),
     // The email OTP was just sent: go and enter it.
-    onSuccess: () => navigation.navigate('VerifyEmail', { email: formData.email.trim() }),
+    onSuccess: () => {
+      // Kept in memory only, so "Set up your Account" after verification can sign in without asking again.
+      rememberPendingSignIn(formData.email.trim(), formData.password);
+      navigation.navigate('VerifyEmail', { email: formData.email.trim() });
+    },
     onError: (error) => setDialog(messageForError(error)),
   });
 
@@ -65,10 +70,6 @@ const CreateAccount: React.FC = () => {
       newErrors.email = 'Email address is required';
     } else if (!/^\S+@\S+\.\S+$/.test(formData.email.trim())) {
       newErrors.email = 'Please enter a valid email address';
-    }
-
-    if (formData.phone.trim() && !/^\+?[0-9\s-]{7,15}$/.test(formData.phone.trim())) {
-      newErrors.phone = 'Please enter a valid phone number';
     }
 
     if (!formData.password) {
@@ -124,15 +125,6 @@ const CreateAccount: React.FC = () => {
             />
 
             <Input
-              label="Phone Number (optional)"
-              placeholder="+234"
-              value={formData.phone}
-              onChangeText={(text: string) => updateFormData('phone', text)}
-              keyboardType="phone-pad"
-              error={errors.phone}
-            />
-
-            <Input
               label="Create Password"
               placeholder="Enter your Password"
               value={formData.password}
@@ -152,6 +144,7 @@ const CreateAccount: React.FC = () => {
                   borderRadius: 4,
                   borderWidth: 1,
                   borderColor: errors.terms ? theme.colors.error : theme.colors.primary,
+                  backgroundColor: isChecked ? theme.colors.primary : theme.colors.white,
                   marginRight: 12,
                   justifyContent: 'center',
                   alignItems: 'center',
@@ -163,26 +156,21 @@ const CreateAccount: React.FC = () => {
                   }
                 }}
               >
-                {isChecked && (
-                  <Icon
-                    name="checkbox"
-                    size={16}
-                    color={theme.colors.primary}
-                  />
-                )}
+                {isChecked && <Feather name="check" size={14} color={theme.colors.white} />}
               </Pressable>
 
               <View style={{ flex: 1 }}>
                 <Text variant="small" style={{ lineHeight: 18 }}>
-                  By tapping Create Account, you agree to our{' '}
+                  {`By tapping ${TERMS_ACTION}, you agree to our `}
                   <LegalLink page="terms">Terms of Services</LegalLink>.
                   {' '}Learn how we process your data in our{' '}
                   <LegalLink page="privacy">Privacy Policy</LegalLink>
                   {' '}and{' '}
                   <Text
                     variant="small"
+                    weight="bold"
                     color={theme.colors.primary}
-                    style={{ marginBottom: -7 }}
+                    style={{ textDecorationLine: 'underline' }}
                   >
                     Cookies Policy
                   </Text>

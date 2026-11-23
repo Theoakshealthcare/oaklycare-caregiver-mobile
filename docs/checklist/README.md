@@ -24,6 +24,17 @@ channel) lives in the backend repo: `docs/checklist/MASTER_CHECKLIST.md`. Update
 - [ ] Android keyboard pass; patient app to adopt `filePart` and `isNetworkFailure` when it gets uploads
 - [ ] DP1-05 (visit rules) and DP1-06 (decline semantics): owner decisions pending
 
+## Caregiver onboarding parity with Figma (2026-11-23)
+- [x] Welcome slides: four, Figma copy, FallGuard on the coral panel, Get Started on every slide opens sign-up
+- [x] One reusable green toast (`components/ui/toast.tsx`): Login Successful, Email Address Verified (gate path), Password has been Reset Successfully
+- [x] Sign-up (no phone box), code screen (OS number pad, no Verify button unless a network failure kept the code), account-created page (Set up your Account signs in and opens the setup), login
+- [x] Recover password: Recovery Link, code screen, Reset Password with two fields, toast
+- [x] Setup steps 1-3: header, "Step N" bar in quarters, identity step as the Figma two rows; consent screen "Give Consent"; new Profile Setup Completed page
+- [x] Staging build turns the identity step on (`EXPO_PUBLIC_KYC_MODE: "api"` in `eas.json` preview)
+- [ ] **Not device-verified** (Jest, tsc and ESLint only): built on `feat/caregiver-onboarding-parity` ([SOP](../sop/2026-11-23-caregiver-onboarding-parity.md))
+- [ ] Owner decisions: pre-ticked terms box, "Get Started" in the terms line, the account-created body sentence, the removed consent paragraphs, "Email Address Verified" after a recovery code (needs a backend code-check endpoint), a Cookies Policy URL
+- [ ] Native Document Scan / Face Scan camera frames (the check runs on the hosted Dojah page)
+
 ## Device pass 1 minors and visit-rule follow-ups (2026-11-07)
 - [x] Fall tab removed, caregiver welcome slides, logout lands on Login (DP1-18, 11, 12); one truthful location sentence and no stale-location warning before location is shared (DP1-13, 14); Job Details wording, notification rows, declined offers "No longer available", held earning "Under review" (DP1-15, 20, 06); visit screens and care plan / vitals links (DP1-19, 32); shared date formatter and `DateField`, care-plan form defaults (DP1-28, 25); care-plan back stack and client "View all" push (DP1-26, 30); multi-select areas and 4-step onboarding (DP1-29, 09); AI note taker mic on tap (DP1-17); Contact us and delete-account copy (DP1-24, 27). Branch `fix/caregiver-device-pass-minors`, **device-verified on the simulator**, see docs/sop/2026-11-07-caregiver-device-pass-minors.md and ledgers/LEDGER-device-caregiver-minors.md
 - [x] Caregiver earning on Job Details and a real "I've arrived" (2026-11-08, branch `feature/caregiver-arrived-earning-ui`, needs backend #48; **device-verified on the simulator**, see docs/sop/2026-11-08-caregiver-arrived-and-earning.md and ledgers/LEDGER-device-caregiver-arrived.md)
@@ -96,7 +107,7 @@ channel) lives in the backend repo: `docs/checklist/MASTER_CHECKLIST.md`. Update
 - [ ] Clinical sign-off of seeded templates and copy (go-live gate)
 
 ## Caregiver reset password by code (2026-11-07)
-- [x] Recover and Reset screens moved to the emailed 5-digit code (`{email, code, new_password}`; no long-token field left), Resend with a 60 s cooldown, `detail.code` sentences, "signed out on your other devices" on success; branch `feature/apps-reset-by-code`, see docs/sop/2026-11-07-apps-reset-password-by-code.md; Jest only, **not device-verified**
+- [x] (Reshaped 2026-11-23 by the onboarding parity change: the code is now typed on its own screen, Reset Password has two fields, the success is a toast; see its SOP.) Recover and Reset screens moved to the emailed 5-digit code (`{email, code, new_password}`; no long-token field left), Resend with a 60 s cooldown, `detail.code` sentences, "signed out on your other devices" on success; branch `feature/apps-reset-by-code`, see docs/sop/2026-11-07-apps-reset-password-by-code.md; Jest only, **not device-verified**
 - [ ] Walk it on a device with a real inbox (caregiver second device pass)
 - [ ] Backend env `PASSWORD_RESET_LEGACY_TOKEN_ENABLED=false` once the previously installed caregiver build (which pastes the long token) is retired: **not flipped by this change**
 

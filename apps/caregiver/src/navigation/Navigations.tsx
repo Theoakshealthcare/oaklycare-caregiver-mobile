@@ -9,7 +9,9 @@ export type ScreenParamLists = {
   VerifyEmail: { email: string };
   AccountCreated: undefined;
   RecoverPassword: undefined;
-  ResetPassword: { email: string };
+  /** The emailed code for a password reset; `cleared` changes when a wrong code sends the caregiver back, so the boxes empty. */
+  RecoverCode: { email: string; cleared?: number };
+  ResetPassword: { email: string; code: string };
   // Signed in, profile not approved yet
   CaregiverSetupStep1: undefined;
   CaregiverSetupStep2: undefined;
@@ -17,6 +19,8 @@ export type ScreenParamLists = {
   IdentityVerification: undefined;
   ConsentScreen: undefined;
   VerificationStatus: undefined;
+  /** The success page right after consent is submitted, before the status screen. */
+  ProfileSetupCompleted: undefined;
   // Signed in and approved
   /** `tab` + `at` select a tab on arrival (`at` is a changing nonce so repeating the same tab still applies). */
   BottomNavigation: { tab?: "home" | "booking" | "vitals"; at?: number } | undefined;

@@ -8,6 +8,7 @@ import { theme } from "@/src/constants/theme";
 import Text from "@/src/components/ui/text";
 import Button from "@/src/components/ui/button";
 import Input from "@/src/components/ui/input";
+import { showToast } from "@/src/components/ui/toast";
 import ErrorDialog from "@/src/components/ui/ErrorDialog";
 import HeaderBack from "@/src/components/back/HeaderBack";
 import { globalStyles } from "@/src/constants/styles";
@@ -25,6 +26,7 @@ const Login: React.FC = () => {
   // screen (verify email, onboarding step, status or home). There is nothing to navigate to here.
   const login = useMutation({
     mutationFn: () => authService.login(emailPhone.trim(), password),
+    onSuccess: () => showToast("Login Successful"),
     onError: (error) => setDialog({ title: "Login failed", message: messageForError(error, "login") }),
   });
 
@@ -77,7 +79,7 @@ const Login: React.FC = () => {
         />
 
         <Pressable style={{ alignSelf: "flex-end" }} onPress={() => navigation.navigate("RecoverPassword")}>
-          <Text variant="small" color={theme.colors.primary}>
+          <Text variant="small" weight="bold">
             Forgot Password
           </Text>
         </Pressable>

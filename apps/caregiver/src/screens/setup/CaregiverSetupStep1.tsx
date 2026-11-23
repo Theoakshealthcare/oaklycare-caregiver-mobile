@@ -138,8 +138,6 @@ const CaregiverSetupStep1 = () => {
               placeholder="Enter your House Address"
               value={formData.address}
               onChangeText={(text) => updateFormData("address", text)}
-              multiline
-              numberOfLines={3}
               error={errors.address}
             />
 

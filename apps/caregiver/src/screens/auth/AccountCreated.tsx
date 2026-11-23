@@ -1,107 +1,64 @@
-import { View, StyleSheet, TouchableOpacity, Pressable } from "react-native";
-import { useNavigation } from "@react-navigation/native";
+import { useState } from "react";
+import { Pressable, ScrollView, View } from "react-native";
+
 import { theme } from "../../constants/theme";
-import Box from "../../components/ui/box";
 import Text from "../../components/ui/text";
 import Button from "../../components/ui/button";
 import Icon from "../../components/ui/icon";
+import SuccessIllustration from "../../components/ui/success-illustration";
 import Navigation from "@/src/hooks/use-navigation";
 import { globalStyles } from "@/src/constants/styles";
-import Image from "@/src/components/ui/image";
-import ScreenSize from "@/src/hooks/screen-size";
-import { Done } from "@/src/components/ui/done";
+import { takePendingSignIn } from "@/src/auth/pendingSignIn";
+import { authService } from "@/src/services/auth.service";
+
+/** The words of the Figma "account created" frame. The body is copied as drawn. */
+export const ACCOUNT_CREATED_TITLE = "Congratulations! Your account setup is complete!";
+export const ACCOUNT_CREATED_BODY = "Account successfully created! Welcome aboard! Let the learning journey begin!";
 
 const AccountCreated = () => {
   const { navigation } = Navigation();
-  const { width } = ScreenSize();
+  const [busy, setBusy] = useState(false);
 
-  // Registered and verified: sign in to continue with onboarding.
-  const handleContinue = () => {
-    navigation.navigate("Login");
+  // "Set up your Account": the account was just verified, so sign in with what was typed on the sign-up form and the auth
+  // gate opens the setup. When that is not possible (the app was restarted, or the sign-in failed) the Login screen does the same.
+  const handleSetUp = async () => {
+    if (busy) return;
+    const credentials = takePendingSignIn();
+    if (!credentials) {
+      navigation.navigate("Login");
+      return;
+    }
+    setBusy(true);
+    try {
+      await authService.login(credentials.email, credentials.password);
+    } catch {
+      setBusy(false);
+      navigation.navigate("Login");
+    }
   };
 
   return (
-    <View style={[globalStyles.container, {flex: 1}]}>
-      <Pressable
-        onPress={handleContinue}
-        style={globalStyles.row}
-      >
+    <View style={[globalStyles.container, { flex: 1 }]}>
+      <Pressable onPress={() => navigation.navigate("Login")} style={globalStyles.row} accessibilityRole="button">
         <Icon name="close-circle-outline" size={24} />
         <Text>Close</Text>
       </Pressable>
 
-      <Box flex={1} center style={{gap: theme.spacing.lg}}>
-        <Done />
+      <ScrollView contentContainerStyle={{ flexGrow: 1, alignItems: "center", justifyContent: "center", gap: theme.spacing.lg }}>
+        <SuccessIllustration />
 
-        <Text
-          variant="h2"
-          weight="bold"
-          color={theme.colors.primary}
-          center
-          style={styles.title}
-        >
-          Your email is verified!
+        <Text variant="h2" weight="bold" color={theme.colors.success} center>
+          {ACCOUNT_CREATED_TITLE}
         </Text>
 
-        <Text
-          variant="body"
-          color={theme.colors.textLight}
-          center
-          style={styles.subtitle}
-        >
-          Welcome to Oakly. Log in to finish setting up your caregiver profile so we can review it.
+        <Text variant="small" color={theme.colors.textLight} center>
+          {ACCOUNT_CREATED_BODY}
         </Text>
 
-        <Button
-          title="Log in to continue"
-          onPress={handleContinue}
-          style={styles.button}
-        />
-      </Box>
+        <Button title="Set up your Account" onPress={() => void handleSetUp()} loading={busy} style={{ width: "100%", borderRadius: 30 }} />
+      </ScrollView>
     </View>
   );
 };
-
-const styles = StyleSheet.create({
-  container: {
-    flex: 1,
-    backgroundColor: theme.colors.white,
-    padding: 24,
-  },
-  header: {
-    marginTop: 20,
-    marginBottom: 24,
-  },
-  content: {
-    gap: 24,
-  },
-  successCircle: {
-    width: 160,
-    height: 160,
-    borderRadius: 80,
-    backgroundColor: "rgba(22, 130, 131, 0.1)",
-    justifyContent: "center",
-    alignItems: "center",
-    marginBottom: 24,
-  },
-  checkCircle: {
-    width: 80,
-    height: 80,
-    borderRadius: 40,
-    backgroundColor: theme.colors.primary,
-    justifyContent: "center",
-    alignItems: "center",
-  },
-  title: {
-    marginBottom: 8,
-  },
-  subtitle: {
-    marginBottom: 32,
-  },
-  button: {
-    width: "100%",
-    borderRadius: 30,
-  },
-});
 
 export default AccountCreated;

@@ -17,8 +17,8 @@ export const SENT_TITLE = "Check your email";
 export const SENT_MESSAGE = "If that email has an account, we've sent a 5-digit code. It works once and for 15 minutes. Check your spam folder too.";
 export const RESENT_NOTICE = "If that email has an account, we've sent a new code. Use the newest email and check your spam folder.";
 export const INVALID_CODE_MESSAGE = "That code isn't right or has expired. Request a new one.";
-export const SUCCESS_TITLE = "Password reset";
-export const SUCCESS_MESSAGE = "Your password has been reset. Log in with your new password. You've been signed out on your other devices.";
+/** The green toast after a reset (Figma). Every other session of the account is ended by the server. */
+export const SUCCESS_TOAST = "Password has been Reset Successfully";
 
 /** Digits only, never more than 5: what the code box keeps after typing, pasting or the keyboard's "code from email". */
 export const codeDigits = (value: string): string => value.replace(/\D/g, "").slice(0, RESET_CODE_LENGTH);

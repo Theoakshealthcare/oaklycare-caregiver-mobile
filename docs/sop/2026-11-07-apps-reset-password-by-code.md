@@ -1,3 +1,5 @@
+> **Update 2026-11-23 (caregiver only, `2026-11-23-caregiver-onboarding-parity.md`):** the caregiver app now collects the code on its own screen (RecoverCode), Reset Password has only the two password fields, and success is a green toast instead of an alert. The API calls and the failure sentences are unchanged.
+
 # SOP: Reset password by the emailed 5-digit code (patient and caregiver apps)
 
 | | |

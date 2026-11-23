@@ -1,5 +1,5 @@
 import React from "react";
-import { ActivityIndicator, ScrollView, View } from "react-native";
+import { ActivityIndicator, Pressable, ScrollView, View } from "react-native";
 import { Feather } from "@expo/vector-icons";
 
 import StepIndicator, { ONBOARDING_STEP } from "@/src/components/ui/step-indicator";
@@ -75,9 +75,73 @@ const Body: React.FC<{ children: React.ReactNode; testID?: string }> = ({ childr
   </Text>
 );
 
+/** The two rows of the Figma identity step. Both open the same hosted check, which takes the ID photo and then the live selfie. */
+export const SCAN_ID_LABEL = "Scan identification";
+export const SCAN_ID_PLACEHOLDER = "National ID, Passport, or Driver’s License";
+export const FACE_SCAN_LABEL = "Face Scan Verification";
+export const FACE_SCAN_PLACEHOLDER = "Turn on your Camera";
+
+const ChooserRow: React.FC<{ testID: string; label: string; placeholder: string; disabled: boolean; onPress: () => void }> = ({
+  testID,
+  label,
+  placeholder,
+  disabled,
+  onPress,
+}) => (
+  <View style={{ gap: 8 }}>
+    <Text variant="body" weight="medium">
+      {label}
+    </Text>
+    <Pressable
+      testID={testID}
+      accessibilityRole="button"
+      accessibilityLabel={`${label}: ${placeholder}`}
+      accessibilityState={{ disabled }}
+      disabled={disabled}
+      onPress={onPress}
+      style={{
+        flexDirection: "row",
+        alignItems: "center",
+        justifyContent: "space-between",
+        borderWidth: 1,
+        borderColor: theme.colors.primary,
+        borderRadius: theme.borderRadius.lg,
+        paddingHorizontal: theme.spacing.md,
+        paddingVertical: theme.spacing.md,
+        opacity: disabled ? 0.5 : 1,
+      }}
+    >
+      <Text variant="body" color={theme.colors.textLight} style={{ flexShrink: 1 }}>
+        {placeholder}
+      </Text>
+      <Feather name="chevron-right" size={20} color={theme.colors.text} />
+    </Pressable>
+  </View>
+);
+
 const IdentityVerificationView: React.FC<IdentityViewProps> = (props) => {
   const { screen, state, consentChecked, onToggleConsent, onStart, onContinue } = props;
   const newAttempt = asksConsent(screen);
+
+  // Both rows start (or resume) the same verification; a new attempt needs the explicit consent below them first.
+  const chooser = (
+    <View style={{ gap: 16 }}>
+      <ChooserRow
+        testID="identity-start"
+        label={SCAN_ID_LABEL}
+        placeholder={SCAN_ID_PLACEHOLDER}
+        disabled={newAttempt && !consentChecked}
+        onPress={onStart}
+      />
+      <ChooserRow
+        testID="identity-start-face"
+        label={FACE_SCAN_LABEL}
+        placeholder={FACE_SCAN_PLACEHOLDER}
+        disabled={newAttempt && !consentChecked}
+        onPress={onStart}
+      />
+    </View>
+  );
 
   const startButton = (title: string) => (
     <Button
@@ -149,22 +213,25 @@ const IdentityVerificationView: React.FC<IdentityViewProps> = (props) => {
                 </Text>
               </View>
             ) : null}
+            {chooser}
             <ConsentBlock checked={consentChecked} onToggle={onToggleConsent} />
-            {startButton(screen === "intro" ? "Start" : screen === "tryAgain" ? "Try again" : "Start again")}
+            {/* Grey until the check is done, as in Figma; the result screens below carry the live Continue. */}
+            <Button testID="identity-save" title="Save & Continue" onPress={() => undefined} disabled style={{ alignSelf: "stretch" }} />
           </View>
         );
 
       case "resume":
         return (
-          <Panel testID="identity-resume" icon="shield" title="Continue verifying your identity">
+          <View testID="identity-resume" style={{ gap: 24 }}>
             <Body>You&apos;ve already agreed to this identity check. Pick up where you left off.</Body>
+            {chooser}
             {state ? (
               <Text testID="identity-attempt" variant="small" color={theme.colors.textLight}>
                 {attemptLabel(state, screen)}
               </Text>
             ) : null}
-            {startButton("Continue verification")}
-          </Panel>
+            <Button testID="identity-save" title="Save & Continue" onPress={() => undefined} disabled style={{ alignSelf: "stretch" }} />
+          </View>
         );
 
       case "starting":
@@ -310,7 +377,15 @@ const IdentityVerificationView: React.FC<IdentityViewProps> = (props) => {
       <ScrollView keyboardShouldPersistTaps="handled" contentContainerStyle={{ flexGrow: 1 }}>
         <View style={[globalStyles.container, { gap: 8 }]}>
           <HeaderBack />
-          <StepIndicator step={ONBOARDING_STEP.identity} />
+          <View style={{ marginTop: 16 }}>
+            <Text variant="h2" weight="bold">
+              Set up your Account
+            </Text>
+            <StepIndicator step={ONBOARDING_STEP.identity} />
+          </View>
+          <Text variant="h3" weight="bold" style={{ marginTop: 16 }}>
+            Identity Verification
+          </Text>
           {props.banner ? (
             <View testID="identity-banner" style={{ padding: 14, borderRadius: 12, backgroundColor: theme.colors.warning + "33" }}>
               <Text variant="body" color={theme.colors.warningText}>

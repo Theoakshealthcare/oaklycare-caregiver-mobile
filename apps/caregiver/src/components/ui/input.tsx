@@ -103,7 +103,7 @@ const Input: React.FC<InputProps> = ({
             onPress={togglePasswordVisibility}
           >
             <Feather
-              name={isPasswordVisible ? "eye-off" : "eye"}
+              name={isPasswordVisible ? "eye" : "eye-off"}
               size={20}
               color={theme.colors.textLight}
             />

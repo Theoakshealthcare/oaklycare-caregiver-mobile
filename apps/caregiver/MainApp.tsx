@@ -6,6 +6,7 @@ import { installNotificationHandler, usePushRegistration } from "./src/push/nati
 import FocusedStatusBar from "./src/components/StatusBar/FocusedStatusBar";
 import { globalStyles } from "./src/constants/styles";
 import { theme } from "./src/constants/theme";
+import { ToastHost } from "./src/components/ui/toast";
 import StackNavigator from "./src/navigation/StackNavigator";
 
 installNotificationHandler();
@@ -23,6 +24,7 @@ const MainApp = () => {
     <SafeAreaView style={globalStyles.safearea}>
       <FocusedStatusBar backgroundColor={theme.colors.primary} barStyle="light-content" />
       <StackNavigator />
+      <ToastHost />
     </SafeAreaView>
   );
 };
