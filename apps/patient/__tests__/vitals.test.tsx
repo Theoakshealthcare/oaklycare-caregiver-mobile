@@ -1,11 +1,31 @@
 import { fireEvent, screen, waitFor } from "@testing-library/react-native";
 
 import { queryClient } from "../src/api/queryClient";
-import { toCreateBody, toReading, validateEntry } from "../src/domain/vitals";
+import { formatAgo, formatUpdated } from "../src/domain/format";
+import { VITAL_STATUS_ENABLED, VITAL_THRESHOLDS, vitalStatus } from "../src/domain/vitalStatus";
+import { convertUnit, durationLabel, entryToInputs, sleepHours, timeLabel, toCreateBody, toInsights, toReading, validateEntry } from "../src/domain/vitals";
 import { disableCacheGcForTests } from "../test-utils/fakeApi";
 import { live, liveBody, liveReply } from "../test-utils/live";
 import { capture } from "../test-utils/captures";
 import { renderSignedIn } from "../test-utils/renderApp";
+
+const mockShare = jest.fn(async (_uri: string, _options?: unknown) => undefined);
+const mockWritten: string[] = [];
+jest.mock("expo-sharing", () => ({ isAvailableAsync: jest.fn(async () => true), shareAsync: (...args: [string, unknown]) => mockShare(...args) }));
+jest.mock("expo-file-system", () => ({
+  Paths: { cache: "file:///cache/" },
+  File: class {
+    uri: string;
+    constructor(dir: string, name: string) {
+      this.uri = `${dir}${name}`;
+    }
+    create() {}
+    write(text: string) {
+      mockWritten.push(text);
+    }
+    delete() {}
+  },
+}));
 
 jest.mock("expo-font", () => ({
   ...jest.requireActual("expo-font"),
@@ -30,19 +50,30 @@ const listAt = (hoursAgo: number) =>
 describe("vitals (live-shaped)", () => {
   beforeAll(() => disableCacheGcForTests(queryClient));
   afterAll(() => queryClient.clear());
+  beforeEach(() => {
+    mockShare.mockClear();
+    mockWritten.length = 0;
+  });
+
+  const INSIGHTS = `GET /api/v1/vitals/${PATIENT_ID}/insights`;
+  const DOWNLOAD = `GET /api/v1/vitals/${PATIENT_ID}/download`;
+  /** The captured insights answer is the server's "Unable to analyze" stand-in (no Gemini key locally); the success shape below is not captured. */
+  const insightsOk = () => ({ status: 200, body: { summary: "Your readings look steady.", concerns: ["Blood pressure was a little high on Monday."], recommendations: ["Aim for 7 to 8 hours of sleep."], key_vitals: ["blood_pressure"] } });
 
   describe("domain", () => {
-    it("reads the captured rows: blood pressure as two numbers, glucose context and sleep times from notes, anything else dropped", () => {
+    it("reads the captured rows: blood pressure as two numbers, units, glucose context and sleep times from notes, anything else dropped", () => {
       const rows = liveBody<any[]>("vitals-list");
       const readings = rows.map(toReading);
       const bp = readings.find((r) => r?.kind === "blood_pressure" && r.value === 120);
-      expect(bp).toMatchObject({ value: 120, secondary: 80 });
-      expect(readings.find((r) => r?.glucoseContext === "FBS")?.value).toBe(92);
+      expect(bp).toMatchObject({ value: 120, secondary: 80, unit: "mmHg" });
+      expect(readings.find((r) => r?.glucoseContext === "FBS")).toMatchObject({ value: 92, unit: "mg/dL" });
       expect(readings.find((r) => r?.kind === "sleep_duration")).toMatchObject({ value: 7.5, sleepStart: "22:30", sleepWake: "06:00" });
       // the server accepted a "banana" vital with value "not a number": the app cannot show it, so it does not
       expect(rows.some((r) => r.vital_type === "banana")).toBe(true);
       expect(readings.filter((r) => r === null)).toHaveLength(1);
       expect(toReading({ ...rows[0], value: "12o/80" })).toBeNull();
+      // a reading saved in °F keeps its unit
+      expect(toReading({ ...rows.find((r) => r.vital_type === "temperature"), unit: "°F", value: "98.6" })).toMatchObject({ value: 98.6, unit: "°F" });
     });
 
     it("builds a create body with the same keys as the captured request", () => {
@@ -50,6 +81,7 @@ describe("vitals (live-shaped)", () => {
       const body = toCreateBody({ kind: "blood_pressure", value: 120, secondary: 80 }, { patientId: PATIENT_ID, userId: USER_ID }, new Date("2026-11-07T15:33:58.737Z"));
       expect(Object.keys(body).sort()).toEqual(Object.keys(captured).sort());
       expect(body).toMatchObject({ vital_type: "blood_pressure", value: "120/80", unit: "mmHg", source: "manual", patient_id: PATIENT_ID, recorded_by_user_id: USER_ID });
+      expect(toCreateBody({ kind: "blood_glucose", value: 7.8, unit: "mmol/L", glucoseContext: "PP" }, { patientId: PATIENT_ID, userId: USER_ID })).toMatchObject({ value: "7.8", unit: "mmol/L", notes: "PP" });
     });
 
     it("refuses what the server accepted: 300/20 blood pressure (DP1-16)", () => {
@@ -65,36 +97,101 @@ describe("vitals (live-shaped)", () => {
       expect(validateEntry("blood_pressure", { value: "120", secondary: "80" })).toEqual({});
       expect(validateEntry("heart_rate", { value: "1e2" }).value).toBe("Enter a number from 20 to 250");
       expect(validateEntry("temperature", { value: "36,8" })).toEqual({});
-      expect(validateEntry("sleep_duration", { start: "25:00", wake: "06:00" }).start).toBe("Enter a time like 22:30");
+      expect(validateEntry("sleep_duration", { start: "", wake: "06:00" }).start).toBe("Select a time");
       expect(validateEntry("sleep_duration", { start: "22:30", wake: "22:30" }).wake).toMatch(/less than 30 minutes/);
       expect(validateEntry("sleep_duration", { start: "22:30", wake: "06:30" })).toEqual({});
+    });
+
+    it("checks each unit against its own range (the server's: 30 to 45 °C or 86 to 113 °F, 20 to 600 mg/dL or 1.1 to 33.3 mmol/L)", () => {
+      expect(validateEntry("temperature", { value: "98.6" }, "°C").value).toBe("Enter a number from 30 to 45");
+      expect(validateEntry("temperature", { value: "98.6" }, "°F")).toEqual({});
+      expect(validateEntry("temperature", { value: "36.8" }, "°F").value).toBe("Enter a number from 86 to 113");
+      expect(validateEntry("blood_glucose", { RBS: "7.3" }, "mmol/L")).toEqual({});
+      expect(validateEntry("blood_glucose", { RBS: "7.3" }, "mg/dL").RBS).toBe("Enter a number from 20 to 600");
+      expect(validateEntry("blood_glucose", {}, "mg/dL")).toEqual({ RBS: "Enter at least one reading" });
+      expect(validateEntry("blood_glucose", { RBS: "", FBS: "5.1", PP: "" }, "mmol/L")).toEqual({});
+    });
+
+    it("glucose sends one reading per filled box, each with its own context and the unit chosen; sleep sends the hours between the two times", () => {
+      expect(entryToInputs("blood_glucose", { RBS: "7.3", FBS: "", PP: "4,1" }, "mmol/L")).toEqual([
+        { kind: "blood_glucose", value: 7.3, unit: "mmol/L", glucoseContext: "RBS" },
+        { kind: "blood_glucose", value: 4.1, unit: "mmol/L", glucoseContext: "PP" },
+      ]);
+      expect(entryToInputs("sleep_duration", { start: "22:00", wake: "5:00" })).toEqual([{ kind: "sleep_duration", value: 7, sleepStart: "22:00", sleepWake: "05:00" }]);
+      expect(entryToInputs("temperature", { value: "98.6" }, "°F")).toEqual([{ kind: "temperature", value: 98.6, unit: "°F" }]);
+      expect(entryToInputs("heart_rate", { value: "82" })).toEqual([{ kind: "heart_rate", value: 82 }]);
+    });
+
+    it("converts temperature and glucose between units, and writes times and durations as the design does", () => {
+      expect(convertUnit("temperature", 98.6, "°F", "°C")).toBe(37);
+      expect(convertUnit("temperature", 37, "°C", "°F")).toBe(98.6);
+      expect(convertUnit("blood_glucose", 7.8, "mmol/L", "mg/dL")).toBe(141);
+      expect(convertUnit("blood_glucose", 90, "mg/dL", "mmol/L")).toBe(5);
+      expect(convertUnit("heart_rate", 72, "bpm", "bpm")).toBe(72);
+      expect([timeLabel("22:00"), timeLabel("05:00"), timeLabel("00:15"), timeLabel("12:30")]).toEqual(["10:00 pm", "5:00 am", "12:15 am", "12:30 pm"]);
+      expect([durationLabel(8), durationLabel(7.5), durationLabel(0.75), durationLabel(1)]).toEqual(["8 hours", "7 hours 30 minutes", "45 minutes", "1 hour"]);
+      expect(sleepHours("22:00", "05:00")).toBe(7);
+    });
+
+    it("reads the AI's notes as sentences (summary, concerns, recommendations) and treats the 'Unable to analyze' stand-in as none", () => {
+      expect(toInsights(liveBody("vitals-insights"))).toEqual([]);
+      expect(toInsights(insightsOk().body)).toEqual(["Your readings look steady.", "Blood pressure was a little high on Monday.", "Aim for 7 to 8 hours of sleep."]);
+      expect(toInsights({ summary: "Unable to analyze vitals.", concerns: ["Real concern."] })).toEqual(["Real concern."]);
+      expect(toInsights({ concerns: [{ text: "From an object." }, 5, null], recommendations: "not a list" })).toEqual(["From an object."]);
+      expect(toInsights(null)).toEqual([]);
+      expect(toInsights("nope")).toEqual([]);
+    });
+
+    it("says how long ago a reading was, and when a tile was updated", () => {
+      const now = new Date("2026-11-07T15:00:00");
+      expect(formatAgo("2026-11-07T14:58:00", now.getTime())).toBe("2 mins ago");
+      expect(formatAgo("2026-11-07T14:59:50", now.getTime())).toBe("just now");
+      expect(formatAgo("2026-11-07T12:00:00", now.getTime())).toBe("3 hrs ago");
+      expect(formatAgo("2026-11-05T15:00:00", now.getTime())).toBe("2 days ago");
+      expect(formatUpdated("2026-11-07T10:45:00", now)).toBe("Updated at 10:45am");
+      expect(formatUpdated("2026-11-07T22:05:00", now)).toBe("Updated at 10:05pm");
+      expect(formatUpdated("2026-11-03T10:45:00", now)).toBe("Updated 3 Nov");
+    });
+
+    it("keeps Normal / Critical off: no thresholds are signed, so no reading gets a status", () => {
+      expect(VITAL_STATUS_ENABLED).toBe(false);
+      expect(VITAL_THRESHOLDS).toEqual({});
+      expect(vitalStatus({ kind: "heart_rate", value: 300 })).toBeNull();
+      expect(vitalStatus({ kind: "heart_rate", value: 70 })).toBeNull();
     });
   });
 
   describe("screens", () => {
-    it("shows the six tiles with the latest captured readings, units, and no sample notice; the id sent is the PATIENT id", async () => {
-      const { calls, view } = await renderSignedIn({ [LIST]: () => liveReply("vitals-list") }, me());
+    const listRoutes = (extra: Record<string, any> = {}) => ({ [LIST]: () => liveReply("vitals-list"), [INSIGHTS]: () => liveReply("vitals-insights"), ...extra });
+
+    it("shows the six tiles with the latest captured readings and units, no badges and no wearable parts; the id sent is the PATIENT id", async () => {
+      const { calls, view } = await renderSignedIn(listRoutes(), me());
       await tab("Vitals");
-      for (const label of ["Heart rate", "Blood pressure", "Temperature", "Respiratory rate", "Blood glucose", "Sleep duration"]) {
+      for (const label of ["Heart Rate", "Blood Pressure", "Temperature", "Respiration Rate", "Blood Glucose", "Sleep Duration"]) {
         expect(await screen.findByRole("button", { name: label })).toBeTruthy();
       }
+      expect(screen.getByText("Real-time Health Metrics")).toBeTruthy();
       expect(await screen.findByText("72")).toBeTruthy(); // heart rate
       expect(screen.getByText("36.8")).toBeTruthy();
       expect(screen.getByText("7.5")).toBeTruthy();
-      expect(screen.getByText(/^mmHg ·/)).toBeTruthy();
-      expect(screen.getByText(/^°C ·/)).toBeTruthy();
-      expect(screen.getByText(/^mg\/dL ·/)).toBeTruthy();
-      expect(screen.queryByText(/bpr|mgd\/dl| C$|banana/i)).toBeNull();
-      expect(screen.queryByText(/shows sample information/)).toBeNull();
+      expect(screen.getByText("mmHg")).toBeTruthy();
+      expect(screen.getByText("°C")).toBeTruthy();
+      expect(screen.getByText("mg/dL")).toBeTruthy();
+      expect(screen.getAllByText(/^Updated /).length).toBeGreaterThanOrEqual(5);
+      // not built, or built and off
+      expect(screen.queryByText(/Connect to Wearable|Wearable Device|Manual Device|Heart Alerts|Recent Caregiver Access/)).toBeNull();
+      expect(screen.queryByText(/^(Normal|Critical)$/)).toBeNull();
+      expect(screen.queryByText(/bpr|mgd\/dl|banana|shows sample information/i)).toBeNull();
       expect(calls.find((c) => c.path.startsWith("/api/v1/vitals/"))?.path).toBe(`/api/v1/vitals/${PATIENT_ID}`);
       expect(calls.some((c) => c.path.includes(USER_ID) && c.path.includes("vitals"))).toBe(false);
       view.unmount();
     });
 
-    it("shows 'No reading yet' on every tile for a patient with none (captured empty list)", async () => {
-      const { view } = await renderSignedIn({ [LIST]: () => liveReply("vitals-empty") }, me());
+    it("shows 'No reading yet' on every tile for a patient with none (captured empty list), and no insights are asked for", async () => {
+      const { calls, view } = await renderSignedIn({ [LIST]: () => liveReply("vitals-empty") }, me());
       await tab("Vitals");
       await waitFor(() => expect(screen.getAllByText("No reading yet")).toHaveLength(6));
+      expect(calls.some((c) => c.path.endsWith("/insights"))).toBe(false);
       view.unmount();
     });
 
@@ -109,11 +206,23 @@ describe("vitals (live-shaped)", () => {
       view.unmount();
     });
 
-    it("blood pressure entry: checks the numbers first, then posts the captured shape and shows the new reading", async () => {
+    it("History & Insights on the home: the AI's first two notes with 'View all History' (not live: the success shape is not captured)", async () => {
+      const { view } = await renderSignedIn(listRoutes({ [INSIGHTS]: insightsOk }), me());
+      await tab("Vitals");
+      expect(await screen.findByText("Your readings look steady.")).toBeTruthy();
+      expect(screen.getByText("Blood pressure was a little high on Monday.")).toBeTruthy();
+      expect(screen.queryByText("Aim for 7 to 8 hours of sleep.")).toBeNull();
+      await press("View all History");
+      expect(await screen.findByText("Aim for 7 to 8 hours of sleep.")).toBeTruthy();
+      view.unmount();
+    });
+
+    it("blood pressure sheet: the design's title, help line and button, one '120 / 80' row; checks the numbers, then posts the captured shape and shows the new reading", async () => {
       let created = false;
       const { calls, view } = await renderSignedIn(
         {
           [LIST]: () => (created ? liveReply("vitals-list", (rows: any[]) => [...rows, { ...live("vital-blood-pressure").response.body, value: "118/76", recorded_at: new Date().toISOString().replace("Z", "") }]) : liveReply("vitals-empty")),
+          [INSIGHTS]: () => liveReply("vitals-insights"),
           "POST /api/v1/vitals/": () => {
             created = true;
             return liveReply("vital-blood-pressure", (b) => ({ ...b, value: "118/76" }));
@@ -122,23 +231,26 @@ describe("vitals (live-shaped)", () => {
         me(),
       );
       await tab("Vitals");
-      await fireEvent.press(await screen.findByRole("button", { name: "Add Blood pressure reading" }));
-      await press("Save reading");
+      await fireEvent.press(await screen.findByRole("button", { name: "Add Blood Pressure reading" }));
+      expect(await screen.findByText("Enter Blood Pressure Readings")).toBeTruthy();
+      expect(screen.getByText("Enter Blood Pressure (mmHg)")).toBeTruthy();
+      await press("Update Blood Pressure");
       expect(await screen.findAllByText("Enter a value")).toHaveLength(2);
       await type("Systolic, top number (mmHg)", "300");
       await type("Diastolic, bottom number (mmHg)", "20");
-      await press("Save reading");
+      await press("Update Blood Pressure");
       expect(await screen.findByText("Enter a number from 50 to 260")).toBeTruthy();
       expect(calls.some((c) => c.method === "POST")).toBe(false);
       await type("Systolic, top number (mmHg)", "80");
       await type("Diastolic, bottom number (mmHg)", "120");
-      await press("Save reading");
+      await press("Update Blood Pressure");
       expect(await screen.findByText("The bottom number must be lower than the top number")).toBeTruthy();
       await type("Systolic, top number (mmHg)", "118");
       await type("Diastolic, bottom number (mmHg)", "76");
-      await press("Save reading");
+      await press("Update Blood Pressure");
 
       expect(await screen.findByText("118/76")).toBeTruthy();
+      expect(screen.queryByText("Enter Blood Pressure Readings")).toBeNull(); // the sheet closed
       const post = calls.find((c) => c.method === "POST" && c.path === "/api/v1/vitals/");
       const captured = live("vital-blood-pressure").request.body as Record<string, unknown>;
       expect(Object.keys(post?.body as object).sort()).toEqual(Object.keys(captured).sort());
@@ -146,48 +258,76 @@ describe("vitals (live-shaped)", () => {
       view.unmount();
     });
 
-    it("glucose entry sends the context in notes (RBS random by default, FBS fasting), as the caregiver app does", async () => {
-      const { calls, view } = await renderSignedIn(
-        { [LIST]: () => liveReply("vitals-empty"), "POST /api/v1/vitals/": () => liveReply("vital-glucose-fasting") },
-        me(),
-      );
+    it("heart rate sheet: 'Update Heart Rate', and Close leaves without sending anything", async () => {
+      const { calls, view } = await renderSignedIn({ [LIST]: () => liveReply("vitals-empty") }, me());
       await tab("Vitals");
-      await fireEvent.press(await screen.findByRole("button", { name: "Add Blood glucose reading" }));
-      await type("Blood glucose (mg/dL)", "110");
-      await press("Save reading");
-      await waitFor(() => expect(calls.filter((c) => c.method === "POST")).toHaveLength(1));
-      expect(calls.find((c) => c.method === "POST")?.body).toMatchObject({ vital_type: "blood_glucose", value: "110", unit: "mg/dL", notes: "RBS" });
+      await fireEvent.press(await screen.findByRole("button", { name: "Add Heart Rate reading" }));
+      expect(await screen.findByText("Your Current Heart Rate")).toBeTruthy();
+      expect(screen.getByText("Enter Heart Rate (bpm)")).toBeTruthy();
+      expect(screen.getByRole("button", { name: "Update Heart Rate" })).toBeTruthy();
+      await press("Close");
+      await waitFor(() => expect(screen.queryByText("Your Current Heart Rate")).toBeNull());
+      expect(calls.some((c) => c.method === "POST")).toBe(false);
       view.unmount();
-
-      const second = await renderSignedIn(
-        { [LIST]: () => liveReply("vitals-empty"), "POST /api/v1/vitals/": () => liveReply("vital-glucose-fasting") },
-        me(),
-      );
-      await tab("Vitals");
-      await fireEvent.press(await screen.findByRole("button", { name: "Add Blood glucose reading" }));
-      await press("Fasting");
-      await type("Blood glucose (mg/dL)", "92");
-      await press("Save reading");
-      await waitFor(() => expect(second.calls.filter((c) => c.method === "POST")).toHaveLength(1));
-      expect(second.calls.find((c) => c.method === "POST")?.body).toMatchObject({ value: "92", notes: "FBS" });
-      second.view.unmount();
     });
 
-    it("sleep entry takes bed and wake times, sends the hours as the value and the times in notes", async () => {
-      const { calls, view } = await renderSignedIn(
-        { [LIST]: () => liveReply("vitals-empty"), "POST /api/v1/vitals/": () => liveReply("vital-sleep") },
-        me(),
-      );
+    it("glucose sheet: a unit choice and three boxes; each filled box is one reading with its context in notes and the unit chosen", async () => {
+      const { calls, view } = await renderSignedIn({ [LIST]: () => liveReply("vitals-empty"), "POST /api/v1/vitals/": () => liveReply("vital-glucose-fasting") }, me());
       await tab("Vitals");
-      await fireEvent.press(await screen.findByRole("button", { name: "Add Sleep duration reading" }));
-      await type("Went to bed (24-hour time)", "22:30");
-      await type("Woke up (24-hour time)", "22:30");
-      await press("Save reading");
-      expect(await screen.findByText(/less than 30 minutes of sleep/)).toBeTruthy();
-      await type("Woke up (24-hour time)", "6:30");
-      await press("Save reading");
+      await fireEvent.press(await screen.findByRole("button", { name: "Add Blood Glucose reading" }));
+      expect(await screen.findByText("Enter Blood Glucose Readings")).toBeTruthy();
+      await press("Update Blood Glucose");
+      expect(await screen.findByText("Enter at least one reading")).toBeTruthy();
+      await fireEvent.press(screen.getByRole("checkbox", { name: "mmol/L" }));
+      await type("Random Blood Sugar (RBS)", "7.3");
+      await type("Post-prandial (2 hours after meal)", "4.1");
+      await press("Update Blood Glucose");
+      await waitFor(() => expect(calls.filter((c) => c.method === "POST")).toHaveLength(2));
+      const [first, second] = calls.filter((c) => c.method === "POST").map((c) => c.body);
+      expect(first).toMatchObject({ vital_type: "blood_glucose", value: "7.3", unit: "mmol/L", notes: "RBS" });
+      expect(second).toMatchObject({ vital_type: "blood_glucose", value: "4.1", unit: "mmol/L", notes: "PP" });
+      view.unmount();
+
+      const mg = await renderSignedIn({ [LIST]: () => liveReply("vitals-empty"), "POST /api/v1/vitals/": () => liveReply("vital-glucose-fasting") }, me());
+      await tab("Vitals");
+      await fireEvent.press(await screen.findByRole("button", { name: "Add Blood Glucose reading" }));
+      await type("Fasting Blood Sugar (FBS)", "92");
+      await press("Update Blood Glucose");
+      await waitFor(() => expect(mg.calls.filter((c) => c.method === "POST")).toHaveLength(1));
+      expect(mg.calls.find((c) => c.method === "POST")?.body).toMatchObject({ value: "92", unit: "mg/dL", notes: "FBS" });
+      mg.view.unmount();
+    });
+
+    it("sleep sheet: two time pickers, the hours between them shown, hours as the value and the times in notes", async () => {
+      const { calls, view } = await renderSignedIn({ [LIST]: () => liveReply("vitals-empty"), "POST /api/v1/vitals/": () => liveReply("vital-sleep") }, me());
+      await tab("Vitals");
+      await fireEvent.press(await screen.findByRole("button", { name: "Add Sleep Duration reading" }));
+      expect(await screen.findByText("Enter your sleep duration and wake-up time.")).toBeTruthy();
+      await press("Update Sleep Pattern");
+      expect(await screen.findAllByText("Select a time")).toHaveLength(2);
+      await press("Sleep Start Time");
+      await press("10:00 pm");
+      await press("Wake-Up Time");
+      await press("5:00 am");
+      expect(screen.getByLabelText("Total Sleep Duration (HRS/MINS)").props.value).toBe("7 hours");
+      await press("Update Sleep Pattern");
       await waitFor(() => expect(calls.filter((c) => c.method === "POST")).toHaveLength(1));
-      expect(calls.find((c) => c.method === "POST")?.body).toMatchObject({ vital_type: "sleep_duration", value: "8", unit: "hrs", notes: "22:30-06:30" });
+      expect(calls.find((c) => c.method === "POST")?.body).toMatchObject({ vital_type: "sleep_duration", value: "7", unit: "hrs", notes: "22:00-05:00" });
+      view.unmount();
+    });
+
+    it("temperature sheet: °C or °F, checked against that unit and sent with it", async () => {
+      const { calls, view } = await renderSignedIn({ [LIST]: () => liveReply("vitals-empty"), "POST /api/v1/vitals/": () => liveReply("vital-temperature") }, me());
+      await tab("Vitals");
+      await fireEvent.press(await screen.findByRole("button", { name: "Add Temperature reading" }));
+      await type("Temperature Reading (°C)", "98.6");
+      await press("Update Temperature");
+      expect(await screen.findByText("Enter a number from 30 to 45")).toBeTruthy();
+      await fireEvent.press(screen.getByRole("checkbox", { name: "°F" }));
+      await type("Temperature Reading (°F)", "98.6");
+      await press("Update Temperature");
+      await waitFor(() => expect(calls.filter((c) => c.method === "POST")).toHaveLength(1));
+      expect(calls.find((c) => c.method === "POST")?.body).toMatchObject({ vital_type: "temperature", value: "98.6", unit: "°F" });
       view.unmount();
     });
 
@@ -197,41 +337,98 @@ describe("vitals (live-shaped)", () => {
         me(),
       );
       await tab("Vitals");
-      await fireEvent.press(await screen.findByRole("button", { name: "Add Heart rate reading" }));
-      await type("Heart rate (bpm)", "70");
-      await press("Save reading");
+      await fireEvent.press(await screen.findByRole("button", { name: "Add Heart Rate reading" }));
+      await type("Enter Heart Rate (bpm)", "70");
+      await press("Update Heart Rate");
       expect(await screen.findByText("Could not save")).toBeTruthy();
       expect(screen.getByText("Access denied")).toBeTruthy();
       view.unmount();
     });
 
-    it("detail: Day / Week / Month change what is listed, from the readings' own times", async () => {
-      const { view } = await renderSignedIn({ [LIST]: () => listAt(2) }, me());
+    it("monitoring page: '<Vital> Monitoring', last synced, the chart, current value, and Day / Week / Month from the readings' own times", async () => {
+      const { view } = await renderSignedIn(listRoutes({ [LIST]: () => listAt(2) }), me());
       await tab("Vitals");
-      await fireEvent.press(await screen.findByRole("button", { name: "Blood glucose" }));
+      await fireEvent.press(await screen.findByRole("button", { name: "Blood Glucose" }));
+      expect(await screen.findByText("Blood Glucose Monitoring")).toBeTruthy();
+      expect(screen.getByText("Vital Monitoring")).toBeTruthy();
+      expect(screen.getByText(/^Last synced: 2 hrs ago$/)).toBeTruthy();
+      expect(screen.getByText("Current")).toBeTruthy();
       // the captured list holds two glucose readings (random 110, fasting 92), both 2 hours old here
-      expect(await screen.findByLabelText("Blood glucose chart, 2 readings")).toBeTruthy();
+      expect(await screen.findByLabelText("Blood Glucose chart, 2 readings")).toBeTruthy();
+      expect(screen.queryByText(/^(Normal|Critical)$/)).toBeNull();
       view.unmount();
-      const old = await renderSignedIn({ [LIST]: () => listAt(24 * 3) }, me());
+
+      const old = await renderSignedIn(listRoutes({ [LIST]: () => listAt(24 * 3) }), me());
       await tab("Vitals");
-      await fireEvent.press(await screen.findByRole("button", { name: "Blood glucose" }));
+      await fireEvent.press(await screen.findByRole("button", { name: "Blood Glucose" }));
       await fireEvent.press(await screen.findByRole("tab", { name: "Day" }));
-      expect(screen.queryByLabelText(/Blood glucose chart/)).toBeNull();
+      expect(screen.queryByLabelText(/Blood Glucose chart/)).toBeNull();
       expect(screen.getByText("No readings in this period")).toBeTruthy();
       await fireEvent.press(screen.getByRole("tab", { name: "Week" }));
-      expect(screen.getByLabelText("Blood glucose chart, 2 readings")).toBeTruthy();
+      expect(screen.getByLabelText("Blood Glucose chart, 2 readings")).toBeTruthy();
       old.view.unmount();
     });
 
-    it("history lists every shown reading with its glucose context and sleep times", async () => {
-      const { view } = await renderSignedIn({ [LIST]: () => liveReply("vitals-list") }, me());
+    it("a temperature saved in °F is drawn in the unit of the latest reading", async () => {
+      const rows = (hoursAgo: number, value: string, unit: string) => ({
+        ...liveBody<any[]>("vitals-list").find((r) => r.vital_type === "temperature"),
+        id: `${hoursAgo}-${value}`,
+        value,
+        unit,
+        recorded_at: new Date(Date.now() - hoursAgo * 3_600_000).toISOString().replace("Z", ""),
+      });
+      const { view } = await renderSignedIn(listRoutes({ [LIST]: () => ({ status: 200, body: [rows(5, "36.8", "°C"), rows(1, "98.6", "°F")] }) }), me());
       await tab("Vitals");
-      await press("History");
-      expect(await screen.findByText("Heart rate: 72 bpm")).toBeTruthy();
+      await fireEvent.press(await screen.findByRole("button", { name: "Temperature" }));
+      expect(await screen.findByLabelText("Temperature chart, 2 readings")).toBeTruthy();
+      // the value under "Current" and the marker on the chart
+      expect(screen.getAllByText("98.6")).toHaveLength(2);
+      expect(screen.getByText("°F")).toBeTruthy();
+      view.unmount();
+    });
+
+    it("history shows the AI's notes first, then every shown reading with its glucose context and sleep times", async () => {
+      const { view } = await renderSignedIn(listRoutes({ [INSIGHTS]: insightsOk }), me());
+      await tab("Vitals");
+      await fireEvent.press(await screen.findByRole("button", { name: "View all History" }));
+      expect(await screen.findByText("Aim for 7 to 8 hours of sleep.")).toBeTruthy();
+      expect(await screen.findByText("Heart Rate: 72 bpm")).toBeTruthy();
       expect(screen.getByText("Fasting")).toBeTruthy();
       expect(screen.getByText("Random")).toBeTruthy();
       expect(screen.getByText("22:30 to 06:00")).toBeTruthy();
       expect(screen.queryByText(/shows sample information/)).toBeNull();
+      view.unmount();
+    });
+
+    it("history with only the 'Unable to analyze' stand-in shows no notes, just the readings", async () => {
+      const { view } = await renderSignedIn(listRoutes(), me());
+      await tab("Vitals");
+      await press("History");
+      expect(await screen.findByText("Heart Rate: 72 bpm")).toBeTruthy();
+      expect(screen.queryByText(/Unable to analy/)).toBeNull();
+      view.unmount();
+    });
+
+    it("Download Report: fetches the CSV for the PATIENT id, hands it to the share sheet, then shows the success page (not live: no CSV capture)", async () => {
+      const { calls, view } = await renderSignedIn(listRoutes({ [DOWNLOAD]: () => ({ status: 200, body: "type,value,unit,recorded_at" }) }), me());
+      await tab("Vitals");
+      await press("Download Report");
+      expect(await screen.findByText("Vital Report Downloaded Successfully")).toBeTruthy();
+      expect(calls.some((c) => c.method === "GET" && c.path === `/api/v1/vitals/${PATIENT_ID}/download`)).toBe(true);
+      expect(mockShare).toHaveBeenCalledTimes(1);
+      expect(mockWritten.join("")).toContain("type,value,unit,recorded_at");
+      await press("Close");
+      await waitFor(() => expect(screen.queryByText("Vital Report Downloaded Successfully")).toBeNull());
+      view.unmount();
+    });
+
+    it("Download Report: a refusal (403) says so and shows no success page", async () => {
+      const { view } = await renderSignedIn(listRoutes({ [DOWNLOAD]: () => liveReply("vitals-list-other-patient") }), me());
+      await tab("Vitals");
+      await press("Download Report");
+      expect(await screen.findByText("Could not download your report")).toBeTruthy();
+      expect(screen.queryByText("Vital Report Downloaded Successfully")).toBeNull();
+      expect(mockShare).not.toHaveBeenCalled();
       view.unmount();
     });
   });

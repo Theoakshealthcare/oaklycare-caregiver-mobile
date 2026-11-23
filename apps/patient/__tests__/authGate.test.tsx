@@ -83,13 +83,13 @@ describe("auth gate (App)", () => {
     expect(queryClient.getQueryCache().getAll().length).toBeGreaterThan(0);
 
     await fireEvent.press(screen.getByRole("button", { name: "Open profile" }));
-    await fireEvent.press(await screen.findByRole("button", { name: "Account and data" }));
-    await fireEvent.press(await screen.findByRole("button", { name: "Log out" }));
+    await fireEvent.press(await screen.findByRole("button", { name: "Account and Data" }));
+    await fireEvent.press(await screen.findByRole("button", { name: "Logout" }));
     // Log out asks first (P1-09): "No, stay signed in" changes nothing, "Yes, log out" ends the session.
     expect(await screen.findByText("Log out?")).toBeTruthy();
     await fireEvent.press(screen.getByRole("button", { name: "No, stay signed in" }));
     expect(session.getAccessToken()).not.toBeNull();
-    await fireEvent.press(screen.getByRole("button", { name: "Log out" }));
+    await fireEvent.press(screen.getByRole("button", { name: "Logout" }));
     await fireEvent.press(await screen.findByRole("button", { name: "Yes, log out" }));
 
     expect(await screen.findByLabelText("Input Password")).toBeTruthy();

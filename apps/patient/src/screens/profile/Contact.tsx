@@ -1,26 +1,35 @@
 import type React from "react";
-import { Linking } from "react-native";
+import { Linking, Pressable, StyleSheet, View } from "react-native";
 
-import Button from "@/src/components/ui/button";
-import { Card } from "@/src/components/ui/card";
+import Icon from "@/src/components/ui/icon";
 import Screen from "@/src/components/ui/screen";
 import Text from "@/src/components/ui/text";
 import { theme } from "@/src/constants/theme";
 
-/** Where to reach Oakly. Email only for now: the support WhatsApp number in the design is a placeholder. */
+/** Where to reach Oakly. */
 export const SUPPORT_EMAIL = "info@theoakshealthcare.com";
 
+/**
+ * "Contact Us" (Figma): one row per way to reach Oakly. Only e-mail is here: "Chat with a support agent" needs the support chat
+ * (not in v1) and the WhatsApp number in the design is a placeholder.
+ */
 const Contact: React.FC = () => (
-  <Screen title="Contact us">
-    <Text color={theme.colors.textLight}>Questions about a booking or your account? Email us and we will get back to you.</Text>
-    <Card tone="tint">
-      <Text variant="small" color={theme.colors.textLight}>
-        Email
-      </Text>
-      <Text weight="bold">{SUPPORT_EMAIL}</Text>
-    </Card>
-    <Button title="Send an email" onPress={() => void Linking.openURL(`mailto:${SUPPORT_EMAIL}`)} />
+  <Screen title="Contact Us" centerTitle>
+    <Pressable accessibilityRole="button" accessibilityLabel="Send an email" onPress={() => void Linking.openURL(`mailto:${SUPPORT_EMAIL}`)} style={styles.row}>
+      <Icon name="mail-outline" size={20} color={theme.colors.primary} circleColor={theme.colors.primaryLight} />
+      <View style={styles.text}>
+        <Text weight="bold">Send an email</Text>
+        <Text variant="small" color={theme.colors.textLight}>
+          {`send us an email at ${SUPPORT_EMAIL}`}
+        </Text>
+      </View>
+    </Pressable>
   </Screen>
 );
+
+const styles = StyleSheet.create({
+  row: { flexDirection: "row", alignItems: "center", gap: theme.spacing.md, paddingVertical: theme.spacing.sm },
+  text: { flex: 1 },
+});
 
 export default Contact;

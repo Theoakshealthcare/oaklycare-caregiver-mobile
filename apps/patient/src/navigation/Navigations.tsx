@@ -40,6 +40,7 @@ export type ScreenParamLists = {
   VitalDetail: { kind: VitalKind };
   AddVital: { kind: VitalKind };
   VitalHistory: undefined;
+  VitalReport: undefined;
   VitalAccess: undefined;
   FallAssessment: undefined;
   FallResult: { result: FallguardResult };

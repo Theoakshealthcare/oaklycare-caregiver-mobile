@@ -14,6 +14,23 @@ export const vitalsService = {
     return unwrap(api.POST("/api/v1/vitals/", { body }));
   },
 
+  /** The whole record as CSV text (`GET /vitals/{patient_id}/download`; the schema types the body as unknown). 403 `Access denied` for anyone else's. */
+  async downloadCsv(patientId: string): Promise<string> {
+    const body: unknown = await unwrap(
+      api.GET("/api/v1/vitals/{patient_id}/download", { params: { path: { patient_id: patientId } }, parseAs: "text" }),
+    );
+    return typeof body === "string" ? body : "";
+  },
+
+  /**
+   * `GET /vitals/{patient_id}/insights`: notes the server's AI wrote from the readings, as `{ summary, concerns, recommendations,
+   * key_vitals }`. The keys come from the prompt, not from a schema, so read them with `toInsights`. It calls the AI on every
+   * request, so ask for it sparingly (the hook keeps the answer for half an hour).
+   */
+  insights(patientId: string): Promise<unknown> {
+    return unwrap(api.GET("/api/v1/vitals/{patient_id}/insights", { params: { path: { patient_id: patientId } } }));
+  },
+
   /**
    * `GET /vitals/access/list`: the caregivers THIS patient has shared with (active grants only; `caregiver_name` is the name to
    * show). The patient and caregiver ids are the PROFILE ids (`/auth/me` -> `patient.id`, a booking's `caregiver_id`), never the

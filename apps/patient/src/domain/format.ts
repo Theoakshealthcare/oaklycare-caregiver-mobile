@@ -24,3 +24,24 @@ export function formatTime(iso: string): string {
 export function formatDateTime(iso: string): string {
   return `${formatDate(iso)}, ${formatTime(iso)}`;
 }
+
+/** "just now", "2 mins ago", "3 hrs ago", "2 days ago": how long before `now` a reading was taken. */
+export function formatAgo(iso: string, now: number = Date.now()): string {
+  const minutes = Math.max(0, Math.floor((now - new Date(iso).getTime()) / 60_000));
+  if (minutes < 1) return "just now";
+  if (minutes < 60) return `${minutes} ${minutes === 1 ? "min" : "mins"} ago`;
+  const hours = Math.floor(minutes / 60);
+  if (hours < 24) return `${hours} ${hours === 1 ? "hr" : "hrs"} ago`;
+  const days = Math.floor(hours / 24);
+  return `${days} ${days === 1 ? "day" : "days"} ago`;
+}
+
+/** "Updated at 10:45am" for a reading taken today, else "Updated 7 Nov" (the Vitals tiles). */
+export function formatUpdated(iso: string, now: Date = new Date()): string {
+  const d = new Date(iso);
+  if (d.toDateString() === now.toDateString()) {
+    const hours = d.getHours();
+    return `Updated at ${hours % 12 === 0 ? 12 : hours % 12}:${pad(d.getMinutes())}${hours < 12 ? "am" : "pm"}`;
+  }
+  return `Updated ${d.getDate()} ${MONTHS[d.getMonth()]}`;
+}

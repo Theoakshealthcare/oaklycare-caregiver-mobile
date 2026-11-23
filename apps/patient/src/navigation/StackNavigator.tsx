@@ -23,7 +23,7 @@ const PushEffects = () => {
 };
 
 const screens = (defs: ScreenDef[]) =>
-  defs.map((def) => <Stack.Screen key={def.name} name={def.name} component={def.component} />);
+  defs.map((def) => <Stack.Screen key={def.name} name={def.name} component={def.component} options={def.options} />);
 
 /** The signed-out stack opens on the intro slides once per install, else on Login. Fixed when the stack first mounts. */
 const SignedOutStack = () => {

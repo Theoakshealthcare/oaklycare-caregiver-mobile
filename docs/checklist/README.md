@@ -50,6 +50,13 @@ channel) lives in the backend repo: `docs/checklist/MASTER_CHECKLIST.md`. Update
 - [ ] Deferred: "Choose Service Time / Immediate booking" and the Wound Care service (no backend service or ASAP rule)
 - [ ] Owner decisions: the app's own lists (relations, assistance, conditions), contact phone and e-mail visible to the caregiver, coral failure title, step bar growth
 
+## Patient app parity with Figma, slice 4: profile, vitals and FallGuard (2026-11-24)
+- [x] Profile Settings, Edit Profile (photo upload, gender, age, Update Password row, toast), Account and Data, Contact Us; Vitals home (Download Report, History & Insights), manual-entry sheets (glucose in mg/dL or mmol/L with three boxes, sleep pickers, BP row), "<Vital> Monitoring" pages, History & Insights, report success page; FallGuard intro, questions (sections, progress bar, "Score : N" from the server), result; branch `feat/patient-profile-vitals-parity` ([SOP](../sop/2026-11-24-patient-profile-vitals-fallguard-parity.md)); **Jest only: the simulator was busy, so the visual pass is pending; nothing seen on Android or a real phone**
+- [x] Built and OFF by owner decision: Normal / Critical badges (`domain/vitalStatus.ts`), FallGuard risk band badge and "What does this mean?" (`RISK_BANDS`)
+- [ ] **Rebuild the patient dev build** (new native modules `expo-image-picker`, `expo-file-system`, `expo-sharing`)
+- [ ] Clinician sign-off: vital thresholds, FallGuard bands and reassessment interval, the three reversed-looking questions (21, 23, 24) now that scores show
+- [ ] Deferred: native FAQ accordion (needs answers), support chat and WhatsApp number, Track pages (slice 3), Heart Alerts and caregiver access requests (no endpoint)
+
 ## Caregiver Home, profile menu and visit dialogs parity with Figma (2026-11-23)
 - [x] Home: menu and bell header, greeting and subtitle, weekly availability with the week strip, CarePlan card (nurses), Upcoming Appointments with Clock in / Clock out, New Job Request with Accept / Decline, Earning Summary, Notification block, Client Care Access
 - [x] Shared Figma confirmation dialog: decline (Home and Bookings, "Yes, Decline"), clock in (after the visit code, before it is sent), clock out (running timer, pay-held and care plan notices)
