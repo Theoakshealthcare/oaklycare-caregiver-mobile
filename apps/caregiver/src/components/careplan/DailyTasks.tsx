@@ -4,8 +4,7 @@ import { Feather } from "@expo/vector-icons";
 
 import { messageForError } from "@/src/api/errors";
 import { ErrorState, LoadingState } from "@/src/components/account/StateViews";
-import { Chip, FieldHint } from "@/src/components/careplan/parts";
-import Button from "@/src/components/ui/button";
+import { AddLink, FieldHint } from "@/src/components/careplan/parts";
 import Text from "@/src/components/ui/text";
 import { theme } from "@/src/constants/theme";
 import {
@@ -19,6 +18,26 @@ import {
 } from "@/src/careplan/carePlanModel";
 import { useReloadAfterTick, useTaskDay, useTickTask } from "@/src/hooks/useCarePlanTasks";
 import type { CarePlan, DayTask } from "@/src/services/carePlans.service";
+
+/** One day of the week: teal when chosen, pale coral otherwise (Figma). */
+const DayPill: React.FC<{ label: string; selected: boolean; onPress: () => void; testID: string }> = ({ label, selected, onPress, testID }) => (
+  <Pressable
+    testID={testID}
+    accessibilityRole="button"
+    accessibilityState={{ selected }}
+    onPress={onPress}
+    style={{
+      paddingVertical: theme.spacing.xs + 2,
+      paddingHorizontal: theme.spacing.sm + 2,
+      borderRadius: theme.borderRadius.md,
+      backgroundColor: selected ? theme.colors.primary : theme.colors.secondaryLight,
+    }}
+  >
+    <Text variant="caption" weight={selected ? "bold" : "regular"} color={selected ? theme.colors.white : theme.colors.text}>
+      {label}
+    </Text>
+  </Pressable>
+);
 
 const TickBox: React.FC<{ task: DayTask; enabled: boolean; pending: boolean; onPress: () => void }> = ({ task, enabled, pending, onPress }) => (
   <Pressable
@@ -120,7 +139,7 @@ const DailyTasks: React.FC<{ plan: CarePlan; onAddTask?: () => void; onNoAccess:
     <View testID="daily-tasks" style={{ gap: theme.spacing.sm }}>
       <View style={{ flexDirection: "row", flexWrap: "wrap", gap: theme.spacing.xs }}>
         {week.map((d) => (
-          <Chip key={d.date} testID={`day-tab-${d.date}`} label={d.label} selected={d.date === shown} onPress={() => choose(d.date)} />
+          <DayPill key={d.date} testID={`day-tab-${d.date}`} label={d.label} selected={d.date === shown} onPress={() => choose(d.date)} />
         ))}
       </View>
       {hint ? (
@@ -140,7 +159,7 @@ const DailyTasks: React.FC<{ plan: CarePlan; onAddTask?: () => void; onNoAccess:
       ) : (
         data.slots.map((slot) => (
           <View key={slot.slot} testID={`slot-${slot.slot}`} style={{ gap: theme.spacing.xs }}>
-            <Text variant="body" weight="bold">
+            <Text variant="small" weight="bold">
               {slotHeading(slot.slot, slot.time_of_day)}
             </Text>
             {slot.tasks.map((task) => (
@@ -178,7 +197,7 @@ const DailyTasks: React.FC<{ plan: CarePlan; onAddTask?: () => void; onNoAccess:
       )}
 
       {problem ? <FieldHint text={problem} testID="tasks-error" /> : null}
-      {onAddTask ? <Button testID="task-add" title="Add New Task" variant="outline" onPress={onAddTask} /> : null}
+      {onAddTask ? <AddLink testID="task-add" label="Add New Task" align="flex-end" onPress={onAddTask} /> : null}
     </View>
   );
 };

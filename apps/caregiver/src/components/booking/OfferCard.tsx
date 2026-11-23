@@ -1,12 +1,9 @@
 import React from "react";
-import { View } from "react-native";
-import { Feather } from "@expo/vector-icons";
 
-import Button from "@/src/components/ui/button";
-import Text from "@/src/components/ui/text";
-import { theme } from "@/src/constants/theme";
+import { ActionChip, BookingAvatar, BookingCardFrame, BookingLine } from "@/src/components/booking/BookingBlocks";
 import type { Offer } from "@/src/services/booking.service";
 import { formatDuration, formatVisitTime } from "@/src/utils/dates";
+import { serviceName } from "@/src/utils/labels";
 
 interface Props {
   offer: Offer;
@@ -17,46 +14,34 @@ interface Props {
 }
 
 /**
- * A job offered to the caregiver. It takes the narrow {@link Offer} type, never a full booking, so
- * no patient identity can be shown before the caregiver accepts.
+ * A job offered to the caregiver (Bookings, "New Request"). It takes the narrow {@link Offer} type, never a full
+ * booking, so no patient identity can be shown before the caregiver accepts: the card is titled by the service, as Home
+ * does, because the offer carries no name (Figma shows the patient's first name and last initial here).
+ *
+ * No price line: the caregiver's own figure (`caregiver_earning`) is null until the job is accepted, and the booking's
+ * total is what the family pays, which is never shown to a caregiver.
  */
 const OfferCard: React.FC<Props> = ({ offer, busy = false, onView, onAccept, onDecline }) => (
-  <View
-    style={{
-      backgroundColor: theme.colors.white,
-      borderRadius: 12,
-      padding: 16,
-      marginBottom: 16,
-      elevation: 3,
-    }}
-  >
-    <Text variant="h3" weight="bold" style={{ textTransform: "capitalize" }}>
-      {offer.serviceType} visit
-    </Text>
-    {offer.assistanceType ? (
-      <Text variant="body" color={theme.colors.primary} weight="medium" style={{ marginTop: 4 }}>
-        {offer.assistanceType}
-      </Text>
-    ) : null}
-
-    <View style={{ marginVertical: 12, gap: 4 }}>
-      <Text variant="body" color={theme.colors.textLight}>
-        <Feather name="map-pin" size={14} /> {offer.area}
-      </Text>
-      <Text variant="body" color={theme.colors.textLight}>
-        <Feather name="clock" size={14} /> {formatVisitTime(offer.scheduledDate)} {"•"} {formatDuration(offer.durationHours)}
-      </Text>
-      <Text variant="small" color={theme.colors.textLight}>
-        The patient&apos;s details are shared once you accept.
-      </Text>
-    </View>
-
-    <View style={{ flexDirection: "row", gap: 8 }}>
-      <Button title="Details" variant="outline" onPress={onView} disabled={busy} style={{ flex: 1, paddingHorizontal: 8 }} />
-      <Button title="Decline" variant="outline" onPress={onDecline} disabled={busy} style={{ flex: 1, paddingHorizontal: 8 }} />
-      <Button title="Accept" onPress={onAccept} loading={busy} style={{ flex: 1, paddingHorizontal: 8 }} />
-    </View>
-  </View>
+  <BookingCardFrame
+    testID="offer-card"
+    avatar={<BookingAvatar />}
+    name={serviceName(offer.serviceType)}
+    service={offer.assistanceType}
+    onOpen={onView}
+    lines={
+      <>
+        <BookingLine icon="calendar" text={offer.area} testID="offer-area" />
+        <BookingLine icon="clock" text={`${formatVisitTime(offer.scheduledDate)} • ${formatDuration(offer.durationHours)}`} />
+      </>
+    }
+    actions={
+      <>
+        <ActionChip label="View Details" icon="file-text" onPress={onView} disabled={busy} />
+        <ActionChip label="Decline" icon="x-circle" tone="coral" onPress={onDecline} disabled={busy} />
+        <ActionChip label={busy ? "Accepting..." : "Accept"} icon="check-circle" onPress={onAccept} disabled={busy} />
+      </>
+    }
+  />
 );
 
 export default OfferCard;

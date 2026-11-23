@@ -12,14 +12,14 @@ import { VITAL_KINDS, type VitalKind } from "@/src/vitals/vitalsModel";
 
 type Props = StackScreenProps<ScreenParamLists, "AddVitals">;
 
-/** "Add manual vital readings": with patients on WhatsApp, readings the caregiver takes are the main source. */
+/** "Add Manual Vital Readings": with patients on WhatsApp, readings the caregiver takes are the main source. */
 const AddVitals: React.FC<Props> = ({ route }) => {
   const { patientId, patientName } = route.params;
   const [open, setOpen] = useState<VitalKind | null>(null);
   const [saved, setSaved] = useState<VitalKind[]>([]);
 
   return (
-    <ScreenShell title="Add manual vital readings" subtitle={patientName}>
+    <ScreenShell title="Add Manual Vital Readings" subtitle={patientName}>
       {VITAL_KINDS.map((info) => (
         <Pressable
           key={info.kind}

@@ -121,7 +121,7 @@ describe("ClientProfile", () => {
     await fireEvent.press(await screen.findByText("View all"));
     expect(mockNavigate).toHaveBeenCalledWith("PatientVitals", { patientId: expect.any(String) });
     expect(mockNavigate).not.toHaveBeenCalledWith("BottomNavigation", expect.anything());
-    await fireEvent.press(screen.getByText("Add notes"));
+    await fireEvent.press(screen.getByText("Add Notes"));
     expect(mockNavigate).toHaveBeenCalledWith("AINoteTaker", { bookingId: BOOKING });
   });
 

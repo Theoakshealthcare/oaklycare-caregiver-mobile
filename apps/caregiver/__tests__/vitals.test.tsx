@@ -11,6 +11,8 @@ import VitalHistory from "../src/screens/vitals/VitalHistory";
 import Vitals from "../src/screens/vitals/Vitals";
 import { authService } from "../src/services/auth.service";
 import { bookingService, type Booking } from "../src/services/booking.service";
+import { clientsService } from "../src/services/clients.service";
+import { heldReport, dropReport } from "../src/vitals/reportStore";
 import { vitalsService, type PatientVital } from "../src/services/vitals.service";
 
 const mockNavigate = jest.fn();
@@ -24,8 +26,6 @@ jest.mock("@react-navigation/native", () => ({
   useNavigationState: (select: (state: { index: number }) => unknown) => select({ index: 1 }),
   useFocusEffect: jest.fn(),
 }));
-const mockShare = jest.fn();
-jest.mock("../src/vitals/report", () => ({ shareVitalsReport: (...args: unknown[]) => mockShare(...args) }));
 
 const PATIENT = "11111111-1111-4111-8111-111111111111";
 const ACCESS_DENIED = new ApiError(403, { detail: "Access denied" }, "Forbidden");
@@ -71,12 +71,15 @@ beforeEach(async () => {
   alertSpy = jest.spyOn(Alert, "alert").mockImplementation(() => undefined);
   jest.spyOn(bookingService, "listActive").mockResolvedValue([booking({})]);
   listSpy = jest.spyOn(vitalsService, "list").mockResolvedValue([]);
+  jest
+    .spyOn(clientsService, "getClientProfile")
+    .mockResolvedValue({ age: 32, gender: "male", profile_image_url: null } as Awaited<ReturnType<typeof clientsService.getClientProfile>>);
   jest.spyOn(authService, "getMe").mockResolvedValue({ id: "user-1" } as Awaited<ReturnType<typeof authService.getMe>>);
 });
 afterEach(async () => {
   jest.restoreAllMocks();
   mockNavigate.mockClear();
-  mockShare.mockClear();
+  dropReport();
   await session.signOut();
 });
 
@@ -187,34 +190,66 @@ describe("Vitals tab", () => {
   });
 
   describe("report", () => {
-    it("downloads into memory, then shares", async () => {
+    it("downloads into memory and opens the success page, which shares it (the CSV never goes in the route)", async () => {
       const csv = jest.spyOn(vitalsService, "downloadCsv").mockResolvedValue("id,vital_type\n1,heart_rate\n");
       await renderWith(<Vitals />);
-      await fireEvent.press(await screen.findByText("Download report"));
-      expect(await screen.findByTestId("vitals-downloaded")).toBeTruthy();
+      await fireEvent.press(await screen.findByText("Download Report"));
+      await waitFor(() => expect(mockNavigate).toHaveBeenCalledWith("VitalReportDownloaded", { patientId: PATIENT }));
       expect(csv).toHaveBeenCalledWith(PATIENT);
-      await fireEvent.press(screen.getByText("Share report"));
-      await waitFor(() => expect(mockShare).toHaveBeenCalledWith("id,vital_type\n1,heart_rate\n"));
+      expect(heldReport(PATIENT)).toBe("id,vital_type\n1,heart_rate\n");
+      expect(heldReport("someone-else")).toBeNull();
+    });
+
+    it("keeps the one Download Report button: a report can only be shared after it is downloaded", async () => {
+      await renderWith(<Vitals />);
+      expect(await screen.findByText("Download Report")).toBeTruthy();
+      expect(screen.queryByText(/Share Report/i)).toBeNull();
+      expect(screen.queryByTestId("vitals-downloaded")).toBeNull();
     });
 
     it("explains a refused download in the same terms", async () => {
       jest.spyOn(vitalsService, "downloadCsv").mockRejectedValue(ACCESS_DENIED);
       await renderWith(<Vitals />);
-      await fireEvent.press(await screen.findByText("Download report"));
+      await fireEvent.press(await screen.findByText("Download Report"));
       await waitFor(() => expect(alertSpy).toHaveBeenCalledWith("Couldn't download the report", "Reports are available during an active visit."));
-      expect(screen.queryByTestId("vitals-downloaded")).toBeNull();
+      expect(mockNavigate).not.toHaveBeenCalledWith("VitalReportDownloaded", expect.anything());
+    });
+  });
+
+  describe("Figma header and client row", () => {
+    it("is titled Clients Vitals with + Add New Readings", async () => {
+      await renderWith(<Vitals />);
+      expect(await screen.findByText("Clients Vitals")).toBeTruthy();
+      expect(await screen.findByText("Add New Readings")).toBeTruthy();
     });
 
-    it("reports a failed share", async () => {
-      jest.spyOn(vitalsService, "downloadCsv").mockResolvedValue("x");
-      mockShare.mockRejectedValue(new Error("Sharing isn't available on this device."));
+    it("shows age and sex from the client profile and when the newest reading was taken", async () => {
+      listSpy.mockResolvedValue([vital({ id: "hr", recorded_at: iso(1) })]);
       await renderWith(<Vitals />);
-      await fireEvent.press(await screen.findByText("Download report"));
-      await fireEvent.press(await screen.findByText("Share report"));
-      await waitFor(() => expect(alertSpy).toHaveBeenCalledWith("Couldn't share the report", "Sharing isn't available on this device."));
+      expect(await screen.findByTestId("vitals-age-sex")).toHaveTextContent("32, Male");
+      expect(screen.getByTestId("vitals-last-updated")).toHaveTextContent(/^Last updated: /);
+      expect(screen.queryByText("Patient")).toBeNull();
+    });
+
+    it("shows the name alone when the profile is not available, and no last-updated line without readings", async () => {
+      jest.spyOn(clientsService, "getClientProfile").mockRejectedValue(new ApiError(404, null, "gone"));
+      await renderWith(<Vitals />);
+      expect(await screen.findByTestId("vitals-patient-name")).toHaveTextContent("Placeholder Patient");
+      expect(screen.queryByTestId("vitals-age-sex")).toBeNull();
+      expect(screen.queryByTestId("vitals-last-updated")).toBeNull();
+    });
+
+    it("draws no Normal / Critical status on a tile while the status badges are off", async () => {
+      listSpy.mockResolvedValue([vital({ id: "hr" })]);
+      await renderWith(<Vitals />);
+      await screen.findByTestId("vital-value-heart_rate");
+      expect(screen.queryByTestId("vital-status-heart_rate")).toBeNull();
     });
   });
 });
+
+/** Readings drawn on the chart: a dot each, the newest one highlighted. */
+const chartReadings = () => screen.queryAllByTestId("chart-point").length + screen.queryAllByTestId("chart-last-point").length;
 
 describe("VitalDetail", () => {
   const route = (kind = "heart_rate") =>
@@ -235,18 +270,38 @@ describe("VitalDetail", () => {
     expect(await screen.findByTestId("vital-chart")).toBeTruthy();
     expect(screen.getByTestId("vital-detail-current")).toHaveTextContent("84 bpm");
     // Week is the default: the 1 h and 60 h readings, not the 20-day one, and not the blood pressure.
-    expect(screen.getAllByTestId("chart-bar")).toHaveLength(2);
+    expect(chartReadings()).toBe(2);
+    expect(screen.getByTestId("chart-last-point")).toBeTruthy();
     expect(screen.getAllByTestId("history-row")).toHaveLength(2);
     expect(screen.queryByText("138/85 mmHg")).toBeNull();
+  });
+
+  it("follows the Figma header and card: '<Vital> Monitoring', 'Vital Monitoring', the patient and Last synced on the card, Current", async () => {
+    await renderWith(<VitalDetail route={route()} navigation={nav} />);
+    await screen.findByTestId("vital-chart");
+    expect(screen.getByText("Heart Rate Monitoring")).toBeTruthy();
+    expect(screen.getByText("Vital Monitoring")).toBeTruthy();
+    expect(screen.getByTestId("vital-detail-patient")).toHaveTextContent("Placeholder Patient");
+    expect(screen.getByTestId("vital-detail-updated")).toHaveTextContent("Last synced: 1 hr ago");
+    expect(screen.getByText("Current")).toBeTruthy();
+    expect(screen.queryByText("Latest")).toBeNull();
+    expect(screen.getByTestId("chart-last-label")).toHaveTextContent("84");
+    expect(screen.getByText("History")).toBeTruthy();
+  });
+
+  it("names the respiratory rate as Figma does on its monitoring page", async () => {
+    listSpy.mockResolvedValue([vital({ id: "rr", vital_type: "respiratory_rate", value: "16", unit: "breaths/min" })]);
+    await renderWith(<VitalDetail route={route("respiratory_rate")} navigation={nav} />);
+    expect(await screen.findByText("Respiratory Rate Monitoring")).toBeTruthy();
   });
 
   it("switches between Day, Week and Month", async () => {
     await renderWith(<VitalDetail route={route()} navigation={nav} />);
     await screen.findByTestId("vital-chart");
     await fireEvent.press(screen.getByTestId("range-day"));
-    expect(screen.getAllByTestId("chart-bar")).toHaveLength(1);
+    expect(chartReadings()).toBe(1);
     await fireEvent.press(screen.getByTestId("range-month"));
-    expect(screen.getAllByTestId("chart-bar")).toHaveLength(3);
+    expect(chartReadings()).toBe(3);
   });
 
   it("says so when a vital has no readings in the period", async () => {
@@ -273,7 +328,7 @@ describe("VitalDetail: blood pressure and sleep", () => {
     ({ params: { patientId: PATIENT, patientName: "Placeholder Patient", kind } }) as unknown as React.ComponentProps<typeof VitalDetail>["route"];
   const nav = {} as React.ComponentProps<typeof VitalDetail>["navigation"];
 
-  it("charts blood pressure as bars from the bottom number to the top number, with a hint", async () => {
+  it("charts blood pressure as a line of the top number with the bottom number as a second line, and a hint", async () => {
     listSpy.mockResolvedValue([
       vital({ id: "bp1", vital_type: "blood_pressure", value: "138/85", unit: "mmHg", recorded_at: iso(1) }),
       vital({ id: "bp2", vital_type: "blood_pressure", value: "120/78", unit: "mmHg", recorded_at: iso(30) }),
@@ -281,8 +336,9 @@ describe("VitalDetail: blood pressure and sleep", () => {
     ]);
     await renderWith(<VitalDetail route={route("blood_pressure")} navigation={nav} />);
     expect(await screen.findByTestId("vital-chart")).toBeTruthy();
-    expect(screen.getAllByTestId("chart-bar")).toHaveLength(2);
-    expect(screen.getByLabelText("138/85")).toBeTruthy();
+    expect(chartReadings()).toBe(2);
+    expect(screen.getByLabelText("120/78")).toBeTruthy();
+    expect(screen.getByLabelText("Latest 138/85")).toBeTruthy();
     expect(screen.getByTestId("chart-pressure-hint")).toBeTruthy();
     expect(screen.getByTestId("vital-detail-current")).toHaveTextContent("138/85 mmHg");
   });
@@ -298,7 +354,7 @@ describe("VitalDetail: blood pressure and sleep", () => {
     listSpy.mockResolvedValue([vital({ id: "s", vital_type: "sleep_duration", value: "6.5", unit: "hrs" })]);
     await renderWith(<VitalDetail route={route("sleep_duration")} navigation={nav} />);
     expect(await screen.findByTestId("vital-detail-current")).toHaveTextContent("6.5 hrs");
-    expect(screen.getAllByTestId("chart-bar")).toHaveLength(1);
+    expect(chartReadings()).toBe(1);
   });
 
   it("opens the full history of this vital", async () => {
@@ -367,6 +423,33 @@ describe("AddVitals (manual entry)", () => {
     await waitFor(() => expect(authService.getMe).toHaveBeenCalled());
   }
 
+  it("is titled Add Manual Vital Readings, with the Figma row hints", async () => {
+    await renderWith(<AddVitals route={route} navigation={nav} />);
+    expect(screen.getByText("Add Manual Vital Readings")).toBeTruthy();
+    expect(screen.getByTestId("entry-hint-heart_rate")).toHaveTextContent("Enter Heart Rate Manually");
+  });
+
+  it("the heart rate popup has the Figma title, sub-line and label, with the real unit (bpm, not the Figma 'pm')", async () => {
+    await openEntry("heart_rate");
+    expect(screen.getByTestId("entry-title")).toHaveTextContent("Heart Rate");
+    expect(screen.getByTestId("entry-subtitle")).toHaveTextContent("Your Current Heart Rate");
+    expect(screen.getByText("Enter Heart Rate (bpm)")).toBeTruthy();
+    expect(screen.getByTestId("entry-icon")).toBeTruthy();
+  });
+
+  it("the blood pressure popup has one label over the two numbers", async () => {
+    await openEntry("blood_pressure");
+    expect(screen.getByTestId("entry-subtitle")).toHaveTextContent("Enter Blood Pressure Readings");
+    expect(screen.getByTestId("entry-label")).toHaveTextContent("Enter Blood Pressure (mmHg)");
+  });
+
+  it("the respiratory rate popup is labelled for respiratory rate, not the Figma copy-paste 'Heart Rate'", async () => {
+    await openEntry("respiratory_rate");
+    expect(screen.getByTestId("entry-title")).toHaveTextContent("Respiratory Rate");
+    expect(screen.getByText("Enter Respiratory Rate (breaths/min)")).toBeTruthy();
+    expect(screen.queryByText("Enter Heart Rate (bpm)")).toBeNull();
+  });
+
   it("lists the six vitals", async () => {
     await renderWith(<AddVitals route={route} navigation={nav} />);
     for (const kind of ["heart_rate", "blood_pressure", "temperature", "respiratory_rate", "blood_glucose", "sleep_duration"]) {
@@ -377,8 +460,8 @@ describe("AddVitals (manual entry)", () => {
   it("saves a heart rate for the patient, recorded by the caregiver, then marks the row saved", async () => {
     await openEntry("heart_rate");
     await fireEvent.changeText(screen.getByTestId("entry-value"), "82");
-    await waitFor(() => expect(screen.getByText("Save heart rate")).toBeTruthy());
-    await fireEvent.press(screen.getByText("Save heart rate"));
+    await waitFor(() => expect(screen.getByText("Update Heart Rate")).toBeTruthy());
+    await fireEvent.press(screen.getByText("Update Heart Rate"));
     await waitFor(() =>
       expect(createSpy).toHaveBeenCalledWith({
         patientId: PATIENT,
@@ -396,7 +479,7 @@ describe("AddVitals (manual entry)", () => {
   it("does not send an invalid reading and says why", async () => {
     await openEntry("heart_rate");
     await fireEvent.changeText(screen.getByTestId("entry-value"), "abc");
-    await fireEvent.press(screen.getByText("Save heart rate"));
+    await fireEvent.press(screen.getByText("Update Heart Rate"));
     expect(await screen.findByTestId("entry-error")).toHaveTextContent("Enter a number for heart rate.");
     expect(createSpy).not.toHaveBeenCalled();
   });
@@ -406,7 +489,7 @@ describe("AddVitals (manual entry)", () => {
     await openEntry("blood_pressure");
     await fireEvent.changeText(screen.getByTestId("entry-systolic"), "300");
     await fireEvent.changeText(screen.getByTestId("entry-diastolic"), "20");
-    await fireEvent.press(screen.getByText("Save blood pressure"));
+    await fireEvent.press(screen.getByText("Update Blood Pressure"));
     expect(await screen.findByTestId("entry-error")).toBeTruthy();
     await fireEvent.changeText(screen.getByTestId("entry-systolic"), "120");
     expect(screen.queryByTestId("entry-error")).toBeNull();
@@ -416,7 +499,7 @@ describe("AddVitals (manual entry)", () => {
     await openEntry("blood_pressure");
     await fireEvent.changeText(screen.getByTestId("entry-systolic"), "120");
     await fireEvent.changeText(screen.getByTestId("entry-diastolic"), "80");
-    await fireEvent.press(screen.getByText("Save blood pressure"));
+    await fireEvent.press(screen.getByText("Update Blood Pressure"));
     await waitFor(() => expect(createSpy).toHaveBeenCalledWith(expect.objectContaining({ vital_type: "blood_pressure", value: "120/80", unit: "mmHg" })));
   });
 
@@ -425,7 +508,7 @@ describe("AddVitals (manual entry)", () => {
     await fireEvent.press(screen.getByTestId("unit-mmol/L"));
     await fireEvent.press(screen.getByTestId("context-FBS"));
     await fireEvent.changeText(screen.getByTestId("entry-value"), "5.5");
-    await fireEvent.press(screen.getByText("Save blood glucose"));
+    await fireEvent.press(screen.getByText("Update Blood Glucose"));
     await waitFor(() => expect(createSpy).toHaveBeenCalledWith(expect.objectContaining({ vital_type: "blood_glucose", value: "5.5", unit: "mmol/L", notes: "FBS" })));
   });
 
@@ -433,7 +516,7 @@ describe("AddVitals (manual entry)", () => {
     await openEntry("temperature");
     await fireEvent.press(screen.getByTestId("unit-°F"));
     await fireEvent.changeText(screen.getByTestId("entry-value"), "98.6");
-    await fireEvent.press(screen.getByText("Save temperature"));
+    await fireEvent.press(screen.getByText("Update Temperature"));
     await waitFor(() => expect(createSpy).toHaveBeenCalledWith(expect.objectContaining({ value: "98.6", unit: "°F" })));
   });
 
@@ -441,7 +524,7 @@ describe("AddVitals (manual entry)", () => {
     createSpy.mockRejectedValue(ACCESS_DENIED);
     await openEntry("sleep_duration");
     await fireEvent.changeText(screen.getByTestId("entry-value"), "6.5");
-    await fireEvent.press(screen.getByText("Save sleep duration"));
+    await fireEvent.press(screen.getByText("Update Sleep Duration"));
     expect(await screen.findByTestId("entry-error")).toHaveTextContent(/while a visit with the patient is in progress/);
     expect(screen.getByTestId("entry-close")).toBeTruthy();
   });
@@ -450,7 +533,7 @@ describe("AddVitals (manual entry)", () => {
     createSpy.mockRejectedValue(new ApiError(0, null, "offline"));
     await openEntry("respiratory_rate");
     await fireEvent.changeText(screen.getByTestId("entry-value"), "16");
-    await fireEvent.press(screen.getByText("Save respiration rate"));
+    await fireEvent.press(screen.getByText("Update Respiratory Rate"));
     expect(await screen.findByTestId("entry-error")).toHaveTextContent(/Can't reach Oakly/);
   });
 

@@ -152,6 +152,12 @@ export function monthLabel(value: string): string {
   return m && name ? `${name} ${m[1]}` : value;
 }
 
+/** "November" for a YYYY-MM month value: the Earning Payment month chip and the payslip page title (the value itself when it is not one). */
+export function monthName(value: string): string {
+  const m = /^(\d{4})-(\d{2})$/.exec(value);
+  return (m && MONTHS[Number(m[2]) - 1]) || value;
+}
+
 export function monthOptions(now: Date = new Date(), count = 6): { value: string; label: string }[] {
   const d = lagos(now);
   const options: { value: string; label: string }[] = [];

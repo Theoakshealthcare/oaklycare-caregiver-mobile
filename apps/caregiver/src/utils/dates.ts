@@ -71,3 +71,36 @@ export function formatStamp(value: string | Date | null | undefined): string {
   const date = toDate(value);
   return date ? date.toLocaleString(LOCALE, { day: "numeric", month: "short", hour: "2-digit", minute: "2-digit", hour12: false }) : "";
 }
+
+/** "Wed 08:00" for a day inside the last week, "28 Oct, 09:14" before that: the stamp between chat message groups. */
+export function formatChatStamp(value: string | Date | null | undefined, now: Date = new Date()): string {
+  const date = toDate(value);
+  if (!date) return "";
+  const days = (now.getTime() - date.getTime()) / 86_400_000;
+  if (days >= 6 || days < -1) return formatStamp(date);
+  return `${date.toLocaleDateString(LOCALE, { weekday: "short" })} ${formatClock(date)}`;
+}
+
+/** "Today", "Tomorrow", or "Thu, 5 Nov" for the day of `value`, read in the phone's zone. */
+export function formatRelativeDay(value: string | Date | null | undefined, now: Date = new Date()): string {
+  const date = toDate(value);
+  if (!date) return "";
+  const startOf = (d: Date) => new Date(d.getFullYear(), d.getMonth(), d.getDate()).getTime();
+  const diff = Math.round((startOf(date) - startOf(now)) / 86_400_000);
+  if (diff === 0) return "Today";
+  if (diff === 1) return "Tomorrow";
+  return date.toLocaleDateString(LOCALE, { weekday: "short", day: "numeric", month: "short" });
+}
+
+/** "5 minutes ago" style: "Just now", "2 mins ago", "3 hrs ago", "2 days ago". */
+export function formatTimeAgo(value: string | Date | null | undefined, now: Date = new Date()): string {
+  const date = toDate(value);
+  if (!date) return "";
+  const minutes = Math.max(0, Math.floor((now.getTime() - date.getTime()) / 60_000));
+  if (minutes < 1) return "Just now";
+  if (minutes < 60) return `${minutes} ${minutes === 1 ? "min" : "mins"} ago`;
+  const hours = Math.floor(minutes / 60);
+  if (hours < 24) return `${hours} ${hours === 1 ? "hr" : "hrs"} ago`;
+  const days = Math.floor(hours / 24);
+  return `${days} ${days === 1 ? "day" : "days"} ago`;
+}

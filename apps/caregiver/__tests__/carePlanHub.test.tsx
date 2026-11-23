@@ -69,10 +69,12 @@ describe("Care plans hub: Assigned tab", () => {
       ],
     });
     await renderHub();
-    expect(await screen.findByText("Placeholder Client")).toBeTruthy();
-    expect(screen.getByText("Placeholder Relative")).toBeTruthy();
-    expect(screen.getAllByText("Ongoing")).toHaveLength(2);
-    expect(screen.getByText("High risk")).toBeTruthy();
+    expect(await screen.findByText("Assigned Plan: Placeholder Client")).toBeTruthy();
+    expect(screen.getByText("Assigned Plan: Placeholder Relative")).toBeTruthy();
+    expect(screen.getByTestId(`plan-status-${PLAN_ID}`)).toHaveTextContent("Status: Ongoing");
+    expect(screen.getByTestId("plan-status-p2")).toHaveTextContent("Status: Ongoing");
+    expect(screen.getByTestId(`plan-risk-${PLAN_ID}`)).toHaveTextContent("Risk: High");
+    expect(screen.getByTestId("plan-risk-p2")).toHaveTextContent("Risk: Low");
     expect(list).toHaveBeenCalledWith("active", "");
     // A bar only where there is a number: null means "nothing to measure", never 0%.
     expect(screen.getByTestId(`plan-progress-${PLAN_ID}`)).toBeTruthy();
@@ -91,11 +93,14 @@ describe("Care plans hub: Assigned tab", () => {
   it("searches by client name after typing stops, and switches to completed plans", async () => {
     const list = jest.spyOn(carePlansService, "listPlans").mockResolvedValue({ items: [listItem()] });
     await renderHub();
-    await screen.findByText("Placeholder Client");
+    await screen.findByText("Assigned Plan: Placeholder Client");
 
     await fireEvent.changeText(screen.getByTestId("plans-search"), "  Ada ");
     await waitFor(() => expect(list).toHaveBeenCalledWith("active", "Ada"));
 
+    // The filter button (sliders icon) opens the Active / Completed choice.
+    expect(screen.queryByTestId("status-completed")).toBeNull();
+    await fireEvent.press(screen.getByTestId("plans-filter"));
     await fireEvent.press(screen.getByTestId("status-completed"));
     await waitFor(() => expect(list).toHaveBeenCalledWith("completed", "Ada"));
   });
@@ -103,11 +108,12 @@ describe("Care plans hub: Assigned tab", () => {
   it("never shows Active plans under the Completed filter while it loads", async () => {
     const list = jest.spyOn(carePlansService, "listPlans").mockResolvedValueOnce({ items: [listItem()] });
     await renderHub();
-    await screen.findByText("Placeholder Client");
+    await screen.findByText("Assigned Plan: Placeholder Client");
     list.mockReturnValueOnce(new Promise(() => undefined));
+    await fireEvent.press(screen.getByTestId("plans-filter"));
     await fireEvent.press(screen.getByTestId("status-completed"));
     expect(await screen.findByTestId("plans-loading")).toBeTruthy();
-    expect(screen.queryByText("Placeholder Client")).toBeNull();
+    expect(screen.queryByText("Assigned Plan: Placeholder Client")).toBeNull();
   });
 
   it("clears the search when switching tabs", async () => {
@@ -117,6 +123,9 @@ describe("Care plans hub: Assigned tab", () => {
     await fireEvent.changeText(screen.getByTestId("plans-search"), "Ada");
     await fireEvent.press(screen.getByTestId("tab-templates"));
     expect(await screen.findByText("Stroke Recovery")).toBeTruthy();
+    // Figma draws no search on the templates tab, and the assigned search starts empty when you come back.
+    expect(screen.queryByTestId("plans-search")).toBeNull();
+    await fireEvent.press(screen.getByTestId("tab-assigned"));
     expect(screen.getByTestId("plans-search").props.value).toBe("");
   });
 
@@ -151,7 +160,7 @@ describe("Care plans hub: Assigned tab", () => {
     (locationService.getHome as jest.Mock).mockResolvedValue(home(false));
     jest.spyOn(carePlansService, "listPlans").mockResolvedValue({ items: [listItem()] });
     await renderHub();
-    await screen.findByText("Placeholder Client");
+    await screen.findByText("Assigned Plan: Placeholder Client");
     expect(screen.queryByTestId("create-new-plan")).toBeNull();
   });
 });
@@ -161,7 +170,7 @@ describe("Care plans hub: Templates tab", () => {
     jest.spyOn(carePlansService, "listPlans").mockResolvedValue({ items: [] });
   });
 
-  it("lists templates with the not-reviewed note, filters by search and opens a preview", async () => {
+  it("lists templates with the not-reviewed note, previews one and uses another", async () => {
     jest.spyOn(carePlansService, "listTemplates").mockResolvedValue({
       items: [templateItem(), templateItem({ id: "t2", key: "diabetes_management", name: "Diabetes Management", summary: "Meals and glucose records.", clinical_review_status: "approved" })],
     });
@@ -171,12 +180,15 @@ describe("Care plans hub: Templates tab", () => {
     expect(screen.getByTestId("template-pending-stroke_recovery")).toBeTruthy();
     expect(screen.queryByTestId("template-pending-diabetes_management")).toBeNull();
 
-    await fireEvent.changeText(screen.getByTestId("plans-search"), "glucose");
-    expect(screen.queryByText("Stroke Recovery")).toBeNull();
+    expect(screen.getAllByText("30-day Program")).toHaveLength(2);
 
-    await fireEvent.changeText(screen.getByTestId("plans-search"), "stroke");
-    await fireEvent.press(screen.getByTestId("template-stroke_recovery"));
+    await fireEvent.press(screen.getByTestId("template-preview-stroke_recovery"));
     expect(mockNavigate).toHaveBeenCalledWith("CarePlanTemplate", { templateId: TEMPLATE_ID, bookingId: undefined });
+
+    // "Use Template" skips the preview and goes to the client picker.
+    mockNavigate.mockClear();
+    await fireEvent.press(screen.getByTestId("template-use-diabetes_management"));
+    expect(mockNavigate).toHaveBeenCalledWith("CarePlanClients", { templateId: "t2" });
   });
 
   it("explains that templates are for nurses on a 403", async () => {

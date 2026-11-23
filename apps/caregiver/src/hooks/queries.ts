@@ -225,12 +225,12 @@ export function useCreateVital() {
 }
 
 /** The client of a live visit. Short-lived in memory; a 404 (the visit is no longer live) is not retried. */
-export function useClientProfile(bookingId: string) {
-  const enabled = useSignedIn();
+export function useClientProfile(bookingId: string, wanted = true) {
+  const signedIn = useSignedIn();
   return useQuery({
     queryKey: queryKeys.clientProfile(bookingId),
     queryFn: () => clientsService.getClientProfile(bookingId),
-    enabled,
+    enabled: signedIn && wanted,
     gcTime: 2 * 60_000,
   });
 }

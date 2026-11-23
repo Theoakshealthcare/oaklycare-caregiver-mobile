@@ -163,36 +163,43 @@ const EditForm: React.FC<{ profile: CaregiverProfile }> = ({ profile }) => {
             <Feather name="user" size={40} color={theme.colors.primary} />
           )}
         </View>
-        <Pressable accessibilityRole="button" onPress={() => void pickPhoto()} disabled={uploading} style={{ marginTop: 8 }}>
+        <Pressable
+          accessibilityRole="button"
+          onPress={() => void pickPhoto()}
+          disabled={uploading}
+          style={{ marginTop: 8, flexDirection: "row", alignItems: "center", gap: 6 }}
+        >
+          <Feather name="download" size={16} color={theme.colors.primary} />
           <Text variant="body" weight="medium" color={theme.colors.primary}>
-            {uploading ? "Uploading..." : "Upload image"}
+            {uploading ? "Uploading..." : "Upload Image"}
           </Text>
         </Pressable>
       </View>
 
       <View style={{ gap: 16 }}>
-        <Input label="Full name" value={form.fullName} onChangeText={set("fullName")} error={errors.fullName} />
+        <Input label="Full Name" value={form.fullName} onChangeText={set("fullName")} error={errors.fullName} placeholder="Provide your Full Name" />
         <Input
-          label="Email address"
+          label="Email Address"
           value={profile.email}
           editable={false}
+          placeholder="Provide your Email Address"
           containerStyle={{ opacity: 0.6 }}
         />
-        <Input label="Phone number" value={form.phone} onChangeText={set("phone")} keyboardType="phone-pad" placeholder="+234" />
-        <Input label="House address" value={form.address} onChangeText={set("address")} placeholder="Enter house address" />
+        <Input label="Phone Number" value={form.phone} onChangeText={set("phone")} keyboardType="phone-pad" placeholder="+234" />
+        <Input label="House Address" value={form.address} onChangeText={set("address")} placeholder="Enter House Address" />
         <Select
-          label="Gender"
-          placeholder="Select gender"
+          label="Select Gender"
+          placeholder="Select Gender"
           options={GENDERS}
           value={form.gender || undefined}
           onValueChange={(v) => set("gender")(String(v))}
         />
         <DateField
           testID="edit-dob"
-          label="Date of birth"
+          label="Date of Birth"
           value={form.dateOfBirth}
           onChange={set("dateOfBirth")}
-          placeholder="Select your date of birth"
+          placeholder="Select your Date of Birth"
           error={errors.dateOfBirth}
           maximumDate={new Date()}
           initialDate={new Date(new Date().getFullYear() - 30, 0, 1)}
@@ -205,13 +212,13 @@ const EditForm: React.FC<{ profile: CaregiverProfile }> = ({ profile }) => {
           onValueChange={(v) => set("state")(String(v))}
         />
         <Input
-          label="Emergency contact phone number"
+          label="Emergency Contact Person Phone Number"
           value={form.emergencyPhone}
           onChangeText={set("emergencyPhone")}
           keyboardType="phone-pad"
           placeholder="+234"
         />
-        <Button title="Update profile details" onPress={submit} loading={save.isPending} />
+        <Button title="Update Profile Details" onPress={submit} loading={save.isPending} />
       </View>
     </>
   );
@@ -220,7 +227,7 @@ const EditForm: React.FC<{ profile: CaregiverProfile }> = ({ profile }) => {
 const EditProfile: React.FC = () => {
   const profile = useCaregiverProfile();
   return (
-    <ScreenShell title="Edit profile">
+    <ScreenShell title="Edit Profile">
       {profile.data ? (
         <EditForm profile={profile.data} />
       ) : profile.isError ? (

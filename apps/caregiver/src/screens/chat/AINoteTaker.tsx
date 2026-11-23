@@ -17,6 +17,7 @@ import { theme, MAX_FONT_SCALE } from "@/src/constants/theme"
 import Text from "@/src/components/ui/text"
 import Button from "@/src/components/ui/button"
 import KeyboardScrollView from "@/src/components/ui/keyboard-scroll-view"
+import AiOrb from "@/src/components/chat/AiOrb"
 import HeaderBack from "@/src/components/back/HeaderBack"
 import { globalStyles } from "@/src/constants/styles"
 import { messageForError } from "@/src/api/errors"
@@ -315,6 +316,24 @@ const AINoteTaker: React.FC<StackScreenProps<ScreenParamLists, "AINoteTaker">> =
     </View>
   )
 
+  const micLocked = voiceOn && !consent.consented && !isRecording
+
+  const recordingIndicator = isRecording ? (
+    <View
+      testID="recording-indicator"
+      accessibilityRole="alert"
+      style={[globalStyles.row, { justifyContent: "center", marginBottom: 16, backgroundColor: theme.colors.secondaryLight, padding: 12, borderRadius: 12 }]}
+    >
+      <View style={{ width: 12, height: 12, borderRadius: 6, backgroundColor: theme.colors.error }} />
+      <Text variant="body" color={theme.colors.error} weight="bold" testID="recording-timer">
+        {`Recording ${formatDuration(recordingDuration)}`}
+      </Text>
+      <Text variant="small" color={theme.colors.textLight}>
+        Tap to stop
+      </Text>
+    </View>
+  ) : null
+
   return (
     <View style={{ flex: 1, backgroundColor: theme.colors.white }}>
       <KeyboardScrollView>
@@ -323,13 +342,13 @@ const AINoteTaker: React.FC<StackScreenProps<ScreenParamLists, "AINoteTaker">> =
 
           <View style={{ marginVertical: "5%" }}>
             <Text variant="h2" weight="bold">
-              AI Note Taker
+              AI Notetaker
             </Text>
-            <Text variant="body" color={theme.colors.textLight}>
-              {voiceOn
-                ? "Record or write notes for this visit. A recording becomes text you can check and edit before you save it."
-                : "Write notes for this visit. Voice recordings are not transcribed yet."}
-            </Text>
+            {voiceOn ? null : (
+              <Text variant="body" color={theme.colors.textLight}>
+                Write notes for this visit. Voice recordings are not transcribed yet.
+              </Text>
+            )}
             {voiceNotesMode() === "fake" ? (
               <Text variant="small" color={theme.colors.warningText} testID="fake-mode-banner" style={{ marginTop: 8 }}>
                 Test mode: voice notes use sample text. Nothing you record leaves this phone.
@@ -387,6 +406,68 @@ const AINoteTaker: React.FC<StackScreenProps<ScreenParamLists, "AINoteTaker">> =
             </View>
           ) : null}
 
+          {/* Voice to text (Figma "I'm Listening"): the orb, the Voice to text pill, and the language choice */}
+          {voiceOn ? (
+            <View testID="voice-panel" style={{ alignItems: "center", gap: theme.spacing.md, marginBottom: theme.spacing.lg }}>
+              <Text variant="body" color={theme.colors.textLight} testID="listening-label">
+                {isRecording ? "I'm Listening" : "Ready to listen"}
+              </Text>
+              <AiOrb testID="ai-orb" />
+              {recordingIndicator}
+              {!isRecording ? (
+                <View style={[globalStyles.row, { justifyContent: "center", gap: 8 }]}>
+                  {(["en", "pcm"] as const).map((code) => (
+                    <TouchableOpacity
+                      key={code}
+                      testID={`language-${code}`}
+                      accessibilityRole="radio"
+                      accessibilityState={{ selected: language === code }}
+                      onPress={() => setLanguage(code)}
+                      style={{
+                        paddingHorizontal: 16,
+                        paddingVertical: 8,
+                        borderRadius: 16,
+                        backgroundColor: language === code ? theme.colors.primary : theme.colors.background,
+                      }}
+                    >
+                      <Text variant="small" weight="bold" color={language === code ? theme.colors.white : theme.colors.text}>
+                        {code === "en" ? "English" : "Pidgin"}
+                      </Text>
+                    </TouchableOpacity>
+                  ))}
+                </View>
+              ) : null}
+              <TouchableOpacity
+                testID="mic-button"
+                accessibilityRole="button"
+                accessibilityLabel={isRecording ? "Stop recording" : "Start recording"}
+                accessibilityState={{ disabled: micLocked }}
+                disabled={micLocked}
+                onPress={isRecording ? stopRecording : startRecording}
+                style={{
+                  opacity: micLocked ? 0.4 : 1,
+                  width: "100%",
+                  minHeight: 48,
+                  flexDirection: "row",
+                  alignItems: "center",
+                  justifyContent: "space-between",
+                  borderWidth: 1,
+                  borderColor: isRecording ? theme.colors.error : theme.colors.primary,
+                  borderRadius: theme.borderRadius.round,
+                  paddingHorizontal: theme.spacing.md,
+                }}
+              >
+                <Text variant="small" color={isRecording ? theme.colors.error : theme.colors.primary}>
+                  {isRecording ? "Tap to stop" : "Voice to text"}
+                </Text>
+                <Feather name={isRecording ? "square" : "mic"} size={18} color={isRecording ? theme.colors.error : theme.colors.primary} />
+              </TouchableOpacity>
+              <Text variant="small" color={theme.colors.textLight} style={{ alignSelf: "flex-start" }}>
+                A recording becomes text you can check and edit before you save it. Or type your note below.
+              </Text>
+            </View>
+          ) : null}
+
           {/* Note Input */}
           <View
             style={{
@@ -424,70 +505,31 @@ const AINoteTaker: React.FC<StackScreenProps<ScreenParamLists, "AINoteTaker">> =
               }}
             />
 
-            {voiceOn && !isRecording ? (
-              <View style={[globalStyles.row, { justifyContent: "center", gap: 8, marginBottom: 12 }]}>
-                {(["en", "pcm"] as const).map((code) => (
-                  <TouchableOpacity
-                    key={code}
-                    testID={`language-${code}`}
-                    accessibilityRole="radio"
-                    accessibilityState={{ selected: language === code }}
-                    onPress={() => setLanguage(code)}
-                    style={{
-                      paddingHorizontal: 16,
-                      paddingVertical: 8,
-                      borderRadius: 16,
-                      backgroundColor: language === code ? theme.colors.primary : theme.colors.background,
-                    }}
-                  >
-                    <Text variant="small" weight="bold" color={language === code ? theme.colors.white : theme.colors.text}>
-                      {code === "en" ? "English" : "Pidgin"}
-                    </Text>
-                  </TouchableOpacity>
-                ))}
-              </View>
-            ) : null}
-
-            {/* Recording Controls */}
-            <View style={[globalStyles.row, { justifyContent: "center", marginBottom: 16 }]}>
-              <TouchableOpacity
-                testID="mic-button"
-                accessibilityRole="button"
-                accessibilityLabel={isRecording ? "Stop recording" : "Start recording"}
-                accessibilityState={{ disabled: voiceOn && !consent.consented && !isRecording }}
-                disabled={voiceOn && !consent.consented && !isRecording}
-                onPress={isRecording ? stopRecording : startRecording}
-                style={{
-                  opacity: voiceOn && !consent.consented && !isRecording ? 0.4 : 1,
-                  width: 80,
-                  height: 80,
-                  borderRadius: 40,
-                  backgroundColor: isRecording ? theme.colors.error : theme.colors.primary,
-                  alignItems: "center",
-                  justifyContent: "center",
-                  marginRight: 20,
-                }}
-              >
-                <Feather name={isRecording ? "square" : "mic"} size={32} color={theme.colors.white} />
-              </TouchableOpacity>
-
-            </View>
-
-            {isRecording && (
-              <View
-                testID="recording-indicator"
-                accessibilityRole="alert"
-                style={[globalStyles.row, { justifyContent: "center", marginBottom: 16, backgroundColor: theme.colors.secondaryLight, padding: 12, borderRadius: 12 }]}
-              >
-                <View style={{ width: 12, height: 12, borderRadius: 6, backgroundColor: theme.colors.error }} />
-                <Text variant="body" color={theme.colors.error} weight="bold" testID="recording-timer">
-                  {`Recording ${formatDuration(recordingDuration)}`}
-                </Text>
-                <Text variant="small" color={theme.colors.textLight}>
-                  Tap the square to stop
-                </Text>
+            {/* Recording Controls: the typed screen keeps its round mic; with voice notes on the Voice to text pill above replaces it */}
+            {voiceOn ? null : (
+              <View style={[globalStyles.row, { justifyContent: "center", marginBottom: 16 }]}>
+                <TouchableOpacity
+                  testID="mic-button"
+                  accessibilityRole="button"
+                  accessibilityLabel={isRecording ? "Stop recording" : "Start recording"}
+                  accessibilityState={{ disabled: false }}
+                  onPress={isRecording ? stopRecording : startRecording}
+                  style={{
+                    width: 80,
+                    height: 80,
+                    borderRadius: 40,
+                    backgroundColor: isRecording ? theme.colors.error : theme.colors.primary,
+                    alignItems: "center",
+                    justifyContent: "center",
+                    marginRight: 20,
+                  }}
+                >
+                  <Feather name={isRecording ? "square" : "mic"} size={32} color={theme.colors.white} />
+                </TouchableOpacity>
               </View>
             )}
+
+            {voiceOn ? null : recordingIndicator}
 
             <Button title="Save Note" onPress={saveTextNote} loading={createNote.isPending} />
           </View>

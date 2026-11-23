@@ -5,7 +5,7 @@ import { messageForError } from "@/src/api/errors";
 import { Chip, FieldHint, ModalFrame } from "@/src/components/careplan/parts";
 import Button from "@/src/components/ui/button";
 import Input from "@/src/components/ui/input";
-import Text from "@/src/components/ui/text";
+import { Select } from "@/src/components/ui/select";
 import { theme } from "@/src/constants/theme";
 import {
   DAILY,
@@ -32,6 +32,8 @@ const PRESETS = [
   { key: "weekends", label: "Weekends", days: WEEKENDS },
 ] as const;
 
+const FREQUENCY_OPTIONS = [...PRESETS.map((p) => ({ label: p.label, value: p.key })), { label: "Choose days", value: "custom" }];
+
 /**
  * "Add New Daily Task" (nurses): name, routine (the slot), an optional time and the days. A task is scheduled from
  * the day it is added, and adding never overwrites anything, so no version is sent.
@@ -46,6 +48,10 @@ const TaskModal: React.FC<{
   const [draft, setDraft] = useState(emptyTaskDraft);
   const [errors, setErrors] = useState<{ title?: string; time?: string; days?: string }>({});
   const [error, setError] = useState<string | null>(null);
+  // "Choose days" shows the seven day buttons; a preset hides them.
+  const [custom, setCustom] = useState(false);
+  const preset = PRESETS.find((p) => sameDays(draft.days, [...p.days]));
+  const frequency = custom || !preset ? "custom" : preset.key;
 
   const toggleDay = (day: number) =>
     setDraft((d) => ({ ...d, days: d.days.includes(day) ? d.days.filter((x) => x !== day) : [...d.days, day] }));
@@ -69,24 +75,23 @@ const TaskModal: React.FC<{
   };
 
   return (
-    <ModalFrame testID="task-modal" title="Add New Daily Task" onClose={onClose}>
-      <Text variant="small" color={theme.colors.textLight}>{`Create a daily task for ${plan.client.full_name}`}</Text>
+    <ModalFrame testID="task-modal" title="Add New Daily Task" subtitle={`Create daily task for ${plan.client.full_name}`} onClose={onClose}>
       <Input
         testID="task-title"
-        label="Task name"
+        label="Task Name"
         placeholder="For example: Physiotherapy appointment"
         value={draft.title}
         onChangeText={(title) => setDraft((d) => ({ ...d, title }))}
         error={errors.title}
       />
-      <View style={{ gap: theme.spacing.sm }}>
-        <Text variant="small">Task routine</Text>
-        <View style={{ flexDirection: "row", flexWrap: "wrap", gap: theme.spacing.sm }}>
-          {SLOTS.map((s) => (
-            <Chip key={s.value} testID={`task-slot-${s.value}`} label={s.label} selected={draft.slot === s.value} onPress={() => setDraft((d) => ({ ...d, slot: s.value }))} />
-          ))}
-        </View>
-      </View>
+      <Select
+        testID="task-slot"
+        label="Task Routine"
+        options={SLOTS.map((s) => ({ label: s.label, value: s.value }))}
+        value={draft.slot}
+        onValueChange={(value) => setDraft((d) => ({ ...d, slot: value as typeof d.slot }))}
+        containerStyle={{ marginBottom: 0 }}
+      />
       <Input
         testID="task-time"
         label="Time (optional, 24-hour HH:MM)"
@@ -97,20 +102,26 @@ const TaskModal: React.FC<{
         onChangeText={(time) => setDraft((d) => ({ ...d, time }))}
         error={errors.time}
       />
-      <View style={{ gap: theme.spacing.sm }}>
-        <Text variant="small">Task frequency</Text>
-        <View style={{ flexDirection: "row", flexWrap: "wrap", gap: theme.spacing.sm }}>
-          {PRESETS.map((p) => (
-            <Chip key={p.key} testID={`task-days-${p.key}`} label={p.label} selected={sameDays(draft.days, [...p.days])} onPress={() => setDraft((d) => ({ ...d, days: [...p.days] }))} />
-          ))}
-        </View>
+      <Select
+        testID="task-frequency"
+        label="Task Frequency"
+        options={FREQUENCY_OPTIONS}
+        value={frequency}
+        onValueChange={(value) => {
+          const chosen = PRESETS.find((p) => p.key === value);
+          setCustom(!chosen);
+          if (chosen) setDraft((d) => ({ ...d, days: [...chosen.days] }));
+        }}
+        containerStyle={{ marginBottom: 0 }}
+      />
+      {frequency === "custom" ? (
         <View style={{ flexDirection: "row", flexWrap: "wrap", gap: theme.spacing.xs }}>
           {WEEK_TABS.map((label, i) => (
             <Chip key={label} testID={`task-day-${i + 1}`} label={label} selected={draft.days.includes(i + 1)} onPress={() => toggleDay(i + 1)} />
           ))}
         </View>
-        {errors.days ? <FieldHint text={errors.days} testID="task-days-error" /> : null}
-      </View>
+      ) : null}
+      {errors.days ? <FieldHint text={errors.days} testID="task-days-error" /> : null}
       {error ? <FieldHint text={error} testID="task-error" /> : null}
       <Button testID="task-save" title="Add New Daily Task" onPress={save} loading={add.isPending} />
     </ModalFrame>

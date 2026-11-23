@@ -1,10 +1,11 @@
 import React, { useMemo, useState } from "react";
-import { FlatList, Modal, Pressable, View } from "react-native";
+import { FlatList, Modal, Pressable, TextInput, View } from "react-native";
 import { Feather } from "@expo/vector-icons";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 
 import { ErrorState, LoadingState } from "@/src/components/account/StateViews";
-import Input from "@/src/components/ui/input";
+import FieldLabel from "@/src/components/ui/field-label";
+import { FIELD_RADIUS } from "@/src/components/ui/input";
 import Text from "@/src/components/ui/text";
 import { theme } from "@/src/constants/theme";
 import type { Bank } from "@/src/services/wallet.service";
@@ -34,27 +35,25 @@ const BankPicker: React.FC<Props> = ({ banks, loading, error, onRetry, value, on
 
   return (
     <View style={{ marginBottom: 16 }}>
-      <Text variant="small" weight="medium" style={{ marginBottom: 6 }}>
-        Bank
-      </Text>
+      <FieldLabel>Select Bank</FieldLabel>
       <Pressable
         accessibilityRole="button"
-        accessibilityLabel="Choose your bank"
+        accessibilityLabel="Choose Bank"
         onPress={() => setOpen(true)}
         style={{
           flexDirection: "row",
           alignItems: "center",
           justifyContent: "space-between",
           padding: 14,
-          borderRadius: 12,
+          borderRadius: FIELD_RADIUS,
           borderWidth: 1,
           borderColor: invalid ? theme.colors.error : theme.colors.primary,
         }}
       >
         <Text variant="body" color={value ? undefined : theme.colors.textLight}>
-          {value ? value.name : "Choose your bank"}
+          {value ? value.name : "Choose Bank"}
         </Text>
-        <Feather name="chevron-down" size={18} color={theme.colors.primary} />
+        <Feather name="chevron-down" size={18} color={theme.colors.text} />
       </Pressable>
       {invalid ? (
         <Text variant="small" color={theme.colors.error} style={{ marginTop: 4 }}>
@@ -62,49 +61,80 @@ const BankPicker: React.FC<Props> = ({ banks, loading, error, onRetry, value, on
         </Text>
       ) : null}
 
-      <Modal visible={open} animationType="slide" onRequestClose={close}>
-        {/* A full-screen modal covers the status bar and the Dynamic Island: start below the device's top inset, with a Back link like every other screen. */}
-        <View style={{ flex: 1, padding: 16, paddingTop: insets.top + 12, backgroundColor: theme.colors.white }} testID="bank-picker">
-          <Pressable
-            accessibilityRole="button"
-            accessibilityLabel="Close bank list"
-            onPress={close}
-            style={{ flexDirection: "row", alignItems: "center", gap: 4, marginBottom: 12 }}
-          >
-            <Feather name="chevron-left" size={24} color={theme.colors.text} />
-            <Text variant="body">Back</Text>
-          </Pressable>
-          <Text variant="h3" weight="bold" style={{ marginBottom: 12 }}>
-            Choose your bank
-          </Text>
-          <Input placeholder="Search banks" value={query} onChangeText={setQuery} autoCorrect={false} />
-          {error && !banks ? (
-            <ErrorState error={error} onRetry={onRetry} />
-          ) : loading || !banks ? (
-            <LoadingState testID="banks-loading" />
-          ) : shown.length === 0 ? (
-            <Text variant="small" color={theme.colors.textLight} style={{ marginTop: 16 }}>
-              No bank matches your search.
+      <Modal visible={open} transparent animationType="fade" onRequestClose={close}>
+        {/* Figma: a white card over a dimmed page, with Close at its top left. It starts below the device's top inset, high enough for the keyboard not to cover the list. */}
+        <View
+          testID="bank-picker"
+          style={{ flex: 1, backgroundColor: "rgba(0,0,0,0.3)", paddingHorizontal: theme.spacing.md, paddingTop: insets.top + 60, paddingBottom: theme.spacing.md }}
+        >
+          <View style={{ flexShrink: 1, backgroundColor: theme.colors.white, borderRadius: theme.borderRadius.xxl, padding: theme.spacing.md }}>
+            <Pressable
+              accessibilityRole="button"
+              accessibilityLabel="Close bank list"
+              onPress={close}
+              style={{ flexDirection: "row", alignItems: "center", gap: 6, marginBottom: 8, alignSelf: "flex-start" }}
+            >
+              <Feather name="x-circle" size={18} color={theme.colors.text} />
+              <Text variant="small">Close</Text>
+            </Pressable>
+            <Text variant="body" weight="bold" center style={{ marginBottom: 12 }}>
+              Select Bank
             </Text>
-          ) : (
-            <FlatList
-              data={shown}
-              keyExtractor={(b) => b.code}
-              keyboardShouldPersistTaps="handled"
-              renderItem={({ item }) => (
-                <Pressable
-                  accessibilityRole="button"
-                  onPress={() => {
-                    onChange(item);
-                    close();
-                  }}
-                  style={{ paddingVertical: 14, borderBottomWidth: 1, borderBottomColor: theme.colors.soft }}
-                >
-                  <Text variant="body">{item.name}</Text>
-                </Pressable>
-              )}
-            />
-          )}
+            <View
+              style={{
+                flexDirection: "row",
+                alignItems: "center",
+                gap: 8,
+                paddingHorizontal: 14,
+                borderRadius: FIELD_RADIUS,
+                backgroundColor: theme.colors.soft,
+                marginBottom: 8,
+              }}
+            >
+              <Feather name="search" size={18} color={theme.colors.textLight} />
+              <TextInput
+                placeholder="Search bank"
+                placeholderTextColor={theme.colors.textLight}
+                value={query}
+                onChangeText={setQuery}
+                autoCorrect={false}
+                style={{ flex: 1, paddingVertical: 14, fontFamily: theme.fonts.regular, fontSize: theme.sizes.body, color: theme.colors.text }}
+              />
+            </View>
+            {error && !banks ? (
+              <ErrorState error={error} onRetry={onRetry} />
+            ) : loading || !banks ? (
+              <LoadingState testID="banks-loading" />
+            ) : shown.length === 0 ? (
+              <Text variant="small" color={theme.colors.textLight} center style={{ marginTop: 16 }}>
+                No bank matches your search.
+              </Text>
+            ) : (
+              <FlatList
+                data={shown}
+                keyExtractor={(b) => b.code}
+                keyboardShouldPersistTaps="handled"
+                renderItem={({ item }) => (
+                  <Pressable
+                    accessibilityRole="button"
+                    onPress={() => {
+                      onChange(item);
+                      close();
+                    }}
+                    style={{
+                      paddingVertical: 14,
+                      borderRadius: theme.borderRadius.lg,
+                      backgroundColor: value?.code === item.code ? theme.colors.primaryLight : "transparent",
+                    }}
+                  >
+                    <Text variant="body" center weight={value?.code === item.code ? "medium" : "regular"}>
+                      {item.name}
+                    </Text>
+                  </Pressable>
+                )}
+              />
+            )}
+          </View>
         </View>
       </Modal>
     </View>

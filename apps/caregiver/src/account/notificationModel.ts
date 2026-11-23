@@ -1,5 +1,5 @@
 import type { CaregiverNotification } from "@/src/services/notification.service";
-import { formatDuration, formatVisitTime } from "@/src/utils/dates";
+import { formatDayHeading, formatDuration, formatVisitTime, parseBackendDate } from "@/src/utils/dates";
 import { serviceName } from "@/src/utils/labels";
 
 /** Notification `response` values that mean this caregiver already acted on, or lost, the offer. */
@@ -55,4 +55,38 @@ export function notificationView(n: CaregiverNotification): NotificationView {
     isRead: n.is_read,
     opensAs: assignedToMe ? "job" : "offer",
   };
+}
+
+export interface NotificationGroup<T> {
+  /** "Today", "Yesterday" or a day heading such as "Thu, 5 Nov 2026". */
+  label: string;
+  items: T[];
+}
+
+function sameDay(a: Date, b: Date): boolean {
+  return a.getFullYear() === b.getFullYear() && a.getMonth() === b.getMonth() && a.getDate() === b.getDate();
+}
+
+/**
+ * Groups notifications by the phone's calendar day, newest day first and newest first inside a day: the "Today" header of the
+ * Figma list. A notification whose time cannot be read goes under an "Earlier" header at the end.
+ */
+export function groupNotifications<T extends { created_at: string }>(items: T[], now: Date): NotificationGroup<T>[] {
+  const yesterday = new Date(now.getFullYear(), now.getMonth(), now.getDate() - 1);
+  const sorted = [...items].sort((a, b) => b.created_at.localeCompare(a.created_at));
+  const groups: NotificationGroup<T>[] = [];
+  const unreadable: T[] = [];
+  for (const item of sorted) {
+    const at = parseBackendDate(item.created_at);
+    if (Number.isNaN(at.getTime())) {
+      unreadable.push(item);
+      continue;
+    }
+    const label = sameDay(at, now) ? "Today" : sameDay(at, yesterday) ? "Yesterday" : formatDayHeading(at);
+    const last = groups[groups.length - 1];
+    if (last && last.label === label) last.items.push(item);
+    else groups.push({ label, items: [item] });
+  }
+  if (unreadable.length > 0) groups.push({ label: "Earlier", items: unreadable });
+  return groups;
 }

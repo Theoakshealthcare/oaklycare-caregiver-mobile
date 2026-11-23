@@ -3,6 +3,7 @@ import { Modal, Pressable, ScrollView, View } from "react-native";
 import { Feather } from "@expo/vector-icons";
 
 import Button from "@/src/components/ui/button";
+import KeyboardScrollView from "@/src/components/ui/keyboard-scroll-view";
 import Text from "@/src/components/ui/text";
 import { globalStyles } from "@/src/constants/styles";
 import { theme } from "@/src/constants/theme";
@@ -74,7 +75,23 @@ export const FieldHint: React.FC<{ text: string; testID?: string }> = ({ text, t
   </Text>
 );
 
-/** A titled block that opens and closes (the Care Plan Details sections). */
+/** The light-mint circle with a teal chevron that opens and closes a section (Figma). */
+const ChevronDisc: React.FC<{ open: boolean }> = ({ open }) => (
+  <View
+    style={{
+      width: 30,
+      height: 30,
+      borderRadius: 15,
+      backgroundColor: theme.colors.primaryLight,
+      alignItems: "center",
+      justifyContent: "center",
+    }}
+  >
+    <Feather name={open ? "chevron-up" : "chevron-down"} size={18} color={theme.colors.primary} />
+  </View>
+);
+
+/** A titled white card that opens and closes (the Care Plan Details sections). Closed by default, as the Figma frames draw it. */
 export const Accordion: React.FC<{
   title: string;
   testID: string;
@@ -87,11 +104,12 @@ export const Accordion: React.FC<{
   const [open, setOpen] = useState(defaultOpen);
   const [everOpened, setEverOpened] = useState(defaultOpen);
   return (
-    <View testID={testID} style={{ borderWidth: 1, borderColor: theme.colors.border, borderRadius: theme.borderRadius.xl, overflow: "hidden" }}>
+    <View testID={testID} style={{ backgroundColor: theme.colors.white, borderRadius: theme.borderRadius.xl, overflow: "hidden" }}>
       <View style={{ flexDirection: "row", alignItems: "center", paddingRight: theme.spacing.md }}>
         <Pressable
           testID={`${testID}-toggle`}
           accessibilityRole="button"
+          accessibilityLabel={title}
           accessibilityState={{ expanded: open }}
           onPress={() => {
             setEverOpened(true);
@@ -99,23 +117,55 @@ export const Accordion: React.FC<{
           }}
           style={{ flex: 1, flexDirection: "row", alignItems: "center", justifyContent: "space-between", padding: theme.spacing.md }}
         >
-          <Text variant="body" weight="bold">
+          <Text variant="body" weight="medium">
             {title}
           </Text>
-          <Feather name={open ? "chevron-up" : "chevron-down"} size={20} color={theme.colors.textLight} />
+          <ChevronDisc open={open} />
         </Pressable>
         {action}
       </View>
       {open || (keepMounted && everOpened) ? (
-        <View style={{ padding: theme.spacing.md, paddingTop: 0, gap: theme.spacing.sm, display: open ? "flex" : "none" }}>{children}</View>
+        <View style={{ padding: theme.spacing.md, paddingTop: 0, gap: theme.spacing.md, display: open ? "flex" : "none" }}>{children}</View>
       ) : null}
     </View>
   );
 };
 
-/** The popup frame of the add-goal, edit-plan and list-editing sheets. */
-export const ModalFrame: React.FC<{ title: string; onClose: () => void; testID: string; children: React.ReactNode }> = ({
+/** "+ Add New Care Goal": the pale coral pill with teal text that ends a section's list. */
+export const AddLink: React.FC<{ label: string; onPress: () => void; testID: string; align?: "center" | "flex-end" }> = ({
+  label,
+  onPress,
+  testID,
+  align = "center",
+}) => (
+  <Pressable
+    testID={testID}
+    accessibilityRole="button"
+    accessibilityLabel={label}
+    onPress={onPress}
+    hitSlop={8}
+    style={{
+      alignSelf: align,
+      flexDirection: "row",
+      alignItems: "center",
+      gap: theme.spacing.xs,
+      paddingVertical: theme.spacing.xs,
+      paddingHorizontal: theme.spacing.sm,
+      borderRadius: theme.borderRadius.md,
+      backgroundColor: theme.colors.secondaryLight,
+    }}
+  >
+    <Feather name="plus" size={16} color={theme.colors.primary} />
+    <Text variant="small" weight="medium" color={theme.colors.primary}>
+      {label}
+    </Text>
+  </Pressable>
+);
+
+/** The popup frame of the add-task, add-goal, edit-plan and list-editing sheets: Close, a teal centred title, an optional sub-line. */
+export const ModalFrame: React.FC<{ title: string; subtitle?: string; onClose: () => void; testID: string; children: React.ReactNode }> = ({
   title,
+  subtitle,
   onClose,
   testID,
   children,
@@ -130,19 +180,82 @@ export const ModalFrame: React.FC<{ title: string; onClose: () => void; testID: 
             onPress={onClose}
             style={{ flexDirection: "row", alignItems: "center", gap: theme.spacing.xs }}
           >
-            <Feather name="x-circle" size={18} color={theme.colors.textLight} />
-            <Text variant="small" color={theme.colors.textLight}>
+            <Feather name="x-circle" size={18} color={theme.colors.text} />
+            <Text variant="small" weight="medium">
               Close
             </Text>
           </Pressable>
-          <Text variant="h3" weight="bold" color={theme.colors.primary}>
-            {title}
-          </Text>
+          <View style={{ gap: theme.spacing.xs }}>
+            <Text variant="h3" weight="bold" color={theme.colors.primary} center accessibilityRole="header">
+              {title}
+            </Text>
+            {subtitle ? (
+              <Text variant="small" center testID={`${testID}-subtitle`}>
+                {subtitle}
+              </Text>
+            ) : null}
+          </View>
           {children}
         </ScrollView>
       </View>
     </View>
   </Modal>
+);
+
+/**
+ * "Add New Medication Schedule": a full page over the details (back button, bold title, a sub-line, the fields, and a
+ * pinned teal button), drawn in a full-screen modal so the details underneath keep their place.
+ */
+export const FullPageFrame: React.FC<{
+  title: string;
+  subtitle?: string;
+  onClose: () => void;
+  testID: string;
+  footer: React.ReactNode;
+  children: React.ReactNode;
+}> = ({ title, subtitle, onClose, testID, footer, children }) => (
+  <Modal animationType="slide" visible onRequestClose={onClose}>
+    <View testID={testID} style={{ flex: 1, backgroundColor: theme.colors.careBackground }}>
+      <KeyboardScrollView keyboardShouldPersistTaps="handled" contentContainerStyle={{ padding: theme.spacing.md, paddingTop: theme.spacing.xxl, gap: theme.spacing.md }}>
+        <RoundBack onPress={onClose} testID={`${testID}-close`} />
+        <View style={{ gap: theme.spacing.xs }}>
+          <Text variant="h2" weight="bold" accessibilityRole="header">
+            {title}
+          </Text>
+          {subtitle ? (
+            <Text variant="small" color={theme.colors.textLight} testID={`${testID}-subtitle`}>
+              {subtitle}
+            </Text>
+          ) : null}
+        </View>
+        {children}
+      </KeyboardScrollView>
+      <View style={{ padding: theme.spacing.md, paddingBottom: theme.spacing.lg, backgroundColor: theme.colors.careBackground }}>{footer}</View>
+    </View>
+  </Modal>
+);
+
+/** The round white back button of the care plan frames. */
+export const RoundBack: React.FC<{ onPress: () => void; testID?: string; light?: boolean }> = ({ onPress, testID, light = false }) => (
+  <Pressable
+    testID={testID}
+    accessibilityRole="button"
+    accessibilityLabel="Back"
+    onPress={onPress}
+    hitSlop={8}
+    style={{
+      width: 40,
+      height: 40,
+      borderRadius: 20,
+      alignItems: "center",
+      justifyContent: "center",
+      backgroundColor: light ? "transparent" : theme.colors.white,
+      borderWidth: 1,
+      borderColor: light ? theme.colors.white : theme.colors.border,
+    }}
+  >
+    <Feather name="chevron-left" size={22} color={light ? theme.colors.white : theme.colors.text} />
+  </Pressable>
 );
 
 /**

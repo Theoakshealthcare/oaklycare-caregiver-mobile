@@ -11,6 +11,8 @@ import EditProfile from "../screens/account/EditProfile";
 import Notifications from "../screens/account/Notifications";
 import Profile from "../screens/account/Profile";
 import Wallet from "../screens/account/Wallet";
+import EarningPayment from "../screens/account/EarningPayment";
+import PayslipDownloaded from "../screens/account/PayslipDownloaded";
 import AccountCreated from "../screens/auth/AccountCreated";
 import CreateAccount from "../screens/auth/CreateAccount";
 import Login from "../screens/auth/Login";
@@ -37,6 +39,7 @@ import AddVitals from "../screens/vitals/AddVitals";
 import PatientVitals from "../screens/vitals/PatientVitals";
 import VitalDetail from "../screens/vitals/VitalDetail";
 import VitalHistory from "../screens/vitals/VitalHistory";
+import VitalReportDownloaded from "../screens/vitals/VitalReportDownloaded";
 import GateMessage from "../screens/GateMessage";
 import OnboardingScreen from "../screens/onboarding-screen";
 import CaregiverSetupStep1 from "../screens/setup/CaregiverSetupStep1";
@@ -170,12 +173,15 @@ const StackNavigator = () => {
             <Stack.Screen name="ChangePassword" component={ChangePassword} />
             <Stack.Screen name="AccountData" component={AccountData} />
             <Stack.Screen name="Wallet" component={Wallet} />
+            <Stack.Screen name="EarningPayment" component={EarningPayment} />
+            <Stack.Screen name="PayslipDownloaded" component={PayslipDownloaded} />
             <Stack.Screen name="BankDetails" component={BankDetails} />
             <Stack.Screen name="Contact" component={Contact} />
             <Stack.Screen name="ClientProfile" component={ClientProfile} />
             <Stack.Screen name="PatientVitals" component={PatientVitals} />
             <Stack.Screen name="VitalDetail" component={VitalDetail} />
             <Stack.Screen name="VitalHistory" component={VitalHistory} />
+            <Stack.Screen name="VitalReportDownloaded" component={VitalReportDownloaded} />
             <Stack.Screen name="AddVitals" component={AddVitals} />
             <Stack.Screen name="CarePlans" component={CarePlans} />
             <Stack.Screen name="CarePlanTemplate" component={CarePlanTemplate} />

@@ -50,6 +50,15 @@ channel) lives in the backend repo: `docs/checklist/MASTER_CHECKLIST.md`. Update
 - [ ] Deferred: "Choose Service Time / Immediate booking" and the Wound Care service (no backend service or ASAP rule)
 - [ ] Owner decisions: the app's own lists (relations, assistance, conditions), contact phone and e-mail visible to the caregiver, coral failure title, step bar growth
 
+## Caregiver remaining parity with Figma: care plans, chat, vitals, bookings, account (2026-11-24)
+- [x] Care plan system: hub (teal header, tabs, search and filter, template and plan cards), details accordions in Figma order, goals, medications (full-page add), tasks (dropdowns), notes, create form, success pages
+- [x] Chat header, booking card, stamps, quick replies, composer; AI Notetaker "I'm Listening" with the orb and "Voice to text" (voice notes on); calling stays off
+- [x] Vitals: Clients Vitals, "<Vital> Monitoring" with area chart and Last synced, entry modals, "Vital Report Downloaded" page; status badge built, OFF (`VITAL_STATUS_BADGES`)
+- [x] Bookings (bell, New Request, cards, Start Service, Get Direction), Job Details, Notification groups; Payment & Earning, Earning Payment, payslip success, Update Payment Details, Edit Profile, Contact Us labels; Client Profile headings
+- [ ] **Not device-verified** (Jest, tsc and ESLint only; simulator was busy): built on `feat/caregiver-remaining-parity` ([SOP](../sop/2026-11-24-caregiver-remaining-parity.md))
+- [ ] Deferred, needs backend or content: Chats list, FallGuard for caregivers, patient name and price on offers, FAQ and About in-app copy, emergency contact name / address, vitals insights
+- [ ] Owner decisions: medication section collapsed (D4), "Total Amount Paid in / Withdrawn", "Continue Service", lock-screen app name
+
 ## Caregiver Home, profile menu and visit dialogs parity with Figma (2026-11-23)
 - [x] Home: menu and bell header, greeting and subtitle, weekly availability with the week strip, CarePlan card (nurses), Upcoming Appointments with Clock in / Clock out, New Job Request with Accept / Decline, Earning Summary, Notification block, Client Care Access
 - [x] Shared Figma confirmation dialog: decline (Home and Bookings, "Yes, Decline"), clock in (after the visit code, before it is sent), clock out (running timer, pay-held and care plan notices)

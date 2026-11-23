@@ -2,10 +2,11 @@ import React, { useState } from "react";
 import { View } from "react-native";
 
 import { messageForError } from "@/src/api/errors";
-import { Chip, FieldHint, ModalFrame } from "@/src/components/careplan/parts";
+import { FieldHint, FullPageFrame } from "@/src/components/careplan/parts";
 import Button from "@/src/components/ui/button";
+import DateField from "@/src/components/ui/date-field";
 import Input from "@/src/components/ui/input";
-import Text from "@/src/components/ui/text";
+import { Select } from "@/src/components/ui/select";
 import { theme } from "@/src/constants/theme";
 import {
   MEDICATION_FREQUENCIES,
@@ -79,51 +80,75 @@ const MedicationModal: React.FC<{
     add.mutate(buildMedicationBody(draft), { onSuccess: onSaved, onError: fail });
   };
 
+  // The pieces the Figma page has no box for (strength, route, who prescribed it, the clock times) stay on the page after
+  // the Figma fields: they are what the care team reads back in the list, and the record is incomplete without them.
   return (
     // Closing while the save is open would lose its answer (success page or error) and invite a duplicate.
-    <ModalFrame testID="medication-modal" title="Add Medication" onClose={() => (add.isPending ? undefined : onClose())}>
-      <Text variant="small" color={theme.colors.textLight}>{`Record a medicine the prescriber ordered for ${plan.client.full_name}`}</Text>
-      <Input testID="medication-name" label="Medication name" accessibilityLabel="Medication name" placeholder="As written on the prescription" value={draft.name} onChangeText={set("name")} error={errors.name} />
-      <Input testID="medication-strength" label="Strength (optional)" accessibilityLabel="Strength (optional)" placeholder="For example: 500 mg" value={draft.strength} onChangeText={set("strength")} error={errors.strength} />
-      <Input testID="medication-dose-amount" label="Dose (optional)" accessibilityLabel="Dose (optional)" placeholder="For example: 1" value={draft.doseAmount} onChangeText={set("doseAmount")} error={errors.doseAmount} />
-      <Input testID="medication-dose-unit" label="Dose unit (optional)" accessibilityLabel="Dose unit (optional)" placeholder="For example: tablet" value={draft.doseUnit} onChangeText={set("doseUnit")} error={errors.doseUnit} />
-      <Input testID="medication-route" label="Route (optional)" accessibilityLabel="Route (optional)" placeholder="For example: oral" value={draft.route} onChangeText={set("route")} error={errors.route} />
-      <Input testID="medication-reason" label="Reason (optional)" accessibilityLabel="Reason (optional)" value={draft.reason} onChangeText={set("reason")} error={errors.reason} />
-      <Input testID="medication-prescribed-by" label="Prescribed by (optional)" accessibilityLabel="Prescribed by (optional)" value={draft.prescribedBy} onChangeText={set("prescribedBy")} error={errors.prescribedBy} />
-      <View style={{ gap: theme.spacing.sm }}>
-        <Text variant="small">How often</Text>
-        <View style={{ flexDirection: "row", flexWrap: "wrap", gap: theme.spacing.sm }}>
-          {MEDICATION_FREQUENCIES.map((f) => (
-            <Chip key={f.value} testID={`medication-frequency-${f.value}`} label={f.label} selected={draft.frequency === f.value} onPress={() => setDraft((d) => ({ ...d, frequency: f.value }))} />
-          ))}
-        </View>
+    <FullPageFrame
+      testID="medication-modal"
+      title="Add New Medication Schedule"
+      subtitle={`Create new schedule for ${plan.client.full_name}`}
+      onClose={() => (add.isPending ? undefined : onClose())}
+      footer={<Button testID="medication-save" title="Save Medication" onPress={save} loading={add.isPending} />}
+    >
+      <View style={{ gap: theme.spacing.xs }}>
+        <Input testID="medication-name" label="Enter Medication Name" accessibilityLabel="Medication name" placeholder="As written on the prescription" value={draft.name} onChangeText={set("name")} error={errors.name} />
+        <Input testID="medication-reason" label="Reason for Medication" accessibilityLabel="Reason for medication" value={draft.reason} onChangeText={set("reason")} error={errors.reason} />
+        <Input testID="medication-dose-amount" label="Enter Medication Dosage" accessibilityLabel="Medication dosage" placeholder="For example: 1" value={draft.doseAmount} onChangeText={set("doseAmount")} error={errors.doseAmount} />
+        <Input testID="medication-dose-unit" label="Dosage Unit" accessibilityLabel="Dosage unit" placeholder="For example: tablet" value={draft.doseUnit} onChangeText={set("doseUnit")} error={errors.doseUnit} />
+        <Select
+          testID="medication-frequency"
+          label="Select Usage Time"
+          options={MEDICATION_FREQUENCIES.map((f) => ({ label: f.label, value: f.value }))}
+          value={draft.frequency}
+          onValueChange={(value) => setDraft((d) => ({ ...d, frequency: value as MedicationDraft["frequency"] }))}
+        />
+        <Input
+          testID="medication-times"
+          label="Times of Day (24-hour, like 08:00, 20:00)"
+          accessibilityLabel="Times of day"
+          placeholder="08:00, 20:00"
+          autoCapitalize="none"
+          keyboardType="numbers-and-punctuation"
+          value={draft.times}
+          onChangeText={set("times")}
+          error={errors.times}
+        />
+        <DateField
+          testID="medication-start"
+          label="Set Start Date"
+          placeholder="Today if left blank"
+          value={draft.startDate}
+          onChange={(value) => set("startDate")(value)}
+          error={errors.startDate}
+          containerStyle={{ marginBottom: theme.spacing.md }}
+        />
+        <DateField
+          testID="medication-end"
+          label="Set End Date"
+          placeholder="Ongoing if left blank"
+          value={draft.endDate}
+          onChange={(value) => set("endDate")(value)}
+          error={errors.endDate}
+          containerStyle={{ marginBottom: theme.spacing.md }}
+        />
+        <Input testID="medication-strength" label="Medicine Strength" accessibilityLabel="Strength" placeholder="For example: 500 mg" value={draft.strength} onChangeText={set("strength")} error={errors.strength} />
+        <Input testID="medication-route" label="Route" accessibilityLabel="Route" placeholder="For example: oral" value={draft.route} onChangeText={set("route")} error={errors.route} />
+        <Input testID="medication-prescribed-by" label="Prescribed By" accessibilityLabel="Prescribed by" value={draft.prescribedBy} onChangeText={set("prescribedBy")} error={errors.prescribedBy} />
+        {/* Figma calls this "Medication Reminder Notes"; Oakly sends no reminders (see the notice), so the label says "Notes". */}
+        <Input
+          testID="medication-note"
+          label="Medication Notes"
+          accessibilityLabel="Notes"
+          multiline
+          inputStyle={{ minHeight: 80, textAlignVertical: "top" }}
+          value={draft.note}
+          onChangeText={set("note")}
+          error={errors.note}
+        />
       </View>
-      <Input
-        testID="medication-times"
-        label="Times (optional, 24-hour HH:MM, separated by commas)"
-        accessibilityLabel="Times (optional, 24-hour HH:MM, separated by commas)"
-        placeholder="08:00, 20:00"
-        autoCapitalize="none"
-        keyboardType="numbers-and-punctuation"
-        value={draft.times}
-        onChangeText={set("times")}
-        error={errors.times}
-      />
-      <Input testID="medication-start" label="Start date (optional, YYYY-MM-DD)" accessibilityLabel="Start date (optional, YYYY-MM-DD)" placeholder="Today if left blank" autoCapitalize="none" value={draft.startDate} onChangeText={set("startDate")} error={errors.startDate} />
-      <Input testID="medication-end" label="End date (optional, YYYY-MM-DD)" accessibilityLabel="End date (optional, YYYY-MM-DD)" placeholder="Ongoing if left blank" autoCapitalize="none" value={draft.endDate} onChangeText={set("endDate")} error={errors.endDate} />
-      <Input
-        testID="medication-note"
-        label="Notes (optional)"
-        accessibilityLabel="Notes (optional)"
-        multiline
-        inputStyle={{ minHeight: 80, textAlignVertical: "top" }}
-        value={draft.note}
-        onChangeText={set("note")}
-        error={errors.note}
-      />
       {error ? <FieldHint text={error} testID="medication-error" /> : null}
-      <Button testID="medication-save" title="Add Medication" onPress={save} loading={add.isPending} />
-    </ModalFrame>
+    </FullPageFrame>
   );
 };
 

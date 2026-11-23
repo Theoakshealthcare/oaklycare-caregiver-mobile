@@ -1,7 +1,9 @@
 import React, { useState } from "react";
 import { ActivityIndicator, Image, RefreshControl, ScrollView, TouchableOpacity, View } from "react-native";
+import { Feather } from "@expo/vector-icons";
 
 import { messageForError } from "@/src/api/errors";
+import AssignedCard from "@/src/components/booking/AssignedCard";
 import DeclineDialog from "@/src/components/booking/DeclineDialog";
 import OfferCard from "@/src/components/booking/OfferCard";
 import Button from "@/src/components/ui/button";
@@ -11,21 +13,12 @@ import { useBookingsTab, type BookingsTab } from "@/src/hooks/queries";
 import Navigation from "@/src/hooks/use-navigation";
 import { useOfferActions } from "@/src/hooks/useOfferActions";
 import { toOffer, type Booking } from "@/src/services/booking.service";
-import { formatDuration, formatVisitTime } from "@/src/utils/dates";
 
 const TABS: { id: BookingsTab; title: string }[] = [
-  { id: "new_requests", title: "New request" },
+  { id: "new_requests", title: "New Request" },
   { id: "upcoming", title: "Upcoming" },
   { id: "completed", title: "Completed" },
 ];
-
-const STATUS_LABEL: Record<string, string> = {
-  accepted: "Accepted",
-  en_route: "On the way",
-  in_progress: "In progress",
-  completed: "Completed",
-  cancelled: "Cancelled",
-};
 
 const CaregiverBookings: React.FC = () => {
   const { navigation } = Navigation();
@@ -46,30 +39,12 @@ const CaregiverBookings: React.FC = () => {
   const bookings: Booking[] = list.data ?? [];
 
   const renderAssigned = (booking: Booking) => (
-    <TouchableOpacity
+    <AssignedCard
       key={booking.id}
-      activeOpacity={0.8}
-      onPress={() => navigation.navigate("BookingDetails", { bookingId: booking.id })}
-      style={{ backgroundColor: theme.colors.white, borderRadius: 12, padding: 16, marginBottom: 16, elevation: 3 }}
-    >
-      <View style={{ flexDirection: "row", justifyContent: "space-between" }}>
-        <Text variant="h3" weight="bold" style={{ flex: 1 }}>
-          {booking.patient_details?.full_name ?? "Patient"}
-        </Text>
-        <Text variant="small" color={theme.colors.primary} weight="medium">
-          {STATUS_LABEL[booking.status] ?? booking.status}
-        </Text>
-      </View>
-      <Text variant="body" color={theme.colors.primary} style={{ marginTop: 4 }}>
-        {booking.assistance_type}
-      </Text>
-      <Text variant="body" color={theme.colors.textLight} style={{ marginTop: 8 }}>
-        {booking.patient_address}
-      </Text>
-      <Text variant="body" color={theme.colors.textLight}>
-        {formatVisitTime(booking.scheduled_date)} {"•"} {formatDuration(booking.duration_hours)}
-      </Text>
-    </TouchableOpacity>
+      booking={booking}
+      onView={() => navigation.navigate("BookingDetails", { bookingId: booking.id })}
+      onStart={() => navigation.navigate("VisitFlow", { bookingId: booking.id })}
+    />
   );
 
   const renderBody = () => {
@@ -93,6 +68,7 @@ const CaregiverBookings: React.FC = () => {
     return (
       <ScrollView
         style={{ paddingHorizontal: 20 }}
+        contentContainerStyle={{ paddingBottom: 120 }}
         refreshControl={<RefreshControl refreshing={list.isRefetching} onRefresh={() => void list.refetch()} />}
       >
         {bookings.length === 0 ? (
@@ -134,10 +110,18 @@ const CaregiverBookings: React.FC = () => {
 
   return (
     <View style={{ flex: 1, backgroundColor: theme.colors.primary }}>
-      <View style={{ paddingTop: 50, paddingBottom: 20, paddingHorizontal: 20 }}>
+      <View style={{ paddingTop: 50, paddingBottom: 20, paddingHorizontal: 20, flexDirection: "row", alignItems: "center", justifyContent: "space-between" }}>
         <Text variant="h2" weight="bold" color={theme.colors.white}>
           Bookings
         </Text>
+        <TouchableOpacity
+          accessibilityRole="button"
+          accessibilityLabel="Notifications"
+          hitSlop={12}
+          onPress={() => navigation.navigate("Notifications")}
+        >
+          <Feather name="bell" size={22} color={theme.colors.white} />
+        </TouchableOpacity>
       </View>
 
       <View
