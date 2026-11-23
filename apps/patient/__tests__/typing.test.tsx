@@ -3,6 +3,7 @@ import { fireEvent, screen } from "@testing-library/react-native";
 import { queryClient } from "../src/api/queryClient";
 import { useBookingDraft, EMPTY_DRAFT } from "../src/hooks/bookingDraft";
 import { disableCacheGcForTests } from "../test-utils/fakeApi";
+import { capture } from "../test-utils/captures";
 import { renderSignedIn } from "../test-utils/renderApp";
 
 jest.mock("expo-font", () => ({
@@ -30,20 +31,23 @@ describe("typing into the booking form keeps every keystroke", () => {
   };
 
   it("holds the text after one event per keystroke, and edits to different fields do not overwrite each other", async () => {
-    const { view } = await renderSignedIn();
+    const { view } = await renderSignedIn({ "GET /api/v1/booking/services": () => ({ status: 200, body: capture("201-p-services-nurse-only").body }) });
     await fireEvent.press(screen.getByRole("button", { name: "Start Booking" }));
-    await burst("What help is needed?", "Wound dressing");
-    await burst("Who are you booking for?", "My mother");
-    await burst("Duration (hours)", "12");
-    expect(useBookingDraft.getState().draft).toMatchObject({ assistance: "Wound dressing", forWhom: "My mother", durationHours: "12" });
-    expect(screen.getByLabelText("What help is needed?").props.value).toBe("Wound dressing");
-    expect(screen.getByLabelText("Who are you booking for?").props.value).toBe("My mother");
+    // The free-text boxes of step 1 are the "Other" answers; the rest are dropdowns.
+    await fireEvent.press(await screen.findByRole("button", { name: "What Assistance Do You Need?" }));
+    await fireEvent.press(screen.getByRole("button", { name: "Other" }));
+    await fireEvent.press(screen.getByRole("button", { name: "Do You Have Any Common Conditions?" }));
+    await fireEvent.press(screen.getByRole("button", { name: "Other" }));
+    await burst("Describe the help needed", "Wound dressing");
+    await burst("Describe the condition", "Asthma");
+    expect(useBookingDraft.getState().draft).toMatchObject({ assistanceOther: "Wound dressing", conditionOther: "Asthma" });
+    expect(screen.getByLabelText("Describe the help needed").props.value).toBe("Wound dressing");
+    expect(screen.getByLabelText("Describe the condition").props.value).toBe("Asthma");
 
-    await fireEvent.changeText(screen.getByLabelText("Who are you booking for?"), "Tunde");
-    await fireEvent.changeText(screen.getByLabelText("What help is needed?"), "Walking");
-    await fireEvent.changeText(screen.getByLabelText("Health condition (optional)"), "Hypertension");
+    await fireEvent.changeText(screen.getByLabelText("Describe the condition"), "Hypertension");
+    await fireEvent.changeText(screen.getByLabelText("Describe the help needed"), "Walking");
     // Edits to different fields straight after one another: none overwrites another's text.
-    expect(useBookingDraft.getState().draft).toMatchObject({ forWhom: "Tunde", assistance: "Walking", condition: "Hypertension" });
+    expect(useBookingDraft.getState().draft).toMatchObject({ assistanceOther: "Walking", conditionOther: "Hypertension" });
     view.unmount();
   });
 });

@@ -29,6 +29,13 @@ describe("auth flows", () => {
   afterEach(() => hideToast());
 
   describe("register", () => {
+    it("Login has a small 'Create account' link that opens the sign-up form (not in Figma: owner decision)", async () => {
+      const { view } = await renderSignedOut();
+      await press("Create account");
+      expect(await screen.findByLabelText("Full Name")).toBeTruthy();
+      view.unmount();
+    });
+
     it("checks the form before calling the server", async () => {
       const { calls, view } = await renderSignedOut();
       await openCreateAccount();
@@ -104,6 +111,7 @@ describe("auth flows", () => {
 
       await type("Verification code", "12345");
       expect(await screen.findByText("Congratulations! Your account setup is complete!")).toBeTruthy();
+      expect(screen.getByText("Account successfully created! Welcome aboard! Let the care journey begin!")).toBeTruthy();
       expect(calls.find((c) => c.path === "/api/v1/auth/verify-email")?.body).toEqual({
         email: "new.person@example.com",
         code: "12345",

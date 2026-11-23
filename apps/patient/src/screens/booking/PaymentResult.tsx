@@ -1,21 +1,25 @@
 import type { StackScreenProps } from "@react-navigation/stack";
 import type React from "react";
 import { useCallback, useEffect, useRef, useState } from "react";
-import { ActivityIndicator, AppState, StyleSheet, View } from "react-native";
+import { ActivityIndicator, AppState, Pressable, StyleSheet, View } from "react-native";
 
 import { useQueryClient } from "@tanstack/react-query";
 
 import { messageForError } from "@/src/api/errors";
 import { queryKeys } from "@/src/api/keys";
 import { paymentLinkErrorMessage, paymentLinkOutcome } from "@/src/api/bookingErrors";
+import { useBottomBand, useTopBand } from "@/src/components/StatusBar/screenChrome";
 import Button from "@/src/components/ui/button";
 import ErrorDialog from "@/src/components/ui/ErrorDialog";
 import Icon from "@/src/components/ui/icon";
+import SuccessIllustration from "@/src/components/ui/success-illustration";
 import Text from "@/src/components/ui/text";
+import TextLink from "@/src/components/ui/text-link";
 import { theme } from "@/src/constants/theme";
 import { fetchPaymentLink } from "@/src/hooks/fetchPaymentLink";
 import { usePaymentLinks } from "@/src/hooks/paymentLinks";
 import { paymentPolling, usePaymentCheck } from "@/src/hooks/usePaymentCheck";
+import { formatNaira } from "@/src/domain/format";
 import { useBooking } from "@/src/hooks/useBookings";
 import type { ScreenParamLists } from "@/src/navigation/Navigations";
 import { openCheckout } from "@/src/services/checkout";
@@ -32,6 +36,32 @@ type Props = StackScreenProps<ScreenParamLists, "PaymentResult">;
  * `detail.code`: an already-paid booking is confirmed (good news), a booking that can no longer be paid says why and drops
  * "Pay now", anything else keeps "Pay now" so the person can try again.
  */
+/** The Figma result frames: a faint page, a round close at the top left, and the content centred. */
+const Frame: React.FC<{ onClose: () => void; children: React.ReactNode }> = ({ onClose, children }) => {
+  // The page tint runs edge to edge, over the status bar and under the home indicator too.
+  useTopBand(theme.colors.pageTint);
+  useBottomBand(theme.colors.pageTint);
+  return (
+  <View style={styles.frame}>
+    <Pressable accessibilityRole="button" accessibilityLabel="Close" hitSlop={8} onPress={onClose} style={styles.close}>
+      <Icon name="close-circle-outline" size={24} />
+    </Pressable>
+    <View style={styles.center}>{children}</View>
+  </View>
+  );
+};
+
+const ReceiptRow: React.FC<{ label: string; value: string; green?: boolean }> = ({ label, value, green }) => (
+  <View style={styles.receiptRow}>
+    <Text variant="small" color={theme.colors.textLight}>
+      {label}
+    </Text>
+    <Text variant="small" weight="bold" color={green ? theme.colors.success : theme.colors.textLight}>
+      {value}
+    </Text>
+  </View>
+);
+
 const PaymentResult: React.FC<Props> = ({ navigation, route }) => {
   const { bookingId, open } = route.params;
   const booking = useBooking(bookingId);
@@ -111,7 +141,6 @@ const PaymentResult: React.FC<Props> = ({ navigation, route }) => {
     return () => subscription.remove();
   }, [browserOpen, check]);
 
-  const reference = booking.data?.reference;
   const goBookings = () => navigation.navigate("Tabs", { tab: "bookings", at: Date.now() });
   const viewBooking = () =>
     navigation.reset({
@@ -120,18 +149,27 @@ const PaymentResult: React.FC<Props> = ({ navigation, route }) => {
     });
 
   if (state.kind === "paid") {
+    const booking_ = booking.data;
+    // "View Caregiver" only when the booking really has one; right after payment the search has only just begun.
+    const caregiver = booking_?.caregiver ?? null;
     return (
-      <View style={styles.container}>
-        <Icon name="checkmark" size={40} color={theme.colors.white} circleColor={theme.colors.success} />
-        <Text variant="h2" weight="bold" center>
-          Booking confirmed
+      <Frame onClose={goBookings}>
+        <SuccessIllustration />
+        <Text variant="page" weight="bold" color={theme.colors.successTitle} center style={styles.title}>
+          {"Payment Successful.\nBooking Confirmed"}
         </Text>
-        <Text color={theme.colors.textLight} center>
-          {`${reference ? `Your booking ${reference} is paid. ` : ""}We are finding a caregiver for you.`}
+        <Text variant="small" color={theme.colors.textLight} center style={styles.body}>
+          Your payment was received. We are now finding a caregiver for you.
         </Text>
-        <Button title="View booking" style={styles.button} onPress={viewBooking} />
-        <Button title="Go to bookings" variant="outline" style={styles.button} onPress={goBookings} />
-      </View>
+        {booking_ ? (
+          <View style={styles.receipt}>
+            <ReceiptRow label="Appointment ID" value={booking_.reference} />
+            <ReceiptRow label="Amount Paid" value={formatNaira(booking_.amount)} />
+            <ReceiptRow label="Payment Status" value="PAID" green />
+          </View>
+        ) : null}
+        <Button title={caregiver ? "View Caregiver" : "View Booking"} style={styles.pill} onPress={viewBooking} />
+      </Frame>
     );
   }
 
@@ -189,6 +227,23 @@ const PaymentResult: React.FC<Props> = ({ navigation, route }) => {
     );
   }
 
+  // Paystack itself said the payment was abandoned or failed (the checkout was closed or cancelled): Figma's "Payment Failed" frame.
+  if (state.kind === "not_confirmed" && state.declined) {
+    return (
+      <Frame onClose={goBookings}>
+        <Text variant="page" weight="bold" color={theme.colors.secondary} center style={styles.title}>
+          Payment Failed! Try Again
+        </Text>
+        <Text variant="small" color={theme.colors.textLight} center style={styles.body}>
+          Your payment did not go through. Nothing is charged unless a payment succeeds, so you can try again.
+        </Text>
+        <Button title="Try Again" style={styles.pill} onPress={() => void pay()} />
+        <TextLink label="Already paid? Check again" center onPress={() => void check()} />
+        <ErrorDialog visible={dialog !== null} title="Could not open the payment page" message={dialog ?? ""} onClose={() => setDialog(null)} />
+      </Frame>
+    );
+  }
+
   const notConfirmed = state.kind === "not_confirmed";
   return (
     <View style={styles.container}>
@@ -223,6 +278,14 @@ const styles = StyleSheet.create({
     gap: theme.spacing.md,
   },
   button: { alignSelf: "stretch" },
+  frame: { flex: 1, backgroundColor: theme.colors.pageTint, paddingHorizontal: theme.spacing.md + 4, paddingTop: theme.spacing.lg },
+  close: { alignSelf: "flex-start" },
+  center: { flex: 1, alignItems: "center", justifyContent: "center", paddingBottom: theme.spacing.xxl, gap: theme.spacing.md },
+  title: { width: "85%" },
+  body: { width: "80%" },
+  receipt: { alignSelf: "stretch", backgroundColor: theme.colors.primaryLight, borderRadius: theme.borderRadius.lg, padding: theme.spacing.md, gap: theme.spacing.sm + 2, marginTop: theme.spacing.sm },
+  receiptRow: { flexDirection: "row", justifyContent: "space-between", gap: theme.spacing.md },
+  pill: { width: "80%", marginTop: theme.spacing.sm },
 });
 
 export default PaymentResult;

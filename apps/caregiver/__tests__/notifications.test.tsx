@@ -40,6 +40,7 @@ const notification: CaregiverNotification = {
     assistance_type: "Placeholder assistance",
     condition: null,
     duration_hours: 2,
+    duration_minutes: 120,
     scheduled_date: "2026-10-06T08:38:27.858997",
     scheduled_end_date: "2026-10-06T10:38:27.858997",
     patient_address: "Lagos, Lagos",

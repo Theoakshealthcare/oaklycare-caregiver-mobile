@@ -3,6 +3,7 @@ import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { useEffect } from "react";
 
 import { queryKeys } from "@/src/api/keys";
+import { useSession } from "@/src/auth";
 import { isActive, type Booking, type BookingDraft, type CancelResult } from "@/src/domain/booking";
 import { bookingService, type CreatedBooking } from "@/src/services/booking.service";
 
@@ -51,13 +52,19 @@ export function useBooking(id: string) {
   });
 }
 
+/** The services on sale and the visit lengths each allows (`GET /booking/services`). Asked every time the form opens: an admin can change them. */
+export function useBookableServices() {
+  const enabled = useSession((s) => s.status === "signedIn");
+  return useQuery({ queryKey: queryKeys.services, queryFn: bookingService.services, enabled, staleTime: 0 });
+}
+
 /** The price from the backend preview. Never computed on the device. */
 export function useBookingQuote(draft: BookingDraft) {
-  const hours = Number(draft.durationHours) || 0;
+  const { serviceType, durationMinutes } = draft;
   return useQuery({
-    queryKey: queryKeys.quote(hours, draft.latitude, draft.longitude),
-    queryFn: () => bookingService.preview({ durationHours: hours, latitude: draft.latitude, longitude: draft.longitude }),
-    enabled: hours >= 1 && hours <= 24,
+    queryKey: queryKeys.quote(serviceType, durationMinutes ?? 0, draft.latitude, draft.longitude),
+    queryFn: () => bookingService.preview({ serviceType, durationMinutes: durationMinutes ?? 0, latitude: draft.latitude, longitude: draft.longitude }),
+    enabled: serviceType !== "" && durationMinutes !== null,
   });
 }
 

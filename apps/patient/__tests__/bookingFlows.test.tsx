@@ -1,6 +1,7 @@
 import { fireEvent, screen, waitFor } from "@testing-library/react-native";
 
 import { queryClient } from "../src/api/queryClient";
+import { EMPTY_DRAFT, useBookingDraft } from "../src/hooks/bookingDraft";
 import { detailRefresh, listRefresh } from "../src/hooks/useBookings";
 import { paymentPolling } from "../src/hooks/usePaymentCheck";
 import { paymentLinkRetry } from "../src/hooks/fetchPaymentLink";
@@ -29,6 +30,10 @@ const WebBrowser = jest.requireMock("expo-web-browser") as { openBrowserAsync: j
 const press = (name: string | RegExp) => fireEvent.press(screen.getByRole("button", { name }));
 const tab = (name: string) => fireEvent.press(screen.getByRole("tab", { name }));
 const type = (label: string, value: string) => fireEvent.changeText(screen.getByLabelText(label), value);
+const choose = async (label: string, option: string) => {
+  await press(label);
+  await press(option);
+};
 const countOf = (calls: RecordedCall[], route: string) => calls.filter((c) => `${c.method} ${c.path}` === route).length;
 
 // Booking 2 of the capture run: accepted, paid, 5 hours out.
@@ -285,23 +290,39 @@ describe("bookings (real backend calls, answered with captured bodies)", () => {
     const paid = () => ({ ...capture("live-verify-paid").body, booking_id: NEW_ID });
     const pending = () => ({ ...capture("live-verify-pending").body, booking_id: NEW_ID });
 
-    async function fillTheForm() {
+    // The form lives in one store for the whole app: every test starts with an empty one.
+    beforeEach(() => useBookingDraft.setState({ draft: EMPTY_DRAFT }));
+    const SERVICES = "GET /api/v1/booking/services";
+    const services = () => ({ status: 200, body: capture("201-p-services-nurse-only").body });
+
+    /** Step 1 the way a person fills it: dropdowns, the calendar sheet (next month, so the day is never past), Duration. */
+    async function fillStepOne() {
       await press("Start Booking");
-      await type("Who are you booking for?", "My mother");
-      await type("What help is needed?", "Walking assistance");
-      await type("Duration (hours)", "4");
-      const dates = screen.getAllByRole("button", { name: /^(Mon|Tue|Wed|Thu|Fri|Sat|Sun) \d+ \w+$/ });
-      await fireEvent.press(dates[1]);
+      await screen.findByText("Book your Appointments in 2 steps");
+      await choose("Who are you Booking for ?", "My Mother");
+      await choose("What Assistance Do You Need?", "Walking assistance");
+      await choose("Do You Have Any Common Conditions?", "Hypertension");
+      await press("Select Preferred Date and Time");
+      await press("Next month");
+      await press(/^\w+ 15$/);
       await press("8:00 PM");
+      await press("Done");
+      await choose("Duration", "1 hour 30 minutes");
+    }
+
+    async function fillTheForm() {
+      await fillStepOne();
       await press("Save & Continue");
-      await screen.findByText("Where should the nurse come? Step 2 of 2.");
-      await type("State", "Lagos");
+      await screen.findByText("Where do you need Care ?");
+      await choose("State", "Lagos");
       await type("City", "Ikeja");
-      await type("House address", "12 Sample Street");
+      await type("House Address", "12 Sample Street");
+      await type("Phone Number", "+2348000000001");
     }
 
     it("needs the phone's location, sends it to the preview and the create call, and shows the backend's price", async () => {
       const { view, calls } = await renderSignedIn({
+        [SERVICES]: services,
         [PREVIEW]: () => ({ status: 200, body: preview }),
         [CREATE]: () => ({ status: 200, body: created() }),
         [`GET /api/v1/booking/booking/${NEW_ID}`]: () => ({ status: 200, body: created() }),
@@ -313,40 +334,50 @@ describe("bookings (real backend calls, answered with captured bodies)", () => {
 
       await press("Use my current location");
       expect(await screen.findByText("Location saved")).toBeTruthy();
-      await press("Female");
-      await press("Yoruba");
+      await choose("Gender", "Female");
+      await choose("Language", "Yoruba");
       await type("Notes for the caregiver (optional)", "Gate code 4");
       await press("Save & Continue");
 
       expect(await screen.findByText("Booking Summary")).toBeTruthy();
-      // The price is the preview's, never computed here (4 h x anything on the device would not give 55,000).
+      // Figma's summary: the answers under their questions, section headings, and the cost in its own bar.
+      expect(screen.getByText("Kindly confirm your appointment details")).toBeTruthy();
+      for (const heading of ["Where do you need Care ?", "Contact Details", "Preference", "Service Fee"]) expect(screen.getByText(heading)).toBeTruthy();
+      expect(screen.getByText("My Mother")).toBeTruthy();
+      expect(screen.getByText("1 hour 30 minutes")).toBeTruthy();
+      expect(screen.getByText(/^\w+ 15th 8:00 pm$/)).toBeTruthy();
+      expect(screen.getByText("ada.placeholder@example.com")).toBeTruthy();
+      expect(screen.getByText("Estimated Cost")).toBeTruthy();
+      // The price is the preview's, never computed here (90 minutes of anything on the device would not give 55,000).
       expect(await screen.findByText("₦55,000")).toBeTruthy();
       expect(screen.getByText("₦50,000")).toBeTruthy();
       expect(screen.getByText("₦5,000")).toBeTruthy();
-      expect(screen.getByText(/Preferred caregiver gender: female/)).toBeTruthy();
+      expect(screen.getByText("Gate code 4")).toBeTruthy();
       expect(calls.find((c) => c.path.endsWith("/booking/preview"))?.body).toEqual({
         service_type: "nurse",
-        duration_hours: 4,
+        duration_minutes: 90,
         patient_latitude: 6.4474,
         patient_longitude: 3.4723,
       });
 
       await press("Proceed to Payment");
       await waitFor(() => expect(WebBrowser.openBrowserAsync).toHaveBeenCalledWith(PAY_URL, expect.anything()));
-      expect(await screen.findByText("Booking confirmed")).toBeTruthy();
+      expect(await screen.findByText(/Payment Successful\./)).toBeTruthy();
 
       const body = calls.find((c) => c.path.endsWith("/booking/create"))?.body as Record<string, unknown>;
       expect(body).toMatchObject({
         service_type: "nurse",
         assistance_type: "Walking assistance",
-        duration_hours: 4,
+        duration_minutes: 90,
+        condition: "Hypertension",
         patient_address: "12 Sample Street",
         patient_city: "Ikeja",
         patient_state: "Lagos",
         patient_latitude: 6.4474,
         patient_longitude: 3.4723,
-        booking_for: "My mother",
-        special_instructions: "Gate code 4\nPreferred caregiver gender: female\nPreferred language: Yoruba",
+        booking_for: "My Mother",
+        special_instructions:
+          "Gate code 4\nPreferred caregiver gender: female\nPreferred language: Yoruba\nContact phone: +2348000000001\nContact email: ada.placeholder@example.com",
       });
       expect(String(body.scheduled_date)).toMatch(/^\d{4}-\d\d-\d\dT.*Z$/);
       view.unmount();
@@ -354,7 +385,10 @@ describe("bookings (real backend calls, answered with captured bodies)", () => {
 
     it("keeps going without location only when the permission is granted: a refusal says what to do and blocks the step", async () => {
       Location.requestForegroundPermissionsAsync.mockResolvedValueOnce({ status: "denied", canAskAgain: false });
-      const { view } = await renderSignedIn({ [PREVIEW]: () => ({ status: 200, body: preview }) });
+      const { view } = await renderSignedIn({
+        [SERVICES]: services,
+        [PREVIEW]: () => ({ status: 200, body: preview }),
+      });
       await fillTheForm();
       await press("Use my current location");
       expect(await screen.findByText(/Location is switched off for Oakly/)).toBeTruthy();
@@ -363,9 +397,81 @@ describe("bookings (real backend calls, answered with captured bodies)", () => {
       view.unmount();
     });
 
-    it("a closed browser marks nothing paid: 'Payment not confirmed yet', then Pay now opens the same checkout again", async () => {
-      const verify = jest.fn(() => ({ status: 200, body: pending() }));
+    it("step 1 asks for what is missing, only offers the catalogue's lengths, and sends what was typed for 'Other'", async () => {
+      const { view } = await renderSignedIn({ [SERVICES]: services });
+      await press("Start Booking");
+      await screen.findByText("Book your Appointments in 2 steps");
+      await press("Save & Continue");
+      for (const message of ["Tell us who the visit is for", "Tell us what help is needed", "Choose a date and time", "Choose how long the visit should be"]) {
+        expect(screen.getByText(message)).toBeTruthy();
+      }
+      // The nurse is chosen for the person (one service on sale), and Duration lists 60 to 1440 minutes in 30-minute steps.
+      expect(screen.getByRole("button", { name: "What Services are you Booking ?" }).props.accessibilityValue.text).toBe("Nurse visit");
+      await press("Duration");
+      expect(screen.getByRole("button", { name: "1 hour 30 minutes" })).toBeTruthy();
+      expect(screen.getByRole("button", { name: "24 hours" })).toBeTruthy();
+      expect(screen.queryByRole("button", { name: "30 minutes" })).toBeNull();
+      await press("Close");
+      await choose("What Assistance Do You Need?", "Other");
+      await press("Save & Continue");
+      expect(screen.getByText("Type the help that is needed")).toBeTruthy();
+      view.unmount();
+    });
+
+    it("says no services are available when the catalogue is empty, and does not let the person continue", async () => {
+      const { view } = await renderSignedIn({ [SERVICES]: () => ({ status: 200, body: { services: [] } }) });
+      await press("Start Booking");
+      expect(await screen.findByText(/No services are available right now/)).toBeTruthy();
+      expect(screen.getByRole("button", { name: "Save & Continue" }).props.accessibilityState.disabled).toBe(true);
+      view.unmount();
+    });
+
+    it("step 2 needs a phone number and a valid email, prefilled from the account", async () => {
+      const { view } = await renderSignedIn({ [SERVICES]: services });
+      await fillStepOne();
+      await press("Save & Continue");
+      await screen.findByText("Where do you need Care ?");
+      expect(screen.getByLabelText("Email Address").props.value).toBe("ada.placeholder@example.com");
+      expect(screen.getByLabelText("Phone Number").props.value).toBe(""); // the account has no phone yet
+      await type("Email Address", "not-an-email");
+      await press("Save & Continue");
+      expect(screen.getByText("State is required")).toBeTruthy();
+      expect(screen.getByText("Phone number is required")).toBeTruthy();
+      expect(screen.getByText("Enter a valid email address")).toBeTruthy();
+      view.unmount();
+    });
+
+    it("a closed browser marks nothing paid: Paystack says abandoned, so 'Payment Failed! Try Again', and Try Again opens the same checkout", async () => {
+      const verify = jest.fn(() => ({ status: 200, body: pending() })); // the capture says payment_status "abandoned"
       const { view, calls } = await renderSignedIn({
+        [SERVICES]: services,
+        [PREVIEW]: () => ({ status: 200, body: preview }),
+        [CREATE]: () => ({ status: 200, body: created() }),
+        [`GET /api/v1/booking/booking/${NEW_ID}`]: () => ({ status: 200, body: created() }),
+        [VERIFY]: verify,
+      });
+      await fillTheForm();
+      await press("Use my current location");
+      await screen.findByText("Location saved");
+      await press("Save & Continue");
+      await screen.findByText("₦55,000");
+      await press("Proceed to Payment");
+
+      expect(await screen.findByText("Payment Failed! Try Again")).toBeTruthy();
+      expect(screen.queryByText(/Payment Successful/)).toBeNull();
+      expect(countOf(calls, VERIFY)).toBe(paymentPolling.attempts); // capped, not endless
+      expect(WebBrowser.openBrowserAsync).toHaveBeenCalledTimes(1);
+
+      await press("Try Again");
+      await waitFor(() => expect(WebBrowser.openBrowserAsync).toHaveBeenCalledTimes(2));
+      expect(WebBrowser.openBrowserAsync).toHaveBeenLastCalledWith(PAY_URL, expect.anything());
+      view.unmount();
+    });
+
+    it("a payment Paystack has not decided (still processing) is never called failed: 'Payment not confirmed yet', with Pay now and Check again", async () => {
+      const verify = jest.fn(() => ({ status: 200, body: { ...pending(), payment_status: "ongoing" } }));
+      const { view } = await renderSignedIn({
+        [SERVICES]: services,
         [PREVIEW]: () => ({ status: 200, body: preview }),
         [CREATE]: () => ({ status: 200, body: created() }),
         [`GET /api/v1/booking/booking/${NEW_ID}`]: () => ({ status: 200, body: created() }),
@@ -379,18 +485,43 @@ describe("bookings (real backend calls, answered with captured bodies)", () => {
       await press("Proceed to Payment");
 
       expect(await screen.findByText("Payment not confirmed yet")).toBeTruthy();
-      expect(screen.queryByText("Booking confirmed")).toBeNull();
-      expect(countOf(calls, VERIFY)).toBe(paymentPolling.attempts); // capped, not endless
-      expect(WebBrowser.openBrowserAsync).toHaveBeenCalledTimes(1);
+      expect(screen.queryByText("Payment Failed! Try Again")).toBeNull();
+      expect(screen.getByRole("button", { name: "Pay now" })).toBeTruthy();
+      expect(screen.getByRole("button", { name: "Check again" })).toBeTruthy();
+      view.unmount();
+    });
 
-      await press("Pay now");
-      await waitFor(() => expect(WebBrowser.openBrowserAsync).toHaveBeenCalledTimes(2));
-      expect(WebBrowser.openBrowserAsync).toHaveBeenLastCalledWith(PAY_URL, expect.anything());
+    it("the success frame shows the receipt from the booking (id, amount, PAID) and no email claim; View Booking while no caregiver is assigned", async () => {
+      const { view } = await renderSignedIn({
+        [SERVICES]: services,
+        [PREVIEW]: () => ({ status: 200, body: preview }),
+        [CREATE]: () => ({ status: 200, body: created() }),
+        [`GET /api/v1/booking/booking/${NEW_ID}`]: () => ({ status: 200, body: created() }),
+        [VERIFY]: () => ({ status: 200, body: paid() }),
+      });
+      await fillTheForm();
+      await press("Use my current location");
+      await screen.findByText("Location saved");
+      await press("Save & Continue");
+      await screen.findByText("₦55,000");
+      await press("Proceed to Payment");
+
+      expect(await screen.findByText(/Payment Successful\./)).toBeTruthy();
+      expect(screen.getByText("Your payment was received. We are now finding a caregiver for you.")).toBeTruthy();
+      expect(screen.queryByText(/sent to your email/)).toBeNull();
+      expect(await screen.findByText(created().booking_code)).toBeTruthy();
+      expect(screen.getByText("₦55,000")).toBeTruthy();
+      expect(screen.getByText("PAID")).toBeTruthy();
+      expect(screen.getByRole("button", { name: "View Booking" })).toBeTruthy();
+      expect(screen.queryByRole("button", { name: "View Caregiver" })).toBeNull();
+      await press("Close"); // the round close goes to the bookings list
+      expect(await screen.findByRole("tab", { name: "Booking" })).toBeTruthy();
       view.unmount();
     });
 
     it("when Paystack cannot start the payment the booking is not offered for payment, and says so", async () => {
       const { view } = await renderSignedIn({
+        [SERVICES]: services,
         [PREVIEW]: () => ({ status: 200, body: preview }),
         [CREATE]: () => ({ status: 200, body: created({ status: "cancelled", payment_status: "failed", payment_url: null, payment_error: "Payment gateway temporarily unavailable" }) }),
       });
@@ -407,6 +538,7 @@ describe("bookings (real backend calls, answered with captured bodies)", () => {
 
     it("the summary says 'Can't reach Oakly' when the price cannot be fetched, and will not proceed without a price", async () => {
       const { view } = await renderSignedIn({
+        [SERVICES]: services,
         [PREVIEW]: () => {
           throw new TypeError("Network request failed");
         },
@@ -449,10 +581,10 @@ describe("bookings (real backend calls, answered with captured bodies)", () => {
         const request = calls.find((c) => c.path === `/api/v1/booking/${item.id}/payment-link`);
         expect(request).toMatchObject({ method: "POST", body: null });
         expect(usePaymentLinks.getState().urls[item.id]).toBe(LINK_URL);
-        // The browser closed with nothing paid (the mock answers "dismiss", verify says pending): not confirmed, nothing marked paid.
-        expect(await screen.findByText("Payment not confirmed yet")).toBeTruthy();
-        // Pay now opens the remembered link: the backend is not asked for a second one.
-        await press("Pay now");
+        // The browser closed with nothing paid (the mock answers "dismiss", verify says abandoned): failed, nothing marked paid.
+        expect(await screen.findByText("Payment Failed! Try Again")).toBeTruthy();
+        // Try Again opens the remembered link: the backend is not asked for a second one.
+        await press("Try Again");
         await waitFor(() => expect(WebBrowser.openBrowserAsync).toHaveBeenCalledTimes(2));
         expect(countOf(calls, `POST /api/v1/booking/${item.id}/payment-link`)).toBe(1);
         view.unmount();
@@ -460,7 +592,7 @@ describe("bookings (real backend calls, answered with captured bodies)", () => {
 
       it("a booking the server says is already paid is confirmed, never shown as an error (409 booking_already_paid)", async () => {
         const { view } = await openPayNow(refused("076-p-link-paid-but-webhook-late"));
-        expect(await screen.findByText("Booking confirmed")).toBeTruthy();
+        expect(await screen.findByText(/Payment Successful\./)).toBeTruthy();
         expect(WebBrowser.openBrowserAsync).not.toHaveBeenCalled();
         view.unmount();
       });
@@ -520,6 +652,7 @@ describe("bookings (real backend calls, answered with captured bodies)", () => {
 
       it("no pricing configured (503 booking_settings_not_configured) on create says booking is unavailable, in plain words", async () => {
         const { view } = await renderSignedIn({
+          [SERVICES]: services,
           "POST /api/v1/booking/preview": refused("061-p-preview-no-pricing"),
         });
         await fillTheForm();

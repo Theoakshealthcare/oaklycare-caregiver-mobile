@@ -1243,6 +1243,28 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/v1/booking/services": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Which services can be booked right now
+         * @description The services a person may book now, in display order: enabled in the catalogue AND priced. A service with no
+         *     price is simply absent. The response carries no prices (use ``/booking/preview`` for those). ``min_minutes``,
+         *     ``step_minutes`` and ``max_minutes`` describe the allowed visit lengths.
+         */
+        get: operations["list_bookable_services_api_v1_booking_services_get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/v1/booking/patient/bookings": {
         parameters: {
             query?: never;
@@ -2752,6 +2774,43 @@ export interface paths {
         head?: never;
         /** Update Policy */
         patch: operations["update_policy_api_v1_admin_booking_policy_patch"];
+        trace?: never;
+    };
+    "/api/v1/admin/service-catalog": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** List Services */
+        get: operations["list_services_api_v1_admin_service_catalog_get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/admin/service-catalog/{service_type}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        /**
+         * Update Service
+         * @description Replace one service's settings. Idempotent: repeating the same body is a no-op (no second audit row).
+         */
+        put: operations["update_service_api_v1_admin_service_catalog__service_type__put"];
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
         trace?: never;
     };
     "/api/v1/admin/earnings": {
@@ -4399,6 +4458,44 @@ export interface components {
             /** File */
             file: string;
         };
+        /** BookableServiceOut */
+        BookableServiceOut: {
+            /**
+             * Service Type
+             * @example nurse
+             */
+            service_type: string;
+            /**
+             * Display Name
+             * @example Nurse visit
+             */
+            display_name: string;
+            /**
+             * Mode
+             * @example home
+             */
+            mode: string;
+            /**
+             * Min Minutes
+             * @example 60
+             */
+            min_minutes: number;
+            /**
+             * Step Minutes
+             * @example 60
+             */
+            step_minutes: number;
+            /**
+             * Max Minutes
+             * @example 1440
+             */
+            max_minutes: number;
+        };
+        /** BookableServicesOut */
+        BookableServicesOut: {
+            /** Services */
+            services: components["schemas"]["BookableServiceOut"][];
+        };
         /**
          * BookingActionOut
          * @description What changed. Fetch the detail for the rest.
@@ -4511,11 +4608,17 @@ export interface components {
              */
             condition?: string | null;
             /**
+             * Duration Minutes
+             * @description Length of the visit in minutes (30-minute steps by default; the service's own minimum, step and maximum are in GET /booking/services). Send this OR duration_hours.
+             * @example 90
+             */
+            duration_minutes?: number | null;
+            /**
              * Duration Hours
-             * @description Duration of service in hours (1-24)
+             * @description Older way to send the length, in hours (4 or 1.5). Converted to minutes; both are returned.
              * @example 4
              */
-            duration_hours: number;
+            duration_hours?: number | null;
             /**
              * Scheduled Date
              * Format: date-time
@@ -4581,6 +4684,8 @@ export interface components {
             assistance_type: string;
             /** Booking For */
             booking_for: string;
+            /** Duration Minutes */
+            duration_minutes: number;
             /** Duration Hours */
             duration_hours: number;
             /**
@@ -4914,11 +5019,17 @@ export interface components {
              */
             service_type: "nurse" | "doctor" | "physiotherapist" | "caregiver" | "nutritionist";
             /**
+             * Duration Minutes
+             * @description Length of the visit in minutes (30-minute steps by default; the service's own minimum, step and maximum are in GET /booking/services). Send this OR duration_hours.
+             * @example 90
+             */
+            duration_minutes?: number | null;
+            /**
              * Duration Hours
-             * @description Duration of service in hours (1-24)
+             * @description Older way to send the length, in hours (4 or 1.5). Converted to minutes; both are returned.
              * @example 4
              */
-            duration_hours: number;
+            duration_hours?: number | null;
             /**
              * Patient Latitude
              * @description Patient latitude for surge pricing calculation (-90 to 90)
@@ -4941,8 +5052,14 @@ export interface components {
              */
             service_type: string;
             /**
+             * Duration Minutes
+             * @description Service duration in minutes
+             * @example 240
+             */
+            duration_minutes: number;
+            /**
              * Duration Hours
-             * @description Service duration in hours
+             * @description Service duration in hours (1.5 for 90 minutes)
              * @example 4
              */
             duration_hours: number;
@@ -5069,6 +5186,8 @@ export interface components {
             assistance_type: string;
             /** Condition */
             condition?: string | null;
+            /** Duration Minutes */
+            duration_minutes: number;
             /** Duration Hours */
             duration_hours: number;
             /**
@@ -5852,6 +5971,8 @@ export interface components {
             assistance_type: string;
             /** Condition */
             condition?: string | null;
+            /** Duration Minutes */
+            duration_minutes: number;
             /** Duration Hours */
             duration_hours: number;
             /**
@@ -7013,6 +7134,8 @@ export interface components {
              * Format: date-time
              */
             scheduled_end_date: string;
+            /** Duration Minutes */
+            duration_minutes: number;
             /** Duration Hours */
             duration_hours: number;
             /** Area */
@@ -7052,6 +7175,8 @@ export interface components {
              * Format: date-time
              */
             scheduled_end_date: string;
+            /** Duration Minutes */
+            duration_minutes: number;
             /** Duration Hours */
             duration_hours: number;
             /** Patient Name */
@@ -8053,6 +8178,8 @@ export interface components {
             assistance_type: string;
             /** Condition */
             condition?: string | null;
+            /** Duration Minutes */
+            duration_minutes: number;
             /** Duration Hours */
             duration_hours: number;
             /**
@@ -8918,6 +9045,70 @@ export interface components {
             items: string[];
             /** Note */
             note: string;
+        };
+        /** ServiceCatalogOut */
+        ServiceCatalogOut: {
+            /** Service Type */
+            service_type: string;
+            /** Enabled */
+            enabled: boolean;
+            /** Display Name */
+            display_name: string;
+            /** Mode */
+            mode: string;
+            /** Min Minutes */
+            min_minutes: number;
+            /** Step Minutes */
+            step_minutes: number;
+            /** Max Minutes */
+            max_minutes: number;
+            /** Sort Order */
+            sort_order: number;
+            /**
+             * Priced
+             * @description Does the newest pricing have a multiplier for it? A service can only be enabled when true
+             */
+            priced: boolean;
+            /**
+             * Bookable
+             * @description enabled AND priced: what patients are offered
+             */
+            bookable: boolean;
+            /**
+             * Updated At
+             * Format: date-time
+             */
+            updated_at: string;
+            /** Updated By */
+            updated_by?: string | null;
+        };
+        /**
+         * ServiceCatalogWrite
+         * @description The full editable state of one service (PUT replaces it: sending the same body twice changes nothing).
+         */
+        ServiceCatalogWrite: {
+            /** Enabled */
+            enabled: boolean;
+            /** Display Name */
+            display_name: string;
+            /**
+             * Mode
+             * @description 'home' only for now
+             */
+            mode: string;
+            /** Min Minutes */
+            min_minutes: number;
+            /** Step Minutes */
+            step_minutes: number;
+            /** Max Minutes */
+            max_minutes: number;
+            /** Sort Order */
+            sort_order: number;
+            /**
+             * Reason
+             * @description Why (kept in the audit log)
+             */
+            reason?: string | null;
         };
         /** SkillIn */
         SkillIn: {
@@ -12593,14 +12784,12 @@ export interface operations {
                     "application/json": unknown;
                 };
             };
-            /** @description Validation Error */
+            /** @description detail.code service_unavailable (the service is not on offer: disabled or unpriced) or invalid_duration (the length is not one the service allows; the detail lists the allowed values) */
             422: {
                 headers: {
                     [name: string]: unknown;
                 };
-                content: {
-                    "application/json": components["schemas"]["HTTPValidationError"];
-                };
+                content?: never;
             };
             /** @description Internal server error */
             500: {
@@ -12622,6 +12811,26 @@ export interface operations {
                     [name: string]: unknown;
                 };
                 content?: never;
+            };
+        };
+    };
+    list_bookable_services_api_v1_booking_services_get: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["BookableServicesOut"];
+                };
             };
         };
     };
@@ -15573,6 +15782,66 @@ export interface operations {
                 content: {
                     "application/json": components["schemas"]["HTTPValidationError"];
                 };
+            };
+        };
+    };
+    list_services_api_v1_admin_service_catalog_get: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ServiceCatalogOut"][];
+                };
+            };
+        };
+    };
+    update_service_api_v1_admin_service_catalog__service_type__put: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                service_type: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["ServiceCatalogWrite"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ServiceCatalogOut"];
+                };
+            };
+            /** @description Unknown service type */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description Invalid body, or detail.code service_has_no_price: set its multiplier in Pricing first */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
             };
         };
     };

@@ -13,7 +13,7 @@ import { authService } from "@/src/services/auth.service";
 
 /** The words of the Figma "account created" frame; the body is copied as drawn. */
 export const ACCOUNT_CREATED_TITLE = "Congratulations! Your account setup is complete!";
-export const ACCOUNT_CREATED_BODY = "Account successfully created! Welcome aboard! Let the learning journey begin!";
+export const ACCOUNT_CREATED_BODY = "Account successfully created! Welcome aboard! Let the care journey begin!";
 
 /** Shown once the email is verified. The account is not signed in yet, so "Start Booking Journey" signs in first. */
 const AccountCreated: React.FC = () => {

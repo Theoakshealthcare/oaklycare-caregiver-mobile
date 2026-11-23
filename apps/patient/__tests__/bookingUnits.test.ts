@@ -3,7 +3,9 @@ import { ApiError, FALLBACK_MESSAGE, NETWORK_MESSAGE } from "../src/api/errors";
 import { isNetworkFailure } from "../src/api/networkFailure";
 import { unwrap } from "../src/api/unwrap";
 import { canChat, feeReason, paymentChip, type Booking, type CancelTerms } from "../src/domain/booking";
-import { specialInstructions, toBooking, toCancelTerms, toCreateBody } from "../src/services/bookingMapper";
+import { specialInstructions, toBookableServices, toBooking, toCancelTerms, toCreateBody } from "../src/services/bookingMapper";
+import { conditionText, helpNeeded } from "../src/domain/booking";
+import { offeredServices } from "../src/domain/bookingChoices";
 import { readPaymentCheck, termsFromChangedError } from "../src/services/booking.service";
 import { firstNameOf } from "../src/domain/names";
 import { EMPTY_DRAFT } from "../src/hooks/bookingDraft";
@@ -141,11 +143,13 @@ describe("mapping the real responses", () => {
   it("builds the create body from the form: nurse only, ISO time, the phone's coordinates", () => {
     const body = toCreateBody({
       ...EMPTY_DRAFT,
-      forWhom: " My mother ",
+      forWhom: " My Mother ",
+      serviceType: "nurse",
+      serviceLabel: "Nurse visit",
       assistance: "Wound dressing",
       date: "2026-12-01",
       time: "14:00",
-      durationHours: "4",
+      durationMinutes: 90,
       state: "Lagos",
       city: "Ikeja",
       address: "12 Sample Street",
@@ -156,16 +160,47 @@ describe("mapping the real responses", () => {
       service_type: "nurse",
       assistance_type: "Wound dressing",
       condition: null,
-      duration_hours: 4,
+      duration_minutes: 90,
       patient_latitude: 6.4474,
       patient_longitude: 3.4723,
       patient_city: "Ikeja",
       patient_state: "Lagos",
-      booking_for: "My mother",
+      booking_for: "My Mother",
       special_instructions: null,
     });
     expect(new Date(body.scheduled_date).getHours()).toBe(14);
     expect(() => toCreateBody({ ...EMPTY_DRAFT })).toThrow();
+    expect(() => toCreateBody({ ...EMPTY_DRAFT, latitude: 6.4, longitude: 3.4, durationMinutes: null })).toThrow();
+  });
+
+  it("sends the typed text for 'Other' and nothing for a condition of 'None'", () => {
+    expect(helpNeeded({ assistance: "Other", assistanceOther: " Help with a bath " })).toBe("Help with a bath");
+    expect(helpNeeded({ assistance: "Elderly care", assistanceOther: "ignored" })).toBe("Elderly care");
+    expect(conditionText({ condition: "", conditionOther: "" })).toBeNull();
+    expect(conditionText({ condition: "None", conditionOther: "" })).toBeNull();
+    expect(conditionText({ condition: "Diabetes", conditionOther: "" })).toBe("Diabetes");
+    expect(conditionText({ condition: "Other", conditionOther: "Asthma " })).toBe("Asthma");
+    expect(conditionText({ condition: "Other", conditionOther: " " })).toBeNull();
+  });
+
+  it("puts the contact details inside the special instructions (the booking has no field for them)", () => {
+    expect(specialInstructions({ instructions: "", genderPreference: "any", languagePreference: "any", phone: " +2348000000001 ", email: "cora.placeholder@example.com" })).toBe(
+      "Contact phone: +2348000000001\nContact email: cora.placeholder@example.com",
+    );
+  });
+
+  it("reads the service catalogue answer and offers only the services this app sells", () => {
+    const services = toBookableServices(capture("201-p-services-nurse-only").body);
+    expect(services).toEqual([{ serviceType: "nurse", displayName: "Nurse visit", minMinutes: 60, stepMinutes: 30, maxMinutes: 1440 }]);
+    const withDoctor = [...services, { serviceType: "doctor", displayName: "Doctor visit", minMinutes: 60, stepMinutes: 30, maxMinutes: 1440 }];
+    expect(offeredServices(withDoctor).map((s) => s.serviceType)).toEqual(["nurse"]);
+  });
+
+  it("reads a booking's length in minutes, and from hours for an older answer", () => {
+    const body = capture("022-p-b2-detail-accepted").body;
+    expect(toBooking({ ...body, duration_minutes: 90, duration_hours: 1.5 }).durationMinutes).toBe(90);
+    const { duration_minutes: _gone, ...older } = body;
+    expect(toBooking({ ...older, duration_hours: 4 }).durationMinutes).toBe(240);
   });
 
   it("reads the verify-payment answer: only 'success' and 'paid' is paid", () => {
@@ -174,7 +209,9 @@ describe("mapping the real responses", () => {
     expect(readPaymentCheck({ status: "pending", message: "Payment not yet completed", payment_status: "abandoned" })).toEqual({
       kind: "not_paid",
       message: "Payment not yet completed",
+      paystackStatus: "abandoned",
     });
+    expect(readPaymentCheck({ status: "pending", message: "Payment not yet completed" })).toMatchObject({ paystackStatus: null });
     expect(readPaymentCheck({ status: "error", message: "Transaction reference not found" }).kind).toBe("not_paid");
     expect(readPaymentCheck(null).kind).toBe("not_paid");
   });
