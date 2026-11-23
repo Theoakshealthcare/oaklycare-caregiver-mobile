@@ -4,7 +4,7 @@ import React from "react";
 import { Alert, Linking } from "react-native";
 
 import ConsentBlock from "../src/components/identity/ConsentBlock";
-import { PRIVACY_URL, TERMS_URL } from "../src/config/contact";
+import { COOKIES_URL, PRIVACY_URL, TERMS_URL } from "../src/config/contact";
 import { CONSENT_BODY, CONSENT_LABEL, CONSENT_TEXT_VERSION, CONSENT_TITLE } from "../src/identity/identityModel";
 import CreateAccount from "../src/screens/auth/CreateAccount";
 import ConsentScreen from "../src/screens/setup/ConsentScreen";
@@ -33,6 +33,7 @@ describe("the URLs", () => {
   it("are the ones the owner supplied", () => {
     expect(TERMS_URL).toBe("https://www.oaklycare.com/terms");
     expect(PRIVACY_URL).toBe("https://www.oaklycare.com/privacy");
+    expect(COOKIES_URL).toBe("https://www.oaklycare.com/cookies");
   });
 });
 
@@ -44,6 +45,8 @@ describe("sign-up: the agree line", () => {
     await waitFor(() => expect(WebBrowser.openBrowserAsync).toHaveBeenLastCalledWith(TERMS_URL, CLOSE_BUTTON));
     await fireEvent.press(screen.getByText("Privacy Policy"));
     await waitFor(() => expect(WebBrowser.openBrowserAsync).toHaveBeenLastCalledWith(PRIVACY_URL, CLOSE_BUTTON));
+    await fireEvent.press(screen.getByText("Cookies Policy"));
+    await waitFor(() => expect(WebBrowser.openBrowserAsync).toHaveBeenLastCalledWith(COOKIES_URL, CLOSE_BUTTON));
     expect(safari).not.toHaveBeenCalled();
   });
 
@@ -69,6 +72,7 @@ describe("caregiver consent screen", () => {
   it.each([
     ["Terms of Services", TERMS_URL],
     ["Privacy Policy", PRIVACY_URL],
+    ["Cookies Policy", COOKIES_URL],
   ])("%s opens the right page in the in-app browser", async (label, url) => {
     await render(withClient(<ConsentScreen />));
     await fireEvent.press(screen.getByText(label));

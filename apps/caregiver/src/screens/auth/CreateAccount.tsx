@@ -166,14 +166,7 @@ const CreateAccount: React.FC = () => {
                   {' '}Learn how we process your data in our{' '}
                   <LegalLink page="privacy">Privacy Policy</LegalLink>
                   {' '}and{' '}
-                  <Text
-                    variant="small"
-                    weight="bold"
-                    color={theme.colors.primary}
-                    style={{ textDecorationLine: 'underline' }}
-                  >
-                    Cookies Policy
-                  </Text>
+                  <LegalLink page="cookies">Cookies Policy</LegalLink>
                 </Text>
                 {errors.terms && (
                   <Text variant="small" color={theme.colors.error}>
