@@ -39,7 +39,13 @@ export function nativePushDeps(): PushRegistrationDeps {
     platform: Platform.OS === "ios" ? "ios" : "android",
     projectId: easProjectId(),
     ensurePermission: ensureNotificationPermission,
-    getExpoPushToken: async (projectId) => (await Notifications.getExpoPushTokenAsync({ projectId })).data,
+    getExpoPushToken: async (projectId, deviceToken) =>
+      (
+        await Notifications.getExpoPushTokenAsync({
+          projectId,
+          ...(deviceToken ? { devicePushToken: { type: Platform.OS === "ios" ? "ios" : "android", data: deviceToken } } : {}),
+        })
+      ).data,
     storedToken: () => pushTokenStorage.get(),
     storeToken: (token) => pushTokenStorage.set(token),
     register: (token, platform) => pushService.register(token, platform),
@@ -59,6 +65,15 @@ export function installNotificationHandler(): void {
   Notifications.setNotificationHandler({
     handleNotification: async () => ({ shouldShowBanner: true, shouldShowList: true, shouldPlaySound: true, shouldSetBadge: false }),
   });
+}
+
+/**
+ * The OS rotated the native token. Answer with the token the event carries and never ask the OS for one here:
+ * `getDevicePushTokenAsync` inside this listener fires it again, which once sent about 12 registrations a second.
+ */
+export function onDevicePushToken(token: { data: unknown }): void {
+  if (typeof token.data !== "string") return;
+  void registerForPush(nativePushDeps(), { deviceToken: token.data });
 }
 
 /**
@@ -88,7 +103,7 @@ export function usePushEffects(): void {
       navigation.navigate("BookingDetails", { id: tap.bookingId });
     };
 
-    const tokenListener = Notifications.addPushTokenListener(() => void registerForPush(nativePushDeps()));
+    const tokenListener = Notifications.addPushTokenListener(onDevicePushToken);
     const receivedListener = Notifications.addNotificationReceivedListener(() => {
       void client.invalidateQueries({ queryKey: notificationKeys.all });
     });
