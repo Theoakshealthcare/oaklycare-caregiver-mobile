@@ -56,8 +56,10 @@ afterEach(() => {
   mockNavigate.mockClear();
 });
 
+// The phone's own number pad does the typing: one digit into each box.
 const typeCode = async (digits: string) => {
-  for (const digit of digits) await fireEvent.press(screen.getByText(digit));
+  let index = 0;
+  for (const digit of digits) await fireEvent.changeText(screen.getByTestId(`otp-box-${index++}`), digit);
 };
 /** A call that stays open until the test settles it, like a stalled connection. */
 function open<T>() {
@@ -75,11 +77,12 @@ describe("caregiver verify-email screen gives feedback (owner's phone test, 2026
     const call = open<unknown>();
     post.mockReturnValue(call.promise);
     await renderScreen();
-    expect(screen.getByText("Verify")).toBeTruthy();
+    // Figma has no Verify button: the fifth digit sends the code by itself.
+    expect(screen.queryByText("Verify")).toBeNull();
 
     await typeCode("12345");
-    // The button's title is replaced by a spinner while the request is open.
-    expect(screen.queryByText("Verify")).toBeNull();
+    // A spinner shows while the request is open.
+    expect(screen.getByTestId("verify-busy")).toBeTruthy();
     expect(post).toHaveBeenCalledTimes(1);
 
     await act(async () => call.settle(ok()));
@@ -109,7 +112,7 @@ describe("caregiver verify-email screen gives feedback (owner's phone test, 2026
     await typeCode("12345");
 
     await waitFor(() => expect(alertSpy).toHaveBeenCalledWith("Verification Failed", NETWORK_MESSAGE));
-    // The five digits are still in the boxes, and Verify is back and works.
+    // The five digits are still in the boxes, and Verify appears and works.
     expect(screen.getAllByDisplayValue(/^[1-5]$/)).toHaveLength(5);
     post.mockResolvedValueOnce(ok());
     await waitFor(() => expect(screen.getByText("Verify")).toBeTruthy());
@@ -125,5 +128,28 @@ describe("caregiver verify-email screen gives feedback (owner's phone test, 2026
 
     await waitFor(() => expect(alertSpy).toHaveBeenCalledWith("Verification Failed", expect.any(String)));
     expect(screen.queryAllByDisplayValue(/^[1-5]$/)).toHaveLength(0);
+  });
+});
+
+describe("verify-email screen follows the Figma frame", () => {
+  it("has the heading, the sentence with the address, five boxes, and the resend row with its pill", async () => {
+    await renderScreen();
+    expect(screen.getByText("Verify Email Address")).toBeTruthy();
+    expect(screen.getByText(`Enter the OTP code sent to your mail, ${EMAIL}`)).toBeTruthy();
+    expect(screen.getAllByTestId(/^otp-box-/)).toHaveLength(5);
+    // Figma's "recieve" typo is fixed; its space before the question mark is kept.
+    expect(screen.getByText("Didn't receive a code ?")).toBeTruthy();
+    expect(screen.queryByText(/recieve/)).toBeNull();
+    expect(screen.getByText(/^Resend Code/)).toBeTruthy();
+    // No hand-drawn keypad: the phone's number pad types.
+    expect(screen.queryByText("ABC")).toBeNull();
+  });
+
+  it("a pasted or auto-filled code spreads over the boxes and verifies", async () => {
+    post.mockResolvedValueOnce(ok());
+    await renderScreen();
+    await fireEvent.changeText(screen.getByTestId("otp-box-0"), "24680");
+    await waitFor(() => expect(post).toHaveBeenCalledTimes(1));
+    expect(post.mock.calls[0][1]).toEqual({ body: { email: EMAIL, code: "24680" } });
   });
 });

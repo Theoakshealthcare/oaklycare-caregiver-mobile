@@ -17,7 +17,7 @@ describe("App", () => {
 
   it("restores the (empty) session and shows the onboarding screen when signed out", async () => {
     const view = await render(<App />);
-    expect(await screen.findByText("Care work that")).toBeTruthy();
+    expect(await screen.findByText("AI-Powered Personalized")).toBeTruthy();
     view.unmount();
   });
 });

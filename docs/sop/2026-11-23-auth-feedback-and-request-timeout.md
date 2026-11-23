@@ -7,6 +7,8 @@
 | **Reported by** | The owner, on the first real phone test of the staging APK (2026-11-23): Resend did nothing visible and was tapped repeatedly; after the last digit the screen sat for about 120 s with no spinner and no button; then the splash screen for 60 s. |
 | **Not verified** | **On a device.** Jest and type-check only. The timeout also needs a look on a phone with a stalled connection (airplane mode toggled mid-request). |
 
+> **Update 2026-11-23 (onboarding parity, `2026-11-23-caregiver-onboarding-parity.md`):** the caregiver code screen no longer shows a standing Verify button (Figma has none). The fifth digit still verifies, a spinner still shows, and **Verify appears only after a network failure that kept the typed code**, so the retry this SOP added still exists.
+
 ## Why
 - The app had no request timeout: a stalled connection left the screen waiting for as long as the OS kept the socket (the owner saw 60-300 s). The stall had a server cause too (see `2026-11-23-push-token-registration-loop.md` and backend `2026-11-23-staging-api-workers.md`), but a client must never wait minutes without a word.
 - The caregiver code screen verified as soon as the fifth digit was typed, with no sign that anything was happening and no button to try again; Resend had no busy state, so the person tapped it repeatedly.

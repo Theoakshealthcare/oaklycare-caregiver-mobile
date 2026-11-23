@@ -12,6 +12,7 @@ import Wallet from "../screens/account/Wallet";
 import AccountCreated from "../screens/auth/AccountCreated";
 import CreateAccount from "../screens/auth/CreateAccount";
 import Login from "../screens/auth/Login";
+import RecoverCode from "../screens/auth/RecoverCode";
 import RecoverPassword from "../screens/auth/RecoverPassword";
 import ResetPassword from "../screens/auth/ResetPassword";
 import VerifyEmail from "../screens/auth/VerifyEmail";
@@ -40,12 +41,14 @@ import CaregiverSetupStep1 from "../screens/setup/CaregiverSetupStep1";
 import CaregiverSetupStep2 from "../screens/setup/CaregiverSetupStep2";
 import ConsentScreen from "../screens/setup/ConsentScreen";
 import IdentityVerification from "../screens/setup/IdentityVerification";
+import ProfileSetupCompleted from "../screens/setup/ProfileSetupCompleted";
 import VerificationStatusScreen from "../screens/setup/VerificationStatus";
 import SplashScreen from "../screens/splash-screen";
 import { authService } from "../services/auth.service";
 import AppRuntime from "./AppRuntime";
 import BottomNavigation from "./BottomNavigation";
 import { kycEnabled } from "../identity/config";
+import { useSetupSubmitted } from "../onboarding/setupSubmitted";
 import { firstSignedOutRoute, resolveGate, type Gate } from "./gate";
 import type { ScreenParamLists } from "./Navigations";
 
@@ -75,6 +78,7 @@ function useGate(): { gate: Gate; returning: boolean; retry: () => void } {
 
 const StackNavigator = () => {
   const { gate, returning, retry } = useGate();
+  const setupSubmitted = useSetupSubmitted();
 
   switch (gate.kind) {
     case "loading":
@@ -106,6 +110,7 @@ const StackNavigator = () => {
           <Stack.Screen name="VerifyEmail" component={VerifyEmail} />
           <Stack.Screen name="AccountCreated" component={AccountCreated} />
           <Stack.Screen name="RecoverPassword" component={RecoverPassword} />
+          <Stack.Screen name="RecoverCode" component={RecoverCode} />
           <Stack.Screen name="ResetPassword" component={ResetPassword} />
         </Stack.Navigator>
       );
@@ -125,6 +130,14 @@ const StackNavigator = () => {
         </Stack.Navigator>
       );
     case "status":
+      // Consent was just submitted: the "Profile Setup Completed" page comes before the status screen.
+      if (setupSubmitted && gate.status === "under_review") {
+        return (
+          <Stack.Navigator key="setupCompleted" screenOptions={{ headerShown: false }}>
+            <Stack.Screen name="ProfileSetupCompleted" component={ProfileSetupCompleted} />
+          </Stack.Navigator>
+        );
+      }
       return (
         <Stack.Navigator key="status" screenOptions={{ headerShown: false }}>
           <Stack.Screen name="VerificationStatus" component={VerificationStatusScreen} />

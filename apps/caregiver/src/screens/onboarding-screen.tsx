@@ -9,28 +9,37 @@ import ScreenSize from "../hooks/screen-size"
 import { globalStyles } from "../constants/styles"
 import FocusedStatusBar from "../components/StatusBar/FocusedStatusBar"
 
-const slides = [
+/** The four welcome slides, in the words of the Figma frames. Slide 3 sits on the coral panel; the others on teal. */
+export const slides = [
   {
     id: "1",
-    title: "Care work that",
-    subtitle: "Comes to you.",
-    description: "Get visit requests near you and accept the ones that suit your day.",
+    title: "AI-Powered Personalized",
+    subtitle: "Smart Care, Tailored for You.",
+    description: "Our AI-driven platform ensures the right care, at the right time.",
     image: require("../../assets/images/onboarding/onboarding-1.png"),
     backgroundColor: theme.colors.primary,
   },
   {
     id: "2",
-    title: "Visits, Care Plans &",
-    subtitle: "Vitals In One Place.",
-    description: "Start a visit with the family's code, follow the care plan and record vitals as you go.",
+    title: "Remote Monitoring &",
+    subtitle: "Real-Time Updates.",
+    description: "Track care sessions, chat with nurses, and receive real-time updates.",
     image: require("../../assets/images/onboarding/onboarding-2.png"),
     backgroundColor: theme.colors.primary,
   },
   {
     id: "3",
-    title: "Earn For Every Visit",
-    subtitle: "Get Paid Securely.",
-    description: "See what you earn for each completed visit and withdraw to your bank account.",
+    title: "Oakly FallGuard™ Fall Predictor–",
+    subtitle: "Predict. Prevent. Protect.",
+    description: "Stay ahead of falls with real-time monitoring and proactive protection.",
+    image: require("../../assets/images/onboarding/onboarding-3.png"),
+    backgroundColor: theme.colors.secondary,
+  },
+  {
+    id: "4",
+    title: "On-Demand Nursing Care",
+    subtitle: "Book a Nurse Instantly.",
+    description: "Reliable, professional home nursing—just a tap away.",
     image: require("../../assets/images/onboarding/onboarding-4.png"),
     backgroundColor: theme.colors.primary,
   },
@@ -41,18 +50,11 @@ const OnboardingScreen = () => {
   const {navigation} = Navigation()
   
   const [currentIndex, setCurrentIndex] = useState(0)
-  const flatListRef = useRef<FlatList>(null)
   const scrollX = useRef(new Animated.Value(0)).current
 
-  const handleNext = () => {
-    if (currentIndex < slides.length - 1) {
-      flatListRef.current?.scrollToIndex({
-        index: currentIndex + 1,
-        animated: true,
-      })
-    } else {
-      navigation.navigate("CreateAccount")
-    }
+  // "Get Started" is on every slide and always opens sign-up (Figma); the slides themselves are swiped.
+  const handleGetStarted = () => {
+    navigation.navigate("CreateAccount")
   }
 
   const handleSkip = () => {
@@ -110,7 +112,6 @@ const OnboardingScreen = () => {
   return (
     <View style={{flex: 1}}>
       <FlatList
-        ref={flatListRef}
         data={slides}
         renderItem={({ item, index }) => (
           <OnboardingSlide
@@ -119,7 +120,7 @@ const OnboardingScreen = () => {
             description={item.description}
             image={item.image}
             backgroundColor={item.backgroundColor}
-            onNext={handleNext}
+            onNext={handleGetStarted}
             onSkip={handleSkip}
             onLogin={handleLogin}
             renderDots={renderDots}

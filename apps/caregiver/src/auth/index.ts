@@ -4,6 +4,8 @@ import { useStore } from "zustand";
 import { API_BASE_URL } from "@/src/api/config";
 import { queryClient } from "@/src/api/queryClient";
 import { resetProfileEdited } from "@/src/onboarding/reviewEdits";
+import { resetSetupSubmitted } from "@/src/onboarding/setupSubmitted";
+import { forgetPendingSignIn } from "./pendingSignIn";
 import { forgetAllLocalRecordings } from "@/src/voiceNotes/localAudio";
 
 import { secureTokenStorage } from "./secureStorage";
@@ -31,6 +33,8 @@ export const session = createSession({
     queryClient.clear();
     // "Edited since the changes were requested" belongs to the account that signed out.
     resetProfileEdited();
+    resetSetupSubmitted();
+    forgetPendingSignIn();
     // A voice recording is the client's voice: it does not stay on the phone after sign-out.
     forgetAllLocalRecordings();
   },

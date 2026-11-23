@@ -49,8 +49,8 @@ describe("sign-up: the agree line", () => {
 
   it("keeps the sentence word for word", async () => {
     await render(withClient(<CreateAccount />));
-    expect(screen.getByText(/By tapping Create Account, you agree to our/)).toHaveTextContent(
-      "By tapping Create Account, you agree to our Terms of Services. Learn how we process your data in our Privacy Policy and Cookies Policy",
+    expect(screen.getByText(/By tapping Get Started, you agree to our/)).toHaveTextContent(
+      "By tapping Get Started, you agree to our Terms of Services. Learn how we process your data in our Privacy Policy and Cookies Policy",
     );
   });
 
@@ -69,7 +69,6 @@ describe("caregiver consent screen", () => {
   it.each([
     ["Terms of Services", TERMS_URL],
     ["Privacy Policy", PRIVACY_URL],
-    ["privacy policy", PRIVACY_URL],
   ])("%s opens the right page in the in-app browser", async (label, url) => {
     await render(withClient(<ConsentScreen />));
     await fireEvent.press(screen.getByText(label));
@@ -81,9 +80,8 @@ describe("caregiver consent screen", () => {
     await render(withClient(<ConsentScreen />));
     await fireEvent.press(screen.getByText("Terms of Services"));
     await fireEvent.press(screen.getByText("Privacy Policy"));
-    await fireEvent.press(screen.getByText("privacy policy"));
     expect(updateConsent).not.toHaveBeenCalled();
-    await fireEvent.press(screen.getByText("Give Consent and Submit"));
+    await fireEvent.press(screen.getByText("Give Consent"));
     await waitFor(() => expect(updateConsent).toHaveBeenCalledTimes(1));
   });
 

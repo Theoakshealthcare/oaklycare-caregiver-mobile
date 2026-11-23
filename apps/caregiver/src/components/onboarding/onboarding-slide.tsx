@@ -96,7 +96,7 @@ const OnboardingSlide: React.FC<OnboardingSlideProps> = ({
           <Text variant="h2" weight="bold" color={textColor} center>
             {title}
           </Text>
-          <Text variant="h3" weight="bold" color={textColor} center>
+          <Text variant="h2" weight="bold" color={textColor} center>
             {subtitle}
           </Text>
         </View>
@@ -111,7 +111,7 @@ const OnboardingSlide: React.FC<OnboardingSlideProps> = ({
 
         <Box style={{ marginTop: -20 }} row justifyContent="center">
             <Text variant="small" color={textColor}>
-              Already have an account?
+              {"Already have an account ? "}
             </Text>
             <Text
               variant="small"
