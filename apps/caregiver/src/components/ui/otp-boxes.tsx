@@ -10,7 +10,7 @@ export const OTP_LENGTH = 5;
 
 export const emptyOtp = (): string[] => Array.from({ length: OTP_LENGTH }, () => "");
 
-const FILLED_BACKGROUND = "#EEF3FD";
+const FILLED_BACKGROUND = "#F0F6FF";
 
 interface OtpBoxesProps {
   value: string[];
@@ -134,20 +134,20 @@ export const OtpResendRow: React.FC<OtpResendRowProps> = ({ cooldown, sending = 
 };
 
 const styles = StyleSheet.create({
-  row: { flexDirection: "row", justifyContent: "center", gap: theme.spacing.sm },
+  row: { flexDirection: "row", justifyContent: "center", gap: 13 },
   box: {
-    width: 56,
-    height: 56,
+    width: 60,
+    height: 60,
     borderRadius: theme.borderRadius.lg,
     borderWidth: 1,
-    borderColor: theme.colors.border,
+    borderColor: "#9FCFCF",
     backgroundColor: theme.colors.primaryLight,
     textAlign: "center",
     fontSize: theme.sizes.display,
     color: theme.colors.text,
     padding: 0,
   },
-  boxFilled: { backgroundColor: FILLED_BACKGROUND, borderColor: "#D5DEF3" },
+  boxFilled: { backgroundColor: FILLED_BACKGROUND, borderColor: "#B4D2FD" },
   resendRow: { flexDirection: "row", alignItems: "center", justifyContent: "center", gap: theme.spacing.sm },
   pill: {
     borderRadius: theme.borderRadius.round,

@@ -20,7 +20,8 @@ const LegalLink: React.FC<{ page: keyof typeof PAGES; children: React.ReactNode 
   <RNText
     accessibilityRole="link"
     onPress={() => openPageOrAlert(PAGES[page].title, PAGES[page].url)}
-    style={{ color: theme.colors.primary, textDecorationLine: "underline" }}
+    // The font is set explicitly: without it the last link of a line rendered bold and larger than the other two.
+    style={{ color: theme.colors.primary, textDecorationLine: "underline", fontFamily: theme.fonts.regular, fontWeight: "normal" }}
   >
     {children}
   </RNText>

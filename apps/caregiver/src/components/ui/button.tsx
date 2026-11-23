@@ -148,8 +148,9 @@ const styles = StyleSheet.create({
     borderWidth: 1,
     borderColor: theme.colors.primary,
   },
+  // Figma: a disabled button is flat grey with white text, not a faded copy of the enabled one.
   disabledButton: {
-    opacity: 0.5,
+    backgroundColor: "#9A9A9A",
   },
   text: {
     fontSize: theme.sizes.body,

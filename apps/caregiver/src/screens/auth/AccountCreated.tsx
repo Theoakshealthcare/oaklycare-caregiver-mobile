@@ -44,18 +44,27 @@ const AccountCreated = () => {
         <Text>Close</Text>
       </Pressable>
 
-      <ScrollView contentContainerStyle={{ flexGrow: 1, alignItems: "center", justifyContent: "center", gap: theme.spacing.lg }}>
+      <ScrollView contentContainerStyle={{ flexGrow: 1, alignItems: "center", paddingTop: theme.spacing.xl }}>
         <SuccessIllustration />
 
-        <Text variant="h2" weight="bold" color={theme.colors.success} center>
-          {ACCOUNT_CREATED_TITLE}
-        </Text>
+        <View style={{ width: "85%", marginTop: 32 }}>
+          <Text variant="page" weight="bold" color={theme.colors.successTitle} center>
+            {ACCOUNT_CREATED_TITLE}
+          </Text>
+        </View>
 
-        <Text variant="small" color={theme.colors.textLight} center>
-          {ACCOUNT_CREATED_BODY}
-        </Text>
+        <View style={{ width: "78%", marginTop: 12 }}>
+          <Text variant="fine" color={theme.colors.textLight} center>
+            {ACCOUNT_CREATED_BODY}
+          </Text>
+        </View>
 
-        <Button title="Set up your Account" onPress={() => void handleSetUp()} loading={busy} style={{ width: "100%", borderRadius: 30 }} />
+        <Button
+          title="Set up your Account"
+          onPress={() => void handleSetUp()}
+          loading={busy}
+          style={{ width: "72%", minHeight: 52, borderRadius: 26, marginTop: 36 }}
+        />
       </ScrollView>
     </View>
   );

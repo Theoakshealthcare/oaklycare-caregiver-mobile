@@ -4,15 +4,13 @@ import { useMutation } from '@tanstack/react-query';
 import { Feather } from '@expo/vector-icons';
 
 import { theme } from '@/src/constants/theme';
-import Box from '@/src/components/ui/box';
 import Text from '@/src/components/ui/text';
 import Button from '@/src/components/ui/button';
 import KeyboardScrollView from '@/src/components/ui/keyboard-scroll-view';
 import Input from '@/src/components/ui/input';
 import Navigation from '@/src/hooks/use-navigation';
-import { globalStyles } from '@/src/constants/styles';
+import { globalStyles, FORM_PADDING } from '@/src/constants/styles';
 import HeaderBack from '@/src/components/back/HeaderBack';
-import ScreenSize from '@/src/hooks/screen-size';
 import ErrorDialog from '@/src/components/ui/ErrorDialog';
 import LegalLink from '@/src/components/ui/legal-link';
 import { messageForError } from '@/src/api/errors';
@@ -24,7 +22,6 @@ export const TERMS_ACTION = 'Get Started';
 
 const CreateAccount: React.FC = () => {
   const { navigation } = Navigation();
-  const { width } = ScreenSize();
 
   const [formData, setFormData] = useState({
     fullName: '',
@@ -92,12 +89,13 @@ const CreateAccount: React.FC = () => {
 
   return (
     <View style={{ flex: 1, backgroundColor: theme.colors.white }}>
-      <KeyboardScrollView>
-        <View style={[globalStyles.container, { flex: 1 }]}>
+      {/* Scrolls to the end when the keyboard opens, so the button and the terms line stay above it. */}
+      <KeyboardScrollView scrollToEndOnKeyboardShow>
+        <View style={[globalStyles.container, FORM_PADDING, { flex: 1 }]}>
           <HeaderBack />
 
-          <View style={{ marginVertical: '10%' }}>
-            <Text variant="h2" weight="bold">
+          <View style={{ marginTop: 28, marginBottom: 24 }}>
+            <Text variant="page" weight="bold">
               Create Your Account
             </Text>
             <Text variant="body" color={theme.colors.textLight}>
@@ -105,7 +103,7 @@ const CreateAccount: React.FC = () => {
             </Text>
           </View>
 
-          <View style={globalStyles.column}>
+          <View style={[globalStyles.column, { gap: 22 }]}>
             <Input
               label="Full Name"
               placeholder="Provide your Full Name"
@@ -136,16 +134,27 @@ const CreateAccount: React.FC = () => {
               error={errors.password}
             />
 
-            <Box row alignItems="flex-start">
+            <Button
+              title="Create Account"
+              onPress={handleCreateAccount}
+              style={{ width: '100%' }}
+              loading={register.isPending}
+            />
+
+            {/* Figma puts the terms line under the button. The box stays unticked until the person ticks it (owner decision). */}
+            <View style={{ flexDirection: 'row', alignItems: 'flex-start' }}>
               <Pressable
+                accessibilityRole="checkbox"
+                accessibilityState={{ checked: isChecked }}
                 style={{
-                  width: width * 0.05,
-                  height: width * 0.05,
+                  width: 18,
+                  height: 18,
                   borderRadius: 4,
                   borderWidth: 1,
                   borderColor: errors.terms ? theme.colors.error : theme.colors.primary,
                   backgroundColor: isChecked ? theme.colors.primary : theme.colors.white,
                   marginRight: 12,
+                  marginTop: 1,
                   justifyContent: 'center',
                   alignItems: 'center',
                 }}
@@ -156,11 +165,11 @@ const CreateAccount: React.FC = () => {
                   }
                 }}
               >
-                {isChecked && <Feather name="check" size={14} color={theme.colors.white} />}
+                {isChecked && <Feather name="check" size={12} color={theme.colors.white} />}
               </Pressable>
 
               <View style={{ flex: 1 }}>
-                <Text variant="small" style={{ lineHeight: 18 }}>
+                <Text variant="fine">
                   {`By tapping ${TERMS_ACTION}, you agree to our `}
                   <LegalLink page="terms">Terms of Services</LegalLink>.
                   {' '}Learn how we process your data in our{' '}
@@ -174,14 +183,7 @@ const CreateAccount: React.FC = () => {
                   </Text>
                 )}
               </View>
-            </Box>
-
-            <Button
-              title="Create Account"
-              onPress={handleCreateAccount}
-              style={{ width: '100%' }}
-              loading={register.isPending}
-            />
+            </View>
           </View>
         </View>
       </KeyboardScrollView>

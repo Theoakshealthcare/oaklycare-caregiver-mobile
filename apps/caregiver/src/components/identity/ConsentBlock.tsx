@@ -5,7 +5,7 @@ import { Feather } from "@expo/vector-icons";
 import LegalLink from "@/src/components/ui/legal-link";
 import Text from "@/src/components/ui/text";
 import { theme } from "@/src/constants/theme";
-import { CONSENT_BODY, CONSENT_LABEL, CONSENT_TITLE } from "@/src/identity/identityModel";
+import { CONSENT_BODY, CONSENT_LABEL } from "@/src/identity/identityModel";
 
 /**
  * The separate, explicit identity consent (design 10.2): the words, then its own tick box. It is not part of the
@@ -16,11 +16,9 @@ const ConsentBlock: React.FC<{ checked: boolean; onToggle: () => void; disabled?
   onToggle,
   disabled = false,
 }) => (
-  <View style={{ gap: 16 }}>
-    <Text variant="h2" weight="bold">
-      {CONSENT_TITLE}
-    </Text>
-    <Text testID="identity-consent-text" variant="body" color={theme.colors.text} style={{ lineHeight: 24 }}>
+  <View style={{ gap: 12 }}>
+    {/* No heading: the Figma identity step has none; the words below are the consent. */}
+    <Text testID="identity-consent-text" variant="small" color={theme.colors.text} style={{ lineHeight: 19 }}>
       {CONSENT_BODY}
     </Text>
     <Text variant="small">

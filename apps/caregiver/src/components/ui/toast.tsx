@@ -1,6 +1,6 @@
 import React, { useEffect } from "react";
 import { Animated, StyleSheet, View } from "react-native";
-import { Feather } from "@expo/vector-icons";
+import { MaterialCommunityIcons } from "@expo/vector-icons";
 import { useStore } from "zustand";
 import { createStore } from "zustand/vanilla";
 
@@ -56,7 +56,7 @@ export const ToastHost: React.FC = () => {
         accessibilityLiveRegion="polite"
         style={[styles.toast, { opacity }]}
       >
-        <Feather name="check-square" size={20} color={theme.colors.white} />
+        <MaterialCommunityIcons name="checkbox-multiple-marked-outline" size={22} color={theme.colors.white} />
         <Text variant="body" color={theme.colors.white} style={styles.text}>
           {message}
         </Text>
@@ -68,7 +68,8 @@ export const ToastHost: React.FC = () => {
 const styles = StyleSheet.create({
   layer: {
     position: "absolute",
-    top: theme.spacing.md,
+    // Figma: just below the top of the Back row, over the screen title (the layer sits under the status bar already).
+    top: 30,
     left: theme.spacing.md,
     right: theme.spacing.md,
     alignItems: "center",
@@ -78,11 +79,14 @@ const styles = StyleSheet.create({
   toast: {
     flexDirection: "row",
     alignItems: "center",
-    gap: theme.spacing.sm,
-    backgroundColor: theme.colors.success,
-    borderRadius: theme.borderRadius.lg,
-    paddingVertical: theme.spacing.md,
-    paddingHorizontal: theme.spacing.md,
+    gap: theme.spacing.md - 4,
+    backgroundColor: theme.colors.toast,
+    borderRadius: theme.borderRadius.md,
+    paddingVertical: theme.spacing.sm + 4,
+    paddingHorizontal: theme.spacing.lg,
+    // Figma: the pill is wider than its words (about 62% of the screen for "Login Successful").
+    minWidth: "62%",
+    justifyContent: "center",
     maxWidth: "100%",
   },
   text: { flexShrink: 1 },

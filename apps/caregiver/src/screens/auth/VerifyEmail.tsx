@@ -10,7 +10,7 @@ import Button from '@/src/components/ui/button';
 import { OtpBoxes, OtpResendRow, emptyOtp } from '@/src/components/ui/otp-boxes';
 import { showToast } from '@/src/components/ui/toast';
 import HeaderBack from '@/src/components/back/HeaderBack';
-import { globalStyles } from '@/src/constants/styles';
+import { globalStyles, FORM_PADDING } from '@/src/constants/styles';
 import Navigation from '@/src/hooks/use-navigation';
 import { authService } from '@/src/services/auth.service';
 import { ApiError, messageForError } from '@/src/api/errors';
@@ -77,11 +77,11 @@ const VerifyEmail: React.FC<StackScreenProps<ScreenParamLists, 'VerifyEmail'>> =
   };
 
   return (
-    <View style={[globalStyles.container, { flex: 1 }]}>
+    <View style={[globalStyles.container, FORM_PADDING, { flex: 1 }]}>
       <HeaderBack />
 
-      <View style={{ marginVertical: '10%' }}>
-        <Text variant="h2" weight="bold">
+      <View style={{ marginTop: 28, marginBottom: 24 }}>
+        <Text variant="page" weight="bold">
           Verify Email Address
         </Text>
 
@@ -90,7 +90,7 @@ const VerifyEmail: React.FC<StackScreenProps<ScreenParamLists, 'VerifyEmail'>> =
         </Text>
       </View>
 
-      <View style={{ gap: 40 }}>
+      <View style={{ gap: 84 }}>
         <OtpBoxes value={otp} onChange={setOtp} onComplete={verifyCode} editable={!isVerifying} />
 
         {isVerifying ? <ActivityIndicator testID="verify-busy" color={theme.colors.primary} /> : null}

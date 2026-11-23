@@ -11,7 +11,7 @@ import Input from "@/src/components/ui/input";
 import { showToast } from "@/src/components/ui/toast";
 import ErrorDialog from "@/src/components/ui/ErrorDialog";
 import HeaderBack from "@/src/components/back/HeaderBack";
-import { globalStyles } from "@/src/constants/styles";
+import { globalStyles, FORM_PADDING } from "@/src/constants/styles";
 import Navigation from "@/src/hooks/use-navigation";
 import { authService } from "@/src/services/auth.service";
 
@@ -39,11 +39,12 @@ const Login: React.FC = () => {
   };
 
   return (
-    <View style={globalStyles.container}>
-      <HeaderBack />
+    <View style={[globalStyles.container, FORM_PADDING]}>
+      {/* On a relaunch Login is the first screen: Back then goes to the welcome slides, as in Figma. */}
+      <HeaderBack onFallback={() => navigation.navigate("Onboarding")} />
 
-      <View style={{ marginVertical: "10%" }}>
-        <Text variant="h2" weight="bold">
+      <View style={{ marginTop: 28, marginBottom: 24 }}>
+        <Text variant="page" weight="bold">
           Login
         </Text>
         <Text variant="body" color={theme.colors.textLight}>
@@ -51,7 +52,7 @@ const Login: React.FC = () => {
         </Text>
       </View>
 
-      <View style={globalStyles.column}>
+      <View style={[globalStyles.column, { gap: 22 }]}>
         <Input
           label="Email Address/Phone Number"
           placeholder="Provide your Email Address"
@@ -84,7 +85,7 @@ const Login: React.FC = () => {
           </Text>
         </Pressable>
 
-        <Button title="Login" onPress={handleLogin} style={{ marginTop: "5%" }} loading={login.isPending} />
+        <Button title="Login" onPress={handleLogin} loading={login.isPending} />
       </View>
 
       <ErrorDialog

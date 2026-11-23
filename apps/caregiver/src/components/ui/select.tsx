@@ -1,6 +1,7 @@
 import React, { useState } from 'react';
 import { theme } from "@/src/constants/theme";
-import { View, Text, TouchableOpacity, Modal, FlatList, StyleSheet } from 'react-native';
+import { View, Text, TouchableOpacity, Modal, FlatList, StyleSheet, type StyleProp, type ViewStyle } from 'react-native';
+import FieldLabel from './field-label';
 import { Ionicons } from '@expo/vector-icons';
 
 interface SelectOption {
@@ -24,6 +25,8 @@ interface SelectProps {
   error?: string;
   disabled?: boolean;
   required?: boolean;
+  /** Overrides the default 16 pt bottom margin (the setup screens space their fields with a column gap instead). */
+  containerStyle?: StyleProp<ViewStyle>;
 }
 
 export const Select: React.FC<SelectProps> = ({
@@ -38,6 +41,7 @@ export const Select: React.FC<SelectProps> = ({
   error,
   disabled = false,
   required = false,
+  containerStyle,
 }) => {
   const [isOpen, setIsOpen] = useState(false);
 
@@ -61,12 +65,12 @@ export const Select: React.FC<SelectProps> = ({
   };
 
   return (
-    <View style={styles.container}>
+    <View style={[styles.container, containerStyle]}>
       {label && (
-        <Text style={styles.label}>
+        <FieldLabel>
           {label}
           {required && <Text style={styles.required}> *</Text>}
-        </Text>
+        </FieldLabel>
       )}
       
       <TouchableOpacity
@@ -152,12 +156,6 @@ const styles = StyleSheet.create({
   container: {
     marginBottom: 16,
   },
-  label: {
-    fontSize: theme.sizes.body,
-    fontWeight: '600',
-    color: '#333',
-    marginBottom: 8,
-  },
   required: {
     color: '#FF3B30',
   },
@@ -166,14 +164,15 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'space-between',
     paddingHorizontal: 16,
+    minHeight: 48,
     paddingVertical: 12,
     borderWidth: 1,
-    borderColor: '#E1E1E1',
-    borderRadius: 8,
+    borderColor: theme.colors.primary,
+    borderRadius: 16,
     backgroundColor: '#FFF',
   },
   selectButtonError: {
-    borderColor: '#FF3B30',
+    borderColor: theme.colors.secondary,
   },
   selectButtonDisabled: {
     backgroundColor: '#F5F5F5',

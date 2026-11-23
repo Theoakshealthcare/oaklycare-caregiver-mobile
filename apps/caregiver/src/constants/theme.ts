@@ -32,6 +32,14 @@ export const theme = {
     border: "#E0E0E0",
     background: "#F5F5F5",
     success: "#4CAF50",
+    /**
+     * Green of the confirmation toast and title of the success pages. The Figma PNGs are exported in Display P3, so the
+     * pixels read #65C466 and #43976F; converted to sRGB (what the phone draws) they are #35C759 and #00996C. The same
+     * conversion turns the app's teal #168283 into the Figma pixel #3D8082 and coral #FD5E52 into #EB695A, which is why
+     * those two tokens are unchanged.
+     */
+    toast: "#35C759",
+    successTitle: "#00996C",
     successLight: "#E8F5E9",
     error: "#F44336",
     warning: "#FFC107",
@@ -60,10 +68,14 @@ export const theme = {
   },
   /** The only font sizes in the app (design values, scaled by width). Raw `fontSize:` numbers are banned. */
   sizes: {
+    /** Legal fine print (the terms line under sign-up and on the consent page; Figma 11 pt). */
+    fine: scale(11),
     caption: scale(13),
     body: scale(15),
     subtitle: scale(17),
     title: scale(20),
+    /** Page titles of the sign-up, login, setup and success screens (Figma 22 pt). */
+    pageTitle: scale(22),
     heading: scale(24),
     display: scale(28),
   },

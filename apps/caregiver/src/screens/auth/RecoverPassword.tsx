@@ -7,7 +7,7 @@ import Text from '@/src/components/ui/text';
 import Button from '@/src/components/ui/button';
 import Input from '@/src/components/ui/input';
 import HeaderBack from '@/src/components/back/HeaderBack';
-import { globalStyles } from '@/src/constants/styles';
+import { globalStyles, FORM_PADDING } from '@/src/constants/styles';
 import Navigation from '@/src/hooks/use-navigation';
 import { authService } from '@/src/services/auth.service';
 import { messageForError } from '@/src/api/errors';
@@ -36,11 +36,11 @@ const RecoverPassword: React.FC = () => {
   };
 
   return (
-    <View style={globalStyles.container}>
+    <View style={[globalStyles.container, FORM_PADDING]}>
       <HeaderBack />
 
-      <View style={{ marginVertical: '10%' }}>
-        <Text variant="h2" weight="bold">
+      <View style={{ marginTop: 28, marginBottom: 24 }}>
+        <Text variant="page" weight="bold">
           Recover Password
         </Text>
 
@@ -49,7 +49,7 @@ const RecoverPassword: React.FC = () => {
         </Text>
       </View>
 
-      <View style={globalStyles.column}>
+      <View style={[globalStyles.column, { gap: 22 }]}>
         <Input
           label="Email Address"
           placeholder="Provide your Email Address"

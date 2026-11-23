@@ -47,4 +47,17 @@ describe("HeaderBack (DP2-07)", () => {
     await fireEvent.press(screen.getAllByText("Back")[0] as never);
     expect(await screen.findByText("first screen")).toBeTruthy();
   });
+
+  it("draws Back on the first screen when a fallback is given, and Back runs it (Login on a relaunch, setup step 1)", async () => {
+    const onFallback = jest.fn();
+    await render(
+      <NavigationContainer>
+        <Stack.Navigator screenOptions={{ headerShown: false, animation: "none" }}>
+          <Stack.Screen name="Only">{() => <HeaderBack onFallback={onFallback} />}</Stack.Screen>
+        </Stack.Navigator>
+      </NavigationContainer>,
+    );
+    await fireEvent.press(screen.getByText("Back"));
+    expect(onFallback).toHaveBeenCalledTimes(1);
+  });
 });

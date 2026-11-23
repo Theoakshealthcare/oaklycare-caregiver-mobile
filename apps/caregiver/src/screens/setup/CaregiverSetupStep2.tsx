@@ -11,8 +11,9 @@ import Button from "@/src/components/ui/button"
 import KeyboardScrollView from "@/src/components/ui/keyboard-scroll-view"
 import StepIndicator, { ONBOARDING_STEP } from "@/src/components/ui/step-indicator"
 import Select from "@/src/components/ui/select"
+import FieldLabel from "@/src/components/ui/field-label"
 import HeaderBack from "@/src/components/back/HeaderBack"
-import { globalStyles } from "@/src/constants/styles"
+import { globalStyles, FORM_PADDING } from "@/src/constants/styles"
 import Navigation from "@/src/hooks/use-navigation"
 import {
   caregiverService,
@@ -99,23 +100,24 @@ const CaregiverSetupStep2 = () => {
   return (
     <View style={{ flex: 1, backgroundColor: theme.colors.white }}>
       <KeyboardScrollView>
-        <View style={[globalStyles.container, { flex: 1 }]}>
+        <View style={[globalStyles.container, FORM_PADDING, { flex: 1, paddingTop: 16 }]}>
           <HeaderBack />
 
-          <View style={{ marginVertical: "5%" }}>
-            <Text variant="h2" weight="bold">
+          <View style={{ marginTop: 22, marginBottom: 14 }}>
+            <Text variant="page" weight="bold">
               Set up your Account
             </Text>
 
             <StepIndicator step={ONBOARDING_STEP.work} />
 
-            <Text variant="h3" weight="bold" style={{ marginTop: 20 }}>
+            <Text variant="h3" weight="bold" style={{ marginTop: 12 }}>
               Work & Experience
             </Text>
           </View>
 
-          <View style={globalStyles.column}>
+          <View style={[globalStyles.column, { gap: 22 }]}>
             <Select
+              containerStyle={{ marginBottom: 0 }}
               label="Select Specialization"
               placeholder="Select your Specialization"
               value={formData.specialization}
@@ -125,6 +127,7 @@ const CaregiverSetupStep2 = () => {
             />
 
             <Select
+              containerStyle={{ marginBottom: 0 }}
               label="Select years of Experience"
               placeholder="Select Experience"
               value={formData.years_of_experience.toString()}
@@ -133,25 +136,23 @@ const CaregiverSetupStep2 = () => {
               error={errors.years_of_experience}
             />
 
-            <View style={{ marginBottom: 20 }}>
-              <Text variant="body" weight="medium" style={{ marginBottom: 8 }}>
-                Upload License
-              </Text>
+            <View>
+              <FieldLabel>Upload License</FieldLabel>
               <TouchableOpacity
                 onPress={handleFileUpload}
                 style={{
-                  borderWidth: 2,
+                  borderWidth: 1,
                   borderColor: theme.colors.primary,
                   borderStyle: "dashed",
-                  borderRadius: 8,
-                  padding: 40,
+                  borderRadius: 16,
+                  minHeight: 48,
+                  paddingVertical: 12,
                   alignItems: "center",
                   justifyContent: "center",
-                  backgroundColor: theme.colors.background,
                 }}
                 disabled={isUploading}
               >
-                <Text variant="body" color={theme.colors.primary}>
+                <Text variant="body" color={theme.colors.textLight}>
                   {isUploading ? "Uploading..." : "Upload Certifications"}
                 </Text>
               </TouchableOpacity>
@@ -168,6 +169,7 @@ const CaregiverSetupStep2 = () => {
             </View>
 
             <Select
+              containerStyle={{ marginBottom: 0 }}
               label="Select preferred work hours"
               placeholder="Select Work Hours"
               value={formData.preferred_work_hours}
@@ -177,6 +179,7 @@ const CaregiverSetupStep2 = () => {
             />
 
             <Select
+              containerStyle={{ marginBottom: 0 }}
               label="Choose Service areas"
               placeholder="Select Service Areas"
               multiple
@@ -185,17 +188,11 @@ const CaregiverSetupStep2 = () => {
               options={(formOptions?.service_areas ?? []).map((area) => ({ label: area, value: area }))}
               error={errors.service_areas}
             />
-            {formData.service_areas.length > 0 && (
-              <Text variant="small" color={theme.colors.primary}>
-                Selected: {formData.service_areas.join(", ")}
-              </Text>
-            )}
-
             <Button
               title="Save & Continue"
               onPress={handleSaveAndContinue}
               loading={save.isPending}
-              style={{ marginTop: 20 }}
+              style={{ marginTop: 0 }}
             />
           </View>
         </View>
