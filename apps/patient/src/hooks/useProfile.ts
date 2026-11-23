@@ -4,13 +4,33 @@ import { ApiError, messageForError } from "@/src/api/errors";
 import type { User } from "@/src/services/auth.service";
 import { authService } from "@/src/services/auth.service";
 
-export type ProfileField = "fullName" | "phone" | "address" | "emergencyName" | "emergencyPhone" | "emergencyAddress";
+export type ProfileField = "fullName" | "phone" | "address" | "gender" | "age" | "emergencyName" | "emergencyPhone" | "emergencyAddress";
+
+/** Whole years between a `YYYY-MM-DD` birth date and `now`, or "" when there is none. */
+export function ageFromBirthDate(birthDate: string | null | undefined, now: Date = new Date()): string {
+  const match = /^(\d{4})-(\d{2})-(\d{2})/.exec(birthDate ?? "");
+  if (!match) return "";
+  let years = now.getFullYear() - Number(match[1]);
+  if (now.getMonth() + 1 < Number(match[2]) || (now.getMonth() + 1 === Number(match[2]) && now.getDate() < Number(match[3]))) years -= 1;
+  return years >= 0 ? String(years) : "";
+}
+
+/**
+ * The birth date to store for an age typed in. The server keeps a date of birth, not an age (it ignores `age`), so an age is saved
+ * as today's date that many years back: reading it back with `ageFromBirthDate` gives the same age, but the exact date is not known.
+ */
+export function birthDateFromAge(age: number, now: Date = new Date()): string {
+  const pad = (n: number) => String(n).padStart(2, "0");
+  return `${now.getFullYear() - age}-${pad(now.getMonth() + 1)}-${pad(now.getDate())}`;
+}
 
 /** The editable fields, the backend key each one is sent under, and where `/auth/me` returns it. */
-export const PROFILE_FIELDS: { field: ProfileField; key: string; read: (user: User) => string }[] = [
+export const PROFILE_FIELDS: { field: ProfileField; key: string; read: (user: User) => string; encode?: (text: string) => string }[] = [
   { field: "fullName", key: "full_name", read: (u) => u.full_name ?? "" },
   { field: "phone", key: "phone_number", read: (u) => u.phone_number ?? "" },
   { field: "address", key: "address", read: (u) => u.patient?.address ?? "" },
+  { field: "gender", key: "gender", read: (u) => u.patient?.gender ?? "" },
+  { field: "age", key: "date_of_birth", read: (u) => ageFromBirthDate(u.patient?.date_of_birth), encode: (t) => birthDateFromAge(Number(t)) },
   { field: "emergencyName", key: "emergency_contact_name", read: (u) => u.patient?.emergency_contact_name ?? "" },
   { field: "emergencyPhone", key: "emergency_contact_phone", read: (u) => u.patient?.emergency_contact_phone ?? "" },
   { field: "emergencyAddress", key: "emergency_contact_address", read: (u) => u.patient?.emergency_contact_address ?? "" },
@@ -26,9 +46,9 @@ export function useUpdateProfile() {
   return useMutation({
     mutationFn: async (edited: Partial<Record<ProfileField, string>>): Promise<User> => {
       const body: Record<string, string> = {};
-      for (const { field, key } of PROFILE_FIELDS) {
+      for (const { field, key, encode } of PROFILE_FIELDS) {
         const value = edited[field]?.trim();
-        if (value) body[key] = value;
+        if (value) body[key] = encode ? encode(value) : value;
       }
       return authService.updateProfile(body);
     },

@@ -50,6 +50,7 @@ describe("nothing outside v1 is reachable", () => {
       "VitalDetail",
       "AddVital",
       "VitalHistory",
+      "VitalReport",
       "VitalAccess",
       "FallAssessment",
       "FallResult",
@@ -82,7 +83,7 @@ describe("nothing outside v1 is reachable", () => {
     await fireEvent.press(screen.getByRole("tab", { name: "Home" }));
     await fireEvent.press(screen.getByRole("button", { name: "Open profile" }));
     check("profile menu");
-    await fireEvent.press(screen.getByRole("button", { name: "Edit personal information" }));
+    await fireEvent.press(screen.getByRole("button", { name: "Edit Personal Information" }));
     check("edit profile");
     view.unmount();
   });
