@@ -74,7 +74,7 @@ describe("notifications (live-shaped)", () => {
     await fireEvent.press(await screen.findByRole("button", { name: `Unread. ${row.title}` }));
     await waitFor(() => expect(calls.some((c) => c.method === "POST" && c.path.endsWith(`/${row.id}/read`))).toBe(true));
     // BookingDetails is still sample-backed until the booking slice lands: the uuid is unknown to it, but the screen opened.
-    expect(await screen.findByText("Booking details")).toBeTruthy();
+    expect(await screen.findByText("Booking Details")).toBeTruthy();
     view.unmount();
   });
 

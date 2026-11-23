@@ -50,6 +50,12 @@ channel) lives in the backend repo: `docs/checklist/MASTER_CHECKLIST.md`. Update
 - [ ] Deferred: "Choose Service Time / Immediate booking" and the Wound Care service (no backend service or ASAP rule)
 - [ ] Owner decisions: the app's own lists (relations, assistance, conditions), contact phone and e-mail visible to the caregiver, coral failure title, step bar growth
 
+## Patient app parity with Figma, slice 3: bookings (2026-11-24)
+- [x] Bookings list (provider photo, name, Track chip, month heading and week strip, Chat / Cancel / Booking Details pills), Booking Details sheet, cancel dialogs, Caregiver Details (stage cards, Track opens the phone's maps), chat restyle; branch `feat/patient-bookings-parity` ([SOP](../sop/2026-11-24-patient-bookings-parity.md)); **seen on the iOS simulator only, not Android or a real phone**
+- [ ] Deferred: "Enter Booking Code" (no backend claim endpoint), nurse note after a visit (no patient endpoint), in-app map (no maps key), "Booking Canceled from website"
+- [ ] Not built, stay off (owner rule): Reschedule, Change Care Provider, ratings, calls, AI notetaker, prescription / nutritionist / physio, provider list
+- [ ] Owner decisions: first names only, no verified tick or TAG chip, refund to the original method (not wallet), chat header without "Active", seven-day week strip
+
 ## Caregiver Home, profile menu and visit dialogs parity with Figma (2026-11-23)
 - [x] Home: menu and bell header, greeting and subtitle, weekly availability with the week strip, CarePlan card (nurses), Upcoming Appointments with Clock in / Clock out, New Job Request with Accept / Decline, Earning Summary, Notification block, Client Care Access
 - [x] Shared Figma confirmation dialog: decline (Home and Bookings, "Yes, Decline"), clock in (after the visit code, before it is sent), clock out (running timer, pay-held and care plan notices)

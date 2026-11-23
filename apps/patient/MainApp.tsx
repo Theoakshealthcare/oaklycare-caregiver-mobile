@@ -24,7 +24,8 @@ const MainApp = () => {
   return (
     <View style={{ flex: 1, backgroundColor: theme.colors.white }}>
       <SafeAreaView edges={["top", "left", "right"]} style={{ flex: 1, backgroundColor: topBand ?? theme.colors.white }}>
-        <StatusBar style="dark" />
+        {/* White clock and icons over the teal band of the Bookings header. */}
+        <StatusBar style={topBand === theme.colors.primary ? "light" : "dark"} />
         <StackNavigator />
         <ToastHost />
       </SafeAreaView>

@@ -29,8 +29,11 @@ export interface Booking {
   paymentStatus: PaymentState;
   status: BookingStatus;
   dispatchState: DispatchState | null;
-  /** Only the first name: that is what the family needs, and the API sends no caregiver phone number. */
-  caregiver: { firstName: string } | null;
+  /**
+   * Only the first name: that is what the family needs, and the API sends no caregiver phone number. `photoUrl` is the
+   * caregiver's profile photo (null when none was uploaded) and `role` their specialization, both as the API sends them.
+   */
+  caregiver: { firstName: string; photoUrl: string | null; role: string | null } | null;
   /** The 4-digit code the patient reads out to the caregiver on arrival; only the detail carries it, only while accepted / en route. */
   visitCode: string | null;
   /** Naira charged for cancelling: `null` unless the booker cancelled (`null` is not `0`; `0` is a free cancel). */
@@ -93,7 +96,7 @@ export function canCancel(booking: Pick<Booking, "status">): boolean {
 }
 
 /** The chat is for the visit: once a booking is cancelled there is nobody left to talk to about it. */
-export function canChat(booking: Pick<Booking, "status" | "caregiver">): boolean {
+export function canChat(booking: Pick<Booking, "status"> & { caregiver: unknown | null }): boolean {
   return booking.caregiver !== null && booking.status !== "cancelled";
 }
 

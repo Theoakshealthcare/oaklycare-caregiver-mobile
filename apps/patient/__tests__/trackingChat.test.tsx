@@ -137,7 +137,7 @@ describe("live tracking (real calls, answered with captured bodies)", () => {
     expect(calls.find((c) => c.path.endsWith("/live-tracking"))?.authorization).toBe("Bearer access-stored");
 
     const open = jest.spyOn(Linking, "openURL").mockResolvedValue(true);
-    await press("Open in Maps");
+    await press("Track");
     // Jest runs as iOS (jest-expo's default platform).
     expect(open).toHaveBeenCalledWith("https://maps.apple.com/?ll=6.4774,3.4723&q=Your%20caregiver");
     open.mockRestore();
@@ -162,13 +162,13 @@ describe("live tracking (real calls, answered with captured bodies)", () => {
     const { view } = await openTrack({ [TRACKING]: () => liveReply("tracking-no-location-yet") });
     expect(await screen.findByText("Location not shared yet")).toBeTruthy();
     expect(screen.queryByText(/km away/)).toBeNull();
-    expect(screen.queryByRole("button", { name: "Open in Maps" })).toBeNull();
+    expect(screen.queryByRole("button", { name: "Track" })).toBeNull();
     view.unmount();
   });
 
   it("shows nothing live, and no error, when tracking is closed for the booking (409)", async () => {
     const { view } = await openTrack({ [TRACKING]: () => liveReply("tracking-after-cancel") });
-    await screen.findByText("Track caregiver");
+    await screen.findByText("Caregiver Details");
     await waitFor(() => expect(screen.queryByText(/Looking for your caregiver/)).toBeNull());
     expect(screen.queryByText("Location not shared yet")).toBeNull();
     expect(screen.queryByRole("alert")).toBeNull();

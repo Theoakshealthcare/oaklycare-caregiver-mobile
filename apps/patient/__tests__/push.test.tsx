@@ -130,7 +130,7 @@ describe("push registration", () => {
       await act(async () => {
         onTap({ notification: { request: { content: { data: { type: row.type, booking_id: row.data.booking_id, target: "booking_detail", notification_id: row.id } } } } });
       });
-      expect(await screen.findByText("Booking details")).toBeTruthy();
+      expect(await screen.findByText("Booking Details")).toBeTruthy();
       await waitFor(() => expect(calls.some((c) => c.path === `/api/v1/patient/notifications/${row.id}/read`)).toBe(true));
       view.unmount();
     });
@@ -142,7 +142,7 @@ describe("push registration", () => {
       await act(async () => {
         onTap({ notification: { request: { content: { data: { target: "something_new" } } } } });
       });
-      expect(screen.queryByText("Booking details")).toBeNull();
+      expect(screen.queryByText("Booking Details")).toBeNull();
       view.unmount();
     });
   });
