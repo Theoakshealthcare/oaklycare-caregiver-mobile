@@ -40,8 +40,15 @@ channel) lives in the backend repo: `docs/checklist/MASTER_CHECKLIST.md`. Update
 - [x] Welcome slides (white art area, coloured panel, Get Started on all four, teal Skip), sign-up, code screen, account created + Start Booking Journey, login, recover (code screen) and reset with the green toast, Home (banner, Quick Service = Book a Nurse, Remote Monitoring tiles, empty state); branch `feat/patient-onboarding-parity` ([SOP](../sop/2026-11-23-patient-onboarding-parity.md)); **seen on the iOS simulator only, not Android or a real phone**
 - [ ] Home items not built, so off: AI search + filter, Medication Reminder, loved-ones carousel, Prescription / Physiotherapy / Nutrition quick tiles
 - [ ] Quick Service artwork export at 3x from the designer (the current circle is a low-res crop of the Figma PNG)
-- [ ] Owner decisions: unticked terms box, no "Create account" link on Login, "learning journey" wording
-- [ ] Slice 2 and later: the remaining 40 patient frames (`ledgers/PARITY-patient-A.md` rows 1-22, 25-26, 35 and B)
+- [x] Slice-1 follow-ups applied in slice 2: small "Create account" link on Login, account-created sentence now "care journey"
+- [ ] Owner decision: unticked terms box
+- [ ] Slice 3 and later: the remaining patient frames (`ledgers/PARITY-patient-A.md` rows 8-22, 25-26, 35 and B)
+
+## Patient app parity with Figma, slice 2: booking and payment (2026-11-23)
+- [x] Booking step 1 (dropdowns, calendar field, services from `GET /booking/services`, lengths in 30-minute steps from the catalogue), step 2 (State dropdown, Contact Details, Preference, progress bar), Booking Summary, "Payment Failed! Try Again", "Payment Successful. Booking Confirmed" with the receipt; branch `feat/patient-booking-parity` ([SOP](../sop/2026-11-23-patient-booking-parity.md)); **seen on the iOS simulator only, not Android or a real phone; real Paystack not exercised**
+- [ ] Deferred: "Payment Details" method screen (Card / Bank Transfer / Wallet): the backend takes no Paystack channel, the wallet is off, and the app never collects card data
+- [ ] Deferred: "Choose Service Time / Immediate booking" and the Wound Care service (no backend service or ASAP rule)
+- [ ] Owner decisions: the app's own lists (relations, assistance, conditions), contact phone and e-mail visible to the caregiver, coral failure title, step bar growth
 
 ## Caregiver Home, profile menu and visit dialogs parity with Figma (2026-11-23)
 - [x] Home: menu and bell header, greeting and subtitle, weekly availability with the week strip, CarePlan card (nurses), Upcoming Appointments with Clock in / Clock out, New Job Request with Accept / Decline, Earning Summary, Notification block, Client Care Access

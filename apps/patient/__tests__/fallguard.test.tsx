@@ -140,7 +140,7 @@ describe("FallGuard (live-shaped)", () => {
       expect(screen.getByText("Add grab bars in the bathroom.")).toBeTruthy();
       expect(screen.getByText("Wear non-slip shoes.")).toBeTruthy();
       await press("Book a Home Visit");
-      expect(await screen.findByText("Book a nurse visit in 2 steps. Step 1 of 2.")).toBeTruthy();
+      expect(await screen.findByText("Book your Appointments in 2 steps")).toBeTruthy();
       view.unmount();
     });
 

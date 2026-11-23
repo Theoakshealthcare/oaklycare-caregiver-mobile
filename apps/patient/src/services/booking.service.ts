@@ -1,9 +1,11 @@
+import type { Schemas } from "@oakly/api-client";
+
 import { api } from "@/src/api/client";
 import { ApiError } from "@/src/api/errors";
 import { unwrap } from "@/src/api/unwrap";
-import type { Booking, BookingDraft, BookingQuote, CancelResult, CancelTerms } from "@/src/domain/booking";
+import type { BookableService, Booking, BookingDraft, BookingQuote, CancelResult, CancelTerms } from "@/src/domain/booking";
 
-import { toBooking, toCancelResult, toCancelTerms, toCreateBody, toQuote } from "./bookingMapper";
+import { toBookableServices, toBooking, toCancelResult, toCancelTerms, toCreateBody, toQuote } from "./bookingMapper";
 
 /** What `POST /booking/create` gives back: the booking, and where to pay for it. */
 export interface CreatedBooking {
@@ -23,13 +25,18 @@ export type PaymentCheck =
   | { kind: "paid" }
   /** Paid, but the booking stays cancelled (the payment link had expired): a refund is coming. */
   | { kind: "paid_refund_required" }
-  | { kind: "not_paid"; message: string };
+  /** `paystackStatus` is Paystack's own word when the answer carries one ("abandoned": the checkout was left; "failed"). */
+  | { kind: "not_paid"; message: string; paystackStatus: string | null };
 
 export function readPaymentCheck(body: unknown): PaymentCheck {
   const b = body && typeof body === "object" ? (body as Record<string, unknown>) : {};
   if (b.status === "success" && b.refund_required === true) return { kind: "paid_refund_required" };
   if (b.status === "success" && b.payment_status === "paid") return { kind: "paid" };
-  return { kind: "not_paid", message: typeof b.message === "string" ? b.message : "Payment not confirmed yet" };
+  return {
+    kind: "not_paid",
+    message: typeof b.message === "string" ? b.message : "Payment not confirmed yet",
+    paystackStatus: typeof b.payment_status === "string" ? b.payment_status : null,
+  };
 }
 
 /** `detail.terms` of a `409 terms_changed`: the new fee to show before asking again. Null for any other error. */
@@ -41,18 +48,23 @@ export function termsFromChangedError(error: unknown): CancelTerms | null {
 
 export const bookingService = {
   /** The price. Public route; location is optional but changes surge pricing and availability. */
-  async preview(input: { durationHours: number; latitude: number | null; longitude: number | null }): Promise<BookingQuote> {
+  async preview(input: { serviceType: string; durationMinutes: number; latitude: number | null; longitude: number | null }): Promise<BookingQuote> {
     const body = await unwrap(
       api.POST("/api/v1/booking/preview", {
         body: {
-          service_type: "nurse",
-          duration_hours: input.durationHours,
+          service_type: input.serviceType as Schemas["BookingPreviewRequest"]["service_type"],
+          duration_minutes: input.durationMinutes,
           patient_latitude: input.latitude,
           patient_longitude: input.longitude,
         },
       }),
     );
     return toQuote(body);
+  },
+
+  /** The services on sale now (enabled and priced) with the visit lengths each allows. No prices. */
+  async services(): Promise<BookableService[]> {
+    return toBookableServices(await unwrap(api.GET("/api/v1/booking/services")));
   },
 
   async create(draft: BookingDraft): Promise<CreatedBooking> {

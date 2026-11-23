@@ -36,6 +36,7 @@ const offerView: Booking = {
   assistance_type: "Wound dressing",
   condition: "Decoy condition: diabetic ulcer",
   duration_hours: 2,
+  duration_minutes: 120,
   scheduled_date: "2026-10-06T08:05:36.281977",
   scheduled_end_date: "2026-10-06T10:05:36.281977",
   patient_address: "12 Decoy Street, Lekki",

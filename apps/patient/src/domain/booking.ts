@@ -22,7 +22,8 @@ export interface Booking {
   service: string;
   bookingFor: string;
   scheduledAt: string;
-  durationHours: number;
+  /** The length in minutes (the API stores minutes; a visit can be 90). */
+  durationMinutes: number;
   address: string;
   amount: number;
   paymentStatus: PaymentState;
@@ -197,16 +198,27 @@ export function feeReason(terms: CancelTerms): string {
 }
 
 export interface BookingDraft {
+  /** The chosen relation ("My Mother"): the backend stores it as `booking_for`. */
   forWhom: string;
-  service: string;
+  /** `service_type` of the chosen service ("nurse"), and its name from the catalogue ("Nurse visit"). */
+  serviceType: string;
+  serviceLabel: string;
+  /** A choice from the list; "Other" opens `assistanceOther`. The text sent is `helpNeeded(draft)`. */
   assistance: string;
+  assistanceOther: string;
+  /** Optional: "" (nothing chosen), "None", a choice, or "Other" with `conditionOther`. */
   condition: string;
+  conditionOther: string;
   date: string;
   time: string;
-  durationHours: string;
+  /** From the catalogue's allowed lengths; null until chosen. */
+  durationMinutes: number | null;
   state: string;
   city: string;
   address: string;
+  /** Contact details (prefilled from the account). The booking has no field for them, so they travel inside the special instructions. */
+  phone: string;
+  email: string;
   /** Where the phone was when the person tapped "Use my current location"; the API needs coordinates. */
   latitude: number | null;
   longitude: number | null;
@@ -214,6 +226,27 @@ export interface BookingDraft {
   genderPreference: string;
   languagePreference: string;
   instructions: string;
+}
+
+/** What `GET /booking/services` lists: a service that is on sale now, with the lengths it allows. */
+export interface BookableService {
+  serviceType: string;
+  displayName: string;
+  minMinutes: number;
+  stepMinutes: number;
+  maxMinutes: number;
+}
+
+/** The assistance as one sentence for the backend and the summary ("Other" is replaced by what was typed). */
+export function helpNeeded(draft: Pick<BookingDraft, "assistance" | "assistanceOther">): string {
+  return draft.assistance === "Other" ? draft.assistanceOther.trim() : draft.assistance;
+}
+
+/** The condition as text, or null when none was named ("None" means nothing to send). */
+export function conditionText(draft: Pick<BookingDraft, "condition" | "conditionOther">): string | null {
+  if (!draft.condition || draft.condition === "None") return null;
+  const text = draft.condition === "Other" ? draft.conditionOther.trim() : draft.condition;
+  return text || null;
 }
 
 /** The price the backend preview gave (`POST /booking/preview`). Nothing here is computed on the device. */

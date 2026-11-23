@@ -9,6 +9,7 @@ import Button from "@/src/components/ui/button";
 import ErrorDialog from "@/src/components/ui/ErrorDialog";
 import Input from "@/src/components/ui/input";
 import Text from "@/src/components/ui/text";
+import TextLink from "@/src/components/ui/text-link";
 import { showToast } from "@/src/components/ui/toast";
 import { useNav } from "@/src/navigation/Navigations";
 import { authService } from "@/src/services/auth.service";
@@ -75,6 +76,8 @@ const Login: React.FC = () => {
         </Text>
       </Pressable>
       <Button title="Login" onPress={submit} loading={login.isPending} />
+      {/* Not in Figma (owner decision): without it a signed-out returning person has no way to reach sign-up except Back to the slides. */}
+      <TextLink label="Create account" center onPress={() => navigation.navigate("CreateAccount")} />
 
       <ErrorDialog visible={dialog !== null} title="Login failed" message={dialog ?? ""} onClose={() => setDialog(null)} />
     </AuthPage>

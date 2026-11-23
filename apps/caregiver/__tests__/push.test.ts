@@ -168,6 +168,7 @@ describe("resolveOffer (the offer view comes from home open_offers)", () => {
     scheduled_date: "2026-10-06T08:38:27.858997",
     scheduled_end_date: "2026-10-06T10:38:27.858997",
     duration_hours: 2,
+    duration_minutes: 120,
     area: "Lagos",
     state: "Lagos",
     offered_at: "2026-10-06T08:23:27.927274",

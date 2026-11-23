@@ -20,6 +20,7 @@ import {
   showsVisitCode,
   statusLabel,
 } from "@/src/domain/booking";
+import { durationLabel } from "@/src/domain/bookingChoices";
 import { formatDate, formatNaira, formatTime } from "@/src/domain/format";
 import { useBooking } from "@/src/hooks/useBookings";
 import type { ScreenParamLists } from "@/src/navigation/Navigations";
@@ -58,7 +59,7 @@ const BookingDetails: React.FC<Props> = ({ navigation, route }) => {
         <DetailRow label="Booked for" value={booking.bookingFor} />
         <DetailRow label="Date" value={formatDate(booking.scheduledAt)} />
         <DetailRow label="Time" value={formatTime(booking.scheduledAt)} />
-        <DetailRow label="Duration" value={`${booking.durationHours} ${booking.durationHours === 1 ? "hour" : "hours"}`} />
+        <DetailRow label="Duration" value={durationLabel(booking.durationMinutes)} />
         <DetailRow label="Address" value={booking.address} />
         {booking.caregiver ? <DetailRow label="Caregiver" value={booking.caregiver.firstName} /> : null}
         <DetailRow label="Amount" value={formatNaira(booking.amount)} />

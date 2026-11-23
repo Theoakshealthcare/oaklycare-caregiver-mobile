@@ -1,6 +1,6 @@
 import type { Schemas } from "@oakly/api-client";
 
-import type { Booking, BookingDraft, BookingQuote, CancelResult, CancelTerms, Refund } from "@/src/domain/booking";
+import { conditionText, helpNeeded, type BookableService, type Booking, type BookingDraft, type BookingQuote, type CancelResult, type CancelTerms, type Refund } from "@/src/domain/booking";
 import { firstNameOf } from "@/src/domain/names";
 import { toLocalDate } from "@/src/domain/slots";
 
@@ -25,7 +25,8 @@ export function toBooking(b: BookingResponse): Booking {
     service: SERVICE_LABELS[b.service_type] ?? b.service_type,
     bookingFor: b.booking_for,
     scheduledAt: b.scheduled_date.endsWith("Z") || /[+-]\d\d:\d\d$/.test(b.scheduled_date) ? b.scheduled_date : `${b.scheduled_date}Z`,
-    durationHours: b.duration_hours,
+    // Older answers carry only hours; the API now sends minutes (a visit can be 90).
+    durationMinutes: b.duration_minutes ?? Math.round(b.duration_hours * 60),
     address: place.join(", "),
     amount: b.total_amount,
     paymentStatus: b.payment_status,
@@ -37,6 +38,16 @@ export function toBooking(b: BookingResponse): Booking {
     cancelFeeTier: b.cancel_fee_tier ?? null,
     refund: refundOf(b.refund),
   };
+}
+
+export function toBookableServices(body: Schemas["BookableServicesOut"]): BookableService[] {
+  return body.services.map((s) => ({
+    serviceType: s.service_type,
+    displayName: s.display_name,
+    minMinutes: s.min_minutes,
+    stepMinutes: s.step_minutes,
+    maxMinutes: s.max_minutes,
+  }));
 }
 
 export function toQuote(p: Schemas["BookingPreviewResponse"]): BookingQuote {
@@ -52,22 +63,30 @@ export function toQuote(p: Schemas["BookingPreviewResponse"]): BookingQuote {
   };
 }
 
-/** Language and gender preference have no backend field, so they ride along inside the special instructions text. */
-export function specialInstructions(draft: Pick<BookingDraft, "instructions" | "genderPreference" | "languagePreference">): string | null {
+/**
+ * Language, gender preference and the contact details have no backend field, so they ride along inside the special
+ * instructions text (the person's own notes first).
+ */
+export function specialInstructions(
+  draft: Pick<BookingDraft, "instructions" | "genderPreference" | "languagePreference"> & Partial<Pick<BookingDraft, "phone" | "email">>,
+): string | null {
   const lines = [draft.instructions.trim()];
   if (draft.genderPreference && draft.genderPreference !== "any") lines.push(`Preferred caregiver gender: ${draft.genderPreference}`);
   if (draft.languagePreference && draft.languagePreference !== "any") lines.push(`Preferred language: ${draft.languagePreference}`);
+  if (draft.phone?.trim()) lines.push(`Contact phone: ${draft.phone.trim()}`);
+  if (draft.email?.trim()) lines.push(`Contact email: ${draft.email.trim()}`);
   const text = lines.filter(Boolean).join("\n");
   return text || null;
 }
 
 export function toCreateBody(draft: BookingDraft): Schemas["BookingCreate"] {
   if (draft.latitude === null || draft.longitude === null) throw new Error("The booking has no location.");
+  if (draft.durationMinutes === null) throw new Error("The booking has no length.");
   return {
-    service_type: "nurse",
-    assistance_type: draft.assistance.trim(),
-    condition: draft.condition.trim() || null,
-    duration_hours: Number(draft.durationHours),
+    service_type: draft.serviceType as Schemas["BookingCreate"]["service_type"],
+    assistance_type: helpNeeded(draft),
+    condition: conditionText(draft),
+    duration_minutes: draft.durationMinutes,
     scheduled_date: toLocalDate(draft.date, draft.time).toISOString(),
     patient_address: draft.address.trim(),
     patient_latitude: draft.latitude,

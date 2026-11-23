@@ -3733,14 +3733,7 @@
             }
           },
           "422": {
-            "description": "Validation Error",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/HTTPValidationError"
-                }
-              }
-            }
+            "description": "detail.code service_unavailable (the service is not on offer: disabled or unpriced) or invalid_duration (the length is not one the service allows; the detail lists the allowed values)"
           },
           "500": {
             "description": "Internal server error",
@@ -3754,6 +3747,34 @@
           },
           "503": {
             "description": "No pricing version exists yet. detail.code is booking_settings_not_configured"
+          }
+        },
+        "security": [
+          {
+            "OAuth2PasswordBearer": []
+          }
+        ]
+      }
+    },
+    "/api/v1/booking/services": {
+      "get": {
+        "tags": [
+          "booking",
+          "Patient Bookings"
+        ],
+        "summary": "Which services can be booked right now",
+        "description": "The services a person may book now, in display order: enabled in the catalogue AND priced. A service with no\nprice is simply absent. The response carries no prices (use ``/booking/preview`` for those). ``min_minutes``,\n``step_minutes`` and ``max_minutes`` describe the allowed visit lengths.",
+        "operationId": "list_bookable_services_api_v1_booking_services_get",
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/BookableServicesOut"
+                }
+              }
+            }
           }
         },
         "security": [
@@ -8654,6 +8675,90 @@
             "AdminBearer": []
           }
         ]
+      }
+    },
+    "/api/v1/admin/service-catalog": {
+      "get": {
+        "tags": [
+          "admin-service-catalog"
+        ],
+        "summary": "List Services",
+        "operationId": "list_services_api_v1_admin_service_catalog_get",
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "items": {
+                    "$ref": "#/components/schemas/ServiceCatalogOut"
+                  },
+                  "type": "array",
+                  "title": "Response List Services Api V1 Admin Service Catalog Get"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "AdminBearer": []
+          }
+        ]
+      }
+    },
+    "/api/v1/admin/service-catalog/{service_type}": {
+      "put": {
+        "tags": [
+          "admin-service-catalog"
+        ],
+        "summary": "Update Service",
+        "description": "Replace one service's settings. Idempotent: repeating the same body is a no-op (no second audit row).",
+        "operationId": "update_service_api_v1_admin_service_catalog__service_type__put",
+        "security": [
+          {
+            "AdminBearer": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "service_type",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "title": "Service Type"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/ServiceCatalogWrite"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ServiceCatalogOut"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Unknown service type"
+          },
+          "422": {
+            "description": "Invalid body, or detail.code service_has_no_price: set its multiplier in Pricing first"
+          }
+        }
       }
     },
     "/api/v1/admin/earnings": {
@@ -13908,6 +14013,78 @@
         ],
         "title": "Body_upload_profile_image_api_v1_auth_profile_upload_image_post"
       },
+      "BookableServiceOut": {
+        "properties": {
+          "service_type": {
+            "type": "string",
+            "title": "Service Type",
+            "examples": [
+              "nurse"
+            ]
+          },
+          "display_name": {
+            "type": "string",
+            "title": "Display Name",
+            "examples": [
+              "Nurse visit"
+            ]
+          },
+          "mode": {
+            "type": "string",
+            "title": "Mode",
+            "examples": [
+              "home"
+            ]
+          },
+          "min_minutes": {
+            "type": "integer",
+            "title": "Min Minutes",
+            "examples": [
+              60
+            ]
+          },
+          "step_minutes": {
+            "type": "integer",
+            "title": "Step Minutes",
+            "examples": [
+              60
+            ]
+          },
+          "max_minutes": {
+            "type": "integer",
+            "title": "Max Minutes",
+            "examples": [
+              1440
+            ]
+          }
+        },
+        "type": "object",
+        "required": [
+          "service_type",
+          "display_name",
+          "mode",
+          "min_minutes",
+          "step_minutes",
+          "max_minutes"
+        ],
+        "title": "BookableServiceOut"
+      },
+      "BookableServicesOut": {
+        "properties": {
+          "services": {
+            "items": {
+              "$ref": "#/components/schemas/BookableServiceOut"
+            },
+            "type": "array",
+            "title": "Services"
+          }
+        },
+        "type": "object",
+        "required": [
+          "services"
+        ],
+        "title": "BookableServicesOut"
+      },
       "BookingActionOut": {
         "properties": {
           "id": {
@@ -14209,12 +14386,33 @@
             "description": "Medical condition or specific health needs",
             "example": "Diabetes management"
           },
+          "duration_minutes": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Duration Minutes",
+            "description": "Length of the visit in minutes (30-minute steps by default; the service's own minimum, step and maximum are in GET /booking/services). Send this OR duration_hours.",
+            "example": 90
+          },
           "duration_hours": {
-            "type": "integer",
-            "maximum": 24,
-            "minimum": 1,
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
             "title": "Duration Hours",
-            "description": "Duration of service in hours (1-24)",
+            "description": "Older way to send the length, in hours (4 or 1.5). Converted to minutes; both are returned.",
             "example": 4
           },
           "scheduled_date": {
@@ -14282,7 +14480,6 @@
         "required": [
           "service_type",
           "assistance_type",
-          "duration_hours",
           "scheduled_date",
           "patient_address",
           "patient_latitude",
@@ -14316,8 +14513,19 @@
             "type": "string",
             "title": "Booking For"
           },
-          "duration_hours": {
+          "duration_minutes": {
             "type": "integer",
+            "title": "Duration Minutes"
+          },
+          "duration_hours": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "number"
+              }
+            ],
             "title": "Duration Hours"
           },
           "scheduled_date": {
@@ -14491,6 +14699,7 @@
           "service_type",
           "assistance_type",
           "booking_for",
+          "duration_minutes",
           "duration_hours",
           "scheduled_date",
           "scheduled_end_date",
@@ -15213,12 +15422,33 @@
             "description": "Type of healthcare service requested",
             "example": "caregiver"
           },
+          "duration_minutes": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Duration Minutes",
+            "description": "Length of the visit in minutes (30-minute steps by default; the service's own minimum, step and maximum are in GET /booking/services). Send this OR duration_hours.",
+            "example": 90
+          },
           "duration_hours": {
-            "type": "integer",
-            "maximum": 24,
-            "minimum": 1,
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
             "title": "Duration Hours",
-            "description": "Duration of service in hours (1-24)",
+            "description": "Older way to send the length, in hours (4 or 1.5). Converted to minutes; both are returned.",
             "example": 4
           },
           "patient_latitude": {
@@ -15254,8 +15484,7 @@
         },
         "type": "object",
         "required": [
-          "service_type",
-          "duration_hours"
+          "service_type"
         ],
         "title": "BookingPreviewRequest"
       },
@@ -15267,10 +15496,23 @@
             "description": "Type of healthcare service",
             "example": "caregiver"
           },
-          "duration_hours": {
+          "duration_minutes": {
             "type": "integer",
+            "title": "Duration Minutes",
+            "description": "Service duration in minutes",
+            "example": 240
+          },
+          "duration_hours": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "number"
+              }
+            ],
             "title": "Duration Hours",
-            "description": "Service duration in hours",
+            "description": "Service duration in hours (1.5 for 90 minutes)",
             "example": 4
           },
           "base_fee_per_hour": {
@@ -15399,6 +15641,7 @@
         "type": "object",
         "required": [
           "service_type",
+          "duration_minutes",
           "duration_hours",
           "base_fee_per_hour",
           "service_multiplier",
@@ -15489,8 +15732,19 @@
             ],
             "title": "Condition"
           },
-          "duration_hours": {
+          "duration_minutes": {
             "type": "integer",
+            "title": "Duration Minutes"
+          },
+          "duration_hours": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "number"
+              }
+            ],
             "title": "Duration Hours"
           },
           "scheduled_date": {
@@ -15727,6 +15981,7 @@
           "patient_id",
           "service_type",
           "assistance_type",
+          "duration_minutes",
           "duration_hours",
           "scheduled_date",
           "scheduled_end_date",
@@ -17327,8 +17582,19 @@
             ],
             "title": "Condition"
           },
-          "duration_hours": {
+          "duration_minutes": {
             "type": "integer",
+            "title": "Duration Minutes"
+          },
+          "duration_hours": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "number"
+              }
+            ],
             "title": "Duration Hours"
           },
           "scheduled_date": {
@@ -17590,6 +17856,7 @@
           "patient_id",
           "service_type",
           "assistance_type",
+          "duration_minutes",
           "duration_hours",
           "scheduled_date",
           "scheduled_end_date",
@@ -20494,8 +20761,19 @@
             "format": "date-time",
             "title": "Scheduled End Date"
           },
-          "duration_hours": {
+          "duration_minutes": {
             "type": "integer",
+            "title": "Duration Minutes"
+          },
+          "duration_hours": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "number"
+              }
+            ],
             "title": "Duration Hours"
           },
           "area": {
@@ -20518,6 +20796,7 @@
           "service_type",
           "scheduled_date",
           "scheduled_end_date",
+          "duration_minutes",
           "duration_hours",
           "area",
           "state",
@@ -20565,8 +20844,19 @@
             "format": "date-time",
             "title": "Scheduled End Date"
           },
-          "duration_hours": {
+          "duration_minutes": {
             "type": "integer",
+            "title": "Duration Minutes"
+          },
+          "duration_hours": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "number"
+              }
+            ],
             "title": "Duration Hours"
           },
           "patient_name": {
@@ -20608,6 +20898,7 @@
           "status",
           "scheduled_date",
           "scheduled_end_date",
+          "duration_minutes",
           "duration_hours",
           "patient_city",
           "patient_state"
@@ -23353,8 +23644,19 @@
             ],
             "title": "Condition"
           },
-          "duration_hours": {
+          "duration_minutes": {
             "type": "integer",
+            "title": "Duration Minutes"
+          },
+          "duration_hours": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "number"
+              }
+            ],
             "title": "Duration Hours"
           },
           "scheduled_date": {
@@ -23610,6 +23912,7 @@
           "patient_id",
           "service_type",
           "assistance_type",
+          "duration_minutes",
           "duration_hours",
           "scheduled_date",
           "scheduled_end_date",
@@ -25815,6 +26118,147 @@
           "note"
         ],
         "title": "RequestChangesIn"
+      },
+      "ServiceCatalogOut": {
+        "properties": {
+          "service_type": {
+            "type": "string",
+            "title": "Service Type"
+          },
+          "enabled": {
+            "type": "boolean",
+            "title": "Enabled"
+          },
+          "display_name": {
+            "type": "string",
+            "title": "Display Name"
+          },
+          "mode": {
+            "type": "string",
+            "title": "Mode"
+          },
+          "min_minutes": {
+            "type": "integer",
+            "title": "Min Minutes"
+          },
+          "step_minutes": {
+            "type": "integer",
+            "title": "Step Minutes"
+          },
+          "max_minutes": {
+            "type": "integer",
+            "title": "Max Minutes"
+          },
+          "sort_order": {
+            "type": "integer",
+            "title": "Sort Order"
+          },
+          "priced": {
+            "type": "boolean",
+            "title": "Priced",
+            "description": "Does the newest pricing have a multiplier for it? A service can only be enabled when true"
+          },
+          "bookable": {
+            "type": "boolean",
+            "title": "Bookable",
+            "description": "enabled AND priced: what patients are offered"
+          },
+          "updated_at": {
+            "type": "string",
+            "format": "date-time",
+            "title": "Updated At"
+          },
+          "updated_by": {
+            "anyOf": [
+              {
+                "type": "string",
+                "format": "uuid"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Updated By"
+          }
+        },
+        "type": "object",
+        "required": [
+          "service_type",
+          "enabled",
+          "display_name",
+          "mode",
+          "min_minutes",
+          "step_minutes",
+          "max_minutes",
+          "sort_order",
+          "priced",
+          "bookable",
+          "updated_at"
+        ],
+        "title": "ServiceCatalogOut"
+      },
+      "ServiceCatalogWrite": {
+        "properties": {
+          "enabled": {
+            "type": "boolean",
+            "title": "Enabled"
+          },
+          "display_name": {
+            "type": "string",
+            "maxLength": 60,
+            "minLength": 1,
+            "title": "Display Name"
+          },
+          "mode": {
+            "type": "string",
+            "title": "Mode",
+            "description": "'home' only for now"
+          },
+          "min_minutes": {
+            "type": "integer",
+            "title": "Min Minutes"
+          },
+          "step_minutes": {
+            "type": "integer",
+            "title": "Step Minutes"
+          },
+          "max_minutes": {
+            "type": "integer",
+            "title": "Max Minutes"
+          },
+          "sort_order": {
+            "type": "integer",
+            "maximum": 1000,
+            "minimum": 0,
+            "title": "Sort Order"
+          },
+          "reason": {
+            "anyOf": [
+              {
+                "type": "string",
+                "maxLength": 2000
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Reason",
+            "description": "Why (kept in the audit log)"
+          }
+        },
+        "additionalProperties": false,
+        "type": "object",
+        "required": [
+          "enabled",
+          "display_name",
+          "mode",
+          "min_minutes",
+          "step_minutes",
+          "max_minutes",
+          "sort_order"
+        ],
+        "title": "ServiceCatalogWrite",
+        "description": "The full editable state of one service (PUT replaces it: sending the same body twice changes nothing)."
       },
       "SkillIn": {
         "properties": {

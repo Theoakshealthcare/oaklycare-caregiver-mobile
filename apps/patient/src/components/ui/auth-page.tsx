@@ -13,6 +13,8 @@ export const FORM_PADDING = 20;
 interface AuthPageProps {
   title: string;
   subtitle?: React.ReactNode;
+  /** Sits at the right of the title row (Booking Summary's Edit). */
+  titleRight?: React.ReactNode;
   /** Shows "< Back" on the first screen of a stack and says where it goes (see `HeaderBack`). */
   onBackFallback?: () => void;
   /** Wrap the form in the keyboard-aware scroll view. Default true; the code screens are short and do not need it. */
@@ -28,14 +30,17 @@ interface AuthPageProps {
  * The chrome of the signed-out Figma screens: "< Back" link, bold 22 pt title, grey subtitle, then the form with 22 pt
  * between fields, all on white with a 20 pt side margin.
  */
-const AuthPage: React.FC<AuthPageProps> = ({ title, subtitle, onBackFallback, scroll = true, scrollToEndOnKeyboardShow, gap = 22, children }) => {
+const AuthPage: React.FC<AuthPageProps> = ({ title, subtitle, titleRight, onBackFallback, scroll = true, scrollToEndOnKeyboardShow, gap = 22, children }) => {
   const body = (
     <View style={styles.content}>
       <HeaderBack onFallback={onBackFallback} />
       <View style={styles.heading}>
-        <Text variant="page" weight="bold">
-          {title}
-        </Text>
+        <View style={styles.titleRow}>
+          <Text variant="page" weight="bold" style={styles.title}>
+            {title}
+          </Text>
+          {titleRight}
+        </View>
         {subtitle ? (
           <Text variant="body" color={theme.colors.textLight}>
             {subtitle}
@@ -56,6 +61,8 @@ const styles = StyleSheet.create({
   screen: { flex: 1, backgroundColor: theme.colors.white },
   content: { paddingHorizontal: FORM_PADDING, paddingTop: theme.spacing.lg, paddingBottom: theme.spacing.xxl },
   heading: { marginTop: 28, marginBottom: 24 },
+  titleRow: { flexDirection: "row", alignItems: "center", justifyContent: "space-between" },
+  title: { flexShrink: 1 },
 });
 
 export default AuthPage;

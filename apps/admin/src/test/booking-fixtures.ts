@@ -124,6 +124,7 @@ export function makeDetail(overrides: Partial<BookingDetail> = {}): BookingDetai
     assistance_type: "Placeholder assistance",
     booking_for: "myself",
     duration_hours: 2,
+    duration_minutes: 120,
     scheduled_date: "2026-10-08T01:38:05.522142",
     scheduled_end_date: "2026-10-08T03:38:05.522142",
     actual_start_time: null,

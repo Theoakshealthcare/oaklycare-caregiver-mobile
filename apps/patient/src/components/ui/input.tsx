@@ -9,11 +9,13 @@ import Text from "./text";
 
 interface InputProps extends TextInputProps {
   label?: string;
+  /** Draws Figma's red star after the label. */
+  required?: boolean;
   error?: string;
 }
 
 /** A labelled field. A password field (`secureTextEntry`) gets a show / hide eye. */
-const Input: React.FC<InputProps> = ({ label, error, secureTextEntry, multiline, style, ...rest }) => {
+const Input: React.FC<InputProps> = ({ label, required, error, secureTextEntry, multiline, style, ...rest }) => {
   const [focused, setFocused] = useState(false);
   const [hidden, setHidden] = useState(true);
   const isPassword = Boolean(secureTextEntry);
@@ -21,7 +23,7 @@ const Input: React.FC<InputProps> = ({ label, error, secureTextEntry, multiline,
   const borderColor = error ? theme.colors.secondary : theme.colors.primary;
   return (
     <View>
-      {label ? <FieldLabel>{label}</FieldLabel> : null}
+      {label ? <FieldLabel required={required}>{label}</FieldLabel> : null}
       <View style={[styles.field, { borderColor, borderWidth: focused ? 2 : 1 }, multiline && styles.multiline]}>
         <TextInput
           accessibilityLabel={label}

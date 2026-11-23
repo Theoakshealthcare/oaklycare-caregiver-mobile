@@ -1,25 +1,31 @@
 import type React from "react";
-import { useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 
+import StepBar from "@/src/components/booking/StepBar";
+import AuthPage from "@/src/components/ui/auth-page";
 import Button from "@/src/components/ui/button";
-import ChipSelect from "@/src/components/ui/chip-select";
+import DateTimeField from "@/src/components/ui/date-time-field";
 import Input from "@/src/components/ui/input";
-import Screen from "@/src/components/ui/screen";
+import QueryError from "@/src/components/ui/query-error";
+import Select from "@/src/components/ui/select";
 import Text from "@/src/components/ui/text";
 import { theme } from "@/src/constants/theme";
-import { dateOptions, isPastSlot, timeOptions } from "@/src/domain/slots";
+import { ASSISTANCE, CONDITIONS, durationChoices, offeredServices, OTHER, RELATIONS } from "@/src/domain/bookingChoices";
+import { isPastSlot } from "@/src/domain/slots";
 import { useBookingDraft } from "@/src/hooks/bookingDraft";
+import { useBookableServices } from "@/src/hooks/useBookings";
 import { useNav } from "@/src/navigation/Navigations";
 
-const DATES = dateOptions();
-const TIMES = timeOptions();
+type Field = "forWhom" | "service" | "assistance" | "assistanceOther" | "conditionOther" | "when" | "duration";
 
-type Field = "forWhom" | "assistance" | "date" | "time" | "durationHours";
-
-/** Step 1 of 2: who the visit is for, what help they need, and when. v1 books a nurse visit only. */
+/** Step 1 of 2 (Figma "Book an Appointment"): who the visit is for, the service, the help needed, when and for how long. */
 const BookingStep1: React.FC = () => {
   const navigation = useNav();
   const { draft, patch } = useBookingDraft();
+  const services = useBookableServices();
+  const offered = useMemo(() => offeredServices(services.data ?? []), [services.data]);
+  const service = offered.find((s) => s.serviceType === draft.serviceType);
+  const lengths = useMemo(() => (service ? durationChoices(service) : []), [service]);
   const [errors, setErrors] = useState<Partial<Record<Field, string>>>({});
 
   const set = (fields: Parameters<typeof patch>[0], field: Field) => {
@@ -27,72 +33,82 @@ const BookingStep1: React.FC = () => {
     setErrors((prev) => ({ ...prev, [field]: undefined }));
   };
 
-  // Today's earlier start times are shown but cannot be picked; read at render, so the list follows the clock.
-  const pastTimes = draft.date ? TIMES.filter((t) => isPastSlot(draft.date, t.value)).map((t) => t.value) : [];
-
-  // Choosing today after an earlier-day time that has since passed would leave a selected, disabled chip: clear it.
-  const chooseDate = (date: string) => {
-    const timePassed = draft.time !== "" && isPastSlot(date, draft.time);
-    set(timePassed ? { date, time: "" } : { date }, "date");
-  };
+  // Only one service is on sale today, so it is chosen for the person; if the one kept from an earlier visit is no longer on sale, the first listed is.
+  useEffect(() => {
+    if (offered.length > 0 && !service) patch({ serviceType: offered[0].serviceType, serviceLabel: offered[0].displayName, durationMinutes: null });
+  }, [offered, service, patch]);
 
   const next = () => {
     const found: Partial<Record<Field, string>> = {};
-    if (!draft.forWhom.trim()) found.forWhom = "Tell us who the visit is for";
-    if (!draft.assistance.trim()) found.assistance = "Tell us what help is needed";
-    if (!draft.date) found.date = "Choose a date";
-    if (!draft.time) found.time = "Choose a start time";
-    else if (draft.date && isPastSlot(draft.date, draft.time)) found.time = "Choose a time that has not passed";
-    const hours = Number(draft.durationHours);
-    if (!draft.durationHours.trim()) found.durationHours = "Enter how many hours";
-    else if (!Number.isInteger(hours) || hours < 1 || hours > 24) found.durationHours = "Enter a whole number of hours from 1 to 24";
+    if (!draft.forWhom) found.forWhom = "Tell us who the visit is for";
+    if (!service) found.service = "Choose a service";
+    if (!draft.assistance) found.assistance = "Tell us what help is needed";
+    else if (draft.assistance === OTHER && !draft.assistanceOther.trim()) found.assistanceOther = "Type the help that is needed";
+    if (draft.condition === OTHER && !draft.conditionOther.trim()) found.conditionOther = "Type the condition";
+    if (!draft.date || !draft.time) found.when = "Choose a date and time";
+    else if (isPastSlot(draft.date, draft.time)) found.when = "Choose a time that has not passed";
+    if (draft.durationMinutes === null || !lengths.some((l) => l.value === String(draft.durationMinutes))) found.duration = "Choose how long the visit should be";
     setErrors(found);
     if (Object.keys(found).length === 0) navigation.navigate("BookingStep2");
   };
 
+  if (services.isError && !services.data) {
+    return (
+      <AuthPage title="Book an Appointment" subtitle="Book your Appointments in 2 steps">
+        <QueryError what="the services" error={services.error} onRetry={() => void services.refetch()} />
+      </AuthPage>
+    );
+  }
+
+  const noneOnSale = services.isSuccess && offered.length === 0;
   return (
-    <Screen title="Book an Appointment" scroll>
-      <Text color={theme.colors.textLight}>Book a nurse visit in 2 steps. Step 1 of 2.</Text>
-      <Input
-        label="Who are you booking for?"
-        placeholder="e.g. My mother"
-        value={draft.forWhom}
-        onChangeText={(v) => set({ forWhom: v }, "forWhom")}
-        error={errors.forWhom}
+    <AuthPage title="Book an Appointment" subtitle="Book your Appointments in 2 steps">
+      <StepBar step={1} total={2} />
+      <Select label="Who are you Booking for ?" required placeholder="Select" options={RELATIONS} value={draft.forWhom} onChange={(v) => set({ forWhom: v }, "forWhom")} error={errors.forWhom} />
+      <Select
+        label="What Services are you Booking ?"
+        required
+        placeholder="Select"
+        options={offered.map((s) => ({ value: s.serviceType, label: s.displayName }))}
+        value={draft.serviceType}
+        onChange={(v) => {
+          const chosen = offered.find((s) => s.serviceType === v);
+          if (chosen) set({ serviceType: v, serviceLabel: chosen.displayName, durationMinutes: null }, "service");
+        }}
+        error={errors.service}
       />
-      <Input label="Service" value="Nurse visit" editable={false} />
-      <Input
-        label="What help is needed?"
-        placeholder="e.g. Walking assistance, wound dressing"
-        value={draft.assistance}
-        onChangeText={(v) => set({ assistance: v }, "assistance")}
-        error={errors.assistance}
+      {noneOnSale ? (
+        <Text color={theme.colors.secondary} accessibilityRole="alert">
+          No services are available right now. Please try again later.
+        </Text>
+      ) : null}
+      <Select label="What Assistance Do You Need?" required placeholder="Select" options={ASSISTANCE} value={draft.assistance} onChange={(v) => set({ assistance: v }, "assistance")} error={errors.assistance} />
+      {draft.assistance === OTHER ? (
+        <Input label="Describe the help needed" placeholder="What help does the patient need?" value={draft.assistanceOther} onChangeText={(v) => set({ assistanceOther: v }, "assistanceOther")} error={errors.assistanceOther} />
+      ) : null}
+      <Select label="Do You Have Any Common Conditions?" placeholder="Select" options={CONDITIONS} value={draft.condition} onChange={(v) => set({ condition: v }, "conditionOther")} />
+      {draft.condition === OTHER ? (
+        <Input label="Describe the condition" placeholder="e.g. Asthma" value={draft.conditionOther} onChangeText={(v) => set({ conditionOther: v }, "conditionOther")} error={errors.conditionOther} />
+      ) : null}
+      <DateTimeField
+        label="Select Preferred Date and Time"
+        required
+        date={draft.date}
+        time={draft.time}
+        onChange={({ date, time }) => set({ date, time }, "when")}
+        error={errors.when}
       />
-      <Input
-        label="Health condition (optional)"
-        placeholder="e.g. Hypertension"
-        value={draft.condition}
-        onChangeText={(v) => patch({ condition: v })}
+      <Select
+        label="Duration"
+        required
+        placeholder="Select"
+        options={lengths}
+        value={draft.durationMinutes === null ? "" : String(draft.durationMinutes)}
+        onChange={(v) => set({ durationMinutes: Number(v) }, "duration")}
+        error={errors.duration}
       />
-      <ChipSelect label="Preferred date" options={DATES} value={draft.date} onChange={chooseDate} error={errors.date} />
-      <ChipSelect
-        label="Start time"
-        options={TIMES}
-        value={draft.time}
-        onChange={(v) => set({ time: v }, "time")}
-        disabledValues={pastTimes}
-        error={errors.time}
-      />
-      <Input
-        label="Duration (hours)"
-        placeholder="1 to 24"
-        value={draft.durationHours}
-        onChangeText={(v) => set({ durationHours: v.replace(/\D/g, "") }, "durationHours")}
-        keyboardType="number-pad"
-        error={errors.durationHours}
-      />
-      <Button title="Save & Continue" onPress={next} />
-    </Screen>
+      <Button title="Save & Continue" onPress={next} disabled={!service} />
+    </AuthPage>
   );
 };
 

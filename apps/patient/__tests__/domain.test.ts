@@ -12,7 +12,8 @@ import {
   type PaymentState,
 } from "../src/domain/booking";
 import { formatNaira } from "../src/domain/format";
-import { dateOptions, timeOptions, toLocalDate } from "../src/domain/slots";
+import { formatSlot, isPastDay, monthWeeks, ordinal, timeOptions, toLocalDate } from "../src/domain/slots";
+import { durationChoices, durationLabel } from "../src/domain/bookingChoices";
 import { isEmail, passwordProblem } from "../src/domain/validation";
 import { readingText, validateEntry } from "../src/domain/vitals";
 import { digitsOnly } from "../src/components/ui/otp-input";
@@ -77,14 +78,41 @@ describe("domain helpers", () => {
     expect(readingText({ value: 36.7 })).toBe("36.7");
   });
 
-  it("offers 14 days from today and hourly slots, and reads a slot back as a local date", () => {
-    const days = dateOptions(14, new Date(2026, 10, 7));
-    expect(days).toHaveLength(14);
-    expect(days[0]).toEqual({ value: "2026-11-07", label: "Sat 7 Nov" });
-    expect(days[13].value).toBe("2026-11-20");
+  it("offers hourly start times, and reads a slot back as a local date", () => {
     expect(timeOptions()[0]).toEqual({ value: "07:00", label: "7:00 AM" });
     expect(timeOptions()[5]).toEqual({ value: "12:00", label: "12:00 PM" });
     expect(toLocalDate("2026-11-07", "14:00").getHours()).toBe(14);
+  });
+
+  it("writes a slot the way Figma does: 'March 20th 10:00 am'", () => {
+    expect(formatSlot("2026-03-20", "10:00")).toBe("March 20th 10:00 am");
+    expect(formatSlot("2026-11-01", "20:00")).toBe("November 1st 8:00 pm");
+    expect(formatSlot("2026-11-12", "12:00")).toBe("November 12th 12:00 pm");
+    expect(formatSlot("2026-11-23", "")).toBe("November 23rd");
+    expect([1, 2, 3, 4, 11, 12, 13, 21, 22, 23, 31].map(ordinal)).toEqual(["1st", "2nd", "3rd", "4th", "11th", "12th", "13th", "21st", "22nd", "23rd", "31st"]);
+  });
+
+  it("lays a month out in weeks of seven, Sunday first, and knows which days are over", () => {
+    const weeks = monthWeeks(2026, 10); // November 2026 starts on a Sunday and has 30 days
+    expect(weeks[0][0]).toBe(1);
+    expect(weeks.every((w) => w.length === 7)).toBe(true);
+    expect(weeks.flat().filter((d) => d !== null)).toHaveLength(30);
+    expect(monthWeeks(2026, 11)[0].slice(0, 2)).toEqual([null, null]); // December 2026 starts on a Tuesday
+    const now = new Date(2026, 10, 23, 15, 0);
+    expect(isPastDay(2026, 10, 22, now)).toBe(true);
+    expect(isPastDay(2026, 10, 23, now)).toBe(false);
+  });
+
+  it("builds the allowed visit lengths from the server's minimum, step and maximum, never from fixed numbers", () => {
+    expect(durationChoices({ minMinutes: 60, stepMinutes: 30, maxMinutes: 180 })).toEqual([
+      { value: "60", label: "1 hour" },
+      { value: "90", label: "1 hour 30 minutes" },
+      { value: "120", label: "2 hours" },
+      { value: "150", label: "2 hours 30 minutes" },
+      { value: "180", label: "3 hours" },
+    ]);
+    expect(durationChoices({ minMinutes: 30, stepMinutes: 30, maxMinutes: 60 }).map((c) => c.label)).toEqual(["30 minutes", "1 hour"]);
+    expect(durationLabel(1440)).toBe("24 hours");
   });
 
   it("validates email and password the way the forms use them", () => {
