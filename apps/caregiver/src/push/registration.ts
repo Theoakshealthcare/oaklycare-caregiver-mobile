@@ -13,7 +13,8 @@ export interface PushRegistrationDeps {
   projectId: string | undefined;
   /** Asks for notification permission (OS prompt when undetermined). True when granted. */
   ensurePermission(): Promise<boolean>;
-  getExpoPushToken(projectId: string): Promise<string>;
+  /** `deviceToken` is the native token an OS "token changed" event carried: passing it stops Expo asking the OS again. */
+  getExpoPushToken(projectId: string, deviceToken?: string): Promise<string>;
   /** The token last registered from this device (`oakly.push_token` in secure store). */
   storedToken(): Promise<string | null>;
   storeToken(token: string): Promise<void>;
@@ -24,10 +25,35 @@ export interface PushRegistrationDeps {
 
 export type PushRegistrationResult =
   | { status: "registered"; token: string; replaced: string | null }
+  | { status: "unchanged"; token: string }
   | { status: "skipped"; reason: "not_a_device" | "no_project_id" | "permission_denied" }
   | { status: "failed" };
 
-export async function registerForPush(deps: PushRegistrationDeps): Promise<PushRegistrationResult> {
+export interface PushRegistrationOptions {
+  /**
+   * Set only when the call answers the OS "push token changed" event, with the native token that event carried.
+   * Asking the OS for a token inside that listener fires the listener again (expo-notifications documents the
+   * infinite loop), so such a call never asks the OS, and sends nothing when the Expo token is already registered.
+   */
+  deviceToken?: string;
+}
+
+let inFlight: Promise<PushRegistrationResult> | null = null;
+
+/** One registration at a time: a second call while one is running (the event our own request causes) joins it. */
+export function registerForPush(
+  deps: PushRegistrationDeps,
+  options: PushRegistrationOptions = {},
+): Promise<PushRegistrationResult> {
+  if (!inFlight) {
+    inFlight = registerOnce(deps, options).finally(() => {
+      inFlight = null;
+    });
+  }
+  return inFlight;
+}
+
+async function registerOnce(deps: PushRegistrationDeps, options: PushRegistrationOptions): Promise<PushRegistrationResult> {
   if (!deps.isDevice) {
     deps.log("[push] skipped: push tokens need a physical device (simulator or emulator)");
     return { status: "skipped", reason: "not_a_device" };
@@ -41,9 +67,10 @@ export async function registerForPush(deps: PushRegistrationDeps): Promise<PushR
       deps.log("[push] skipped: notification permission not granted");
       return { status: "skipped", reason: "permission_denied" };
     }
-    const token = await deps.getExpoPushToken(deps.projectId);
+    const token = await deps.getExpoPushToken(deps.projectId, options.deviceToken);
     const previous = await deps.storedToken();
-    // Always POST: it is an idempotent upsert, and it heals a token the backend pruned as dead.
+    if (options.deviceToken && previous === token) return { status: "unchanged", token };
+    // A normal call always POSTs: it is an idempotent upsert, and it heals a token the backend pruned as dead.
     await deps.register(token, deps.platform);
     await deps.storeToken(token);
     if (previous && previous !== token) {

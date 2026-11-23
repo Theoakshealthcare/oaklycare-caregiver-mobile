@@ -194,3 +194,46 @@ describe("resolveOffer (the offer view comes from home open_offers)", () => {
     ).resolves.toBeNull();
   });
 });
+
+describe("the OS token-changed event must not start a registration loop (staging, 2026-11-23: ~12 POSTs a second)", () => {
+  it("answers the event with the token it carries and sends nothing when that Expo token is already registered", async () => {
+    const getExpoPushToken = jest.fn(async () => "ExponentPushToken[placeholder-aaa]");
+    const t = makeDeps({ getExpoPushToken });
+    t.setStored("ExponentPushToken[placeholder-aaa]");
+    await expect(registerForPush(t.deps, { deviceToken: "placeholder-native-token" })).resolves.toEqual({
+      status: "unchanged",
+      token: "ExponentPushToken[placeholder-aaa]",
+    });
+    expect(getExpoPushToken).toHaveBeenCalledWith(t.deps.projectId, "placeholder-native-token");
+    expect(t.registered).toEqual([]);
+  });
+
+  it("registers when the event carries a token the backend has not seen", async () => {
+    const t = makeDeps({ getExpoPushToken: async () => "ExponentPushToken[placeholder-new]" });
+    t.setStored("ExponentPushToken[placeholder-old]");
+    await expect(registerForPush(t.deps, { deviceToken: "placeholder-native-token" })).resolves.toMatchObject({ status: "registered" });
+    expect(t.registered).toEqual([["ExponentPushToken[placeholder-new]", "ios"]]);
+    expect(t.forgotten).toEqual(["ExponentPushToken[placeholder-old]"]);
+  });
+
+  it("two calls at once make one registration", async () => {
+    const t = makeDeps();
+    await Promise.all([registerForPush(t.deps), registerForPush(t.deps), registerForPush(t.deps)]);
+    expect(t.registered).toHaveLength(1);
+  });
+
+  it("an OS that fires the listener on every token request ends after one POST", async () => {
+    // Like Android: asking for a token without the event's own token fires the listener, which re-registers.
+    const pending: Promise<unknown>[] = [];
+    const t = makeDeps({
+      getExpoPushToken: async (_projectId, deviceToken) => {
+        if (!deviceToken) setTimeout(() => pending.push(registerForPush(t.deps, { deviceToken: "placeholder-native-token" })), 0);
+        return "ExponentPushToken[placeholder-aaa]";
+      },
+    });
+    await registerForPush(t.deps);
+    await new Promise((resolve) => setTimeout(resolve, 20));
+    await Promise.all(pending);
+    expect(t.registered).toHaveLength(1);
+  });
+});

@@ -64,6 +64,31 @@ describe("push registration", () => {
       ]);
     });
 
+    it("answers the OS token-changed event without asking the OS again, and sends nothing for a token already registered", async () => {
+      const getExpoPushToken = jest.fn(async () => registerRequest.token);
+      const deps = fakeDeps({ getExpoPushToken, storedToken: async () => registerRequest.token });
+      expect(await registerForPush(deps, { deviceToken: "placeholder-native-token" })).toEqual({ status: "unchanged", token: registerRequest.token });
+      expect(getExpoPushToken).toHaveBeenCalledWith("placeholder-eas-project", "placeholder-native-token");
+      expect(deps.calls).toEqual([]);
+    });
+
+    it("an OS that fires the listener on every token request ends after one POST (staging loop, 2026-11-23)", async () => {
+      const pending: Promise<unknown>[] = [];
+      let stored: string | null = null;
+      const deps = fakeDeps({
+        storedToken: async () => stored,
+        storeToken: async (t) => void (stored = t),
+        getExpoPushToken: async (_projectId, deviceToken) => {
+          if (!deviceToken) setTimeout(() => pending.push(registerForPush(deps, { deviceToken: "placeholder-native-token" })), 0);
+          return registerRequest.token;
+        },
+      });
+      await registerForPush(deps);
+      await new Promise((resolve) => setTimeout(resolve, 20));
+      await Promise.all(pending);
+      expect(deps.calls.filter((c) => c.startsWith("register "))).toHaveLength(1);
+    });
+
     it("reports a failure instead of throwing", async () => {
       const deps = fakeDeps({ register: async () => Promise.reject(new Error("offline")) });
       expect(await registerForPush(deps)).toEqual({ status: "failed" });

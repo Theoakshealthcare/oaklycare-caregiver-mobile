@@ -34,7 +34,13 @@ export function nativePushDeps(): PushRegistrationDeps {
     platform: Platform.OS === "ios" ? "ios" : "android",
     projectId: easProjectId(),
     ensurePermission: ensureNotificationPermission,
-    getExpoPushToken: async (projectId) => (await Notifications.getExpoPushTokenAsync({ projectId })).data,
+    getExpoPushToken: async (projectId, deviceToken) =>
+      (
+        await Notifications.getExpoPushTokenAsync({
+          projectId,
+          ...(deviceToken ? { devicePushToken: { type: Platform.OS === "ios" ? "ios" : "android", data: deviceToken } } : {}),
+        })
+      ).data,
     storedToken: () => pushTokenStorage.get(),
     storeToken: (token) => pushTokenStorage.set(token),
     register: (token, platform) => pushService.register(token, platform),
@@ -68,6 +74,15 @@ export function installNotificationHandler(): void {
 }
 
 /**
+ * The OS rotated the native token. Answer with the token the event carries and never ask the OS for one here:
+ * `getDevicePushTokenAsync` inside this listener fires it again, which once sent about 12 registrations a second.
+ */
+export function onDevicePushToken(token: { data: unknown }): void {
+  if (typeof token.data !== "string") return;
+  void registerForPush(nativePushDeps(), { deviceToken: token.data });
+}
+
+/**
  * Registers the Expo push token once the caregiver is signed in, and again whenever the OS rotates
  * it. Never throws: a failed registration is retried on the next launch or sign-in.
  */
@@ -76,9 +91,7 @@ export function usePushRegistration(): void {
   useEffect(() => {
     if (!signedIn) return;
     void registerForPush(nativePushDeps());
-    const subscription = Notifications.addPushTokenListener(() => {
-      void registerForPush(nativePushDeps());
-    });
+    const subscription = Notifications.addPushTokenListener(onDevicePushToken);
     return () => subscription.remove();
   }, [signedIn]);
 }
