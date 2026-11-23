@@ -32,7 +32,13 @@ export function toBooking(b: BookingResponse): Booking {
     paymentStatus: b.payment_status,
     status: b.status,
     dispatchState: b.dispatch_state === "dispatching" || b.dispatch_state === "matched" || b.dispatch_state === "unmatched" ? b.dispatch_state : null,
-    caregiver: b.caregiver_details?.full_name ? { firstName: firstNameOf(b.caregiver_details.full_name) } : null,
+    caregiver: b.caregiver_details?.full_name
+      ? {
+          firstName: firstNameOf(b.caregiver_details.full_name),
+          photoUrl: b.caregiver_details.profile_image_url?.startsWith("https://") ? b.caregiver_details.profile_image_url : null,
+          role: b.caregiver_details.specialization?.trim() || null,
+        }
+      : null,
     visitCode: b.visit_code ?? null,
     cancelFee: b.cancel_fee ?? null,
     cancelFeeTier: b.cancel_fee_tier ?? null,

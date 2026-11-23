@@ -24,7 +24,11 @@ export const Card: React.FC<CardProps> = ({ children, tone = "plain", onPress, a
       </Pressable>
     );
   }
-  return <View style={cardStyle}>{children}</View>;
+  return (
+    <View style={cardStyle} accessibilityLabel={accessibilityLabel}>
+      {children}
+    </View>
+  );
 };
 
 type ChipTone = "primary" | "success" | "warning" | "error" | "neutral";

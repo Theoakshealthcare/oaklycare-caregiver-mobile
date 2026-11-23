@@ -72,8 +72,9 @@ export const APP_SCREENS: ScreenDef[] = [
   { name: "BookingStep2", component: BookingStep2 },
   { name: "BookingSummary", component: BookingSummary },
   { name: "PaymentResult", component: PaymentResult },
-  { name: "BookingDetails", component: BookingDetails },
-  { name: "CancelBooking", component: CancelBooking },
+  // The details sheet and the cancel dialogs are drawn over the bookings list, as the designs show them.
+  { name: "BookingDetails", component: BookingDetails, options: { presentation: "transparentModal", animation: "slide_from_bottom", cardStyle: { backgroundColor: "transparent" } } },
+  { name: "CancelBooking", component: CancelBooking, options: { presentation: "transparentModal", animation: "fade", cardStyle: { backgroundColor: "transparent" } } },
   { name: "CaregiverDetail", component: CaregiverDetail },
   { name: "Chat", component: Chat },
   { name: "VitalDetail", component: VitalDetail },
