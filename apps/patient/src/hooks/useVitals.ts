@@ -1,6 +1,6 @@
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 
-import { toCreateBody, toReading, type VitalInput, type VitalReading } from "@/src/domain/vitals";
+import { toCreateBody, toInsights, toReading, type VitalInput, type VitalReading } from "@/src/domain/vitals";
 import { vitalsService } from "@/src/services/vitals.service";
 
 import { useMe } from "./queries";
@@ -30,16 +30,49 @@ export function useVitalReadings() {
   });
 }
 
+/**
+ * The AI's notes on the readings, as sentences. The server calls the AI on every request, so this waits for a reading to exist,
+ * keeps the answer for half an hour and does not refetch on focus; a new reading does refresh it (the key is under `vitalKeys.all`).
+ */
+export function useVitalInsights() {
+  const me = useMe();
+  const patientId = me.data?.patient?.id;
+  const readings = useVitalReadings();
+  return useQuery({
+    queryKey: [...vitalKeys.all, "insights", patientId, readings.data?.length ?? 0] as const,
+    enabled: Boolean(patientId) && (readings.data?.length ?? 0) > 0,
+    queryFn: () => vitalsService.insights(patientId as string),
+    select: toInsights,
+    staleTime: 30 * 60_000,
+    refetchOnWindowFocus: false,
+    retry: false,
+  });
+}
+
+/** Fetches the whole record as CSV (the share sheet then hands it on). The id is the PATIENT's. */
+export function useDownloadVitals() {
+  const me = useMe();
+  return useMutation({
+    mutationFn: async (): Promise<string> => {
+      const patientId = me.data?.patient?.id;
+      if (!patientId) throw new Error("Your profile is not ready yet.");
+      return vitalsService.downloadCsv(patientId);
+    },
+  });
+}
+
 export function useAddVital() {
   const client = useQueryClient();
   const me = useMe();
   return useMutation({
-    mutationFn: async (input: VitalInput) => {
+    // Glucose can send up to three readings at once (one per box): in order, stopping at the first the server refuses.
+    mutationFn: async (inputs: VitalInput[]) => {
       const patientId = me.data?.patient?.id;
       const userId = me.data?.id;
       if (!patientId || !userId) throw new Error("Your profile is not ready yet.");
-      return vitalsService.create(toCreateBody(input, { patientId, userId }));
+      for (const input of inputs) await vitalsService.create(toCreateBody(input, { patientId, userId }));
     },
-    onSuccess: () => client.invalidateQueries({ queryKey: vitalKeys.all }),
+    // Also after a failure: a reading saved before the refusal is on record.
+    onSettled: () => client.invalidateQueries({ queryKey: vitalKeys.all }),
   });
 }

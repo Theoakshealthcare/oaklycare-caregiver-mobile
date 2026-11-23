@@ -1,3 +1,4 @@
+import type { StackNavigationOptions } from "@react-navigation/stack";
 import type React from "react";
 
 import AccountCreated from "@/src/screens/auth/AccountCreated";
@@ -28,6 +29,7 @@ import AddVital from "@/src/screens/vitals/AddVital";
 import VitalAccess from "@/src/screens/vitals/VitalAccess";
 import VitalDetail from "@/src/screens/vitals/VitalDetail";
 import VitalHistory from "@/src/screens/vitals/VitalHistory";
+import VitalReport from "@/src/screens/vitals/VitalReport";
 
 import type { ScreenParamLists } from "./Navigations";
 import Tabs from "./Tabs";
@@ -36,6 +38,8 @@ export interface ScreenDef {
   name: keyof ScreenParamLists;
   // Screens take different route params; the navigator checks the names through ScreenParamLists.
   component: React.ComponentType<any>;
+  /** Stack options for the screen (the manual entry sheet is a transparent modal). */
+  options?: StackNavigationOptions;
 }
 
 /**
@@ -73,8 +77,9 @@ export const APP_SCREENS: ScreenDef[] = [
   { name: "CaregiverDetail", component: CaregiverDetail },
   { name: "Chat", component: Chat },
   { name: "VitalDetail", component: VitalDetail },
-  { name: "AddVital", component: AddVital },
+  { name: "AddVital", component: AddVital, options: { presentation: "transparentModal", cardStyle: { backgroundColor: "transparent" } } },
   { name: "VitalHistory", component: VitalHistory },
+  { name: "VitalReport", component: VitalReport },
   { name: "VitalAccess", component: VitalAccess },
   { name: "FallAssessment", component: FallAssessment },
   { name: "FallResult", component: FallResult },

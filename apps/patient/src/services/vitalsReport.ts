@@ -1,0 +1,23 @@
+import { File, Paths } from "expo-file-system";
+import * as Sharing from "expo-sharing";
+
+/**
+ * Hands the vitals CSV to the phone's share sheet (save to Files, mail, WhatsApp...). The report was downloaded into memory; it
+ * is written to a temporary file only because the share sheet needs one, and deleted as soon as the sheet closes, so no vitals
+ * stay on the phone. Throws when the phone cannot share.
+ */
+export async function shareVitalsReport(csv: string): Promise<void> {
+  if (!(await Sharing.isAvailableAsync())) throw new Error("Sharing isn't available on this device.");
+  const file = new File(Paths.cache, `oakly-vitals-${Date.now()}.csv`);
+  try {
+    file.create({ overwrite: true });
+    file.write(csv);
+    await Sharing.shareAsync(file.uri, { mimeType: "text/csv", UTI: "public.comma-separated-values-text", dialogTitle: "Vitals report" });
+  } finally {
+    try {
+      file.delete();
+    } catch {
+      // Nothing left to clean up if the file was never created.
+    }
+  }
+}

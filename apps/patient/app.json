@@ -39,6 +39,13 @@
           "locationWhenInUsePermission": "Oakly uses your location once, to find caregivers near the address you are booking a visit for."
         }
       ],
+      "expo-sharing",
+      [
+        "expo-image-picker",
+        {
+          "photosPermission": "Oakly uses your photos so you can choose a profile picture."
+        }
+      ],
       "expo-web-browser"
     ],
     "extra": {
