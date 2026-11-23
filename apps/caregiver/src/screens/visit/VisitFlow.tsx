@@ -1,4 +1,4 @@
-import React, { useState } from "react";
+import React, { useEffect, useRef, useState } from "react";
 import { ActivityIndicator, Alert, View } from "react-native";
 import { useQueryClient } from "@tanstack/react-query";
 import type { StackScreenProps } from "@react-navigation/stack";
@@ -7,6 +7,7 @@ import { isArrivedTooEarly, isSuspendedStop, messageForError } from "@/src/api/e
 import { queryKeys } from "@/src/api/keys";
 import HeaderBack from "@/src/components/back/HeaderBack";
 import Button from "@/src/components/ui/button";
+import ConfirmDialog from "@/src/components/ui/confirm-dialog";
 import KeyboardScrollView from "@/src/components/ui/keyboard-scroll-view";
 import Text from "@/src/components/ui/text";
 import { globalStyles } from "@/src/constants/styles";
@@ -27,7 +28,9 @@ import {
   submitVisitCode,
   visitStarts,
 } from "@/src/visit/visitFlow";
+import { partOfDay } from "@/src/home/homeBlocks";
 import { formatNaira } from "@/src/home/homeModel";
+import { formatElapsed, useElapsed } from "@/src/visit/clockTimer";
 import { formatVisitTime, parseBackendDate } from "@/src/utils/dates";
 
 import { InProgressStep, OnMyWayStep, VisitClosedStep, VisitCodeStep, VisitDoneStep, VisitStoppedStep } from "./VisitSteps";
@@ -59,6 +62,20 @@ const VisitFlow: React.FC<Props> = ({ route, navigation, now = Date.now }) => {
   const [stopped, setStopped] = useState<string | null>(null);
   // Set by the `complete` answer: did the backend judge this visit short (pay held for Finance review)?
   const [completedShort, setCompletedShort] = useState(false);
+
+  // The two timer dialogs from Figma. Clock in confirms the code the caregiver typed (nothing is sent until "Yes, Clock in");
+  // clock out confirms completing the visit. "Clock out" on Home opens the screen with `clockOut` set, so the dialog is up at once.
+  const [pendingCode, setPendingCode] = useState<string | null>(null);
+  const [clockOutOpen, setClockOutOpen] = useState(false);
+  const autoOpened = useRef(false);
+  const inProgress = booking?.status === "in_progress";
+  useEffect(() => {
+    if (route.params.clockOut && inProgress && !autoOpened.current) {
+      autoOpened.current = true;
+      setClockOutOpen(true);
+    }
+  }, [route.params.clockOut, inProgress]);
+  const elapsed = useElapsed(visitStarts.get(bookingId), clockOutOpen, now);
 
   const goHome = () => navigation.popTo("BottomNavigation", { tab: "home", at: Date.now() });
 
@@ -125,28 +142,19 @@ const VisitFlow: React.FC<Props> = ({ route, navigation, now = Date.now }) => {
   /** Under half of the booked time on site: finishing now holds the pay for Finance review, so say so first. */
   const finishingShort = () => isShortVisit(visitStarts.get(bookingId), now(), booking?.duration_hours);
 
-  const confirmComplete = () => {
-    const short = finishingShort();
-    // A client with an active care plan: remind the caregiver that ticks and notes end with the visit.
+  const confirmComplete = () => setClockOutOpen(true);
+
+  /** What the clock-out dialog says beyond Figma's two lines: pay held for review, the care plan reminder, location sharing. */
+  const clockOutNotice = () => {
     const plan = carePlan.data?.plan;
-    if (plan && needsClockOutPrompt(carePlan.data)) {
-      const message = short ? `${CLOCK_OUT_PROMPT.message}\n\n${SHORT_VISIT_CONFIRM_MESSAGE}` : CLOCK_OUT_PROMPT.message;
-      Alert.alert(CLOCK_OUT_PROMPT.title, message, [
-        { text: CLOCK_OUT_PROMPT.cancel, style: "cancel" },
-        { text: CLOCK_OUT_PROMPT.review, onPress: () => navigation.navigate("CarePlanDetails", { planId: plan.id, from: "clock_out" }) },
-        { text: CLOCK_OUT_PROMPT.anyway, style: "destructive", onPress: () => run("complete") },
-      ]);
-      return;
-    }
-    const message = short
-      ? SHORT_VISIT_CONFIRM_MESSAGE
-      : sharingLocation
-        ? "This ends the visit and stops sharing your location."
-        : "This ends the visit.";
-    Alert.alert("Complete this visit?", message, [
-      { text: "Not yet", style: "cancel" },
-      { text: "Complete", onPress: () => run("complete") },
-    ]);
+    const planPrompt = Boolean(plan) && needsClockOutPrompt(carePlan.data);
+    const short = finishingShort();
+    const parts = [
+      planPrompt ? CLOCK_OUT_PROMPT.message : null,
+      short ? SHORT_VISIT_CONFIRM_MESSAGE : null,
+      !planPrompt && !short ? (sharingLocation ? "This ends the visit and stops sharing your location." : "This ends the visit.") : null,
+    ].filter(Boolean);
+    return parts.join("\n\n");
   };
 
   const submitCode = async (code: string) => {
@@ -219,7 +227,7 @@ const VisitFlow: React.FC<Props> = ({ route, navigation, now = Date.now }) => {
             lockedUntil={lockedUntil}
             attemptsLeft={attemptsLeft}
             error={codeError}
-            onSubmit={(code) => void submitCode(code)}
+            onSubmit={(code) => setPendingCode(code)}
             arrival={arrival}
           />
         ) : (
@@ -243,7 +251,7 @@ const VisitFlow: React.FC<Props> = ({ route, navigation, now = Date.now }) => {
             lockedUntil={lockedUntil}
             attemptsLeft={attemptsLeft}
             error={codeError}
-            onSubmit={(code) => void submitCode(code)}
+            onSubmit={(code) => setPendingCode(code)}
             arrival={arrival}
           />
         );
@@ -266,18 +274,29 @@ const VisitFlow: React.FC<Props> = ({ route, navigation, now = Date.now }) => {
           />
         );
       case "done":
-        return (
-          <VisitDoneStep
-            onHome={goHome}
-            sharedLocation={sharingLocation}
-            short={completedShort}
-            earning={booking.caregiver_earning == null ? null : formatNaira(booking.caregiver_earning)}
-          />
-        );
+        return null;
       case "closed":
         return <VisitClosedStep status={booking.status} onHome={goHome} />;
     }
   };
+
+  // The "clocked out" success page is a full page of its own (Figma): no back arrow, just Close.
+  if (!stopped && booking && stepForStatus(booking.status) === "done") {
+    return (
+      <View style={{ flex: 1, backgroundColor: theme.colors.white }}>
+        <VisitDoneStep
+          onHome={goHome}
+          sharedLocation={sharingLocation}
+          short={completedShort}
+          earning={booking.caregiver_earning == null ? null : formatNaira(booking.caregiver_earning)}
+          partOfDay={partOfDay(parseBackendDate(booking.scheduled_date).getHours())}
+        />
+      </View>
+    );
+  }
+
+  const plan = carePlan.data?.plan;
+  const reviewPlan = plan && needsClockOutPrompt(carePlan.data) ? plan : null;
 
   return (
     <View style={{ flex: 1, backgroundColor: theme.colors.white }}>
@@ -287,6 +306,45 @@ const VisitFlow: React.FC<Props> = ({ route, navigation, now = Date.now }) => {
           <View style={{ marginTop: "5%" }}>{renderBody()}</View>
         </View>
       </KeyboardScrollView>
+
+      <ConfirmDialog
+        visible={pendingCode !== null}
+        onClose={() => setPendingCode(null)}
+        timer={formatElapsed(0)}
+        title="Are you sure you want to clock in to this appointment ?"
+        body="Once you clock in to this appointment, it means your appointment service has started."
+        cancelLabel="No, Go Back"
+        confirmLabel="Yes, Clock in"
+        onConfirm={() => {
+          const code = pendingCode;
+          setPendingCode(null);
+          if (code) void submitCode(code);
+        }}
+      />
+
+      <ConfirmDialog
+        visible={clockOutOpen}
+        onClose={() => setClockOutOpen(false)}
+        timer={elapsed}
+        title="Are you sure you want to clock out of this appointment ?"
+        body="Once you clock out of this appointment, it means you have finished your booking."
+        notice={clockOutOpen ? clockOutNotice() : undefined}
+        cancelLabel="No, Go Back"
+        confirmLabel="Yes, Clock out"
+        onConfirm={() => {
+          setClockOutOpen(false);
+          run("complete");
+        }}
+        extraLabel={reviewPlan ? CLOCK_OUT_PROMPT.review : undefined}
+        onExtra={
+          reviewPlan
+            ? () => {
+                setClockOutOpen(false);
+                navigation.navigate("CarePlanDetails", { planId: reviewPlan.id, from: "clock_out" });
+              }
+            : undefined
+        }
+      />
     </View>
   );
 };

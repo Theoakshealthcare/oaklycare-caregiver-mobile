@@ -31,7 +31,7 @@ const BottomNavigation = ({ route }: Partial<StackScreenProps<ScreenParamLists, 
       id: "booking",
       icon: require("@/assets/images/tabs/booking.png"),
       icon_active: require("@/assets/images/tabs/booking-active.png"),
-      label: "Booking",
+      label: "Bookings",
       page: <Booking />,
     },
     {

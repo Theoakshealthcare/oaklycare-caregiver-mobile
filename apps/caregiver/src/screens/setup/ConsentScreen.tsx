@@ -3,7 +3,6 @@
 import { useMutation, useQueryClient } from "@tanstack/react-query"
 import { View, Alert } from "react-native"
 
-import { theme } from "@/src/constants/theme"
 import Text from "@/src/components/ui/text"
 import Button from "@/src/components/ui/button"
 import LegalLink from "@/src/components/ui/legal-link"
@@ -48,9 +47,7 @@ const ConsentScreen = () => {
           {". Learn how we process your data in our "}
           <LegalLink page="privacy">Privacy Policy</LegalLink>
           {" and "}
-          <Text variant="small" weight="bold" color={theme.colors.primary} style={{ textDecorationLine: "underline" }}>
-            Cookies Policy
-          </Text>
+          <LegalLink page="cookies">Cookies Policy</LegalLink>
         </Text>
 
         <Button title="Give Consent" onPress={() => consent.mutate()} loading={consent.isPending} />

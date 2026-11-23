@@ -5,7 +5,7 @@ import { Alert, type RefreshControlProps } from "react-native";
 import { useFocusEffect } from "@react-navigation/native";
 
 import { ApiError } from "../src/api/errors";
-import { DECLINE_MESSAGE, DECLINE_TITLE } from "../src/constants/offerCopy";
+import { DECLINE_CANCEL, DECLINE_CONFIRM, DECLINE_FINAL_NOTICE, DECLINE_MESSAGE, DECLINE_TITLE } from "../src/constants/offerCopy";
 import {
   firstName,
   formatNaira,
@@ -19,6 +19,8 @@ import {
 } from "../src/home/homeModel";
 import Home from "../src/screens/home/Home";
 import { authService } from "../src/services/auth.service";
+import { bookingService } from "../src/services/booking.service";
+import { notificationService, type CaregiverNotification } from "../src/services/notification.service";
 import { walletService, type WalletSummary } from "../src/services/wallet.service";
 import { session } from "../src/auth";
 import { locationService, type CaregiverHome } from "../src/supply/locationService";
@@ -232,6 +234,7 @@ describe("Home screen", () => {
   }
 
   beforeEach(async () => {
+    mockNavigate.mockClear();
     order.length = 0;
     locationPermissionStore.setState({ foreground: false, background: false, loaded: false });
     await session.signIn({ accessToken: "access", refreshToken: "refresh" });
@@ -276,20 +279,44 @@ describe("Home screen", () => {
   it("renders everything from GET /caregiver/home", async () => {
     getHome = jest.spyOn(locationService, "getHome").mockResolvedValue(homeWithVisitAndOffer);
     await renderHome();
-    expect(await screen.findByText("Hello Ada")).toBeTruthy();
+    expect(await screen.findByText("Hello Ada, 👋")).toBeTruthy();
     expect(await screen.findByText("Placeholder Patient")).toBeTruthy();
     expect(screen.getByTestId("wallet-balance").props.children).toBe("₦125,000.50");
-    expect(screen.getByText("Accept")).toBeTruthy(); // the offer card
-    expect(screen.getByText("You're available")).toBeTruthy();
+    expect(screen.getByText("Accept")).toBeTruthy(); // the job request
+    expect(screen.getByText("What do you like to do today ?")).toBeTruthy();
+    for (const title of ["Weekly Availability", "Upcoming Appointments", "New Job Request", "Earning Summary", "Client Care Access"]) {
+      expect(screen.getByText(title)).toBeTruthy();
+    }
+    expect(screen.getByTestId("count-Upcoming Appointments")).toHaveTextContent("1");
+    expect(screen.getByTestId("count-New Job Request")).toHaveTextContent("1");
+    expect(screen.getByTestId("week-strip").children).toHaveLength(5);
+    expect(screen.getByTestId("week-today")).toBeTruthy();
     expect(getHome).toHaveBeenCalled();
   });
 
-  it("tells the caregiver before the tap that a decline is final (DP1-06)", async () => {
+  it("asks in the Figma dialog before a decline, and says it is final (DP1-06)", async () => {
     getHome = jest.spyOn(locationService, "getHome").mockResolvedValue(homeWithVisitAndOffer);
+    const act_ = jest.spyOn(bookingService, "act").mockResolvedValue({ status: "declined", arrivedAt: null, actualStartTime: null, actualEndTime: null });
     await renderHome();
     await fireEvent.press(await screen.findByText("Decline"));
-    expect(alertSpy).toHaveBeenCalledWith(DECLINE_TITLE, DECLINE_MESSAGE, expect.any(Array));
-    expect(DECLINE_MESSAGE).toMatch(/won't be able to accept it afterwards/);
+    expect(alertSpy).not.toHaveBeenCalled(); // no native alert any more
+    expect(screen.getByText(DECLINE_TITLE)).toBeTruthy();
+    expect(screen.getByText(DECLINE_MESSAGE)).toBeTruthy();
+    expect(screen.getByText(DECLINE_FINAL_NOTICE)).toBeTruthy();
+    expect(DECLINE_FINAL_NOTICE).toMatch(/won't be able to accept it afterwards/);
+    expect(act_).not.toHaveBeenCalled();
+    await fireEvent.press(screen.getByText(DECLINE_CONFIRM));
+    await waitFor(() => expect(act_).toHaveBeenCalledWith("d63f2ad6-2f83-4d58-98cd-3c241fc8e354", "decline", undefined));
+  });
+
+  it("'No, Go Back' closes the decline dialog and declines nothing", async () => {
+    getHome = jest.spyOn(locationService, "getHome").mockResolvedValue(homeWithVisitAndOffer);
+    const act_ = jest.spyOn(bookingService, "act");
+    await renderHome();
+    await fireEvent.press(await screen.findByText("Decline"));
+    await fireEvent.press(screen.getByText(DECLINE_CANCEL));
+    expect(act_).not.toHaveBeenCalled();
+    await waitFor(() => expect(screen.queryByText(DECLINE_TITLE)).toBeNull());
   });
 
   describe("pull-to-refresh spinner (DP1-07)", () => {
@@ -299,7 +326,7 @@ describe("Home screen", () => {
     it("stays off while the focus refetch runs in the background", async () => {
       getHome = jest.spyOn(locationService, "getHome").mockResolvedValue(homeWithVisitAndOffer);
       await renderHome();
-      expect(await screen.findByText("Hello Ada")).toBeTruthy();
+      expect(await screen.findByText("Hello Ada, 👋")).toBeTruthy();
 
       // Back from a visit or Notifications: React Navigation runs the focus callback and the refetch is slow.
       let finish: (value: CaregiverHome) => void = () => undefined;
@@ -320,7 +347,7 @@ describe("Home screen", () => {
     it("shows while the caregiver pulls, then clears", async () => {
       getHome = jest.spyOn(locationService, "getHome").mockResolvedValue(homeWithVisitAndOffer);
       await renderHome();
-      expect(await screen.findByText("Hello Ada")).toBeTruthy();
+      expect(await screen.findByText("Hello Ada, 👋")).toBeTruthy();
 
       let finish: (value: CaregiverHome) => void = () => undefined;
       getHome.mockImplementation(() => new Promise<CaregiverHome>((resolve) => (finish = resolve)));
@@ -346,7 +373,7 @@ describe("Home screen", () => {
     getHome = jest.spyOn(locationService, "getHome").mockResolvedValue(homeWithVisitAndOffer);
     walletSpy.mockResolvedValue(walletSummary({ pending_balance: 4_500_000 }));
     await renderHome();
-    expect(await screen.findByTestId("wallet-pending")).toHaveTextContent("₦45,000.00 pending");
+    expect(await screen.findByTestId("wallet-pending")).toHaveTextContent("₦45,000.00");
     await fireEvent.press(screen.getByTestId("home-wallet"));
     expect(mockNavigate).toHaveBeenCalledWith("Wallet");
   });
@@ -355,8 +382,10 @@ describe("Home screen", () => {
     getHome = jest.spyOn(locationService, "getHome").mockResolvedValue(homeWithVisitAndOffer);
     walletSpy.mockResolvedValue(walletSummary({ pending_balance: 8_000_000, held_balance: 4_000_000 }));
     await renderHome();
-    expect(await screen.findByTestId("wallet-held")).toHaveTextContent("₦40,000.00 on hold (under review)");
-    expect(screen.getByTestId("wallet-pending")).toHaveTextContent("₦80,000.00 pending");
+    expect(await screen.findByTestId("wallet-held")).toHaveTextContent("₦40,000.00");
+    expect(screen.getByText("On hold (under review)")).toBeTruthy();
+    expect(screen.getByTestId("wallet-pending")).toHaveTextContent("₦80,000.00");
+    expect(screen.getByText("Pending Payment")).toBeTruthy();
   });
 
   it("shows no pending line when nothing is pending, or when the wallet cannot be read", async () => {
@@ -379,7 +408,7 @@ describe("Home screen", () => {
     await renderHome();
     expect(await screen.findByText(/Your profile is under review/)).toBeTruthy();
     expect(screen.getByLabelText("Available for visits").props.disabled).toBe(true);
-    expect(screen.getByText("No visits today")).toBeTruthy();
+    expect(screen.getByText("You do not have any appointments")).toBeTruthy();
   });
 
   it("warns when available but the location is out of date", async () => {
@@ -454,27 +483,120 @@ describe("Home screen", () => {
     expect(locationService.setAvailability).not.toHaveBeenCalled();
   });
 
-  it("the bell opens notifications and the avatar opens the profile menu", async () => {
+  it("the bell opens notifications and the menu button opens the profile menu", async () => {
     jest.spyOn(locationService, "getHome").mockResolvedValue(emptyHome);
     await renderHome();
     await fireEvent.press(await screen.findByLabelText("Notifications"));
     expect(mockNavigate).toHaveBeenCalledWith("Notifications");
-    await fireEvent.press(screen.getByLabelText("Account"));
+    await fireEvent.press(screen.getByLabelText("Menu"));
     expect(mockNavigate).toHaveBeenCalledWith("Profile");
   });
 
   it("shows the Care plans card only when the server says the caregiver can author plans", async () => {
     jest.spyOn(locationService, "getHome").mockResolvedValue({ ...emptyHome, can_author_care_plans: true });
     await renderHome();
-    await fireEvent.press(await screen.findByTestId("home-care-plans"));
+    expect(await screen.findByTestId("home-care-plans")).toBeTruthy();
+    expect(screen.getByText("Let's help you get health care for your loved one")).toBeTruthy();
+    await fireEvent.press(screen.getByText("Create Care Plan"));
     expect(mockNavigate).toHaveBeenCalledWith("CarePlans");
   });
 
   it("hides the Care plans card for a caregiver who cannot author plans", async () => {
     jest.spyOn(locationService, "getHome").mockResolvedValue(emptyHome);
     await renderHome();
-    expect(await screen.findByText("No visits today")).toBeTruthy();
+    expect(await screen.findByText("You do not have any appointments")).toBeTruthy();
     expect(screen.queryByTestId("home-care-plans")).toBeNull();
+  });
+
+  describe("appointments, clock buttons and shortcuts", () => {
+    it("Clock in opens the visit for an accepted visit; Clock out is off until it is in progress", async () => {
+      jest.spyOn(locationService, "getHome").mockResolvedValue(homeWithVisitAndOffer);
+      await renderHome();
+      await screen.findByText("Placeholder Patient");
+      expect(screen.getByText("Clock out").parent?.parent?.props.accessibilityState).toEqual({ disabled: true });
+      await fireEvent.press(screen.getByText("Clock in"));
+      expect(mockNavigate).toHaveBeenCalledWith("VisitFlow", { bookingId: "d4055373-bee6-431e-977a-11b01af19a96" });
+    });
+
+    it("Clock out of a visit in progress opens the visit with its clock-out dialog", async () => {
+      const visit = { ...homeWithVisitAndOffer.today_visits[0]!, status: "in_progress" as const };
+      jest.spyOn(locationService, "getHome").mockResolvedValue({ ...homeWithVisitAndOffer, today_visits: [visit] });
+      await renderHome();
+      await screen.findByText("Placeholder Patient");
+      await fireEvent.press(screen.getByText("Clock out"));
+      expect(mockNavigate).toHaveBeenCalledWith("VisitFlow", { bookingId: visit.id, clockOut: true });
+    });
+
+    it("a visit on a later day shows no clock buttons and opens its booking", async () => {
+      const visit = homeWithVisitAndOffer.today_visits[0]!;
+      jest.spyOn(locationService, "getHome").mockResolvedValue({ ...homeWithVisitAndOffer, today_visits: [], upcoming_visits: [visit] });
+      await renderHome();
+      await fireEvent.press(await screen.findByLabelText("Open Placeholder Patient"));
+      expect(screen.queryByText("Clock in")).toBeNull();
+      expect(mockNavigate).toHaveBeenCalledWith("BookingDetails", { bookingId: visit.id });
+    });
+
+    it("a job request is titled by its service (no patient name exists before accepting) and Accept goes through", async () => {
+      jest.spyOn(locationService, "getHome").mockResolvedValue(homeWithVisitAndOffer);
+      const act_ = jest.spyOn(bookingService, "act").mockResolvedValue({ status: "accepted", arrivedAt: null, actualStartTime: null, actualEndTime: null });
+      await renderHome();
+      expect(await screen.findByText("Nurse visit")).toBeTruthy();
+      await fireEvent.press(screen.getByText("Accept"));
+      await waitFor(() => expect(act_).toHaveBeenCalledWith("d63f2ad6-2f83-4d58-98cd-3c241fc8e354", "accept", undefined));
+    });
+
+    it("Client Care Access: the profile opens for the live visit, vitals open the Vitals tab", async () => {
+      const inFlight = { ...homeWithVisitAndOffer.today_visits[0]!, id: "live-1", status: "in_progress" as const };
+      jest.spyOn(locationService, "getHome").mockResolvedValue({
+        ...homeWithVisitAndOffer,
+        today_visits: [homeWithVisitAndOffer.today_visits[0]!, inFlight],
+      });
+      await renderHome();
+      await screen.findByText("Client Care Access");
+      const views = screen.getAllByText("View");
+      await fireEvent.press(views[0]!);
+      expect(mockNavigate).toHaveBeenCalledWith("ClientProfile", { bookingId: "live-1" });
+      await fireEvent.press(views[1]!);
+      expect(mockNavigate).toHaveBeenCalledWith("BottomNavigation", expect.objectContaining({ tab: "vitals" }));
+    });
+
+    it("Client Care Access: no accepted visit means no client profile to open, and it says so", async () => {
+      jest.spyOn(locationService, "getHome").mockResolvedValue(emptyHome);
+      await renderHome();
+      expect(await screen.findByText("A client's profile opens once you have an accepted visit.")).toBeTruthy();
+      await fireEvent.press(screen.getAllByText("View")[0]!);
+      expect(mockNavigate).not.toHaveBeenCalledWith("ClientProfile", expect.anything());
+    });
+  });
+
+  describe("Notification block", () => {
+    const note = (over: Partial<CaregiverNotification>): CaregiverNotification => ({
+      ...(({ id: "n1", booking_id: "b1", title: "Your Profile has been Approved", message: "ok", notification_type: "profile", is_read: false, created_at: "2026-10-06T08:00:00", response: null, booking: {} }) as unknown as CaregiverNotification),
+      ...over,
+    });
+
+    it("shows the unread count, the latest notification and See all", async () => {
+      jest.spyOn(locationService, "getHome").mockResolvedValue(emptyHome);
+      jest.spyOn(notificationService, "list").mockResolvedValue([
+        note({ id: "old", title: "Older one", created_at: "2026-10-05T08:00:00" }),
+        note({ id: "new", title: "Mrs Thompson sent you a Message", created_at: "2026-10-06T08:00:00" }),
+        note({ id: "read", title: "Read one", is_read: true, created_at: "2026-10-04T08:00:00" }),
+      ]);
+      await renderHome();
+      expect(await screen.findByText("Mrs Thompson sent you a Message")).toBeTruthy();
+      expect(screen.getByTestId("count-Notification")).toHaveTextContent("2");
+      expect(screen.queryByText("Older one")).toBeNull();
+      await fireEvent.press(screen.getByLabelText("See all notifications"));
+      expect(mockNavigate).toHaveBeenCalledWith("Notifications");
+    });
+
+    it("is left out when there is nothing to show", async () => {
+      jest.spyOn(locationService, "getHome").mockResolvedValue(emptyHome);
+      jest.spyOn(notificationService, "list").mockResolvedValue([]);
+      await renderHome();
+      await screen.findByText("Client Care Access");
+      expect(screen.queryByText("Notification")).toBeNull();
+    });
   });
 
   it("going unavailable only calls the switch", async () => {

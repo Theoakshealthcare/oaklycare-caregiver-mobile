@@ -32,8 +32,19 @@ channel) lives in the backend repo: `docs/checklist/MASTER_CHECKLIST.md`. Update
 - [x] Setup steps 1-3: header, "Step N" bar in quarters, identity step as the Figma two rows; consent screen "Give Consent"; new Profile Setup Completed page
 - [x] Staging build turns the identity step on (`EXPO_PUBLIC_KYC_MODE: "api"` in `eas.json` preview)
 - [ ] **Not device-verified** (Jest, tsc and ESLint only): built on `feat/caregiver-onboarding-parity` ([SOP](../sop/2026-11-23-caregiver-onboarding-parity.md))
-- [ ] Owner decisions: pre-ticked terms box, "Get Started" in the terms line, the account-created body sentence, the removed consent paragraphs, "Email Address Verified" after a recovery code (needs a backend code-check endpoint), a Cookies Policy URL
+- [ ] Owner decisions: pre-ticked terms box, "Get Started" in the terms line, the account-created body sentence, the removed consent paragraphs, "Email Address Verified" after a recovery code (needs a backend code-check endpoint); the Cookies Policy URL was supplied and wired on 2026-11-23
 - [ ] Native Document Scan / Face Scan camera frames (the check runs on the hosted Dojah page)
+
+## Caregiver Home, profile menu and visit dialogs parity with Figma (2026-11-23)
+- [x] Home: menu and bell header, greeting and subtitle, weekly availability with the week strip, CarePlan card (nurses), Upcoming Appointments with Clock in / Clock out, New Job Request with Accept / Decline, Earning Summary, Notification block, Client Care Access
+- [x] Shared Figma confirmation dialog: decline (Home and Bookings, "Yes, Decline"), clock in (after the visit code, before it is sent), clock out (running timer, pay-held and care plan notices)
+- [x] Full-page "clocked out" success; green toast "Payment Details has been updated"
+- [x] Profile Settings menu in Figma order with only the rows that exist (Care Plan for nurses, Security, Account and Data page with Logout and Delete Account)
+- [x] Cookies Policy link (https://www.oaklycare.com/cookies) on sign-up and consent
+- [ ] **Not device-verified** (Jest, tsc and ESLint only): built on `feat/caregiver-home-parity` ([SOP](../sop/2026-11-23-caregiver-home-parity.md))
+- [ ] Deferred, needs backend: Profile Completion card, Weekly Earning, patient first name and initial on offers, Chats tab (list endpoint), clients list for "Clients Profiles", `actual_start_time` on the booking
+- [ ] Not built, stays off: Learn tab, Live Chat, Refer and Earn, Complaints
+- [ ] Owner decisions: CarePlan card wording, "Yes, Decline" vs "Yes, Cancel", Account and Data page title, menu button target
 
 ## Device pass 1 minors and visit-rule follow-ups (2026-11-07)
 - [x] Fall tab removed, caregiver welcome slides, logout lands on Login (DP1-18, 11, 12); one truthful location sentence and no stale-location warning before location is shared (DP1-13, 14); Job Details wording, notification rows, declined offers "No longer available", held earning "Under review" (DP1-15, 20, 06); visit screens and care plan / vitals links (DP1-19, 32); shared date formatter and `DateField`, care-plan form defaults (DP1-28, 25); care-plan back stack and client "View all" push (DP1-26, 30); multi-select areas and 4-step onboarding (DP1-29, 09); AI note taker mic on tap (DP1-17); Contact us and delete-account copy (DP1-24, 27). Branch `fix/caregiver-device-pass-minors`, **device-verified on the simulator**, see docs/sop/2026-11-07-caregiver-device-pass-minors.md and ledgers/LEDGER-device-caregiver-minors.md

@@ -6,6 +6,7 @@ import { Keyboard, Linking, StyleSheet } from "react-native";
 import { ApiError, BANK_NAME_MISMATCH_MESSAGE, isBankNameMismatch } from "../src/api/errors";
 import { unwrap } from "../src/api/unwrap";
 import { supportUrl } from "../src/config/contact";
+import * as toast from "../src/components/ui/toast";
 import { session } from "../src/auth";
 import BankDetails from "../src/screens/account/BankDetails";
 import { walletService } from "../src/services/wallet.service";
@@ -185,12 +186,14 @@ describe("BankDetails screen", () => {
   });
 
   it("save success without a pause just confirms", async () => {
+    const showToast = jest.spyOn(toast, "showToast");
     jest.spyOn(walletService, "resolveBankAccount").mockResolvedValue(resolved);
     jest.spyOn(walletService, "updateBankAccount").mockResolvedValue(saved);
     await renderScreen();
     await fillAndCheck();
     await fireEvent.press(await screen.findByText("Yes, this is my account"));
     expect(await screen.findByTestId("bank-saved-notice")).toHaveTextContent(/Your bank account is saved\./);
+    expect(showToast).toHaveBeenCalledWith("Payment Details has been updated");
     expect(screen.getByTestId("bank-saved-notice")).not.toHaveTextContent(/paused/);
   });
 

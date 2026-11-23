@@ -1,17 +1,15 @@
 import React from "react";
-import { Alert, Pressable, ScrollView, View } from "react-native";
+import { Pressable, ScrollView, View } from "react-native";
 import { Feather } from "@expo/vector-icons";
 
-import { messageForError } from "@/src/api/errors";
 import { ABOUT_URL, FAQ_URL } from "@/src/config/contact";
 import HeaderBack from "@/src/components/back/HeaderBack";
 import Image from "@/src/components/ui/image";
 import Text from "@/src/components/ui/text";
 import { globalStyles } from "@/src/constants/styles";
 import { theme } from "@/src/constants/theme";
-import { useMe } from "@/src/hooks/queries";
+import { useCaregiverHome, useMe } from "@/src/hooks/queries";
 import useNavigation from "@/src/hooks/use-navigation";
-import { authService } from "@/src/services/auth.service";
 import { openPageOrAlert } from "@/src/services/openPageOrAlert";
 
 /** FAQs and About us open inside the app; a page that cannot open says so in the app's usual alert. */
@@ -19,12 +17,7 @@ const openInApp = openPageOrAlert;
 
 type IconName = React.ComponentProps<typeof Feather>["name"];
 
-const MenuRow: React.FC<{ icon: IconName; label: string; onPress: () => void; danger?: boolean }> = ({
-  icon,
-  label,
-  onPress,
-  danger = false,
-}) => (
+const MenuRow: React.FC<{ icon: IconName; label: string; onPress: () => void }> = ({ icon, label, onPress }) => (
   <Pressable
     accessibilityRole="button"
     onPress={onPress}
@@ -37,11 +30,11 @@ const MenuRow: React.FC<{ icon: IconName; label: string; onPress: () => void; da
       borderBottomColor: theme.colors.border,
     }}
   >
-    <Feather name={icon} size={20} color={danger ? theme.colors.error : theme.colors.primary} />
-    <Text variant="body" weight="medium" color={danger ? theme.colors.error : theme.colors.text} style={{ flex: 1 }}>
+    <Feather name={icon} size={20} color={theme.colors.primary} />
+    <Text variant="body" weight="medium" style={{ flex: 1 }}>
       {label}
     </Text>
-    {danger ? null : <Feather name="chevron-right" size={20} color={theme.colors.text} />}
+    <Feather name="chevron-right" size={20} color={theme.colors.text} />
   </Pressable>
 );
 
@@ -49,29 +42,8 @@ const Profile: React.FC = () => {
   const { navigation } = useNavigation();
   const me = useMe();
 
-  const confirmLogout = () =>
-    Alert.alert("Log out", "Do you want to log out of Oakly?", [
-      { text: "Cancel", style: "cancel" },
-      { text: "Log out", style: "destructive", onPress: () => void authService.logout() },
-    ]);
-
-  const confirmDelete = () =>
-    Alert.alert(
-      "Delete your account?",
-      "Your personal details will be removed and you will be signed out. This cannot be undone. You can't delete your account while you have active bookings or money in your wallet: finish your visits and wait until your balance has been paid out to your bank account. Records we must keep by law, such as past bookings and payments, are kept without your details.",
-      [
-        { text: "Cancel", style: "cancel" },
-        {
-          text: "Delete account",
-          style: "destructive",
-          onPress: () => {
-            authService.deleteAccount().catch((error: unknown) => {
-              Alert.alert("Couldn't delete your account", messageForError(error));
-            });
-          },
-        },
-      ],
-    );
+  // Care plans are a nurse's tool: the server says who may author them (the hub hides itself for anyone else).
+  const canAuthorCarePlans = useCaregiverHome().data?.can_author_care_plans === true;
 
   return (
     <View style={{ flex: 1, backgroundColor: theme.colors.white }}>
@@ -80,7 +52,7 @@ const Profile: React.FC = () => {
           <HeaderBack />
           <View style={{ marginVertical: "5%" }}>
             <Text variant="h2" weight="bold">
-              Profile settings
+              Profile Settings
             </Text>
           </View>
 
@@ -119,22 +91,22 @@ const Profile: React.FC = () => {
                   <Text variant="body" weight="bold">
                     {me.data.full_name}
                   </Text>
-                  <Text variant="small" color={theme.colors.textLight}>
-                    {me.data.email}
+                  <Text variant="small" weight="medium" color={theme.colors.primary}>
+                    Verified User
                   </Text>
                 </>
               ) : null}
             </View>
           </View>
 
-          <MenuRow icon="user" label="Edit personal information" onPress={() => navigation.navigate("EditProfile")} />
-          <MenuRow icon="lock" label="Change password" onPress={() => navigation.navigate("ChangePassword")} />
-          <MenuRow icon="credit-card" label="Payment & earnings" onPress={() => navigation.navigate("Wallet")} />
-          <MenuRow icon="info" label="About us" onPress={() => openInApp("About us", ABOUT_URL)} />
+          <MenuRow icon="user" label="Edit Personal Information" onPress={() => navigation.navigate("EditProfile")} />
+          <MenuRow icon="credit-card" label="Payment & Earnings" onPress={() => navigation.navigate("Wallet")} />
+          {canAuthorCarePlans ? <MenuRow icon="folder" label="Care Plan" onPress={() => navigation.navigate("CarePlans")} /> : null}
+          <MenuRow icon="info" label="About Us" onPress={() => openInApp("About Us", ABOUT_URL)} />
           <MenuRow icon="help-circle" label="FAQs" onPress={() => openInApp("FAQs", FAQ_URL)} />
-          <MenuRow icon="mail" label="Contact us" onPress={() => navigation.navigate("Contact")} />
-          <MenuRow icon="log-out" label="Logout" onPress={confirmLogout} danger />
-          <MenuRow icon="trash-2" label="Delete account" onPress={confirmDelete} danger />
+          <MenuRow icon="lock" label="Security" onPress={() => navigation.navigate("ChangePassword")} />
+          <MenuRow icon="phone" label="Contact Us" onPress={() => navigation.navigate("Contact")} />
+          <MenuRow icon="file-text" label="Account and Data" onPress={() => navigation.navigate("AccountData")} />
         </View>
       </ScrollView>
     </View>

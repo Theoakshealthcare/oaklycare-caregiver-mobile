@@ -8,11 +8,25 @@ import { ApiError } from "../src/api/errors";
 import { pushTokenStorage } from "../src/auth/secureStorage";
 import { session } from "../src/auth";
 import EditProfile from "../src/screens/account/EditProfile";
+import AccountData from "../src/screens/account/AccountData";
 import Profile from "../src/screens/account/Profile";
 import { accountService } from "../src/services/account.service";
 import { authService } from "../src/services/auth.service";
 import { caregiverService } from "../src/services/caregiver.service";
 import * as inAppBrowser from "../src/services/inAppBrowser";
+import { locationService, type CaregiverHome } from "../src/supply/locationService";
+
+const homeFor = (canAuthor: boolean): CaregiverHome => ({
+  profile_status: "approved",
+  is_available: false,
+  location_updated_at: null,
+  today_visits: [],
+  upcoming_visits: [],
+  open_offers: [],
+  wallet_balance_naira: 0,
+  currency: "NGN",
+  can_author_care_plans: canAuthor,
+});
 
 const mockNavigate = jest.fn();
 const mockGoBack = jest.fn();
@@ -77,6 +91,7 @@ beforeEach(async () => {
   await session.signIn({ accessToken: "access", refreshToken: "refresh" });
   jest.spyOn(authService, "getMe").mockResolvedValue(me);
   alertSpy = jest.spyOn(Alert, "alert").mockImplementation(() => undefined);
+  jest.spyOn(locationService, "getHome").mockResolvedValue(homeFor(false));
 });
 afterEach(async () => {
   jest.restoreAllMocks();
@@ -100,29 +115,50 @@ async function pressAlertButton(title: string) {
 }
 
 describe("Profile screen", () => {
-  it("shows the caregiver and only the rows that exist", async () => {
+  it("shows the caregiver as a verified user and only the rows that exist", async () => {
     await renderWith(<Profile />);
     expect(await screen.findByText("Ada Obi")).toBeTruthy();
-    expect(screen.getByText("ada@example.com")).toBeTruthy();
-    for (const row of ["Edit personal information", "Payment & earnings", "About us", "FAQs", "Contact us", "Logout", "Delete account"]) {
+    expect(screen.getByText("Profile Settings")).toBeTruthy();
+    expect(screen.getByText("Verified User")).toBeTruthy();
+    for (const row of ["Edit Personal Information", "Payment & Earnings", "About Us", "FAQs", "Security", "Contact Us", "Account and Data"]) {
       expect(screen.getByText(row)).toBeTruthy();
     }
-    for (const missing of ["Live chat", "Care plan", "Refer and earn", "Complaints", "Security", "Account and data"]) {
+    // Rows for things that are not built (or not for this caregiver) are left out, never drawn dead.
+    for (const missing of ["Live chat", "Care plan", "Refer and earn", "Complaints", "Logout", "Delete account"]) {
       expect(screen.queryByText(new RegExp(missing, "i"))).toBeNull();
     }
+  });
+
+  it("lists the rows in the Figma order", async () => {
+    await renderWith(<Profile />);
+    await screen.findByText("Ada Obi");
+    const order = ["Edit Personal Information", "Payment & Earnings", "About Us", "FAQs", "Security", "Contact Us", "Account and Data"];
+    const tree = JSON.stringify(screen.toJSON());
+    const positions = order.map((row) => tree.indexOf(row));
+    expect([...positions].sort((a, b) => a - b)).toEqual(positions);
+    expect(positions.every((p) => p >= 0)).toBe(true);
+  });
+
+  it("shows the Care Plan row only to a caregiver the server lets author care plans", async () => {
+    jest.spyOn(locationService, "getHome").mockResolvedValue(homeFor(true));
+    await renderWith(<Profile />);
+    await fireEvent.press(await screen.findByText("Care Plan"));
+    expect(mockNavigate).toHaveBeenCalledWith("CarePlans");
   });
 
   it("still shows the menu while the profile is loading or failed to load", async () => {
     jest.spyOn(authService, "getMe").mockRejectedValue(new ApiError(0, null, "x"));
     await renderWith(<Profile />);
-    expect(screen.getByText("Logout")).toBeTruthy();
+    expect(screen.getByText("Account and Data")).toBeTruthy();
     expect(screen.queryByText("Ada Obi")).toBeNull();
   });
 
   it.each([
-    ["Edit personal information", "EditProfile"],
-    ["Payment & earnings", "Wallet"],
-    ["Contact us", "Contact"],
+    ["Edit Personal Information", "EditProfile"],
+    ["Payment & Earnings", "Wallet"],
+    ["Security", "ChangePassword"],
+    ["Contact Us", "Contact"],
+    ["Account and Data", "AccountData"],
   ])("%s opens %s", async (row, route) => {
     await renderWith(<Profile />);
     await fireEvent.press(screen.getByText(row));
@@ -130,7 +166,7 @@ describe("Profile screen", () => {
   });
 
   it.each([
-    ["About us", "https://www.oaklycare.com/about"],
+    ["About Us", "https://www.oaklycare.com/about"],
     ["FAQs", "https://www.oaklycare.com/faq"],
   ])("%s opens the website page %s in the in-app browser", async (row, url) => {
     const open = jest.spyOn(inAppBrowser, "openPage").mockResolvedValue(undefined);
@@ -139,10 +175,19 @@ describe("Profile screen", () => {
     expect(open).toHaveBeenCalledWith(url);
     expect(mockNavigate).not.toHaveBeenCalled();
   });
+});
+
+describe("Account and Data screen", () => {
+  it("offers Delete Account and Logout", async () => {
+    await renderWith(<AccountData />);
+    expect(screen.getByText("Account and Data")).toBeTruthy();
+    expect(screen.getByText("Delete Account")).toBeTruthy();
+    expect(screen.getByText("Logout")).toBeTruthy();
+  });
 
   it("logout asks first, then uses the auth service logout", async () => {
     const logout = jest.spyOn(authService, "logout").mockResolvedValue();
-    await renderWith(<Profile />);
+    await renderWith(<AccountData />);
     await fireEvent.press(screen.getByText("Logout"));
     expect(alertSpy).toHaveBeenCalledWith("Log out", "Do you want to log out of Oakly?", expect.any(Array));
     expect(logout).not.toHaveBeenCalled();
@@ -152,8 +197,8 @@ describe("Profile screen", () => {
 
   it("delete account states the consequence and does nothing until confirmed", async () => {
     const del = jest.spyOn(authService, "deleteAccount").mockResolvedValue();
-    await renderWith(<Profile />);
-    await fireEvent.press(screen.getByText("Delete account"));
+    await renderWith(<AccountData />);
+    await fireEvent.press(screen.getByText("Delete Account"));
     const [title, message] = alertSpy.mock.calls.at(-1) ?? [];
     expect(title).toBe("Delete your account?");
     expect(message).toMatch(/personal details will be removed/i);
@@ -164,15 +209,15 @@ describe("Profile screen", () => {
     expect(del).not.toHaveBeenCalled();
     await pressAlertButton("Cancel");
     expect(del).not.toHaveBeenCalled();
-    await fireEvent.press(screen.getByText("Delete account"));
+    await fireEvent.press(screen.getByText("Delete Account"));
     await pressAlertButton("Delete account");
     await waitFor(() => expect(del).toHaveBeenCalledTimes(1));
   });
 
   it("a failed delete keeps the caregiver signed in and says why", async () => {
     jest.spyOn(authService, "deleteAccount").mockRejectedValue(new ApiError(500, null, "Something went wrong on our side. Please try again in a moment."));
-    await renderWith(<Profile />);
-    await fireEvent.press(screen.getByText("Delete account"));
+    await renderWith(<AccountData />);
+    await fireEvent.press(screen.getByText("Delete Account"));
     await pressAlertButton("Delete account");
     await waitFor(() => expect(alertSpy).toHaveBeenCalledWith("Couldn't delete your account", expect.stringContaining("Something went wrong")));
   });

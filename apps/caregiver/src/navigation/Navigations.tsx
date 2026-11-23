@@ -63,5 +63,7 @@ export type ScreenParamLists = {
   /** View Progress for one plan (percent over visit days, day N of M, goal counts). */
   CarePlanProgress: { planId: string; clientName?: string };
   /** accepted -> on my way -> visit code -> in progress -> complete, driven by the booking status. */
-  VisitFlow: { bookingId: string };
+  VisitFlow: { bookingId: string; /** Opened by "Clock out" on Home: the clock-out dialog shows as soon as the visit is in progress. */ clockOut?: boolean };
+  /** Logout and Delete account, behind "Account and Data" on the profile menu. */
+  AccountData: undefined;
 };
