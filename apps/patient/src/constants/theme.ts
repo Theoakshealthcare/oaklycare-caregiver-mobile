@@ -54,6 +54,8 @@ export const theme = {
     pageTint: "#F9FBFB",
     toast: "#35C759",
     successTitle: "#00996C",
+    /** Title of the patient "Payment Successful" frame: Figma pixel #55AB68 (Display P3) = sRGB #26AD61, the same green as the check disc. */
+    paymentSuccess: "#26AD61",
   },
   spacing: {
     xs: scale(4),

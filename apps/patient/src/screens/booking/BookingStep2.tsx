@@ -85,7 +85,7 @@ const BookingStep2: React.FC = () => {
 
   const located = draft.latitude !== null && draft.longitude !== null;
   return (
-    <AuthPage title="Book an Appointment" subtitle="Book your Appointments in 2 steps" gap={20}>
+    <AuthPage booking title="Book an Appointment" subtitle="Book your Appointments in 2 steps" gap={20}>
       <StepBar step={2} total={2} />
       <Heading>Where do you need Care ?</Heading>
       <Select label="State" required placeholder="Select" options={STATES} value={draft.state} onChange={(v) => set({ state: v }, "state")} error={errors.state} />

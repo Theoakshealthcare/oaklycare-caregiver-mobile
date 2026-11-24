@@ -6,6 +6,7 @@ import StepIndicator, { consentStepNumber, onboardingStepCount } from "../src/co
 import Select from "../src/components/ui/select";
 import ConsentScreen from "../src/screens/setup/ConsentScreen";
 import CreateAccount from "../src/screens/auth/CreateAccount";
+import Login from "../src/screens/auth/Login";
 
 jest.mock("../src/hooks/use-navigation", () => ({
   __esModule: true,
@@ -38,6 +39,12 @@ describe("sign-up and consent copy follow the Figma frames", () => {
     await fireEvent.changeText(screen.getByPlaceholderText("Enter your Password"), "Placeholder-Pass-1");
     await fireEvent.press(screen.getAllByText("Create Account").at(-1) as never);
     expect(await screen.findByText("You must agree to the terms")).toBeTruthy();
+  });
+
+  it("login asks for an email address only: phone-number sign-in is off, so the label says nothing about a phone", async () => {
+    await render(withClient(<Login />));
+    expect(screen.getByText("Email Address")).toBeTruthy();
+    expect(screen.queryByText(/Phone/)).toBeNull();
   });
 
   it("consent is the heading, the terms line and a Give Consent button, with no step bar and none of the old paragraphs", async () => {

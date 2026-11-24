@@ -107,7 +107,7 @@ const Home: React.FC = () => {
           <View style={styles.quickCircle}>
             <Image source={QUICK_NURSE} style={styles.quickIcon} resizeMode="contain" />
           </View>
-          <Text variant="small">Book a Nurse</Text>
+          <Text variant="small" weight="medium">Book a Nurse</Text>
         </Pressable>
 
         <Text weight="bold" style={styles.heading}>
@@ -232,7 +232,7 @@ const styles = StyleSheet.create({
   startBooking: { paddingHorizontal: theme.spacing.md, minHeight: 40 },
   heading: { fontSize: theme.sizes.subtitle, marginTop: theme.spacing.xs },
   quick: { alignItems: "center", alignSelf: "flex-start", gap: theme.spacing.xs, paddingLeft: theme.spacing.xs },
-  quickCircle: { width: 62, height: 62, borderRadius: 31, backgroundColor: QUICK_TILE_TINT, alignItems: "center", justifyContent: "center" },
+  quickCircle: { width: 62, height: 62, borderRadius: 31, backgroundColor: QUICK_TILE_TINT, borderWidth: 1, borderColor: "#D9E4E6", alignItems: "center", justifyContent: "center" },
   quickIcon: { width: 46, height: 37 },
   tiles: { flexDirection: "row", gap: theme.spacing.md },
   tile: {
