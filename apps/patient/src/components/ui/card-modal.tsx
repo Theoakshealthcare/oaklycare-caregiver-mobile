@@ -14,25 +14,27 @@ interface CardModalProps {
   iconColor?: string;
   title: string;
   subtitle?: string;
+  /** A confirmation card (Figma "Delete Account"): its title is one size smaller than the entry sheets' ("Heart Rate"). */
+  compact?: boolean;
   children?: React.ReactNode;
 }
 
 /** The card itself, for a screen that is already a transparent modal route (the manual entry sheet). */
-export const CardSheet: React.FC<Omit<CardModalProps, "visible">> = ({ onClose, icon, iconColor = theme.colors.primary, title, subtitle, children }) => (
+export const CardSheet: React.FC<Omit<CardModalProps, "visible">> = ({ onClose, icon, iconColor = theme.colors.primary, title, subtitle, compact, children }) => (
   <View style={styles.cardWrap}>
     {icon ? (
       <View style={styles.iconDisc}>
         <Icon name={icon} size={34} color={iconColor} />
       </View>
     ) : null}
-    <View style={styles.card}>
+    <View style={[styles.card, compact && styles.compactCard]}>
       <Pressable accessibilityRole="button" accessibilityLabel="Close" hitSlop={8} onPress={onClose} style={styles.close}>
         <Icon name="close-circle-outline" size={20} />
         <Text variant="small" weight="medium">
           Close
         </Text>
       </Pressable>
-      <Text variant="h3" weight="bold" color={theme.colors.primary} center style={icon ? styles.titleWithIcon : undefined}>
+      <Text variant="h3" weight="bold" color={theme.colors.primary} center style={[icon ? styles.titleWithIcon : null, compact ? styles.compactTitle : null]}>
         {title}
       </Text>
       {subtitle ? (
@@ -60,7 +62,7 @@ const CardModal: React.FC<CardModalProps> = ({ visible, ...sheet }) => (
 const DISC = 80;
 
 const styles = StyleSheet.create({
-  overlay: { flex: 1, backgroundColor: "rgba(0,0,0,0.45)", justifyContent: "center", padding: theme.spacing.lg },
+  overlay: { flex: 1, backgroundColor: "rgba(0,0,0,0.45)", justifyContent: "center", paddingHorizontal: "9.5%", paddingVertical: theme.spacing.lg },
   cardWrap: { alignItems: "center" },
   card: {
     alignSelf: "stretch",
@@ -69,6 +71,7 @@ const styles = StyleSheet.create({
     padding: theme.spacing.lg,
     gap: theme.spacing.sm,
   },
+  compactCard: { padding: theme.spacing.md },
   close: { flexDirection: "row", alignItems: "center", gap: theme.spacing.sm, alignSelf: "flex-start" },
   iconDisc: {
     position: "absolute",
@@ -84,6 +87,7 @@ const styles = StyleSheet.create({
     justifyContent: "center",
   },
   titleWithIcon: { marginTop: theme.spacing.sm },
+  compactTitle: { fontSize: theme.sizes.subtitle - 1, lineHeight: Math.round((theme.sizes.subtitle - 1) * 1.35) },
 });
 
 export default CardModal;

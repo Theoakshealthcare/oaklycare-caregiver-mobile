@@ -289,6 +289,7 @@ Owner decisions (2026-11-07): move the old app into the monorepo on SDK 57, copi
   - [ ] P1-04 keystroke loss: code audited and sound, regression test added; **still to confirm on a real phone with a Release build**; look at the layout items (P1-11) on a screen
 - [ ] P10-P12 Nutritionist / physio, wallet / support, prescriptions / video call / AI note taker / ratings / care-plan view: hidden or deferred per the owner's v1 scope
 - [ ] P13 Tests per slice, device pass, EAS builds, TestFlight / Play internal track (owner: Apple / Google accounts)
+- [x] **Patient visual pass on the simulator** (2026-11-24, branch `fix/patient-visual-parity`, see docs/sop/2026-11-24-patient-visual-parity.md and `ledgers/SIM-patient-visual.md`; iOS simulator only, **not seen on Android or a real phone**): Vitals, FallGuard, Profile and the sheets/dialogs fixed against the Figma frames (dimmed strips, smooth chart, double top inset, clipped initials); onboarding slides 2-4, sign-up/recovery, booking step 2/summary, payments and the tracking page not re-seen in this pass
 - [ ] Theme aligned to the designs (primary about `#3D8082`, coral about `#EB695A`; the shell still carries the caregiver tokens; owner to confirm, see `LEDGER-patient-screens.md` §6 Q4)
 - [ ] Extract shared auth / theme / ui package (the shell was copied from the caregiver app on purpose; two copies of `session.ts`, `errors.ts`, theme and ui primitives now exist)
 - [ ] Production font licence check for GT Walsheim Pro (the files were copied from the caregiver app)

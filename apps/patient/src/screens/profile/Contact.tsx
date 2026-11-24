@@ -14,9 +14,9 @@ export const SUPPORT_EMAIL = "info@theoakshealthcare.com";
  * (not in v1) and the WhatsApp number in the design is a placeholder.
  */
 const Contact: React.FC = () => (
-  <Screen title="Contact Us" centerTitle>
+  <Screen title="Contact Us" centerTitle contentStyle={styles.page}>
     <Pressable accessibilityRole="button" accessibilityLabel="Send an email" onPress={() => void Linking.openURL(`mailto:${SUPPORT_EMAIL}`)} style={styles.row}>
-      <Icon name="mail-outline" size={20} color={theme.colors.primary} circleColor={theme.colors.primaryLight} />
+      <Icon name="mail-outline" size={22} color={theme.colors.primary} />
       <View style={styles.text}>
         <Text weight="bold">Send an email</Text>
         <Text variant="small" color={theme.colors.textLight}>
@@ -28,6 +28,8 @@ const Contact: React.FC = () => (
 );
 
 const styles = StyleSheet.create({
+  // Figma: the first row sits right under the title.
+  page: { paddingTop: 0 },
   row: { flexDirection: "row", alignItems: "center", gap: theme.spacing.md, paddingVertical: theme.spacing.sm },
   text: { flex: 1 },
 });
