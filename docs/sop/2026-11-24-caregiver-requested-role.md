@@ -31,7 +31,7 @@
 | Not run | the admin Playwright e2e (CI; the flow without a request is unchanged), real device or simulator |
 
 ## Operate / roll back
-The app change needs the backend PR (a first step-2 save without `applying_as` is `422`; an older backend ignores the field). Merge the backend first on staging, then this. Revert the PR to roll back; the admin side tolerates a backend without `requested_skills`.
+The app change needs the backend PR to be useful: the backend accepts `applying_as` as optional, and an older backend ignores the field, so the order is safe either way, but the console line and the pre-selection only show once the backend returns `requested_skills`. **The app requires the field in its UI; the server does not**, so an older installed app build still saves step 2 and the admin simply sees no request for that caregiver. Merge the backend first on staging, then this. Revert the PR to roll back; the admin side tolerates a backend without `requested_skills`.
 
 ## Owner notes
 - **Step 2 may now scroll** (one more field on a screen that already had five).
