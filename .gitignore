@@ -8,6 +8,9 @@ web-build/
 expo-env.d.ts
 .metro-health-check*
 
+# The marketing website is its own repository (cloned here for convenience): never part of this repo or the workspace
+apps/oaklycare-website/
+
 # Generated native projects (Continuous Native Generation: `expo prebuild`)
 apps/*/android/
 apps/*/ios/

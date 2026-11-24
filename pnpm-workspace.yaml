@@ -1,5 +1,6 @@
 packages:
   - "apps/*"
+  - "!apps/oaklycare-website"
   - "packages/*"
 
 # Install scripts are denied by default. Nothing in the workspace needs one to build;
