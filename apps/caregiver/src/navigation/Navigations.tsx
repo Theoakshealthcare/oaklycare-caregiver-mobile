@@ -26,7 +26,7 @@ export type ScreenParamLists = {
   BottomNavigation: { tab?: "home" | "booking" | "chats" | "vitals"; at?: number } | undefined;
   /** With `offer` it is an un-accepted job (offer view, nothing is fetched); without it, an assigned booking. */
   BookingDetails: { bookingId: string; offer?: Offer };
-  ChatScreen: { bookingId: string; patientName?: string };
+  ChatScreen: { bookingId: string; patientName?: string; /** From the Chats list, so the header shows the photo before the booking has loaded. */ patientPhotoUrl?: string };
   CallScreen: { bookingId: string; patientName?: string; isVideo?: boolean };
   AINoteTaker: { bookingId: string };
   /** Check, edit and save the draft of a voice note (only reachable while the voice note flow is on). */

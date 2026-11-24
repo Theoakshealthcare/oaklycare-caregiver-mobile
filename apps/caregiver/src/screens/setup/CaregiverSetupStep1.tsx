@@ -11,6 +11,7 @@ import KeyboardScrollView from "@/src/components/ui/keyboard-scroll-view"
 import DateField from "@/src/components/ui/date-field"
 import StepIndicator, { onboardingStepCount, ONBOARDING_STEP } from "@/src/components/ui/step-indicator"
 import Input from "@/src/components/ui/input"
+import PhoneInput from "@/src/components/ui/phone-input"
 import Select from "@/src/components/ui/select"
 import HeaderBack from "@/src/components/back/HeaderBack"
 import { globalStyles, FORM_PADDING } from "@/src/constants/styles"
@@ -20,6 +21,7 @@ import { useFormOptions } from "@/src/hooks/queries"
 import { messageForError } from "@/src/api/errors"
 import { queryKeys } from "@/src/api/keys"
 import { authService } from "@/src/services/auth.service"
+import { PHONE_PREFIX, isPhoneBlank, phoneForSave } from "@/src/utils/phone"
 
 type Gender = CaregiverProfileStep1["gender"]
 
@@ -27,9 +29,6 @@ type Gender = CaregiverProfileStep1["gender"]
 const NIGERIAN_STATES = [
   "Abia", "Adamawa", "Akwa Ibom", "Anambra", "Bauchi", "Bayelsa", "Benue", "Borno", "Cross River", "Delta", "Ebonyi", "Edo", "Ekiti", "Enugu", "Federal Capital Territory", "Gombe", "Imo", "Jigawa", "Kaduna", "Kano", "Katsina", "Kebbi", "Kogi", "Kwara", "Lagos", "Nasarawa", "Niger", "Ogun", "Ondo", "Osun", "Oyo", "Plateau", "Rivers", "Sokoto", "Taraba", "Yobe", "Zamfara"
 ]
-
-/** The emergency number starts as "+234", as drawn in Figma, so only the national number is typed. */
-const PHONE_PREFIX = "+234"
 
 const CaregiverSetupStep1 = () => {
   const { navigation } = Navigation()
@@ -68,7 +67,7 @@ const CaregiverSetupStep1 = () => {
     if (!formData.gender) newErrors.gender = "Gender is required"
     if (!formData.state) newErrors.state = "State is required"
     if (!formData.address.trim()) newErrors.address = "House address is required"
-    if (formData.emergency_contact_phone.trim() === PHONE_PREFIX || !formData.emergency_contact_phone.trim()) newErrors.emergency_contact_phone = "Emergency contact is required"
+    if (isPhoneBlank(formData.emergency_contact_phone)) newErrors.emergency_contact_phone = "Emergency contact is required"
     setErrors(newErrors)
     if (Object.keys(newErrors).length > 0 || !formData.gender) return
 
@@ -77,7 +76,7 @@ const CaregiverSetupStep1 = () => {
       gender: formData.gender,
       state: formData.state,
       address: formData.address.trim(),
-      emergency_contact_phone: formData.emergency_contact_phone.trim(),
+      emergency_contact_phone: phoneForSave(formData.emergency_contact_phone),
     })
   }
 
@@ -156,12 +155,10 @@ const CaregiverSetupStep1 = () => {
               error={errors.address}
             />
 
-            <Input
+            <PhoneInput
               label="Emergency Contact Phone Number"
-              placeholder="+234"
               value={formData.emergency_contact_phone}
               onChangeText={(text) => updateFormData("emergency_contact_phone", text)}
-              keyboardType="phone-pad"
               error={errors.emergency_contact_phone}
             />
 

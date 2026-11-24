@@ -5,6 +5,7 @@ import type { StackScreenProps } from "@react-navigation/stack";
 import { messageForError } from "@/src/api/errors";
 import { ActionChip } from "@/src/components/booking/BookingBlocks";
 import DeclineDialog from "@/src/components/booking/DeclineDialog";
+import BottomCta from "@/src/components/ui/bottom-cta";
 import Button from "@/src/components/ui/button";
 import HeaderBack from "@/src/components/back/HeaderBack";
 import Text from "@/src/components/ui/text";
@@ -97,7 +98,7 @@ const OfferDetails: React.FC<{ offer: Offer }> = ({ offer }) => (
 
 /** Accept Job / Decline Job, pinned under the page as in the Figma frame. */
 const OfferActions: React.FC<{ busy: boolean; onAccept: () => void; onDecline: () => void }> = ({ busy, onAccept, onDecline }) => (
-  <View style={[globalStyles.row, { gap: 12, paddingHorizontal: theme.spacing.md, paddingVertical: theme.spacing.md, backgroundColor: theme.colors.white }]}>
+  <BottomCta style={[globalStyles.row, { gap: 12, backgroundColor: theme.colors.white }]} testID="offer-actions">
     <Button title="Accept Job" onPress={onAccept} loading={busy} style={{ flex: 1 }} />
     <Button
       title="Decline Job"
@@ -107,7 +108,7 @@ const OfferActions: React.FC<{ busy: boolean; onAccept: () => void; onDecline: (
       style={{ flex: 1, borderColor: theme.colors.secondary }}
       textStyle={{ color: theme.colors.secondary }}
     />
-  </View>
+  </BottomCta>
 );
 
 /** Assigned view: this is now the caregiver's job, so the backend returns the full booking. */

@@ -18179,6 +18179,18 @@
             "type": "string",
             "title": "Patient Name"
           },
+          "patient_photo_url": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Patient Photo Url",
+            "description": "Absolute URL of the patient's profile photo; null when they have none."
+          },
           "service_type": {
             "type": "string",
             "title": "Service Type"

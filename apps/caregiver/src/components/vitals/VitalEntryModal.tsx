@@ -5,6 +5,7 @@ import { Feather } from "@expo/vector-icons";
 import { messageForError } from "@/src/api/errors";
 import Button from "@/src/components/ui/button";
 import Input from "@/src/components/ui/input";
+import KeyboardInsetView from "@/src/components/ui/keyboard-inset-view";
 import Text from "@/src/components/ui/text";
 import { theme } from "@/src/constants/theme";
 import { useCreateVital, useMe } from "@/src/hooks/queries";
@@ -92,7 +93,7 @@ const VitalEntryModal: React.FC<{
 
   return (
     <Modal transparent animationType="fade" visible onRequestClose={onClose}>
-      <View style={{ flex: 1, backgroundColor: "rgba(0,0,0,0.45)", justifyContent: "center", padding: theme.spacing.md }}>
+      <KeyboardInsetView outsideAppRoot style={{ flex: 1, backgroundColor: "rgba(0,0,0,0.45)", justifyContent: "center", padding: theme.spacing.md }}>
         <View style={{ backgroundColor: theme.colors.white, borderRadius: theme.borderRadius.xxl, padding: theme.spacing.lg, gap: theme.spacing.md }}>
           <Pressable accessibilityRole="button" onPress={onClose} style={{ flexDirection: "row", alignItems: "center", gap: theme.spacing.xs, alignSelf: "flex-start" }} testID="entry-close">
             <Feather name="x-circle" size={18} color={theme.colors.textLight} />
@@ -196,7 +197,7 @@ const VitalEntryModal: React.FC<{
 
           <Button title={`Update ${info.heading}`} onPress={save} loading={create.isPending} style={{ borderRadius: theme.borderRadius.round }} />
         </View>
-      </View>
+      </KeyboardInsetView>
     </Modal>
   );
 };
