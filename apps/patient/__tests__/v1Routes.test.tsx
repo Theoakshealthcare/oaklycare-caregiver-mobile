@@ -42,6 +42,7 @@ describe("nothing outside v1 is reachable", () => {
       "BookingStep1",
       "BookingStep2",
       "BookingSummary",
+      "PaymentDetails",
       "PaymentResult",
       "BookingDetails",
       "CancelBooking",

@@ -28,6 +28,7 @@ const Location = jest.requireMock("expo-location") as {
 const WebBrowser = jest.requireMock("expo-web-browser") as { openBrowserAsync: jest.Mock };
 
 const press = (name: string | RegExp) => fireEvent.press(screen.getByRole("button", { name }));
+const pick = (name: string) => fireEvent.press(screen.getByRole("radio", { name }));
 const tab = (name: string) => fireEvent.press(screen.getByRole("tab", { name }));
 const type = (label: string, value: string) => fireEvent.changeText(screen.getByLabelText(label), value);
 const choose = async (label: string, option: string) => {
@@ -310,6 +311,13 @@ describe("bookings (real backend calls, answered with captured bodies)", () => {
       await choose("Duration", "1 hour 30 minutes");
     }
 
+    /** "Proceed to Payment" opens Payment Details; "Make Payment" (nothing picked, or the method named) is what creates the booking. */
+    async function makePayment(method?: string) {
+      await screen.findByText("Payment Details");
+      if (method) await pick(method);
+      await press("Make Payment");
+    }
+
     async function fillTheForm() {
       await fillStepOne();
       await press("Save & Continue");
@@ -361,6 +369,7 @@ describe("bookings (real backend calls, answered with captured bodies)", () => {
       });
 
       await press("Proceed to Payment");
+      await makePayment();
       await waitFor(() => expect(WebBrowser.openBrowserAsync).toHaveBeenCalledWith(PAY_URL, expect.anything()));
       expect(await screen.findByText(/Payment Successful\./)).toBeTruthy();
 
@@ -458,6 +467,7 @@ describe("bookings (real backend calls, answered with captured bodies)", () => {
       await press("Save & Continue");
       await screen.findByText("₦55,000");
       await press("Proceed to Payment");
+      await makePayment();
 
       expect(await screen.findByText("Payment Failed! Try Again")).toBeTruthy();
       expect(screen.queryByText(/Payment Successful/)).toBeNull();
@@ -485,6 +495,7 @@ describe("bookings (real backend calls, answered with captured bodies)", () => {
       await press("Save & Continue");
       await screen.findByText("₦55,000");
       await press("Proceed to Payment");
+      await makePayment();
 
       expect(await screen.findByText("Payment not confirmed yet")).toBeTruthy();
       expect(screen.queryByText("Payment Failed! Try Again")).toBeNull();
@@ -507,6 +518,7 @@ describe("bookings (real backend calls, answered with captured bodies)", () => {
       await press("Save & Continue");
       await screen.findByText("₦55,000");
       await press("Proceed to Payment");
+      await makePayment();
 
       expect(await screen.findByText(/Payment Successful\./)).toBeTruthy();
       expect(screen.getByText("Your payment was received. We are now finding a caregiver for you.")).toBeTruthy();
@@ -533,9 +545,137 @@ describe("bookings (real backend calls, answered with captured bodies)", () => {
       await press("Save & Continue");
       await screen.findByText("₦55,000");
       await press("Proceed to Payment");
+      await makePayment();
       expect(await screen.findByText(/We could not start the payment/)).toBeTruthy();
       expect(WebBrowser.openBrowserAsync).not.toHaveBeenCalled();
       view.unmount();
+    });
+
+    describe("Payment Details (Card or Bank Transfer)", () => {
+      /** Everything up to the summary, with the live-captured preview and create answers, then "Proceed to Payment". */
+      async function openPaymentDetails(create: () => { status: number; body: unknown } = () => ({ status: 200, body: created() })) {
+        const rendered = await renderSignedIn({
+          [SERVICES]: services,
+          [PREVIEW]: () => ({ status: 200, body: preview }),
+          [CREATE]: create,
+          [`GET /api/v1/booking/booking/${NEW_ID}`]: () => ({ status: 200, body: created() }),
+          [VERIFY]: () => ({ status: 200, body: paid() }),
+        });
+        await fillTheForm();
+        await press("Use my current location");
+        await screen.findByText("Location saved");
+        await press("Save & Continue");
+        await screen.findByText("₦55,000");
+        await press("Proceed to Payment");
+        await screen.findByText("Payment Details");
+        return rendered;
+      }
+      const createBodies = (calls: RecordedCall[]) => calls.filter((c) => `${c.method} ${c.path}` === CREATE).map((c) => c.body as Record<string, unknown>);
+
+      it("is drawn as in the design: Card Payment and Bank Transfer, no wallet, no card fields, Make Payment; nothing is created until it is pressed", async () => {
+        const { view, calls } = await openPaymentDetails();
+        expect(screen.getByText("Book your Appointments in 2 steps")).toBeTruthy();
+        expect(screen.getAllByRole("radio").map((r) => r.props.accessibilityLabel)).toEqual(["Card Payment", "Bank Transfer"]);
+        expect(screen.queryByText(/wallet/i)).toBeNull();
+        expect(screen.queryByLabelText(/card number|expiry|cvv/i)).toBeNull();
+        expect(screen.queryByText(/Lorem ipsum/i)).toBeNull();
+        expect(screen.getByRole("button", { name: "Make Payment" }).props.accessibilityState.disabled).toBe(false);
+        expect(createBodies(calls)).toHaveLength(0);
+        expect(WebBrowser.openBrowserAsync).not.toHaveBeenCalled();
+        view.unmount();
+      });
+
+      it("Back returns to the summary with the form intact, and nothing was created", async () => {
+        const { view, calls } = await openPaymentDetails();
+        await press("Back");
+        expect(await screen.findByText("Booking Summary")).toBeTruthy();
+        expect(screen.getByText("My Mother")).toBeTruthy();
+        expect(createBodies(calls)).toHaveLength(0);
+        view.unmount();
+      });
+
+      it.each([
+        ["Card Payment", ["card"]],
+        ["Bank Transfer", ["bank_transfer"]],
+      ])("picking %s sends exactly channels %j on the create call, never an amount, then opens the checkout", async (method, channels) => {
+        const { view, calls } = await openPaymentDetails();
+        await pick(method);
+        expect(screen.getByRole("radio", { name: method }).props.accessibilityState.selected).toBe(true);
+        await press("Make Payment");
+        await waitFor(() => expect(WebBrowser.openBrowserAsync).toHaveBeenCalledWith(PAY_URL, expect.anything()));
+        const bodies = createBodies(calls);
+        expect(bodies).toHaveLength(1);
+        expect(bodies[0].channels).toEqual(channels);
+        expect(Object.keys(bodies[0]).filter((k) => /amount|price|card|cvv|expiry/i.test(k))).toEqual([]);
+        expect(await screen.findByText(/Payment Successful\./)).toBeTruthy();
+        view.unmount();
+      });
+
+      it("the last pick wins when the person changes their mind", async () => {
+        const { view, calls } = await openPaymentDetails();
+        await pick("Card Payment");
+        await pick("Bank Transfer");
+        await press("Make Payment");
+        await waitFor(() => expect(createBodies(calls)).toHaveLength(1));
+        expect(createBodies(calls)[0].channels).toEqual(["bank_transfer"]);
+        view.unmount();
+      });
+
+      it("with nothing picked the channels field is left out (Paystack shows its own methods)", async () => {
+        const { view, calls } = await openPaymentDetails();
+        await press("Make Payment");
+        await waitFor(() => expect(WebBrowser.openBrowserAsync).toHaveBeenCalledWith(PAY_URL, expect.anything()));
+        expect(createBodies(calls)).toHaveLength(1);
+        expect("channels" in createBodies(calls)[0]).toBe(false);
+        view.unmount();
+      });
+
+      it("a 422 naming channels says the method can't be used, opens no checkout, and the person can pick again and succeed", async () => {
+        // The backend guide's section 14.1 body for an unknown value (an in-process test run, not a live capture).
+        const refused = {
+          detail: [{ type: "literal_error", loc: ["body", "channels", 0], msg: "Input should be 'card' or 'bank_transfer'", input: "ussd", ctx: { expected: "'card' or 'bank_transfer'" } }],
+        };
+        let attempts = 0;
+        const { view, calls } = await openPaymentDetails(() => (++attempts === 1 ? { status: 422, body: refused } : { status: 200, body: created() }));
+        await pick("Card Payment");
+        await press("Make Payment");
+        expect(await screen.findByText("That payment method can't be used right now. Please choose another one and try again.")).toBeTruthy();
+        expect(screen.queryByText(/Input should be/)).toBeNull();
+        expect(WebBrowser.openBrowserAsync).not.toHaveBeenCalled();
+        await press("OK");
+        await pick("Bank Transfer");
+        await press("Make Payment");
+        await waitFor(() => expect(WebBrowser.openBrowserAsync).toHaveBeenCalledWith(PAY_URL, expect.anything()));
+        expect(createBodies(calls).map((b) => b.channels)).toEqual([["card"], ["bank_transfer"]]);
+        view.unmount();
+      });
+
+      it("a 503 payment_link_unavailable shows the server's sentence and opens nothing; Make Payment can be pressed again", async () => {
+        const message = "We couldn't prepare your payment link right now. Please try again in a moment.";
+        let attempts = 0;
+        const { view } = await openPaymentDetails(() =>
+          ++attempts === 1 ? { status: 503, body: { detail: { code: "payment_link_unavailable", message } } } : { status: 200, body: created() },
+        );
+        await pick("Bank Transfer");
+        await press("Make Payment");
+        expect(await screen.findByText(message)).toBeTruthy();
+        expect(WebBrowser.openBrowserAsync).not.toHaveBeenCalled();
+        await press("OK");
+        expect(screen.getByRole("button", { name: "Make Payment" }).props.accessibilityState.disabled).toBe(false);
+        await press("Make Payment");
+        await waitFor(() => expect(WebBrowser.openBrowserAsync).toHaveBeenCalledWith(PAY_URL, expect.anything()));
+        view.unmount();
+      });
+
+      it("shows 'Can't reach Oakly' when the create call never arrives, and stays on the screen", async () => {
+        const { view } = await openPaymentDetails(() => {
+          throw new TypeError("Network request failed");
+        });
+        await press("Make Payment");
+        expect(await screen.findByText("Can't reach Oakly. Check your internet connection and try again.")).toBeTruthy();
+        expect(screen.getByText("Payment Details")).toBeTruthy();
+        view.unmount();
+      });
     });
 
     it("the summary says 'Can't reach Oakly' when the price cannot be fetched, and will not proceed without a price", async () => {

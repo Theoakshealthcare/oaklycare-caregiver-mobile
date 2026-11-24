@@ -3,6 +3,7 @@ import type { Schemas } from "@oakly/api-client";
 import { api } from "@/src/api/client";
 import { ApiError } from "@/src/api/errors";
 import { unwrap } from "@/src/api/unwrap";
+import type { PaymentChannel } from "@/src/domain/paymentMethods";
 import type { BookableService, Booking, BookingDraft, BookingQuote, CancelResult, CancelTerms } from "@/src/domain/booking";
 
 import { toBookableServices, toBooking, toCancelResult, toCancelTerms, toCreateBody, toQuote } from "./bookingMapper";
@@ -67,8 +68,12 @@ export const bookingService = {
     return toBookableServices(await unwrap(api.GET("/api/v1/booking/services")));
   },
 
-  async create(draft: BookingDraft): Promise<CreatedBooking> {
-    const body = await unwrap(api.POST("/api/v1/booking/create", { body: toCreateBody(draft) }));
+  /**
+   * `channel` is the payment method picked on "Payment Details". It is sent here, on the call that makes the Paystack link,
+   * because the first link wins: `/payment-link` later hands back the same link whatever it is asked.
+   */
+  async create(draft: BookingDraft, channel?: PaymentChannel): Promise<CreatedBooking> {
+    const body = await unwrap(api.POST("/api/v1/booking/create", { body: toCreateBody(draft, channel) }));
     return { booking: toBooking(body), paymentUrl: body.payment_url ?? null, paymentError: body.payment_error ?? null };
   },
 

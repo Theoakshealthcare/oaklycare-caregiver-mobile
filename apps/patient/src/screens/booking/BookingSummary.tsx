@@ -1,11 +1,9 @@
 import type React from "react";
-import { useState } from "react";
 import { Pressable, StyleSheet, View } from "react-native";
 
 import { bookingErrorMessage } from "@/src/api/bookingErrors";
 import AuthPage from "@/src/components/ui/auth-page";
 import Button from "@/src/components/ui/button";
-import ErrorDialog from "@/src/components/ui/ErrorDialog";
 import Icon from "@/src/components/ui/icon";
 import Text from "@/src/components/ui/text";
 import { theme } from "@/src/constants/theme";
@@ -14,7 +12,7 @@ import { durationLabel, GENDERS, LANGUAGES } from "@/src/domain/bookingChoices";
 import { formatNaira } from "@/src/domain/format";
 import { formatSlot } from "@/src/domain/slots";
 import { useBookingDraft } from "@/src/hooks/bookingDraft";
-import { useBookingQuote, useCreateBooking } from "@/src/hooks/useBookings";
+import { useBookingQuote } from "@/src/hooks/useBookings";
 import { useNav } from "@/src/navigation/Navigations";
 
 /** Figma writes "Nil" for a value that was left empty. */
@@ -37,32 +35,14 @@ const Heading: React.FC<{ children: string }> = ({ children }) => (
 
 const choiceLabel = (choices: { value: string; label: string }[], value: string) => choices.find((c) => c.value === value)?.label ?? value;
 
-/** Read-only recap of both steps (Figma "Booking Summary"), the price the backend quoted, and the way into payment on Paystack's secure page. */
+/** Read-only recap of both steps (Figma "Booking Summary"), the price the backend quoted, and the way on to "Payment Details". */
 const BookingSummary: React.FC = () => {
   const navigation = useNav();
-  const { draft, reset } = useBookingDraft();
+  const { draft } = useBookingDraft();
   const quote = useBookingQuote(draft);
-  const create = useCreateBooking();
-  const [dialog, setDialog] = useState<string | null>(null);
 
-  const proceed = () =>
-    create.mutate(draft, {
-      onSuccess: ({ booking, paymentError }) => {
-        if (paymentError) {
-          // The backend cancelled this booking because payment could not start: there is nothing to pay or resume.
-          setDialog(`We could not start the payment (${paymentError}). Nothing was charged. Please try again in a moment.`);
-          return;
-        }
-        reset();
-        // The form is done: Back from here goes to the bookings list (where an unpaid booking offers "Pay now"), not
-        // into the emptied form.
-        navigation.reset({
-          index: 1,
-          routes: [{ name: "Tabs", params: { tab: "bookings", at: Date.now() } }, { name: "PaymentResult", params: { bookingId: booking.id, open: true } }],
-        });
-      },
-      onError: (e) => setDialog(bookingErrorMessage(e)),
-    });
+  // The booking is made on the next screen, with the payment method chosen there.
+  const proceed = () => navigation.navigate("PaymentDetails");
 
   const q = quote.data;
   const edit = (
@@ -146,9 +126,8 @@ const BookingSummary: React.FC = () => {
         )}
       </View>
       <View style={styles.action}>
-        <Button title="Proceed to Payment" onPress={proceed} loading={create.isPending} disabled={!q} />
+        <Button title="Proceed to Payment" onPress={proceed} disabled={!q} />
       </View>
-      <ErrorDialog visible={dialog !== null} title="Could not create the booking" message={dialog ?? ""} onClose={() => setDialog(null)} />
     </AuthPage>
   );
 };

@@ -14,6 +14,7 @@ import BookingStep1 from "@/src/screens/booking/BookingStep1";
 import BookingStep2 from "@/src/screens/booking/BookingStep2";
 import BookingSummary from "@/src/screens/booking/BookingSummary";
 import CancelBooking from "@/src/screens/booking/CancelBooking";
+import PaymentDetails from "@/src/screens/booking/PaymentDetails";
 import PaymentResult from "@/src/screens/booking/PaymentResult";
 import FallAssessment from "@/src/screens/fall/FallAssessment";
 import FallResult from "@/src/screens/fall/FallResult";
@@ -71,6 +72,7 @@ export const APP_SCREENS: ScreenDef[] = [
   { name: "BookingStep1", component: BookingStep1 },
   { name: "BookingStep2", component: BookingStep2 },
   { name: "BookingSummary", component: BookingSummary },
+  { name: "PaymentDetails", component: PaymentDetails },
   { name: "PaymentResult", component: PaymentResult },
   // The details sheet and the cancel dialogs are drawn over the bookings list, as the designs show them.
   { name: "BookingDetails", component: BookingDetails, options: { presentation: "transparentModal", animation: "slide_from_bottom", cardStyle: { backgroundColor: "transparent" } } },

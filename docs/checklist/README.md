@@ -46,7 +46,8 @@ channel) lives in the backend repo: `docs/checklist/MASTER_CHECKLIST.md`. Update
 
 ## Patient app parity with Figma, slice 2: booking and payment (2026-11-23)
 - [x] Booking step 1 (dropdowns, calendar field, services from `GET /booking/services`, lengths in 30-minute steps from the catalogue), step 2 (State dropdown, Contact Details, Preference, progress bar), Booking Summary, "Payment Failed! Try Again", "Payment Successful. Booking Confirmed" with the receipt; branch `feat/patient-booking-parity` ([SOP](../sop/2026-11-23-patient-booking-parity.md)); **seen on the iOS simulator only, not Android or a real phone; real Paystack not exercised**
-- [ ] Deferred: "Payment Details" method screen (Card / Bank Transfer / Wallet): the backend takes no Paystack channel, the wallet is off, and the app never collects card data
+- [x] "Payment Details" method screen (Card Payment / Bank Transfer; no wallet, no card fields) between the summary and Paystack, sending `channels` on `POST /booking/create` (backend #71); branch `feat/patient-payment-details` ([SOP](../sop/2026-11-24-patient-payment-details.md)); **Jest only: visual pass pending**
+- [ ] **Owner: run each single channel once in Paystack test mode** (open a `card` link and a `bank_transfer` link, confirm each page offers a usable method) before a build with the single-channel choice goes to patients: a channel not enabled on the merchant account may leave the patient on a checkout with no usable method until the 30-minute window ends
 - [ ] Deferred: "Choose Service Time / Immediate booking" and the Wound Care service (no backend service or ASAP rule)
 - [ ] Owner decisions: the app's own lists (relations, assistance, conditions), contact phone and e-mail visible to the caregiver, coral failure title, step bar growth
 

@@ -3996,7 +3996,7 @@
           "Patient Bookings"
         ],
         "summary": "Get the payment link of a booking that is not paid yet (booker only)",
-        "description": "The \"Pay now\" link for a booking created earlier, so it survives an app restart.\n\nSame response as ``/create`` (the booking with ``payment_url`` and ``payment_access_code``) plus ``paystack_reference``\nand ``payment_expires_at``. The link is the one Paystack gave when the booking was created (stored on the booking). The\nbooking keeps its one Paystack reference, so Paystack itself can charge it only once: tapping twice, or paying on an old page and a new\none, can never charge twice. Paystack is asked first whether the booking was already paid (a late webhook): if so it\nis settled and the answer is 409 ``booking_already_paid``. Nothing is written when a link is handed out. Only for a\npending booking whose payment window is still open; the window is not extended.",
+        "description": "The \"Pay now\" link for a booking created earlier, so it survives an app restart.\n\nSame response as ``/create`` (the booking with ``payment_url`` and ``payment_access_code``) plus ``paystack_reference``\nand ``payment_expires_at``. The link is the one Paystack gave when the booking was created (stored on the booking). The\nbooking keeps its one Paystack reference, so Paystack itself can charge it only once: tapping twice, or paying on an old page and a new\none, can never charge twice. Paystack is asked first whether the booking was already paid (a late webhook): if so it\nis settled and the answer is 409 ``booking_already_paid``. Nothing is written when a link is handed out. Only for a\npending booking whose payment window is still open; the window is not extended.\n\n**channels** (optional, ``[\"card\"]``, ``[\"bank_transfer\"]`` or both) limits Paystack's checkout page. It only applies\nwhen the server has to make a new link (a booking with no stored link). A booking that already has its link, which is\nevery booking made through ``/create``, gets that same link back whatever this request names: the first link wins.\nThe person's method is chosen on ``/create``. The body can be left out entirely; no amount or other field is accepted.",
         "operationId": "get_payment_link_api_v1_booking__booking_id__payment_link_post",
         "security": [
           {
@@ -4015,6 +4015,24 @@
             }
           }
         ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "anyOf": [
+                  {
+                    "$ref": "#/components/schemas/PaymentLinkRequest"
+                  },
+                  {
+                    "type": "null"
+                  }
+                ],
+                "description": "Optional. Send nothing, or {\"channels\": [...]}; see the note on channels below.",
+                "title": "Body"
+              }
+            }
+          }
+        },
         "responses": {
           "200": {
             "description": "Successful Response",
@@ -14474,6 +14492,30 @@
             "title": "Booking For",
             "description": "Who the booking is for",
             "example": "Myself"
+          },
+          "channels": {
+            "anyOf": [
+              {
+                "items": {
+                  "type": "string",
+                  "enum": [
+                    "card",
+                    "bank_transfer"
+                  ]
+                },
+                "type": "array",
+                "maxItems": 2,
+                "minItems": 1
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Channels",
+            "description": "Optional. Which payment methods Paystack's checkout page offers: [\"card\"], [\"bank_transfer\"] or both. Left out, Paystack shows its own default channels. Only applied when the payment link is first made: the same booking always keeps the link it was created with.",
+            "example": [
+              "bank_transfer"
+            ]
           }
         },
         "type": "object",
@@ -23567,6 +23609,38 @@
           "created_at"
         ],
         "title": "PaymentAttemptOut"
+      },
+      "PaymentLinkRequest": {
+        "properties": {
+          "channels": {
+            "anyOf": [
+              {
+                "items": {
+                  "type": "string",
+                  "enum": [
+                    "card",
+                    "bank_transfer"
+                  ]
+                },
+                "type": "array",
+                "maxItems": 2,
+                "minItems": 1
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Channels",
+            "description": "Optional. Which payment methods Paystack's checkout page offers: [\"card\"], [\"bank_transfer\"] or both. Left out, Paystack shows its own default channels. Only applied when the payment link is first made: the same booking always keeps the link it was created with.",
+            "example": [
+              "card"
+            ]
+          }
+        },
+        "additionalProperties": false,
+        "type": "object",
+        "title": "PaymentLinkRequest",
+        "description": "Optional body of ``POST /booking/{id}/payment-link``. The whole body may be left out. Nothing about the money\ncan be sent: an amount, card details or any other field is a 422, not silently ignored."
       },
       "PaymentLinkResponse": {
         "properties": {

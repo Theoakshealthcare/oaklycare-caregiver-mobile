@@ -31,6 +31,8 @@ export type ScreenParamLists = {
   BookingStep1: undefined;
   BookingStep2: undefined;
   BookingSummary: undefined;
+  /** Card or Bank Transfer, between the summary and the Paystack checkout. */
+  PaymentDetails: undefined;
   /** `open`: open the Paystack checkout as soon as the screen shows (from "Proceed to Payment" and "Pay now"). */
   PaymentResult: { bookingId: string; open?: boolean };
   BookingDetails: { id: string };

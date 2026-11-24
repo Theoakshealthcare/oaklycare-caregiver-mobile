@@ -1354,6 +1354,11 @@ export interface paths {
          *     one, can never charge twice. Paystack is asked first whether the booking was already paid (a late webhook): if so it
          *     is settled and the answer is 409 ``booking_already_paid``. Nothing is written when a link is handed out. Only for a
          *     pending booking whose payment window is still open; the window is not extended.
+         *
+         *     **channels** (optional, ``["card"]``, ``["bank_transfer"]`` or both) limits Paystack's checkout page. It only applies
+         *     when the server has to make a new link (a booking with no stored link). A booking that already has its link, which is
+         *     every booking made through ``/create``, gets that same link back whatever this request names: the first link wins.
+         *     The person's method is chosen on ``/create``. The body can be left out entirely; no amount or other field is accepted.
          */
         post: operations["get_payment_link_api_v1_booking__booking_id__payment_link_post"];
         delete?: never;
@@ -4668,6 +4673,14 @@ export interface components {
              * @example Myself
              */
             booking_for: string;
+            /**
+             * Channels
+             * @description Optional. Which payment methods Paystack's checkout page offers: ["card"], ["bank_transfer"] or both. Left out, Paystack shows its own default channels. Only applied when the payment link is first made: the same booking always keeps the link it was created with.
+             * @example [
+             *       "bank_transfer"
+             *     ]
+             */
+            channels?: ("card" | "bank_transfer")[] | null;
         };
         /** BookingDetail */
         BookingDetail: {
@@ -8145,6 +8158,21 @@ export interface components {
              * Format: date-time
              */
             created_at: string;
+        };
+        /**
+         * PaymentLinkRequest
+         * @description Optional body of ``POST /booking/{id}/payment-link``. The whole body may be left out. Nothing about the money
+         *     can be sent: an amount, card details or any other field is a 422, not silently ignored.
+         */
+        PaymentLinkRequest: {
+            /**
+             * Channels
+             * @description Optional. Which payment methods Paystack's checkout page offers: ["card"], ["bank_transfer"] or both. Left out, Paystack shows its own default channels. Only applied when the payment link is first made: the same booking always keeps the link it was created with.
+             * @example [
+             *       "card"
+             *     ]
+             */
+            channels?: ("card" | "bank_transfer")[] | null;
         };
         /**
          * PaymentLinkResponse
@@ -12996,7 +13024,11 @@ export interface operations {
             };
             cookie?: never;
         };
-        requestBody?: never;
+        requestBody?: {
+            content: {
+                "application/json": components["schemas"]["PaymentLinkRequest"] | null;
+            };
+        };
         responses: {
             /** @description Successful Response */
             200: {

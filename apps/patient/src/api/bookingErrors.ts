@@ -83,3 +83,17 @@ export function bookingErrorMessage(error: unknown): string {
 export function pointsToSupport(error: unknown): boolean {
   return error instanceof ApiError && (error.code === "booking_in_progress" || error.code === "payment_under_review");
 }
+
+/**
+ * What "Make Payment" shows when creating the booking is refused. A `422` that names `channels` (a value the backend does not
+ * allow) would otherwise show FastAPI's validation sentence; every other error reads as it does elsewhere, including a coded
+ * `503 payment_link_unavailable`, whose own `message` is shown.
+ */
+export function paymentMethodErrorMessage(error: unknown): string {
+  if (error instanceof ApiError && error.status === 422) {
+    const detail = (error.body as { detail?: unknown } | null)?.detail;
+    const namesChannels = Array.isArray(detail) && detail.some((d) => Array.isArray((d as { loc?: unknown })?.loc) && (d as { loc: unknown[] }).loc.includes("channels"));
+    if (namesChannels) return "That payment method can't be used right now. Please choose another one and try again.";
+  }
+  return bookingErrorMessage(error);
+}
