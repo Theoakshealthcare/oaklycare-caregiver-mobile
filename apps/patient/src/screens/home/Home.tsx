@@ -33,8 +33,14 @@ const TILES = [
   { kind: "heart_rate", label: "Heart Rate", icon: "pulse", unit: " BPM" },
 ] as const;
 
-/** Figma: Quick Service is a row of round tiles; only the services that are built are shown (Book a Nurse). */
-const QUICK_NURSE = require("../../../assets/images/home-quick-nurse.png");
+/**
+ * Figma: Quick Service is a row of round tiles; only the services that are built are shown (Book a Nurse). The artwork is the
+ * figures alone on a transparent background (`assets/images/quick/`): the tile draws its own pale pink circle. The other
+ * pictures in that folder (prescription-request, physiotherapy-request, medication-reminder) are for services and cards that
+ * are not built yet and are deliberately not shown.
+ */
+const QUICK_NURSE = require("../../../assets/images/quick/book-a-nurse.png");
+const QUICK_TILE_TINT = "#FCEDEB";
 
 const Home: React.FC = () => {
   const navigation = useNav();
@@ -98,7 +104,9 @@ const Home: React.FC = () => {
           Quick Service
         </Text>
         <Pressable accessibilityRole="button" accessibilityLabel="Book a Nurse" onPress={() => navigation.navigate("BookingStep1")} style={styles.quick}>
-          <Image source={QUICK_NURSE} style={styles.quickIcon} />
+          <View style={styles.quickCircle}>
+            <Image source={QUICK_NURSE} style={styles.quickIcon} resizeMode="contain" />
+          </View>
           <Text variant="small">Book a Nurse</Text>
         </Pressable>
 
@@ -224,7 +232,8 @@ const styles = StyleSheet.create({
   startBooking: { paddingHorizontal: theme.spacing.md, minHeight: 40 },
   heading: { fontSize: theme.sizes.subtitle, marginTop: theme.spacing.xs },
   quick: { alignItems: "center", alignSelf: "flex-start", gap: theme.spacing.xs, paddingLeft: theme.spacing.xs },
-  quickIcon: { width: 62, height: 62 },
+  quickCircle: { width: 62, height: 62, borderRadius: 31, backgroundColor: QUICK_TILE_TINT, alignItems: "center", justifyContent: "center" },
+  quickIcon: { width: 46, height: 37 },
   tiles: { flexDirection: "row", gap: theme.spacing.md },
   tile: {
     flex: 1,

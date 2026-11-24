@@ -26,6 +26,7 @@ channel) lives in the backend repo: `docs/checklist/MASTER_CHECKLIST.md`. Update
 - [x] Device re-check of DP1-03/04/07 passed (re-check 1); DP1-02 re-proved after its correction
 - [ ] Push-token registration loop (both apps, ~12 POSTs/s, found on staging 2026-11-23): fixed on `fix/push-token-loop`, **not verified on a device** until a new APK is tried ([SOP](../sop/2026-11-23-push-token-registration-loop.md))
 - [ ] Resend and code-screen feedback, and a 20 s request timeout in the shared client (found on staging 2026-11-23): built on `fix/auth-feedback-and-timeout`, **not verified on a device** ([SOP](../sop/2026-11-23-auth-feedback-and-request-timeout.md))
+- [x] Patient Quick Service artwork replaced with the owner's icons (Home tile uses the sharp nurse art; the other three kept for unbuilt services), 2026-11-24, [SOP](../sop/2026-11-24-patient-quick-service-icons.md); not seen on a screen yet
 - [ ] Android keyboard pass; patient app to adopt `filePart` and `isNetworkFailure` when it gets uploads
 - [ ] DP1-05 (visit rules) and DP1-06 (decline semantics): owner decisions pending
 
