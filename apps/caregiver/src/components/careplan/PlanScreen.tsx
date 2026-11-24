@@ -27,7 +27,7 @@ const PlanScreen: React.FC<{
         <View style={{ padding: theme.spacing.md, paddingTop: theme.spacing.xl, paddingBottom: theme.spacing.xl, gap: theme.spacing.md }}>
           <View>{hasHistory ? <RoundBack onPress={() => navigation.goBack()} /> : null}</View>
           <View style={{ gap: theme.spacing.xs }}>
-            <Text variant="h2" weight="bold" accessibilityRole="header">
+            <Text variant="page" weight="bold" accessibilityRole="header">
               {title}
             </Text>
             {subtitle ? (

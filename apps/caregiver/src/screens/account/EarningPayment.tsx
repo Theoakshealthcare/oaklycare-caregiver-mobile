@@ -103,7 +103,7 @@ const EarningPayment: React.FC = () => {
         <View style={[globalStyles.container, { paddingBottom: theme.spacing.md }]}>
           <HeaderBack />
           <View style={{ marginVertical: "5%", flexDirection: "row", alignItems: "center", justifyContent: "space-between" }}>
-            <Text variant="h2" weight="bold">
+            <Text variant="page" weight="bold">
               Earning Payment
             </Text>
             <MonthChip value={month} options={options} onChange={setMonth} />

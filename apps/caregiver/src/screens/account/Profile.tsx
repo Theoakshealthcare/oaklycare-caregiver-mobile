@@ -25,13 +25,13 @@ const MenuRow: React.FC<{ icon: IconName; label: string; onPress: () => void }> 
       flexDirection: "row",
       alignItems: "center",
       gap: 12,
-      paddingVertical: 16,
+      paddingVertical: 21,
       borderBottomWidth: 1,
       borderBottomColor: theme.colors.border,
     }}
   >
     <Feather name={icon} size={20} color={theme.colors.primary} />
-    <Text variant="body" weight="medium" style={{ flex: 1 }}>
+    <Text variant="small" weight="medium" style={{ flex: 1 }}>
       {label}
     </Text>
     <Feather name="chevron-right" size={20} color={theme.colors.text} />
@@ -51,7 +51,7 @@ const Profile: React.FC = () => {
         <View style={globalStyles.container}>
           <HeaderBack />
           <View style={{ marginVertical: "5%" }}>
-            <Text variant="h2" weight="bold">
+            <Text variant="page" weight="bold">
               Profile Settings
             </Text>
           </View>

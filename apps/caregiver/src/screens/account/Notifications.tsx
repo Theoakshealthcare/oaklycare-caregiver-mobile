@@ -3,7 +3,9 @@ import { FlatList, Pressable, RefreshControl, View } from "react-native";
 import { Feather } from "@expo/vector-icons";
 
 import { ErrorState, LoadingState } from "@/src/components/account/StateViews";
-import HeaderBack from "@/src/components/back/HeaderBack";
+import { useNavigation as useRNNavigation } from "@react-navigation/native";
+
+import Icon from "@/src/components/ui/icon";
 import Text from "@/src/components/ui/text";
 import { globalStyles } from "@/src/constants/styles";
 import { theme } from "@/src/constants/theme";
@@ -28,6 +30,7 @@ const NoNotifications: React.FC = () => (
 
 const Notifications: React.FC = () => {
   const { navigation } = useNavigation();
+  const rnNavigation = useRNNavigation();
   const query = useNotifications();
   // "10 Min Ago" and "Today" are judged as of the moment the list was fetched (the same rule as Home's block).
   const fetchedAt = query.dataUpdatedAt;
@@ -58,9 +61,12 @@ const Notifications: React.FC = () => {
   return (
     <View style={{ flex: 1, backgroundColor: theme.colors.white }}>
       <View style={[globalStyles.container, { flex: 1, paddingBottom: 0 }]}>
-        <HeaderBack />
-        <View style={{ marginVertical: "5%" }}>
-          <Text variant="h2" weight="bold">
+        {/* Figma: just the back arrow on the left and the title centred. */}
+        <View style={{ height: 44, justifyContent: "center", marginBottom: theme.spacing.md }}>
+          <Pressable accessibilityRole="button" accessibilityLabel="Back" onPress={() => rnNavigation.goBack()} hitSlop={12} style={{ position: "absolute", left: 0 }}>
+            <Icon name="chevron-back" size={24} />
+          </Pressable>
+          <Text variant="subtitle" weight="bold" center>
             Notification
           </Text>
         </View>
@@ -74,7 +80,7 @@ const Notifications: React.FC = () => {
             renderItem={({ item: row }) => {
               if (row.kind === "header") {
                 return (
-                  <Text variant="body" weight="medium" style={{ marginTop: theme.spacing.sm, marginBottom: theme.spacing.sm }}>
+                  <Text variant="small" weight="medium" style={{ marginTop: theme.spacing.sm, marginBottom: theme.spacing.sm }}>
                     {row.label}
                   </Text>
                 );
@@ -86,33 +92,35 @@ const Notifications: React.FC = () => {
                   accessibilityRole="button"
                   onPress={() => open(item)}
                   style={{
-                    padding: 16,
-                    borderRadius: 16,
-                    marginBottom: 12,
-                    backgroundColor: view.isRead ? theme.colors.soft : theme.colors.primaryLight,
+                    padding: 14,
+                    borderRadius: 12,
+                    marginBottom: 10,
+                    backgroundColor: view.isRead ? theme.colors.white : theme.colors.primaryLight,
+                    ...theme.shadows.small,
+                    shadowOpacity: 0.1,
                   }}
                 >
                   <View style={{ flexDirection: "row", alignItems: "flex-start", justifyContent: "space-between", gap: theme.spacing.sm }}>
                     <View style={{ flex: 1 }}>
-                      <Text variant="body" weight="bold">
+                      <Text variant="small" weight="medium">
                         {view.title}
                       </Text>
                     </View>
-                    <Text variant="small" weight="bold" color={theme.colors.primary} testID="notification-ago">
+                    <Text variant="label" weight="bold" color={theme.colors.primary} testID="notification-ago">
                       {timeAgo(item.created_at, fetchedAt)}
                     </Text>
                   </View>
-                  <Text variant="small" color={theme.colors.textLight} style={{ marginTop: 2 }}>
+                  <Text variant="label" color={theme.colors.muted} style={{ marginTop: 2 }}>
                     {view.detail}
                   </Text>
                   {view.distance ? (
-                    <Text variant="small" color={theme.colors.textLight}>
+                    <Text variant="label" color={theme.colors.muted}>
                       {view.distance}
                     </Text>
                   ) : null}
                   {view.stateLabel ? (
                     <Text
-                      variant="small"
+                      variant="label"
                       weight="medium"
                       color={view.state === "unavailable" ? theme.colors.textLight : theme.colors.primary}
                       style={{ marginTop: 4 }}

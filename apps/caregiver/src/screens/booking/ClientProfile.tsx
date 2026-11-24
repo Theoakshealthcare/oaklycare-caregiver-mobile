@@ -27,7 +27,7 @@ const Section: React.FC<{ title: string; action?: { label: string; onPress: () =
 }) => (
   <View style={{ marginTop: theme.spacing.lg }}>
     <View style={{ flexDirection: "row", justifyContent: "space-between", alignItems: "center", marginBottom: theme.spacing.sm }}>
-      <Text variant="h3" weight="bold">
+      <Text variant="body" weight="bold" color={theme.colors.sectionTitle}>
         {title}
       </Text>
       {action ? (
@@ -43,17 +43,17 @@ const Section: React.FC<{ title: string; action?: { label: string; onPress: () =
 );
 
 const Card: React.FC<{ children: React.ReactNode; testID?: string }> = ({ children, testID }) => (
-  <View testID={testID} style={{ backgroundColor: theme.colors.soft, borderRadius: theme.borderRadius.xl, padding: theme.spacing.md, gap: theme.spacing.sm }}>
+  <View testID={testID} style={{ backgroundColor: theme.colors.white, ...theme.shadows.small, shadowOpacity: 0.08, borderRadius: theme.borderRadius.xl, padding: theme.spacing.md, gap: theme.spacing.sm }}>
     {children}
   </View>
 );
 
 const LabelledLine: React.FC<{ label: string; value: string }> = ({ label, value }) => (
   <View>
-    <Text variant="caption" color={theme.colors.textLight}>
+    <Text variant="label" color={theme.colors.textLight}>
       {label}
     </Text>
-    <Text variant="body">{value}</Text>
+    <Text variant="compact">{value}</Text>
   </View>
 );
 
@@ -117,16 +117,16 @@ const ClientProfile: React.FC<Props> = ({ route }) => {
               </View>
             )}
             <View style={{ flex: 1 }}>
-              <Text variant="h3" weight="bold" testID="client-name">
+              <Text variant="body" weight="bold" color="#000000" testID="client-name">
                 {profile.full_name}
               </Text>
               {subtitle ? (
-                <Text variant="small" color={theme.colors.textLight} testID="client-age-sex">
+                <Text variant="label" color={theme.colors.textLight} testID="client-age-sex">
                   {subtitle}
                 </Text>
               ) : null}
               {bookingCode ? (
-                <Text variant="caption" color={theme.colors.textLight} testID="client-code">
+                <Text variant="label" color={theme.colors.textLight} testID="client-code">
                   {`Booking ${bookingCode}`}
                 </Text>
               ) : null}
@@ -168,18 +168,18 @@ const ClientProfile: React.FC<Props> = ({ route }) => {
                 <View
                   key={kind}
                   testID={`client-vital-${kind}`}
-                  style={{ width: "48%", backgroundColor: theme.colors.soft, borderRadius: theme.borderRadius.xl, padding: theme.spacing.md, marginBottom: theme.spacing.sm, gap: theme.spacing.xs }}
+                  style={{ width: "48%", backgroundColor: theme.colors.white, ...theme.shadows.small, shadowOpacity: 0.08, borderRadius: theme.borderRadius.xl, padding: theme.spacing.md, marginBottom: theme.spacing.sm, gap: theme.spacing.xs }}
                 >
                   <View style={{ flexDirection: "row", alignItems: "center", gap: theme.spacing.xs }}>
                     <Feather name={kindInfo(kind).icon} size={16} color={theme.colors.primary} />
-                    <Text variant="caption" color={theme.colors.textLight}>
+                    <Text variant="label" color={theme.colors.textLight}>
                       {kindInfo(kind).label}
                     </Text>
                   </View>
-                  <Text variant="h3" weight="bold">
+                  <Text variant="subtitle" weight="bold">
                     {formatReading({ value: vital.value, unit: vital.unit ?? null })}
                   </Text>
-                  <Text variant="caption" color={theme.colors.textLight}>
+                  <Text variant="label" color={theme.colors.textLight}>
                     {formatUpdated(parseBackendDate(vital.recorded_at))}
                   </Text>
                 </View>

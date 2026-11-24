@@ -83,7 +83,7 @@ const ChangePassword: React.FC = () => {
         <View style={globalStyles.container}>
           <HeaderBack />
           <View style={{ marginVertical: "8%" }}>
-            <Text variant="h2" weight="bold">
+            <Text variant="page" weight="bold">
               Change password
             </Text>
             <Text variant="body" color={theme.colors.textLight}>

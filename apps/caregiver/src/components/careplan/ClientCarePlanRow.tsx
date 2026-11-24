@@ -93,7 +93,7 @@ const ClientCarePlanRow: React.FC<{ bookingId: string; clientName?: string }> = 
 
   return (
     <View style={{ marginTop: theme.spacing.lg }}>
-      <Text variant="h3" weight="bold" style={{ marginBottom: theme.spacing.sm }}>
+      <Text variant="body" weight="bold" color={theme.colors.sectionTitle} style={{ marginBottom: theme.spacing.sm }}>
         Care Plan
       </Text>
       <Card testID="care-plan-row">{body()}</Card>

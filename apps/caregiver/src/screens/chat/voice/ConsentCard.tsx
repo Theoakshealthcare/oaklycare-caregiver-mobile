@@ -11,31 +11,79 @@ interface Props {
   onChange: (checked: boolean) => void
 }
 
-/** The consent step before recording: the exact line from consentCopy and a checkbox the caregiver ticks (owner decision D2). */
+/**
+ * The consent step before recording: the exact line from consentCopy and a checkbox the caregiver ticks (owner decision D2).
+ * Layout: a titled card, the confirmation beside a square checkbox (the whole row is the tap target), a hairline, then the
+ * storage note with a lock. The words are untouched (counsel reviews them); only the drawing changed.
+ */
 const ConsentCard: React.FC<Props> = ({ checked, onChange }) => (
   <View
     testID="consent-card"
-    style={{ backgroundColor: theme.colors.primaryLight, borderRadius: 12, padding: 16, marginBottom: 16 }}
+    style={{
+      backgroundColor: theme.colors.primaryLight,
+      borderRadius: theme.borderRadius.xl,
+      borderWidth: 1,
+      borderColor: checked ? theme.colors.primary : "#CDEBEB",
+      padding: theme.spacing.md,
+      marginBottom: theme.spacing.md,
+      gap: 12,
+    }}
   >
-    <Text variant="h3" weight="bold" style={{ marginBottom: 8 }}>
-      {CONSENT_TITLE}
-    </Text>
+    <View style={{ flexDirection: "row", alignItems: "center", gap: 10 }}>
+      <View
+        style={{
+          width: 32,
+          height: 32,
+          borderRadius: 16,
+          backgroundColor: theme.colors.white,
+          alignItems: "center",
+          justifyContent: "center",
+        }}
+      >
+        <Feather name="shield" size={16} color={theme.colors.primary} />
+      </View>
+      <Text variant="body" weight="bold" style={{ fontSize: theme.sizes.subtitle }}>
+        {CONSENT_TITLE}
+      </Text>
+    </View>
+
     <TouchableOpacity
       testID="consent-checkbox"
       accessibilityRole="checkbox"
       accessibilityState={{ checked }}
       accessibilityLabel={CONSENT_LINE}
+      activeOpacity={0.7}
       onPress={() => onChange(!checked)}
       style={{ flexDirection: "row", alignItems: "flex-start", gap: 12 }}
     >
-      <Feather name={checked ? "check-square" : "square"} size={24} color={theme.colors.primary} />
-      <Text variant="body" style={{ flex: 1 }} testID="consent-line">
+      <View
+        style={{
+          width: 24,
+          height: 24,
+          marginTop: 1,
+          borderRadius: 6,
+          borderWidth: 2,
+          borderColor: theme.colors.primary,
+          backgroundColor: checked ? theme.colors.primary : theme.colors.white,
+          alignItems: "center",
+          justifyContent: "center",
+        }}
+      >
+        {checked ? <Feather name="check" size={16} color={theme.colors.white} /> : null}
+      </View>
+      <Text variant="small" style={{ flex: 1, lineHeight: 20 }} testID="consent-line">
         {CONSENT_LINE}
       </Text>
     </TouchableOpacity>
-    <Text variant="small" color={theme.colors.textLight} style={{ marginTop: 8 }} testID="consent-note">
-      {CONSENT_NOTE}
-    </Text>
+
+    <View style={{ height: 1, backgroundColor: "#CDEBEB" }} />
+
+    <View style={{ flexDirection: "row", alignItems: "flex-start", gap: 8 }}>
+      <Feather name="lock" size={14} color={theme.colors.textLight} style={{ marginTop: 2 }} />
+      <Text variant="caption" color={theme.colors.textLight} style={{ flex: 1 }} testID="consent-note">
+        {CONSENT_NOTE}
+      </Text>
+    </View>
   </View>
 )
 

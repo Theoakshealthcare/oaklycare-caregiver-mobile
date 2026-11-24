@@ -24,12 +24,12 @@ export const Card: React.FC<{ children: React.ReactNode; style?: object }> = ({ 
 export const SectionHeader: React.FC<{ title: string; count?: number; right?: React.ReactNode }> = ({ title, count, right }) => (
   <View style={styles.sectionHeader}>
     <View style={styles.sectionTitle}>
-      <Text variant="body" weight="bold">
+      <Text variant="body" weight="bold" color={theme.colors.sectionTitle}>
         {title}
       </Text>
       {count !== undefined && count > 0 ? (
         <View style={styles.badge} testID={`count-${title}`}>
-          <Text variant="caption" weight="medium" color={theme.colors.white}>
+          <Text variant="label" weight="medium" color={theme.colors.white}>
             {count}
           </Text>
         </View>
@@ -81,8 +81,8 @@ const Pill: React.FC<{
       onPress={onPress}
       style={[styles.pill, { backgroundColor: tone === "teal" ? theme.colors.primaryLight : theme.colors.secondaryLight }, disabled && styles.dim]}
     >
-      <Feather name={icon} size={14} color={color} />
-      <Text variant="caption" weight="medium" color={color}>
+      <Feather name={icon} size={13} color={color} />
+      <Text variant="label" weight="medium" color={color}>
         {label}
       </Text>
     </Pressable>
@@ -102,10 +102,10 @@ export const WeeklyAvailability: React.FC<{
   <View style={styles.availability}>
     <View style={styles.availabilityHead}>
       <View>
-        <Text variant="body" color={theme.colors.textLight}>
+        <Text variant="compact" color={theme.colors.textLight}>
           Weekly Availability
         </Text>
-        <Text variant="h3" weight="bold">
+        <Text variant="subtitle" weight="bold">
           {monthTitle(now)}
         </Text>
       </View>
@@ -114,18 +114,20 @@ export const WeeklyAvailability: React.FC<{
         value={view.isAvailable}
         disabled={!view.approved || pending}
         onValueChange={onToggle}
-        thumbColor={theme.colors.white}
-        trackColor={{ true: theme.colors.success, false: theme.colors.border }}
+        // Figma: a light grey track with a green knob (grey when off).
+        thumbColor={view.isAvailable ? theme.colors.toast : theme.colors.textLight}
+        trackColor={{ true: theme.colors.switchTrack, false: theme.colors.switchTrack }}
+        ios_backgroundColor={theme.colors.switchTrack}
       />
     </View>
 
     <View style={styles.strip} testID="week-strip">
       {weekStrip(now).map((day) => (
         <View key={`${day.label}-${day.date}`} style={[styles.day, day.isToday && styles.dayToday]} testID={day.isToday ? "week-today" : undefined}>
-          <Text variant="caption" color={day.isToday ? theme.colors.white : theme.colors.textLight}>
+          <Text variant="label" color={day.isToday ? theme.colors.white : theme.colors.text}>
             {day.label}
           </Text>
-          <Text variant="body" weight="bold" color={day.isToday ? theme.colors.white : theme.colors.text}>
+          <Text variant="compact" weight="bold" color={day.isToday ? theme.colors.white : theme.colors.text}>
             {day.date}
           </Text>
         </View>
@@ -157,14 +159,18 @@ export const WeeklyAvailability: React.FC<{
 export const CarePlanPromo: React.FC<{ onCreate: () => void }> = ({ onCreate }) => (
   <View style={styles.promo} testID="home-care-plans">
     <View style={{ flex: 1, gap: 4 }}>
-      <Text variant="h3" weight="bold" color={theme.colors.primary}>
+      <Text variant="subtitle" weight="bold" color={theme.colors.primary}>
         CarePlan
       </Text>
-      <Text variant="small" color={theme.colors.textLight}>
+      <Text variant="label" color={theme.colors.textLight}>
         Let&apos;s help you get health care for your loved one
       </Text>
     </View>
-    <Button title="Create Care Plan" onPress={onCreate} style={styles.promoButton} accessibilityLabel="Create Care Plan" />
+    <Pressable accessibilityRole="button" accessibilityLabel="Create Care Plan" onPress={onCreate} style={styles.promoButton}>
+      <Text variant="label" weight="bold" color={theme.colors.white}>
+        Create Care Plan
+      </Text>
+    </Pressable>
   </View>
 );
 
@@ -181,7 +187,7 @@ export const NoAppointments: React.FC = () => (
   </Card>
 );
 
-/** One upcoming appointment. Today's visits carry "Clock in" and "Clock out"; a later day just opens the booking. */
+/** One upcoming appointment. Today's visits carry "Clock in" and "Clock out" stacked at the right (Figma); a later day just opens the booking. */
 export const AppointmentCard: React.FC<{
   visit: VisitView;
   showClock: boolean;
@@ -193,35 +199,38 @@ export const AppointmentCard: React.FC<{
   const canClockOut = visit.status === "in_progress";
   return (
     <Card>
-      <Pressable accessibilityRole="button" accessibilityLabel={`Open ${visit.patientName}`} onPress={onOpen} style={styles.visitRow}>
-        <Avatar initial={visit.patientName.trim().charAt(0).toUpperCase() || undefined} />
-        <View style={{ flex: 1, gap: 2 }}>
-          <Text variant="body" weight="bold">
-            {visit.patientName}
-          </Text>
-          <Text variant="small" color={theme.colors.textLight} style={{ textTransform: "capitalize" }}>
-            {visit.title}
-          </Text>
-          {visit.address ? (
-            <Text variant="caption" color={theme.colors.textLight} testID="visit-address">
-              {visit.address}
+      <View style={styles.visitRow}>
+        <Pressable accessibilityRole="button" accessibilityLabel={`Open ${visit.patientName}`} onPress={onOpen} style={styles.visitInfo}>
+          <Avatar initial={visit.patientName.trim().charAt(0).toUpperCase() || undefined} />
+          <View style={{ flex: 1, gap: 2 }}>
+            <Text variant="body" weight="bold" color="#000000">
+              {visit.patientName}
             </Text>
-          ) : null}
-          <Text variant="caption" color={theme.colors.textLight}>
-            <Feather name="calendar" size={12} /> {visit.when} {"•"} {visit.duration}
-          </Text>
-          <Text variant="caption" weight="medium" color={theme.colors.primary}>
-            {visit.statusLabel}
-          </Text>
-        </View>
-        {showClock ? null : <Feather name="chevron-right" size={20} color={theme.colors.textLight} />}
-      </Pressable>
-      {showClock ? (
-        <View style={styles.clockRow}>
-          <Pill label="Clock in" icon="clock" tone="teal" onPress={onClockIn} disabled={!canClockIn} />
-          <Pill label="Clock out" icon="clock" tone="coral" onPress={onClockOut} disabled={!canClockOut} />
-        </View>
-      ) : null}
+            <Text variant="label" color={theme.colors.muted} style={{ textTransform: "capitalize" }}>
+              {visit.title}
+            </Text>
+            {visit.address ? (
+              <Text variant="label" color={theme.colors.muted} testID="visit-address">
+                {visit.address}
+              </Text>
+            ) : null}
+            <Text variant="label" color={theme.colors.muted}>
+              <Feather name="calendar" size={12} /> {visit.when} {"•"} {visit.duration}
+            </Text>
+            <Text variant="label" weight="medium" color={theme.colors.primary}>
+              {visit.statusLabel}
+            </Text>
+          </View>
+        </Pressable>
+        {showClock ? (
+          <View style={styles.pillColumn}>
+            <Pill label="Clock in" icon="clock" tone="teal" onPress={onClockIn} disabled={!canClockIn} />
+            <Pill label="Clock out" icon="clock" tone="coral" onPress={onClockOut} disabled={!canClockOut} />
+          </View>
+        ) : (
+          <Feather name="chevron-right" size={20} color={theme.colors.textLight} />
+        )}
+      </View>
     </Card>
   );
 };
@@ -235,28 +244,30 @@ export const JobRequestCard: React.FC<{
   onDecline: () => void;
 }> = ({ offer, busy, onView, onAccept, onDecline }) => (
   <Card>
-    <Pressable accessibilityRole="button" accessibilityLabel="Job details" onPress={onView} style={styles.visitRow}>
-      <Avatar />
-      <View style={{ flex: 1, gap: 2 }}>
-        <Text variant="body" weight="bold">
-          {serviceName(offer.serviceType)}
-        </Text>
-        {offer.assistanceType ? (
-          <Text variant="small" color={theme.colors.textLight}>
-            {offer.assistanceType}
+    <View style={styles.visitRow}>
+      <Pressable accessibilityRole="button" accessibilityLabel="Job details" onPress={onView} style={styles.visitInfo}>
+        <Avatar />
+        <View style={{ flex: 1, gap: 2 }}>
+          <Text variant="body" weight="bold" color="#000000">
+            {serviceName(offer.serviceType)}
           </Text>
-        ) : null}
-        <Text variant="caption" color={theme.colors.textLight}>
-          <Feather name="map-pin" size={12} /> {offer.area}
-        </Text>
-        <Text variant="caption" color={theme.colors.textLight}>
-          <Feather name="calendar" size={12} /> {formatVisitTime(offer.scheduledDate)} {"•"} {formatDuration(offer.durationHours)}
-        </Text>
+          {offer.assistanceType ? (
+            <Text variant="label" color={theme.colors.muted}>
+              {offer.assistanceType}
+            </Text>
+          ) : null}
+          <Text variant="label" color={theme.colors.muted}>
+            <Feather name="map-pin" size={12} /> {offer.area}
+          </Text>
+          <Text variant="label" color={theme.colors.muted}>
+            <Feather name="calendar" size={12} /> {formatVisitTime(offer.scheduledDate)} {"•"} {formatDuration(offer.durationHours)}
+          </Text>
+        </View>
+      </Pressable>
+      <View style={styles.pillColumn}>
+        <Pill label="Accept" icon="check-circle" tone="teal" onPress={onAccept} disabled={busy} busy={busy} />
+        <Pill label="Decline" icon="x-circle" tone="coral" onPress={onDecline} disabled={busy} />
       </View>
-    </Pressable>
-    <View style={styles.clockRow}>
-      <Pill label="Accept" icon="check-circle" tone="teal" onPress={onAccept} disabled={busy} busy={busy} />
-      <Pill label="Decline" icon="x-circle" tone="coral" onPress={onDecline} disabled={busy} />
     </View>
   </Card>
 );
@@ -279,8 +290,8 @@ export const EarningSummary: React.FC<{
 
 const Row: React.FC<{ label: string; value: string; valueTestID?: string }> = ({ label, value, valueTestID }) => (
   <View style={styles.row}>
-    <Text variant="body">{label}</Text>
-    <Text variant="body" weight="bold" color={theme.colors.primary} testID={valueTestID}>
+    <Text variant="compact">{label}</Text>
+    <Text variant="compact" weight="bold" color={theme.colors.primary} testID={valueTestID}>
       {value}
     </Text>
   </View>
@@ -325,7 +336,7 @@ export const ClientCareAccess: React.FC<{
   <Section title="Client Care Access">
     <Card style={{ gap: theme.spacing.sm }}>
       <View style={styles.row}>
-        <Text variant="body">Clients Profiles</Text>
+        <Text variant="body" color="#000000">Clients Profiles</Text>
         <Pill label="View" icon="check-circle" tone="teal" onPress={onProfile} disabled={!canOpenProfile} />
       </View>
       {canOpenProfile ? null : (
@@ -334,7 +345,7 @@ export const ClientCareAccess: React.FC<{
         </Text>
       )}
       <View style={styles.row}>
-        <Text variant="body">Vitals &amp; FallGuard</Text>
+        <Text variant="body" color="#000000">Vitals &amp; FallGuard</Text>
         <Pill label="View" icon="check-circle" tone="teal" onPress={onVitals} />
       </View>
     </Card>
@@ -356,9 +367,9 @@ const styles = StyleSheet.create({
     backgroundColor: theme.colors.primary,
   },
   avatar: {
-    width: 52,
-    height: 52,
-    borderRadius: 12,
+    width: 64,
+    height: 64,
+    borderRadius: 16,
     backgroundColor: theme.colors.primaryLight,
     alignItems: "center",
     justifyContent: "center",
@@ -366,11 +377,12 @@ const styles = StyleSheet.create({
   pill: {
     flexDirection: "row",
     alignItems: "center",
+    justifyContent: "center",
     gap: 6,
-    paddingVertical: 6,
-    paddingHorizontal: theme.spacing.md,
+    paddingVertical: 5,
+    paddingHorizontal: 12,
+    minWidth: 84,
     borderRadius: theme.borderRadius.round,
-    alignSelf: "flex-end",
   },
   dim: { opacity: 0.4 },
   availability: { paddingHorizontal: 20, paddingTop: 20, marginBottom: theme.spacing.md, gap: theme.spacing.sm },
@@ -386,11 +398,12 @@ const styles = StyleSheet.create({
     marginBottom: theme.spacing.md,
     padding: theme.spacing.md,
     borderRadius: theme.borderRadius.xl,
-    backgroundColor: theme.colors.secondaryLight,
+    backgroundColor: theme.colors.promoBackground,
   },
-  promoButton: { minHeight: 40, paddingVertical: theme.spacing.sm, paddingHorizontal: theme.spacing.md },
-  visitRow: { flexDirection: "row", alignItems: "center", gap: theme.spacing.md },
-  clockRow: { flexDirection: "row", justifyContent: "flex-end", gap: theme.spacing.sm, marginTop: theme.spacing.sm },
+  promoButton: { minHeight: 32, paddingVertical: 6, paddingHorizontal: 14, borderRadius: theme.borderRadius.round, backgroundColor: theme.colors.primary, alignItems: "center", justifyContent: "center" },
+  visitRow: { flexDirection: "row", alignItems: "center", gap: theme.spacing.sm },
+  visitInfo: { flex: 1, flexDirection: "row", alignItems: "center", gap: theme.spacing.md },
+  pillColumn: { gap: theme.spacing.sm, alignItems: "stretch" },
   row: { flexDirection: "row", alignItems: "center", justifyContent: "space-between" },
   seeAll: { flexDirection: "row", alignItems: "center", gap: 2 },
 });

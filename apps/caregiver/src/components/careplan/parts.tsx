@@ -219,7 +219,7 @@ export const FullPageFrame: React.FC<{
       <KeyboardScrollView keyboardShouldPersistTaps="handled" contentContainerStyle={{ padding: theme.spacing.md, paddingTop: theme.spacing.xxl, gap: theme.spacing.md }}>
         <RoundBack onPress={onClose} testID={`${testID}-close`} />
         <View style={{ gap: theme.spacing.xs }}>
-          <Text variant="h2" weight="bold" accessibilityRole="header">
+          <Text variant="page" weight="bold" accessibilityRole="header">
             {title}
           </Text>
           {subtitle ? (

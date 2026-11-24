@@ -80,7 +80,7 @@ const VoiceNoteReview: React.FC<StackScreenProps<ScreenParamLists, "VoiceNoteRev
     <>
       <HeaderBack />
       <View style={{ marginVertical: "5%" }}>
-        <Text variant="h2" weight="bold">
+        <Text variant="page" weight="bold">
           Check your voice note
         </Text>
       </View>

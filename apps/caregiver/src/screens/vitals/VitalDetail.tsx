@@ -109,7 +109,7 @@ const VitalDetail: React.FC<Props> = ({ route }) => {
         </View>
 
         <View style={{ flexDirection: "row", alignItems: "center", justifyContent: "space-between", marginTop: theme.spacing.lg, marginBottom: theme.spacing.sm }}>
-          <Text variant="h3" weight="bold">
+          <Text variant="body" weight="bold" color={theme.colors.sectionTitle}>
             History
           </Text>
           <Pressable

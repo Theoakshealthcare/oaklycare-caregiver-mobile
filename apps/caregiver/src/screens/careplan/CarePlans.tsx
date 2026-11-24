@@ -239,7 +239,7 @@ const CarePlans: React.FC<Props> = ({ route }) => {
           style={{
             backgroundColor: theme.colors.primary,
             paddingHorizontal: theme.spacing.md,
-            paddingTop: theme.spacing.xxl,
+            paddingTop: theme.spacing.sm + 4,
             paddingBottom: theme.spacing.md,
             borderBottomLeftRadius: theme.borderRadius.xxl + 8,
             borderBottomRightRadius: theme.borderRadius.xxl + 8,

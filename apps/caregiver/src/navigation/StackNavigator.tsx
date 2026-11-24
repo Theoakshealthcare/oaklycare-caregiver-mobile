@@ -1,7 +1,7 @@
 import { createStackNavigator } from "@react-navigation/stack";
 
 import { useSession } from "../auth";
-import { TEAL_CHROME, WHITE_CHROME, useScreenChrome } from "../components/StatusBar/screenChrome";
+import { APP_TEAL_TOP_CHROME, WHITE_CHROME, chromeForRoute, chromeStore, useScreenChrome } from "../components/StatusBar/screenChrome";
 import { useMe, useVerificationStatus } from "../hooks/queries";
 import BankDetails from "../screens/account/BankDetails";
 import Contact from "../screens/account/Contact";
@@ -86,7 +86,7 @@ const StackNavigator = () => {
   const setupSubmitted = useSetupSubmitted();
   // Everything before the signed-in app is edge-to-edge white (Figma); the app proper keeps its teal bands.
   const beforeApp = gate.kind === "signedOut" || gate.kind === "verifyEmail" || gate.kind === "setup" || gate.kind === "status";
-  useScreenChrome(beforeApp ? WHITE_CHROME : TEAL_CHROME);
+  useScreenChrome(beforeApp ? WHITE_CHROME : APP_TEAL_TOP_CHROME);
 
   switch (gate.kind) {
     case "loading":
@@ -159,7 +159,17 @@ const StackNavigator = () => {
     case "app":
       return (
         <>
-          <Stack.Navigator key="app" screenOptions={{ headerShown: false }}>
+          <Stack.Navigator
+            key="app"
+            screenOptions={{ headerShown: false }}
+            screenListeners={({ route }) => ({
+              // The strip under the status bar follows the screen that is showing (teal header or white page).
+              focus: () => {
+                const { top, bottom, barStyle } = chromeForRoute(route.name);
+                chromeStore.setState({ top, bottom, barStyle });
+              },
+            })}
+          >
             <Stack.Screen name="BottomNavigation" component={BottomNavigation} />
             <Stack.Screen name="BookingDetails" component={BookingDetails} />
             <Stack.Screen name="VisitFlow" component={VisitFlow} />

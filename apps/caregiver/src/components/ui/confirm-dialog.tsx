@@ -55,7 +55,7 @@ const ConfirmDialog: React.FC<ConfirmDialogProps> = ({
       <View style={styles.card}>
         <Pressable accessibilityRole="button" accessibilityLabel="Close" onPress={onClose} style={styles.close} hitSlop={8}>
           <Feather name="x-circle" size={20} color={theme.colors.textLight} />
-          <Text variant="body" color={theme.colors.text}>
+          <Text variant="compact" color={theme.colors.text}>
             Close
           </Text>
         </Pressable>
@@ -63,27 +63,27 @@ const ConfirmDialog: React.FC<ConfirmDialogProps> = ({
         <View style={styles.content}>
           {illustration ?? null}
           {timer ? (
-            <Text variant="h1" weight="bold" color={theme.colors.primary} testID="dialog-timer" accessibilityRole="timer">
+            <Text variant="h1" weight="bold" color={theme.colors.primary} testID="dialog-timer" accessibilityRole="timer" style={{ fontSize: theme.sizes.display + 14, lineHeight: theme.sizes.display + 22 }}>
               {timer}
             </Text>
           ) : null}
-          <Text variant="h2" weight="bold" color={theme.colors.primary} center>
+          <Text variant="h3" weight="bold" color={theme.colors.primary} center>
             {title}
           </Text>
           {body ? (
-            <Text variant="small" color={theme.colors.textLight} center>
+            <Text variant="label" color={theme.colors.textLight} center>
               {body}
             </Text>
           ) : null}
           {notice ? (
-            <Text variant="small" color={theme.colors.warningText} center testID="dialog-notice">
+            <Text variant="label" color={theme.colors.warningText} center testID="dialog-notice">
               {notice}
             </Text>
           ) : null}
         </View>
 
         <View style={styles.buttons}>
-          <Button title={cancelLabel} onPress={onClose} disabled={confirmLoading} style={styles.button} />
+          <Button title={cancelLabel} onPress={onClose} disabled={confirmLoading} style={styles.button} textStyle={styles.buttonText} />
           <Button
             title={confirmLabel}
             variant="outline"
@@ -91,10 +91,11 @@ const ConfirmDialog: React.FC<ConfirmDialogProps> = ({
             loading={confirmLoading}
             disabled={confirmLoading}
             style={styles.button}
+            textStyle={styles.buttonText}
           />
         </View>
         {extraLabel && onExtra ? (
-          <Text variant="small" weight="medium" color={theme.colors.primary} center onPress={onExtra} style={styles.extra}>
+          <Text variant="label" weight="medium" color={theme.colors.primary} center onPress={onExtra} style={styles.extra}>
             {extraLabel}
           </Text>
         ) : null}
@@ -113,16 +114,17 @@ const styles = StyleSheet.create({
   },
   card: {
     width: "100%",
-    maxWidth: 420,
+    maxWidth: 360,
     backgroundColor: theme.colors.white,
     borderRadius: 28,
-    padding: theme.spacing.lg,
+    padding: 20,
     gap: theme.spacing.md,
   },
   close: { flexDirection: "row", alignItems: "center", gap: theme.spacing.sm, alignSelf: "flex-start" },
   content: { alignItems: "center", gap: theme.spacing.sm, paddingVertical: theme.spacing.sm },
   buttons: { flexDirection: "row", gap: theme.spacing.md },
-  button: { flex: 1, paddingHorizontal: theme.spacing.sm },
+  button: { flex: 1, paddingHorizontal: theme.spacing.sm, minHeight: 44, paddingVertical: 10 },
+  buttonText: { fontSize: theme.sizes.compact },
   extra: { paddingTop: theme.spacing.xs },
 });
 

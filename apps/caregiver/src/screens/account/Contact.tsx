@@ -26,10 +26,10 @@ const Channel: React.FC<{
   >
     <Feather name={icon} size={22} color={theme.colors.primary} />
     <View style={{ flex: 1 }}>
-      <Text variant="body" weight="bold">
+      <Text variant="compact" weight="bold">
         {label}
       </Text>
-      <Text variant="small" color={theme.colors.textLight}>
+      <Text variant="small" color={theme.colors.text}>
         {detail}
       </Text>
     </View>
@@ -39,7 +39,7 @@ const Channel: React.FC<{
 const Contact: React.FC = () => {
   const whatsapp = whatsappUrl();
   return (
-    <ScreenShell title="Contact Us">
+    <ScreenShell title="Contact Us" centered>
       {/* Figma's first row, "Chat with a support agent", is not drawn: the support live chat is not built. */}
       <Channel
         icon="mail"

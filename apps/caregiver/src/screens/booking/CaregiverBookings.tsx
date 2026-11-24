@@ -111,7 +111,7 @@ const CaregiverBookings: React.FC = () => {
   return (
     <View style={{ flex: 1, backgroundColor: theme.colors.primary }}>
       <View style={{ paddingTop: 50, paddingBottom: 20, paddingHorizontal: 20, flexDirection: "row", alignItems: "center", justifyContent: "space-between" }}>
-        <Text variant="h2" weight="bold" color={theme.colors.white}>
+        <Text variant="page" weight="bold" color={theme.colors.white}>
           Bookings
         </Text>
         <TouchableOpacity

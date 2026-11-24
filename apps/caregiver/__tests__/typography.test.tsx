@@ -42,7 +42,7 @@ describe("scaleFactor (damped, clamped width scale)", () => {
 
 describe("theme.sizes", () => {
   it("is a small fixed set of numbers", () => {
-    expect(Object.keys(theme.sizes).sort()).toEqual(["body", "caption", "display", "fine", "heading", "pageTitle", "subtitle", "title"]);
+    expect(Object.keys(theme.sizes).sort()).toEqual(["body", "caption", "compact", "display", "fine", "heading", "label", "micro", "pageTitle", "subtitle", "title"]);
     const values = Object.values(theme.sizes);
     expect(values.every((v) => typeof v === "number")).toBe(true);
     expect([...values].sort((a, b) => a - b)).toEqual(values);
