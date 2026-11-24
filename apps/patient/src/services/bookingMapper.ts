@@ -2,6 +2,7 @@ import type { Schemas } from "@oakly/api-client";
 
 import { conditionText, helpNeeded, type BookableService, type Booking, type BookingDraft, type BookingQuote, type CancelResult, type CancelTerms, type Refund } from "@/src/domain/booking";
 import { firstNameOf } from "@/src/domain/names";
+import type { PaymentChannel } from "@/src/domain/paymentMethods";
 import { toLocalDate } from "@/src/domain/slots";
 
 type BookingResponse = Schemas["BookingResponse"];
@@ -85,7 +86,11 @@ export function specialInstructions(
   return text || null;
 }
 
-export function toCreateBody(draft: BookingDraft): Schemas["BookingCreate"] {
+/**
+ * The body of `POST /booking/create`. `channel` is the method the person picked on "Payment Details": it goes out as the
+ * one-item `channels` list. With no pick the field is left out (Paystack then shows its own channels), never sent empty.
+ */
+export function toCreateBody(draft: BookingDraft, channel?: PaymentChannel): Schemas["BookingCreate"] {
   if (draft.latitude === null || draft.longitude === null) throw new Error("The booking has no location.");
   if (draft.durationMinutes === null) throw new Error("The booking has no length.");
   return {
@@ -101,6 +106,7 @@ export function toCreateBody(draft: BookingDraft): Schemas["BookingCreate"] {
     patient_state: draft.state.trim(),
     special_instructions: specialInstructions(draft),
     booking_for: draft.forWhom.trim(),
+    ...(channel ? { channels: [channel] } : {}),
   };
 }
 

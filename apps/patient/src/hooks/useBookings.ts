@@ -5,6 +5,7 @@ import { useEffect } from "react";
 import { queryKeys } from "@/src/api/keys";
 import { useSession } from "@/src/auth";
 import { isActive, type Booking, type BookingDraft, type CancelResult } from "@/src/domain/booking";
+import type { PaymentChannel } from "@/src/domain/paymentMethods";
 import { bookingService, type CreatedBooking } from "@/src/services/booking.service";
 
 import { usePaymentLinks } from "./paymentLinks";
@@ -68,12 +69,15 @@ export function useBookingQuote(draft: BookingDraft) {
   });
 }
 
-/** Creates the booking. The checkout URL is kept (in memory) so "Pay now" can open it again. */
+/**
+ * Creates the booking. The checkout URL is kept (in memory) so "Pay now" can open it again. `channel` is the method picked
+ * on "Payment Details" (left out when none was picked).
+ */
 export function useCreateBooking() {
   const client = useQueryClient();
   const remember = usePaymentLinks((s) => s.remember);
   return useMutation({
-    mutationFn: (draft: BookingDraft): Promise<CreatedBooking> => bookingService.create(draft),
+    mutationFn: ({ draft, channel }: { draft: BookingDraft; channel?: PaymentChannel }): Promise<CreatedBooking> => bookingService.create(draft, channel),
     onSuccess: ({ booking, paymentUrl }) => {
       if (paymentUrl) remember(booking.id, paymentUrl);
       client.setQueryData<Booking>(queryKeys.booking(booking.id), booking);

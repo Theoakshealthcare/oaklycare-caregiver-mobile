@@ -53,7 +53,7 @@
 Revert the PR. No backend or migration change. Needs a backend with `GET /booking/services` and minutes (backend #55 and #56, already on `develop`). The app sends `duration_minutes`; an older backend would reject it.
 
 ## Follow-ups / decisions for the owner
-- **Payment Details method screen**: needs a `channels` parameter on the booking pay link (backend) before Card / Bank Transfer can be honest; the wallet stays off.
+- ~~**Payment Details method screen**: needs a `channels` parameter on the booking pay link (backend).~~ Done 2026-11-24 (backend #71, [SOP](2026-11-24-patient-payment-details.md)); the wallet stays off.
 - Confirm the app's own lists (relations, assistance, conditions) and whether the caregiver may see the contact phone and e-mail.
 - Confirm the coral failure title and the step bar growth (both differ from Figma on purpose).
 - "Choose Service Time / Immediate booking" and Wound Care need a backend service and an ASAP rule.

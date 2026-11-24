@@ -1,4 +1,4 @@
-import { bookingErrorMessage, pointsToSupport } from "../src/api/bookingErrors";
+import { bookingErrorMessage, paymentMethodErrorMessage, pointsToSupport } from "../src/api/bookingErrors";
 import { ApiError, FALLBACK_MESSAGE, NETWORK_MESSAGE } from "../src/api/errors";
 import { isNetworkFailure } from "../src/api/networkFailure";
 import { unwrap } from "../src/api/unwrap";
@@ -6,6 +6,7 @@ import { canChat, feeReason, paymentChip, type Booking, type CancelTerms } from 
 import { specialInstructions, toBookableServices, toBooking, toCancelTerms, toCreateBody } from "../src/services/bookingMapper";
 import { conditionText, helpNeeded } from "../src/domain/booking";
 import { offeredServices } from "../src/domain/bookingChoices";
+import { PAYMENT_CHANNEL_LABELS, PAYMENT_CHANNELS } from "../src/domain/paymentMethods";
 import { readPaymentCheck, termsFromChangedError } from "../src/services/booking.service";
 import { firstNameOf } from "../src/domain/names";
 import { EMPTY_DRAFT } from "../src/hooks/bookingDraft";
@@ -171,6 +172,28 @@ describe("mapping the real responses", () => {
     expect(new Date(body.scheduled_date).getHours()).toBe(14);
     expect(() => toCreateBody({ ...EMPTY_DRAFT })).toThrow();
     expect(() => toCreateBody({ ...EMPTY_DRAFT, latitude: 6.4, longitude: 3.4, durationMinutes: null })).toThrow();
+  });
+
+  it("sends the payment method as a one-item channels list, and leaves the field out when none was picked", () => {
+    const draft = { ...EMPTY_DRAFT, serviceType: "nurse", durationMinutes: 60, date: "2026-12-01", time: "14:00", latitude: 6.4, longitude: 3.4 };
+    expect(toCreateBody(draft, "card").channels).toEqual(["card"]);
+    expect(toCreateBody(draft, "bank_transfer").channels).toEqual(["bank_transfer"]);
+    expect("channels" in toCreateBody(draft)).toBe(false);
+    expect("channels" in toCreateBody(draft, undefined)).toBe(false);
+  });
+
+  it("allows exactly Card and Bank Transfer (no wallet), each with its Figma label", () => {
+    expect([...PAYMENT_CHANNELS]).toEqual(["card", "bank_transfer"]);
+    expect(PAYMENT_CHANNELS.map((c) => PAYMENT_CHANNEL_LABELS[c])).toEqual(["Card Payment", "Bank Transfer"]);
+  });
+
+  it("reads a 422 about channels as a plain sentence, and any other error as the booking messages do", () => {
+    const channels = new ApiError(422, { detail: [{ type: "literal_error", loc: ["body", "channels", 0], msg: "Input should be 'card' or 'bank_transfer'" }] }, "x");
+    expect(paymentMethodErrorMessage(channels)).toBe("That payment method can't be used right now. Please choose another one and try again.");
+    const other = new ApiError(422, { detail: [{ type: "missing", loc: ["body", "patient_city"], msg: "Field required" }] }, "x");
+    expect(paymentMethodErrorMessage(other)).toBe(bookingErrorMessage(other));
+    const unavailable = new ApiError(503, { detail: { code: "payment_link_unavailable", message: "Try again in a moment." } }, "x");
+    expect(paymentMethodErrorMessage(unavailable)).toBe("Try again in a moment.");
   });
 
   it("sends the typed text for 'Other' and nothing for a condition of 'None'", () => {
