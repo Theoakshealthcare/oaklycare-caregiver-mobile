@@ -78,7 +78,7 @@
         "expo-notifications",
         {
           "icon": "./assets/images/notification-icon.png",
-          "color": "#ffffff",
+          "color": "#168283",
           "defaultChannel": "default",
           "sounds": [
             "./assets/sound/notification_sound.wav",
