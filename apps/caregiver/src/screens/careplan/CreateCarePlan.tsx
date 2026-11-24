@@ -4,12 +4,13 @@ import { Feather } from "@expo/vector-icons";
 import type { StackScreenProps } from "@react-navigation/stack";
 
 import { messageForError } from "@/src/api/errors";
-import ScreenShell from "@/src/components/account/ScreenShell";
 import { ErrorState, LoadingState } from "@/src/components/account/StateViews";
-import { CarePlanNotice, Card, Chip, FieldHint } from "@/src/components/careplan/parts";
+import PlanScreen from "@/src/components/careplan/PlanScreen";
+import { AddLink, CarePlanNotice, Card, Chip, FieldHint } from "@/src/components/careplan/parts";
 import Button from "@/src/components/ui/button";
 import DateField from "@/src/components/ui/date-field";
 import Input from "@/src/components/ui/input";
+import { Select } from "@/src/components/ui/select";
 import Text from "@/src/components/ui/text";
 import { theme } from "@/src/constants/theme";
 import {
@@ -63,7 +64,7 @@ const Heading: React.FC<{ children: string }> = ({ children }) => (
 
 const RemoveButton: React.FC<{ label: string; onPress: () => void; testID: string }> = ({ label, onPress, testID }) => (
   <Pressable testID={testID} accessibilityRole="button" accessibilityLabel={label} onPress={onPress} hitSlop={8}>
-    <Feather name="x" size={18} color={theme.colors.textLight} />
+    <Feather name="trash-2" size={18} color={theme.colors.secondary} />
   </Pressable>
 );
 
@@ -130,11 +131,15 @@ const GoalsEditor: React.FC<{ draft: PlanDraft; set: (next: PlanDraft) => void; 
   );
 };
 
+/** "Activities": the daily tasks, one bordered row each (clock, slot and time, name, bin), and "+ Add More Activities". */
 const TasksEditor: React.FC<{ draft: PlanDraft; set: (next: PlanDraft) => void; error?: string }> = ({ draft, set, error }) => {
   const [title, setTitle] = useState("");
   const [slot, setSlot] = useState<TimeSlot>("morning");
   const [days, setDays] = useState<number[]>(DAILY);
   const [problem, setProblem] = useState<string | null>(null);
+  // With none yet the form is open; afterwards it opens from "Add More Activities".
+  const [adding, setAdding] = useState(false);
+  const formOpen = adding || draft.tasks.length === 0;
 
   const add = () => {
     const errors = validateGoal({ title, target: "" });
@@ -146,6 +151,7 @@ const TasksEditor: React.FC<{ draft: PlanDraft; set: (next: PlanDraft) => void; 
     const task: DraftTask = { title: title.trim(), time_slot: slot, time_of_day: null, days_of_week: days };
     set({ ...draft, tasks: [...draft.tasks, task] });
     setTitle("");
+    setAdding(false);
   };
 
   return (
@@ -156,11 +162,27 @@ const TasksEditor: React.FC<{ draft: PlanDraft; set: (next: PlanDraft) => void; 
         </Text>
       ) : null}
       {draft.tasks.map((task, i) => (
-        <View key={`${task.title}-${i}`} testID={`create-task-${i}`} style={{ flexDirection: "row", alignItems: "center", gap: theme.spacing.sm }}>
+        <View
+          key={`${task.title}-${i}`}
+          testID={`create-task-${i}`}
+          style={{
+            flexDirection: "row",
+            alignItems: "center",
+            gap: theme.spacing.sm,
+            padding: theme.spacing.md,
+            borderWidth: 1,
+            borderColor: theme.colors.primary,
+            borderRadius: theme.borderRadius.xl,
+            backgroundColor: theme.colors.white,
+          }}
+        >
+          <Feather name="clock" size={16} color={theme.colors.primary} />
           <View style={{ flex: 1 }}>
-            <Text variant="body">{task.title}</Text>
-            <Text variant="caption" color={theme.colors.textLight}>
+            <Text variant="caption" weight="medium" color={theme.colors.primary}>
               {`${slotLabel(task.time_slot)}${task.time_of_day ? ` ${task.time_of_day}` : ""} · ${daysLabel(task.days_of_week)}`}
+            </Text>
+            <Text variant="small" color={theme.colors.primary}>
+              {task.title}
             </Text>
           </View>
           <RemoveButton
@@ -170,21 +192,25 @@ const TasksEditor: React.FC<{ draft: PlanDraft; set: (next: PlanDraft) => void; 
           />
         </View>
       ))}
-      <Card>
-        <Input testID="create-task-title" label="Task" placeholder="For example: Assisted washing" value={title} onChangeText={setTitle} />
-        <View style={{ flexDirection: "row", flexWrap: "wrap", gap: theme.spacing.sm }}>
-          {SLOTS.map((s) => (
-            <Chip key={s.value} testID={`create-task-slot-${s.value}`} label={s.label} selected={slot === s.value} onPress={() => setSlot(s.value)} />
-          ))}
-        </View>
-        <View style={{ flexDirection: "row", flexWrap: "wrap", gap: theme.spacing.sm }}>
-          {DAY_PRESETS.map((p) => (
-            <Chip key={p.label} testID={`create-task-days-${p.label.toLowerCase()}`} label={p.label} selected={daysLabel(days) === p.label} onPress={() => setDays(p.days)} />
-          ))}
-        </View>
-        {problem ? <FieldHint text={problem} testID="create-task-problem" /> : null}
-        <Button testID="create-task-add" title="Add task" variant="outline" onPress={add} />
-      </Card>
+      {formOpen ? (
+        <Card>
+          <Input testID="create-task-title" label="Task" placeholder="For example: Assisted washing" value={title} onChangeText={setTitle} />
+          <View style={{ flexDirection: "row", flexWrap: "wrap", gap: theme.spacing.sm }}>
+            {SLOTS.map((s) => (
+              <Chip key={s.value} testID={`create-task-slot-${s.value}`} label={s.label} selected={slot === s.value} onPress={() => setSlot(s.value)} />
+            ))}
+          </View>
+          <View style={{ flexDirection: "row", flexWrap: "wrap", gap: theme.spacing.sm }}>
+            {DAY_PRESETS.map((p) => (
+              <Chip key={p.label} testID={`create-task-days-${p.label.toLowerCase()}`} label={p.label} selected={daysLabel(days) === p.label} onPress={() => setDays(p.days)} />
+            ))}
+          </View>
+          {problem ? <FieldHint text={problem} testID="create-task-problem" /> : null}
+          <Button testID="create-task-add" title="Add task" variant="outline" onPress={add} />
+        </Card>
+      ) : (
+        <AddLink testID="create-task-more" label="Add More Activities" align="flex-end" onPress={() => setAdding(true)} />
+      )}
       {error ? <FieldHint text={error} /> : null}
     </View>
   );
@@ -250,52 +276,67 @@ const CreateCarePlan: React.FC<Props> = ({ route }) => {
   }
   if (templateId && template.isError && !template.data) {
     return (
-      <ScreenShell title="Create care plan">
+      <PlanScreen title="Create New Care Plan">
         <ErrorState error={template.error} onRetry={() => void template.refetch()} />
-      </ScreenShell>
+      </PlanScreen>
     );
   }
   if (!seeded) {
     return (
-      <ScreenShell title="Create care plan">
+      <PlanScreen title="Create New Care Plan">
         <LoadingState testID="create-loading" />
-      </ScreenShell>
+      </PlanScreen>
     );
   }
 
   return (
-    <ScreenShell
-      title="Create care plan"
-      subtitle={[clientName, template.data ? `${template.data.name} template` : null].filter(Boolean).join(" · ") || undefined}
+    <PlanScreen
+      title="Create New Care Plan"
+      subtitle="Create a health care plan for your patients"
+      footer={<Button testID="create-submit" title="Create Care Plan" onPress={submit} loading={create.isPending} />}
     >
       <View style={{ gap: theme.spacing.sm }}>
+        {clientName || template.data ? (
+          <Text variant="small" weight="medium" color={theme.colors.primary} testID="create-for">
+            {[clientName ? `For ${clientName}` : null, template.data ? `${template.data.name} template` : null].filter(Boolean).join(" · ")}
+          </Text>
+        ) : null}
         <Input
           testID="create-diagnosis"
-          label="Medical diagnosis"
+          label="Medical Diagnosis *"
           placeholder="For example: Hypertension, early dementia"
           value={draft.diagnosis}
           onChangeText={(diagnosis) => patch({ diagnosis })}
           error={errors.diagnosis}
         />
 
-        <Text variant="small">Risk level</Text>
-        <View style={{ flexDirection: "row", gap: theme.spacing.sm }}>
-          {RISKS.map((r) => (
-            <Chip key={r.value} testID={`risk-${r.value}`} label={r.label} selected={draft.risk === r.value} onPress={() => patch({ risk: r.value })} />
-          ))}
+        <View style={{ flexDirection: "row", gap: theme.spacing.sm, alignItems: "flex-start" }}>
+          <View style={{ flex: 1 }}>
+            <Select
+              testID="create-risk"
+              label="Risk Level *"
+              placeholder="Select"
+              options={RISKS.map((r) => ({ label: r.label, value: r.value }))}
+              value={draft.risk ?? undefined}
+              onValueChange={(value) => patch({ risk: value as PlanDraft["risk"] })}
+              containerStyle={{ marginBottom: 0 }}
+            />
+          </View>
+          <View style={{ flex: 1 }}>
+            <DateField
+              testID="create-start"
+              label="Start Date *"
+              value={draft.startDate}
+              onChange={(startDate) => patch({ startDate })}
+              error={errors.startDate}
+              containerStyle={{ marginBottom: 0 }}
+            />
+          </View>
         </View>
         {errors.risk ? <FieldHint text={errors.risk} testID="create-risk-error" /> : null}
-
-        <DateField
-          testID="create-start"
-          label="Start date"
-          value={draft.startDate}
-          onChange={(startDate) => patch({ startDate })}
-          error={errors.startDate}
-        />
         <Input
           testID="create-duration"
-          label="Plan duration (days)"
+          label="Plan Duration (days)"
           placeholder="30"
           keyboardType="number-pad"
           value={draft.durationDays}
@@ -304,7 +345,7 @@ const CreateCarePlan: React.FC<Props> = ({ route }) => {
         />
         <Input
           testID="create-review"
-          label="Review every (days, optional: clear to skip)"
+          label="Review Every (days, optional: clear to skip)"
           placeholder="No review"
           keyboardType="number-pad"
           value={draft.reviewEveryDays}
@@ -312,13 +353,12 @@ const CreateCarePlan: React.FC<Props> = ({ route }) => {
           error={errors.reviewEveryDays}
         />
 
-        <Heading>Care goals</Heading>
+        <Heading>Goals</Heading>
         <GoalsEditor draft={draft} set={setDraft} error={errors.goals} />
 
-        <Heading>Daily tasks</Heading>
+        <Heading>Activities</Heading>
         <TasksEditor draft={draft} set={setDraft} error={errors.tasks} />
 
-        <Heading>Allergies and special instructions</Heading>
         <Input
           testID="create-allergies"
           label="Allergies (one per line, optional)"
@@ -330,7 +370,7 @@ const CreateCarePlan: React.FC<Props> = ({ route }) => {
         />
         <Input
           testID="create-instructions"
-          label="Special instructions (one per line, optional)"
+          label="Any Special Instructions (one per line, optional)"
           multiline
           inputStyle={{ minHeight: 72, textAlignVertical: "top" }}
           value={draft.specialInstructions}
@@ -343,9 +383,8 @@ const CreateCarePlan: React.FC<Props> = ({ route }) => {
             {formError}
           </Text>
         ) : null}
-        <Button testID="create-submit" title="Create care plan" onPress={submit} loading={create.isPending} />
       </View>
-    </ScreenShell>
+    </PlanScreen>
   );
 };
 

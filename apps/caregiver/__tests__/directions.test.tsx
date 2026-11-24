@@ -76,7 +76,7 @@ describe("Get directions", () => {
 
   it("opens the maps app with the booking's coordinates", async () => {
     await renderDetails(assigned);
-    await fireEvent.press(await screen.findByText("Get Directions"));
+    await fireEvent.press(await screen.findByText("Get Direction"));
     const expected =
       Platform.OS === "ios"
         ? "http://maps.apple.com/?daddr=6.4474,3.4723&dirflg=d"
@@ -87,7 +87,7 @@ describe("Get directions", () => {
   it("is hidden once the visit is completed", async () => {
     await renderDetails({ ...assigned, status: "completed" });
     await screen.findByText("Service Information");
-    expect(screen.queryByText("Get Directions")).toBeNull();
+    expect(screen.queryByText("Get Direction")).toBeNull();
   });
 });
 
@@ -100,5 +100,34 @@ describe("Job Details wording (DP1-15)", () => {
     expect(screen.queryByText("accepted")).toBeNull();
     expect(screen.queryByText("Service fee")).toBeNull();
     expect(screen.queryByText(/50,000/)).toBeNull();
+  });
+});
+
+describe("Job Details cards (Figma 8.18.01)", () => {
+  it("an assigned booking has the Service Information and Location cards, and the extra buttons stay", async () => {
+    await renderDetails(assigned);
+    expect(await screen.findByText("Job Details")).toBeTruthy();
+    await screen.findByText("Service Information");
+    for (const label of ["Service Information", "Service Type", "Client", "Date & Time", "Duration", "Location", "Address", "City"]) {
+      expect(screen.getByText(label)).toBeTruthy();
+    }
+    expect(screen.getByText("12 Placeholder Street, Lekki")).toBeTruthy();
+    // No earning on this booking and no distance in the payload: neither row is drawn.
+    for (const label of ["Payment", "Payment Status", "Distance", "Special Instructions"]) expect(screen.queryByText(label)).toBeNull();
+    for (const label of ["Open visit steps", "Client profile", "Message patient", "Visit notes"]) expect(screen.getByText(label)).toBeTruthy();
+  });
+
+  it("draws the coral Special Instructions card only when the booking has instructions", async () => {
+    await renderDetails({ ...assigned, special_instructions: "Ring the doorbell on arrival." });
+    expect(await screen.findByText("Special Instructions")).toBeTruthy();
+    expect(screen.getByText("Ring the doorbell on arrival.")).toBeTruthy();
+    expect(screen.getByTestId("special-instructions")).toBeTruthy();
+  });
+
+  it("shows the caregiver's own earning as Payment, never the family's total", async () => {
+    await renderDetails({ ...assigned, caregiver_earning: 16000 });
+    expect(await screen.findByText("Payment")).toBeTruthy();
+    expect(screen.getByTestId("booking-earning-amount")).toHaveTextContent("₦16,000.00");
+    expect(screen.queryByText(/55,000/)).toBeNull();
   });
 });

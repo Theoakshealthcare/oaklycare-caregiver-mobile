@@ -1,9 +1,8 @@
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { fireEvent, render, screen } from "@testing-library/react-native";
 import React from "react";
-import { Alert } from "react-native";
 
-import { DECLINE_MESSAGE, DECLINE_TITLE } from "../src/constants/offerCopy";
+import { DECLINE_FINAL_NOTICE, DECLINE_MESSAGE, DECLINE_TITLE } from "../src/constants/offerCopy";
 import BookingDetails from "../src/screens/booking/BookingDetails";
 import type { Offer } from "../src/services/booking.service";
 
@@ -48,12 +47,26 @@ describe("a job request (DP1-06 follow-up)", () => {
     expect(screen.queryByTestId("offer-unavailable")).toBeNull();
   });
 
-  it("warns before the tap that a decline is final", async () => {
-    const alertSpy = jest.spyOn(Alert, "alert").mockImplementation(() => undefined);
+  it("warns before the tap that a decline is final, in the shared decline dialog", async () => {
     await renderOffer(null);
     await fireEvent.press(screen.getByText("Decline Job"));
-    expect(alertSpy).toHaveBeenCalledWith(DECLINE_TITLE, DECLINE_MESSAGE, expect.any(Array));
-    alertSpy.mockRestore();
+    expect(await screen.findByText(DECLINE_TITLE)).toBeTruthy();
+    expect(screen.getByText(DECLINE_MESSAGE)).toBeTruthy();
+    expect(screen.getByText(DECLINE_FINAL_NOTICE)).toBeTruthy();
+    expect(screen.getByText("No, Go Back")).toBeTruthy();
+    expect(screen.getByText("Yes, Decline")).toBeTruthy();
+  });
+
+  it("is headed Job Details with the Figma cards: Service Type, Date & Time, Duration, a City row, and no price or patient rows", async () => {
+    await renderOffer(null);
+    expect(screen.getByText("Job Details")).toBeTruthy();
+    for (const label of ["Service Information", "Service Type", "Date & Time", "Duration", "Location", "City"]) {
+      expect(screen.getByText(label)).toBeTruthy();
+    }
+    // The offer carries no earning, no client and no street address; nothing is drawn for them.
+    for (const label of ["Payment", "Payment Status", "Client", "Address", "Distance", "Special Instructions", "Get Direction"]) {
+      expect(screen.queryByText(label)).toBeNull();
+    }
   });
 
   it("an offer from Home (no response field) still offers Accept and Decline", async () => {

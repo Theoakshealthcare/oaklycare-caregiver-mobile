@@ -32,15 +32,21 @@ describe("Contact", () => {
 
   it("opens the mail app for the support email", async () => {
     await render(<Contact />);
-    expect(screen.getByText(CONTACT_EMAIL)).toBeTruthy();
+    expect(screen.getByText("Contact Us")).toBeTruthy();
+    expect(screen.getByText("Send an email")).toBeTruthy();
+    // Figma says "a email"; the typo is fixed.
+    expect(screen.getByText(`send us an email at ${CONTACT_EMAIL}`)).toBeTruthy();
     expect(CONTACT_EMAIL).toBe("info@theoakshealthcare.com");
-    await fireEvent.press(screen.getByText(CONTACT_EMAIL));
+    await fireEvent.press(screen.getByText("Send an email"));
     expect(open).toHaveBeenCalledWith(`mailto:${CONTACT_EMAIL}`);
   });
 
   it("shows no WhatsApp row while there is no number: no dead row, no call or phone entry (DP1-24)", async () => {
     await render(<Contact />);
-    expect(screen.queryByText("WhatsApp")).toBeNull();
+    expect(screen.queryByText(/whatsapp/i)).toBeNull();
+    // Support live chat is not built: Figma's "Chat with a support agent" row is not drawn.
+    expect(screen.queryByText("Chat")).toBeNull();
+    expect(screen.queryByText("Chat with a support agent")).toBeNull();
     expect(screen.queryByText("Not available yet")).toBeNull();
     expect(screen.queryByText(/call/i)).toBeNull();
     expect(open).not.toHaveBeenCalled();

@@ -1,7 +1,8 @@
-import React from "react";
+import React, { useMemo } from "react";
 import { FlatList, Pressable, RefreshControl, View } from "react-native";
+import { Feather } from "@expo/vector-icons";
 
-import { EmptyState, ErrorState, LoadingState } from "@/src/components/account/StateViews";
+import { ErrorState, LoadingState } from "@/src/components/account/StateViews";
 import HeaderBack from "@/src/components/back/HeaderBack";
 import Text from "@/src/components/ui/text";
 import { globalStyles } from "@/src/constants/styles";
@@ -10,11 +11,34 @@ import { useNotifications } from "@/src/hooks/queries";
 import useNavigation from "@/src/hooks/use-navigation";
 import { toOffer } from "@/src/services/booking.service";
 import type { CaregiverNotification } from "@/src/services/notification.service";
-import { notificationView } from "@/src/account/notificationModel";
+import { groupNotifications, notificationView } from "@/src/account/notificationModel";
+import { timeAgo } from "@/src/home/homeBlocks";
+
+type Row = { kind: "header"; label: string } | { kind: "item"; item: CaregiverNotification };
+
+/** Figma's empty state: a folder and "No Notification". Its "Start Booking Journey" button is for a patient, so it is not drawn. */
+const NoNotifications: React.FC = () => (
+  <View testID="notifications-empty" style={{ alignItems: "center", paddingTop: theme.spacing.xxl * 2, gap: theme.spacing.sm }}>
+    <Feather name="folder" size={56} color={theme.colors.warning} />
+    <Text variant="body" color={theme.colors.textLight}>
+      No Notification
+    </Text>
+  </View>
+);
 
 const Notifications: React.FC = () => {
   const { navigation } = useNavigation();
   const query = useNotifications();
+  // "10 Min Ago" and "Today" are judged as of the moment the list was fetched (the same rule as Home's block).
+  const fetchedAt = query.dataUpdatedAt;
+  const rows = useMemo<Row[]>(
+    () =>
+      groupNotifications(query.data ?? [], new Date(fetchedAt)).flatMap((group) => [
+        { kind: "header", label: group.label } as Row,
+        ...group.items.map((item): Row => ({ kind: "item", item })),
+      ]),
+    [query.data, fetchedAt],
+  );
 
   /**
    * A booking nobody is assigned to is an offer (the backend hides patient details until accepted),
@@ -37,19 +61,25 @@ const Notifications: React.FC = () => {
         <HeaderBack />
         <View style={{ marginVertical: "5%" }}>
           <Text variant="h2" weight="bold">
-            Notifications
+            Notification
           </Text>
         </View>
         {query.data ? (
           <FlatList
             testID="notifications-list"
-            data={query.data}
-            keyExtractor={(n) => n.id}
+            data={rows}
+            keyExtractor={(row) => (row.kind === "header" ? `header-${row.label}` : row.item.id)}
             refreshControl={<RefreshControl refreshing={query.isRefetching} onRefresh={() => void query.refetch()} />}
-            ListEmptyComponent={
-              <EmptyState icon="bell" title="No notifications yet" hint="New job requests and updates will show up here." />
-            }
-            renderItem={({ item }) => {
+            ListEmptyComponent={<NoNotifications />}
+            renderItem={({ item: row }) => {
+              if (row.kind === "header") {
+                return (
+                  <Text variant="body" weight="medium" style={{ marginTop: theme.spacing.sm, marginBottom: theme.spacing.sm }}>
+                    {row.label}
+                  </Text>
+                );
+              }
+              const item = row.item;
               const view = notificationView(item);
               return (
                 <Pressable
@@ -62,9 +92,16 @@ const Notifications: React.FC = () => {
                     backgroundColor: view.isRead ? theme.colors.soft : theme.colors.primaryLight,
                   }}
                 >
-                  <Text variant="body" weight="bold">
-                    {view.title}
-                  </Text>
+                  <View style={{ flexDirection: "row", alignItems: "flex-start", justifyContent: "space-between", gap: theme.spacing.sm }}>
+                    <View style={{ flex: 1 }}>
+                      <Text variant="body" weight="bold">
+                        {view.title}
+                      </Text>
+                    </View>
+                    <Text variant="small" weight="bold" color={theme.colors.primary} testID="notification-ago">
+                      {timeAgo(item.created_at, fetchedAt)}
+                    </Text>
+                  </View>
                   <Text variant="small" color={theme.colors.textLight} style={{ marginTop: 2 }}>
                     {view.detail}
                   </Text>
@@ -83,9 +120,6 @@ const Notifications: React.FC = () => {
                       {view.stateLabel}
                     </Text>
                   ) : null}
-                  <Text variant="caption" color={theme.colors.textLight} style={{ marginTop: 6 }}>
-                    {view.received}
-                  </Text>
                 </Pressable>
               );
             }}

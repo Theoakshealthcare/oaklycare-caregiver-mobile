@@ -1,8 +1,7 @@
 import React from "react";
 import { View } from "react-native";
 
-import { Card } from "@/src/components/careplan/parts";
-import Button from "@/src/components/ui/button";
+import { Accordion, AddLink } from "@/src/components/careplan/parts";
 import Text from "@/src/components/ui/text";
 import { theme } from "@/src/constants/theme";
 import {
@@ -10,9 +9,9 @@ import {
   MEDICATION_NOTICE,
   STOPPED_HEADING,
   medicationDatesLine,
-  medicationDoseLine,
+  clockLabel,
+  medicationFrequencyLabel,
   medicationGroups,
-  medicationScheduleLine,
   medicationStoppedLine,
 } from "@/src/careplan/carePlanModel";
 import type { CarePlan, CarePlanMedication } from "@/src/services/carePlans.service";
@@ -35,25 +34,48 @@ export const MedicationNotice: React.FC = () => (
   </View>
 );
 
+/** "1 tablet · Oral": the dose and the route as the nurse wrote them (the strength is part of the name line). */
+const doseAndRoute = (m: CarePlanMedication): string => [[m.dose_amount, m.dose_unit].filter(Boolean).join(" "), m.route].filter(Boolean).join(" · ");
+
 const MedicationRow: React.FC<{ medication: CarePlanMedication }> = ({ medication: m }) => {
   const stopped = m.status !== "active";
-  const lines = [medicationDoseLine(m), medicationScheduleLine(m), m.reason ? `For: ${m.reason}` : "", m.prescribed_by ? `Prescribed by ${m.prescribed_by}` : "", medicationDatesLine(m)].filter(Boolean);
+  const times = m.times_of_day.map(clockLabel).join(", ");
+  const extra = [m.reason ? `For: ${m.reason}` : "", m.prescribed_by ? `Prescribed by ${m.prescribed_by}` : "", medicationDatesLine(m)].filter(Boolean);
   const muted = stopped ? theme.colors.textLight : undefined;
   return (
     <View testID={`medication-${m.id}`} style={{ gap: theme.spacing.xs }}>
-      <Text variant="body" weight="bold" color={muted}>
-        {m.name}
-      </Text>
-      {lines.map((line, i) => (
-        <Text key={`${i}-${line}`} variant="small" color={theme.colors.textLight}>
+      <View style={{ flexDirection: "row", justifyContent: "space-between", gap: theme.spacing.sm }}>
+        <View style={{ flex: 1, gap: 2 }}>
+          <Text variant="small" weight="bold" color={muted}>
+            {[m.name, m.strength].filter(Boolean).join(" ")}
+          </Text>
+          {doseAndRoute(m) ? (
+            <Text variant="caption" color={theme.colors.textLight}>
+              {doseAndRoute(m)}
+            </Text>
+          ) : null}
+        </View>
+        <View style={{ flex: 1, alignItems: "flex-end", gap: 2 }}>
+          <Text variant="small" weight="bold" color={stopped ? theme.colors.textLight : theme.colors.primary} testID={`medication-times-${m.id}`}>
+            {times || medicationFrequencyLabel(m.frequency)}
+          </Text>
+          {m.note ? (
+            <Text variant="caption" color={theme.colors.textLight} style={{ textAlign: "right" }}>
+              {m.note}
+            </Text>
+          ) : null}
+        </View>
+      </View>
+      {times ? (
+        <Text variant="caption" color={theme.colors.textLight}>
+          {medicationFrequencyLabel(m.frequency)}
+        </Text>
+      ) : null}
+      {extra.map((line, i) => (
+        <Text key={`${i}-${line}`} variant="caption" color={theme.colors.textLight}>
           {line}
         </Text>
       ))}
-      {m.note ? (
-        <Text variant="small" color={muted}>
-          {m.note}
-        </Text>
-      ) : null}
       {stopped ? (
         <Text variant="caption" weight="medium" color={theme.colors.textLight} testID={`medication-stopped-${m.id}`}>
           {medicationStoppedLine(m)}
@@ -64,20 +86,16 @@ const MedicationRow: React.FC<{ medication: CarePlanMedication }> = ({ medicatio
 };
 
 /**
- * "Medication schedules": a record of what the prescriber ordered (design decision D4). It is never collapsed, so the
- * notice is always on screen with it. Authors see Add (`can_edit_plan`, from the server); everyone with access reads the
- * list. There are no reminders, no "given" ticks and no "due" or "overdue" states: nothing here is computed from a time.
+ * "Medication Schedules": a record of what the prescriber ordered (design decision D4). It is a section like the others
+ * (closed until opened, as Figma draws it), and the "not clinical advice" notice is the first thing inside it, so the
+ * notice is always on screen whenever the list is. Authors see Add (`can_edit_plan`, from the server); everyone with access
+ * reads the list. There are no reminders, no "given" ticks and no "due" or "overdue" states: nothing here is computed
+ * from a time.
  */
 const MedicationsSection: React.FC<{ plan: CarePlan; onAdd?: () => void }> = ({ plan, onAdd }) => {
   const { active, stopped } = medicationGroups(plan);
   return (
-    <View
-      testID="section-medications"
-      style={{ borderWidth: 1, borderColor: theme.colors.border, borderRadius: theme.borderRadius.xl, padding: theme.spacing.md, gap: theme.spacing.sm }}
-    >
-      <Text variant="body" weight="bold" accessibilityRole="header">
-        Medication schedules
-      </Text>
+    <Accordion testID="section-medications" title="Medication Schedules">
       <MedicationNotice />
       {plan.medications.length === 0 ? (
         <Text variant="small" color={theme.colors.textLight} testID="medications-empty">
@@ -85,24 +103,20 @@ const MedicationsSection: React.FC<{ plan: CarePlan; onAdd?: () => void }> = ({ 
         </Text>
       ) : null}
       {active.map((m) => (
-        <Card key={m.id}>
-          <MedicationRow medication={m} />
-        </Card>
+        <MedicationRow key={m.id} medication={m} />
       ))}
       {stopped.length > 0 ? (
-        <View testID="medications-stopped" style={{ gap: theme.spacing.sm }}>
+        <View testID="medications-stopped" style={{ gap: theme.spacing.md }}>
           <Text variant="small" weight="bold" color={theme.colors.textLight} accessibilityRole="header">
             {STOPPED_HEADING}
           </Text>
           {stopped.map((m) => (
-            <Card key={m.id}>
-              <MedicationRow medication={m} />
-            </Card>
+            <MedicationRow key={m.id} medication={m} />
           ))}
         </View>
       ) : null}
-      {onAdd ? <Button testID="medication-add" title="Add Medication" variant="outline" onPress={onAdd} /> : null}
-    </View>
+      {onAdd ? <AddLink testID="medication-add" label="Add New Medication" onPress={onAdd} /> : null}
+    </Accordion>
   );
 };
 

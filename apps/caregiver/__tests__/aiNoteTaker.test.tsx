@@ -37,6 +37,13 @@ describe("AI Note Taker (DP1-17)", () => {
   });
   afterEach(() => jest.restoreAllMocks());
 
+  it("voice off: the title has no stray comma and there is no orb or Voice to text pill", async () => {
+    await render();
+    expect(screen.getByText("AI Notetaker")).toBeTruthy();
+    expect(screen.queryByTestId("ai-orb")).toBeNull();
+    expect(screen.queryByText("Voice to text")).toBeNull();
+  });
+
   it("does not ask for the microphone when the screen opens", async () => {
     await render();
     expect(mockPermission).not.toHaveBeenCalled();

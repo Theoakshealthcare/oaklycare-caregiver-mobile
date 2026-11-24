@@ -28,15 +28,19 @@ export interface VitalKindInfo {
   units: string[];
   /** Subtitle on the manual entry list. */
   entryHint: string;
+  /** The name on the monitoring card, the entry popup and its button (Figma says "Respiratory Rate" there and "Respiration Rate" on the tile). */
+  heading: string;
+  /** The sub-line under the title of the entry popup. */
+  entrySubtitle: string;
 }
 
 export const VITAL_KINDS: VitalKindInfo[] = [
-  { kind: "heart_rate", label: "Heart Rate", icon: "heart", units: ["bpm"], entryHint: "Enter heart rate manually" },
-  { kind: "blood_pressure", label: "Blood Pressure", icon: "activity", units: ["mmHg"], entryHint: "Enter blood pressure manually" },
-  { kind: "temperature", label: "Temperature", icon: "thermometer", units: ["°C", "°F"], entryHint: "Enter temperature manually" },
-  { kind: "respiratory_rate", label: "Respiration Rate", icon: "wind", units: ["breaths/min"], entryHint: "Enter respiration rate manually" },
-  { kind: "blood_glucose", label: "Blood Glucose", icon: "droplet", units: ["mg/dL", "mmol/L"], entryHint: "Enter blood glucose manually" },
-  { kind: "sleep_duration", label: "Sleep Duration", icon: "moon", units: ["hrs"], entryHint: "Enter sleep duration manually" },
+  { kind: "heart_rate", label: "Heart Rate", icon: "heart", units: ["bpm"], entryHint: "Enter Heart Rate Manually", heading: "Heart Rate", entrySubtitle: "Your Current Heart Rate" },
+  { kind: "blood_pressure", label: "Blood Pressure", icon: "activity", units: ["mmHg"], entryHint: "Enter Blood Pressure Manually", heading: "Blood Pressure", entrySubtitle: "Enter Blood Pressure Readings" },
+  { kind: "temperature", label: "Temperature", icon: "thermometer", units: ["°C", "°F"], entryHint: "Enter Temperature Manually", heading: "Temperature", entrySubtitle: "Enter your body temperature manually" },
+  { kind: "respiratory_rate", label: "Respiration Rate", icon: "wind", units: ["breaths/min"], entryHint: "Enter Respiration Rate Manually", heading: "Respiratory Rate", entrySubtitle: "Enter your Respiratory Rate Reading" },
+  { kind: "blood_glucose", label: "Blood Glucose", icon: "droplet", units: ["mg/dL", "mmol/L"], entryHint: "Enter Blood Glucose Manually", heading: "Blood Glucose", entrySubtitle: "Enter Blood Glucose Readings" },
+  { kind: "sleep_duration", label: "Sleep Duration", icon: "moon", units: ["hrs"], entryHint: "Enter Sleep Duration Manually", heading: "Sleep Duration", entrySubtitle: "Enter your Sleep Duration" },
 ];
 
 export function kindInfo(kind: VitalKind): VitalKindInfo {
@@ -151,12 +155,15 @@ export function readingsInRange(readings: Reading[], range: ChartRange, now: Dat
     .sort((a, b) => a.recordedAt.getTime() - b.recordedAt.getTime());
 }
 
-export interface ChartBar {
+export interface ChartPoint {
   id: string;
-  /** 0.15 to 1: bar height as a share of the chart, so the lowest reading is still visible. For blood pressure this is where the top (systolic) number sits. */
-  height: number;
-  /** Blood pressure only: where the bottom (diastolic) number sits, 0 to 1, so the bar spans the two. */
+  /** When the reading was taken, in ms: the chart places points by time. */
+  at: number;
+  /** What the line follows: the number itself, or the top (systolic) number for blood pressure. */
+  value: number;
+  /** Blood pressure only: the bottom (diastolic) number, drawn as a second, lighter line. */
   low?: number;
+  /** The reading as stored ("138/85"), for screen readers. */
   label: string;
 }
 
@@ -169,37 +176,36 @@ export function parsePressure(value: string): { systolic: number; diastolic: num
   return { systolic, diastolic };
 }
 
-/** Turns plottable readings into bar heights scaled between the lowest and highest value shown. */
-export function chartBars(readings: Reading[]): ChartBar[] {
-  if (readings.length > 0 && readings.every((r) => r.kind === "blood_pressure")) return pressureBars(readings);
-  const points = readings.filter((r): r is Reading & { plot: number } => r.plot !== null);
-  if (points.length === 0) return [];
-  const values = points.map((p) => p.plot);
-  const min = Math.min(...values);
-  const max = Math.max(...values);
-  return points.map((p) => ({
-    id: p.id,
-    height: max === min ? 0.6 : 0.15 + ((p.plot - min) / (max - min)) * 0.85,
-    label: p.value,
-  }));
+/** Plottable readings (oldest first, as `readingsInRange` returns them) as chart points. A reading that is not a number is left out. */
+export function chartPoints(readings: Reading[]): ChartPoint[] {
+  const points: ChartPoint[] = [];
+  for (const r of readings) {
+    const at = r.recordedAt.getTime();
+    if (r.kind === "blood_pressure") {
+      const pressure = parsePressure(r.value);
+      if (pressure) points.push({ id: r.id, at, value: pressure.systolic, low: pressure.diastolic, label: r.value });
+    } else if (r.plot !== null) {
+      points.push({ id: r.id, at, value: r.plot, label: r.value });
+    }
+  }
+  return points;
 }
 
-/** Blood pressure: one bar per reading, running from the diastolic to the systolic number on a shared scale. */
-function pressureBars(readings: Reading[]): ChartBar[] {
-  const points = readings.flatMap((r) => {
-    const pressure = parsePressure(r.value);
-    return pressure ? [{ id: r.id, label: r.value, ...pressure }] : [];
-  });
-  if (points.length === 0) return [];
-  const min = Math.min(...points.map((p) => p.diastolic));
-  const max = Math.max(...points.map((p) => p.systolic));
-  const scale = (n: number) => (max === min ? 0.5 : 0.1 + ((n - min) / (max - min)) * 0.8);
-  return points.map((p) => ({
-    id: p.id,
-    height: max === min ? 0.6 : scale(p.systolic),
-    low: max === min ? 0.4 : scale(p.diastolic),
-    label: p.label,
-  }));
+/** "Today, 08:45" for today, "24 Oct, 10:45" before: the client row's "Last updated". */
+export function formatLastUpdated(date: Date, now: Date = new Date()): string {
+  return date.toDateString() === now.toDateString() ? `Today, ${formatClock(date)}` : formatStamp(date);
+}
+
+const SEX_LABEL: Record<string, string> = { male: "Male", female: "Female", other: "Other" };
+
+/** "32, Male": the client row's age and sex, only the parts the profile has; null when it has neither. */
+export function ageAndSexLine(profile: { age?: number | null; gender?: string | null } | undefined): string | null {
+  if (!profile) return null;
+  const parts = [
+    profile.age !== null && profile.age !== undefined ? String(profile.age) : null,
+    profile.gender ? (SEX_LABEL[profile.gender.toLowerCase()] ?? profile.gender) : null,
+  ].filter(Boolean);
+  return parts.length ? parts.join(", ") : null;
 }
 
 /** Readings (already newest first) grouped under "Today", "Yesterday" or the date, keeping their order. */

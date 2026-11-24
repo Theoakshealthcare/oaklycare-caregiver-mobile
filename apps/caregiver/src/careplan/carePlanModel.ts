@@ -148,6 +148,24 @@ export function ageAndSex(client: { age?: number | null; gender?: string | null 
   return parts.length ? parts.join(". ") : null;
 }
 
+/** "Female · 71" (the Figma header line, sex first), or whichever part is known; null when neither is. */
+export function sexAndAge(client: { age?: number | null; gender?: string | null }): string | null {
+  const parts = [
+    client.gender ? (SEX_LABEL[client.gender.toLowerCase()] ?? client.gender) : null,
+    client.age !== null && client.age !== undefined ? String(client.age) : null,
+  ].filter(Boolean);
+  return parts.length ? parts.join(" · ") : null;
+}
+
+/** "30 Days (Review Every 2 Weeks)": a review interval that is a whole number of weeks is written in weeks. */
+export function planDuration(plan: Pick<CarePlan, "duration_days" | "review_every_days">): string {
+  const days = plan.duration_days === 1 ? "1 Day" : `${plan.duration_days} Days`;
+  const every = plan.review_every_days;
+  if (!every) return days;
+  const interval = every % 7 === 0 ? `${every / 7} ${every === 7 ? "Week" : "Weeks"}` : `${every} ${every === 1 ? "Day" : "Days"}`;
+  return `${days} (Review Every ${interval})`;
+}
+
 /** "Review every 14 days" or "No review date". */
 export function reviewText(plan: Pick<CarePlan, "review_every_days" | "review_due_on">): string {
   if (!plan.review_every_days) return "No review date";

@@ -27,6 +27,8 @@ interface SelectProps {
   required?: boolean;
   /** Overrides the default 16 pt bottom margin (the setup screens space their fields with a column gap instead). */
   containerStyle?: StyleProp<ViewStyle>;
+  /** Field button gets this id; each option is `<testID>-option-<value>`. */
+  testID?: string;
 }
 
 export const Select: React.FC<SelectProps> = ({
@@ -42,6 +44,7 @@ export const Select: React.FC<SelectProps> = ({
   disabled = false,
   required = false,
   containerStyle,
+  testID,
 }) => {
   const [isOpen, setIsOpen] = useState(false);
 
@@ -74,6 +77,7 @@ export const Select: React.FC<SelectProps> = ({
       )}
       
       <TouchableOpacity
+        testID={testID}
         style={[
           styles.selectButton,
           error && styles.selectButtonError,
@@ -118,6 +122,7 @@ export const Select: React.FC<SelectProps> = ({
               keyExtractor={(item) => String(item.value)}
               renderItem={({ item }) => (
                 <TouchableOpacity
+                  testID={testID ? `${testID}-option-${item.value}` : undefined}
                   style={[
                     styles.option,
                     isSelected(item) && styles.selectedOption,

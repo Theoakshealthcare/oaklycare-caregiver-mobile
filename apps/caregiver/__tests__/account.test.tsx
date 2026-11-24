@@ -139,6 +139,20 @@ describe("Profile screen", () => {
     expect(positions.every((p) => p >= 0)).toBe(true);
   });
 
+  it("shows the profile photo when the profile has a URL", async () => {
+    jest.spyOn(authService, "getMe").mockResolvedValue({ ...me, profile_image_url: "https://img.example/ada.jpg" });
+    await renderWith(<Profile />);
+    await screen.findByText("Ada Obi");
+    expect(JSON.stringify(screen.toJSON())).toContain("https://img.example/ada.jpg");
+  });
+
+  it("shows the plain icon when the profile has no photo", async () => {
+    jest.spyOn(authService, "getMe").mockResolvedValue(me);
+    await renderWith(<Profile />);
+    await screen.findByText("Ada Obi");
+    expect(JSON.stringify(screen.toJSON())).not.toContain("https://img.example");
+  });
+
   it("shows the Care Plan row only to a caregiver the server lets author care plans", async () => {
     jest.spyOn(locationService, "getHome").mockResolvedValue(homeFor(true));
     await renderWith(<Profile />);
@@ -253,13 +267,25 @@ describe("EditProfile screen", () => {
     expect(screen.queryByText(/password/i)).toBeNull();
   });
 
+  it("uses the Figma labels and button, and draws no emergency-contact name or address (the caregiver profile has no such fields)", async () => {
+    jest.spyOn(caregiverService, "getProfile").mockResolvedValue(caregiverProfile);
+    await renderWith(<EditProfile />);
+    await screen.findByDisplayValue("Ada Obi");
+    for (const label of ["Edit Profile", "Upload Image", "Full Name", "Email Address", "Phone Number", "House Address", "Select Gender", "Date of Birth", "Emergency Contact Person Phone Number", "Update Profile Details"]) {
+      expect(screen.getByText(label)).toBeTruthy();
+    }
+    expect(screen.queryByText("Emergency Contact Person Name")).toBeNull();
+    expect(screen.queryByText("Emergency Contact Person Address")).toBeNull();
+    expect(screen.queryByText("Enter Age")).toBeNull();
+  });
+
   it("saves only what changed through PUT /auth/profile and goes back", async () => {
     jest.spyOn(caregiverService, "getProfile").mockResolvedValue(caregiverProfile);
     const update = jest.spyOn(accountService, "updateProfile").mockResolvedValue({} as never);
     const step1 = jest.spyOn(caregiverService, "updateProfileStep1");
     await renderWith(<EditProfile />);
     await fireEvent.changeText(await screen.findByDisplayValue("Ada Obi"), "Ada Okafor");
-    await fireEvent.press(screen.getByText("Update profile details"));
+    await fireEvent.press(screen.getByText("Update Profile Details"));
     await waitFor(() => expect(update).toHaveBeenCalledWith({ full_name: "Ada Okafor" }));
     expect(step1).not.toHaveBeenCalled();
     await waitFor(() => expect(mockGoBack).toHaveBeenCalled());
@@ -279,7 +305,7 @@ describe("EditProfile screen", () => {
     await screen.findByDisplayValue("Ada Obi");
     await fireEvent.press(screen.getByText("Lagos"));
     await fireEvent.press(await screen.findByText("Ogun"));
-    await fireEvent.press(screen.getByText("Update profile details"));
+    await fireEvent.press(screen.getByText("Update Profile Details"));
     await waitFor(() =>
       expect(step1).toHaveBeenCalledWith({
         date_of_birth: "1990-05-01",
@@ -296,7 +322,7 @@ describe("EditProfile screen", () => {
     const update = jest.spyOn(accountService, "updateProfile");
     await renderWith(<EditProfile />);
     await fireEvent.changeText(await screen.findByDisplayValue("Ada Obi"), "  ");
-    await fireEvent.press(screen.getByText("Update profile details"));
+    await fireEvent.press(screen.getByText("Update Profile Details"));
     expect(await screen.findByText("Full name is required")).toBeTruthy();
     expect(update).not.toHaveBeenCalled();
   });
@@ -306,7 +332,7 @@ describe("EditProfile screen", () => {
     jest.spyOn(accountService, "updateProfile").mockRejectedValue(new ApiError(0, null, "x"));
     await renderWith(<EditProfile />);
     await fireEvent.changeText(await screen.findByDisplayValue("Ada Obi"), "Ada Okafor");
-    await fireEvent.press(screen.getByText("Update profile details"));
+    await fireEvent.press(screen.getByText("Update Profile Details"));
     await waitFor(() => expect(alertSpy).toHaveBeenCalledWith("Couldn't save", expect.stringContaining("Can't reach Oakly")));
   });
 
@@ -319,7 +345,7 @@ describe("EditProfile screen", () => {
     });
     const upload = jest.spyOn(accountService, "uploadProfileImage").mockResolvedValue("https://img/x.jpg");
     await renderWith(<EditProfile />);
-    await fireEvent.press(await screen.findByText("Upload image"));
+    await fireEvent.press(await screen.findByText("Upload Image"));
     await waitFor(() =>
       expect(upload).toHaveBeenCalledWith({ uri: "file:///photo.jpg", fileName: "photo.jpg", mimeType: "image/jpeg" }),
     );
@@ -330,7 +356,7 @@ describe("EditProfile screen", () => {
     const upload = jest.spyOn(accountService, "uploadProfileImage");
     mockRequestPermission.mockResolvedValue({ granted: false });
     await renderWith(<EditProfile />);
-    await fireEvent.press(await screen.findByText("Upload image"));
+    await fireEvent.press(await screen.findByText("Upload Image"));
     await waitFor(() => expect(alertSpy).toHaveBeenCalledWith("Photos are off", expect.any(String)));
     expect(upload).not.toHaveBeenCalled();
   });

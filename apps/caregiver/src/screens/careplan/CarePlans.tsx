@@ -1,23 +1,20 @@
 import React, { useState } from "react";
-import { Pressable, RefreshControl, View } from "react-native";
+import { Pressable, RefreshControl, ScrollView, View } from "react-native";
+import { useNavigationState } from "@react-navigation/native";
 import { Feather } from "@expo/vector-icons";
 import type { StackScreenProps } from "@react-navigation/stack";
 
-import ScreenShell from "@/src/components/account/ScreenShell";
 import { EmptyState, ErrorState, LoadingState } from "@/src/components/account/StateViews";
-import { Card, Chip, RiskBadge } from "@/src/components/careplan/parts";
-import Button from "@/src/components/ui/button";
+import { Chip, RoundBack } from "@/src/components/careplan/parts";
 import Input from "@/src/components/ui/input";
 import Text from "@/src/components/ui/text";
 import { theme } from "@/src/constants/theme";
 import {
   NOT_REVIEWED_NOTE,
   ONLY_NURSES_HINT,
-  ageAndSex,
   errorCode,
   listStatusLabel,
-  matchesQuery,
-  planLength,
+  riskLabel,
 } from "@/src/careplan/carePlanModel";
 import { useDebounced } from "@/src/hooks/use-debounced";
 import { useCaregiverHome } from "@/src/hooks/queries";
@@ -29,76 +26,121 @@ import type { CarePlanListItem, CarePlanTemplateItem, PlanListStatus } from "@/s
 type Props = StackScreenProps<ScreenParamLists, "CarePlans">;
 type Tab = "assigned" | "templates";
 
+/** The pill switch in the teal header: the chosen tab is a filled teal pill on a white track. */
 const TabButton: React.FC<{ label: string; active: boolean; onPress: () => void; testID: string }> = ({ label, active, onPress, testID }) => (
   <Pressable
     testID={testID}
     accessibilityRole="tab"
     accessibilityState={{ selected: active }}
     onPress={onPress}
-    style={{ flex: 1, alignItems: "center", paddingVertical: theme.spacing.sm, borderBottomWidth: 2, borderBottomColor: active ? theme.colors.primary : theme.colors.border }}
+    style={{
+      flex: 1,
+      alignItems: "center",
+      paddingVertical: theme.spacing.sm + 2,
+      borderRadius: theme.borderRadius.round,
+      backgroundColor: active ? theme.colors.primary : "transparent",
+    }}
   >
-    <Text variant="body" weight={active ? "bold" : "regular"} color={active ? theme.colors.primary : theme.colors.textLight}>
+    <Text variant="small" weight={active ? "bold" : "regular"} color={active ? theme.colors.white : theme.colors.textLight} numberOfLines={1}>
+      {label}
+    </Text>
+  </Pressable>
+);
+
+const WhiteCard: React.FC<{ children: React.ReactNode; testID?: string }> = ({ children, testID }) => (
+  <View testID={testID} style={{ backgroundColor: theme.colors.white, borderRadius: theme.borderRadius.xl, padding: theme.spacing.md, gap: theme.spacing.sm }}>
+    {children}
+  </View>
+);
+
+const RISK_TEXT: Record<CarePlanListItem["risk_level"], string> = {
+  high: theme.colors.secondary,
+  medium: theme.colors.warning,
+  low: theme.colors.toast,
+};
+
+const SmallPill: React.FC<{ label: string; onPress: () => void; testID: string; filled?: boolean }> = ({ label, onPress, testID, filled }) => (
+  <Pressable
+    testID={testID}
+    accessibilityRole="button"
+    onPress={onPress}
+    style={{
+      paddingVertical: theme.spacing.xs + 2,
+      paddingHorizontal: theme.spacing.sm + 2,
+      borderRadius: theme.borderRadius.round,
+      backgroundColor: filled ? theme.colors.primary : theme.colors.primaryLight,
+    }}
+  >
+    <Text variant="caption" weight="medium" color={filled ? theme.colors.white : theme.colors.primary}>
       {label}
     </Text>
   </Pressable>
 );
 
 const PlanCard: React.FC<{ plan: CarePlanListItem; onOpen: () => void; onProgress: () => void }> = ({ plan, onOpen, onProgress }) => {
-  const subtitle = ageAndSex(plan.client);
+  const detail = [`Primary Diagnosis: ${plan.diagnosis}`, plan.client.age != null ? `Age: ${plan.client.age}` : null].filter(Boolean).join(" | ");
+  const done = plan.status !== "active";
+  const statusColour = done ? theme.colors.toast : theme.colors.warning;
   return (
     <Pressable testID={`plan-${plan.id}`} accessibilityRole="button" onPress={onOpen}>
-      <Card>
+      <WhiteCard>
         <View style={{ flexDirection: "row", justifyContent: "space-between", alignItems: "flex-start", gap: theme.spacing.sm }}>
-          <View style={{ flex: 1 }}>
+          <View style={{ flex: 1, gap: theme.spacing.xs }}>
             <Text variant="body" weight="bold">
-              {plan.client.full_name}
+              {`Assigned Plan: ${plan.client.full_name}`}
             </Text>
-            {subtitle ? (
-              <Text variant="small" color={theme.colors.textLight}>
-                {subtitle}
-              </Text>
-            ) : null}
+            <Text variant="small" color={theme.colors.textLight}>
+              {detail}
+            </Text>
+            <Text variant="small" weight="bold" color={RISK_TEXT[plan.risk_level]} testID={`plan-risk-${plan.id}`}>
+              {`Risk: ${riskLabel(plan.risk_level)}`}
+            </Text>
           </View>
-          <Text variant="small" weight="medium" color={plan.status === "active" ? theme.colors.primary : theme.colors.textLight}>
+          <SmallPill testID={`plan-view-progress-${plan.id}`} label="View Progress" filled onPress={onProgress} />
+        </View>
+        <Text variant="caption" color={theme.colors.textLight} testID={`plan-status-${plan.id}`}>
+          {"Status: "}
+          <Text variant="caption" weight="medium" color={statusColour}>
             {listStatusLabel(plan.status)}
           </Text>
-        </View>
-        <Text variant="small">{plan.diagnosis}</Text>
-        <RiskBadge risk={plan.risk_level} />
+        </Text>
         {plan.progress_percent !== null && plan.progress_percent !== undefined ? (
-          <View testID={`plan-progress-${plan.id}`} style={{ gap: theme.spacing.xs }}>
-            <View style={{ height: 6, borderRadius: 3, backgroundColor: theme.colors.border, overflow: "hidden" }}>
-              <View style={{ width: `${Math.max(0, Math.min(100, plan.progress_percent))}%`, height: 6, backgroundColor: theme.colors.primary }} />
+          <View testID={`plan-progress-${plan.id}`} style={{ flexDirection: "row", alignItems: "center", gap: theme.spacing.sm }}>
+            <View style={{ flex: 1, height: 5, borderRadius: 3, backgroundColor: theme.colors.border, overflow: "hidden" }}>
+              <View style={{ width: `${Math.max(0, Math.min(100, plan.progress_percent))}%`, height: 5, backgroundColor: statusColour }} />
             </View>
-            <Text variant="caption">{`${plan.progress_percent}% complete`}</Text>
+            <Text variant="caption" color={theme.colors.textLight}>{`${plan.progress_percent}%`}</Text>
           </View>
         ) : null}
-        <Button testID={`plan-view-progress-${plan.id}`} title="View progress" variant="outline" onPress={onProgress} />
-      </Card>
+      </WhiteCard>
     </Pressable>
   );
 };
 
-const TemplateCard: React.FC<{ template: CarePlanTemplateItem; onOpen: () => void }> = ({ template, onOpen }) => (
-  <Pressable testID={`template-${template.key}`} accessibilityRole="button" onPress={onOpen}>
-    <Card>
-      <Text variant="body" weight="bold">
-        {template.name}
+const TemplateCard: React.FC<{ template: CarePlanTemplateItem; onPreview: () => void; onUse: () => void }> = ({ template, onPreview, onUse }) => (
+  <WhiteCard testID={`template-${template.key}`}>
+    <Text variant="body" weight="bold">
+      {template.name}
+    </Text>
+    <Text variant="small" color={theme.colors.textLight}>
+      {template.summary}
+    </Text>
+    <View style={{ flexDirection: "row", alignItems: "center", gap: theme.spacing.xs }}>
+      <Feather name="clock" size={14} color={theme.colors.primary} />
+      <Text variant="caption" color={theme.colors.primary}>
+        {`${template.duration_days}-day Program`}
       </Text>
-      <Text variant="small" color={theme.colors.textLight}>
-        {template.summary}
+    </View>
+    {template.clinical_review_status === "pending" ? (
+      <Text variant="caption" color={theme.colors.warningText} testID={`template-pending-${template.key}`}>
+        {NOT_REVIEWED_NOTE}
       </Text>
-      <Text variant="caption">
-        {`${planLength(template.duration_days)}${template.review_every_days ? `, review every ${template.review_every_days} days` : ""}`}
-      </Text>
-      <RiskBadge risk={template.default_risk_level} />
-      {template.clinical_review_status === "pending" ? (
-        <Text variant="caption" color={theme.colors.warningText} testID={`template-pending-${template.key}`}>
-          {NOT_REVIEWED_NOTE}
-        </Text>
-      ) : null}
-    </Card>
-  </Pressable>
+    ) : null}
+    <View style={{ flexDirection: "row", gap: theme.spacing.sm }}>
+      <SmallPill testID={`template-preview-${template.key}`} label="Preview Template" onPress={onPreview} />
+      <SmallPill testID={`template-use-${template.key}`} label="Use Template" filled onPress={onUse} />
+    </View>
+  </WhiteCard>
 );
 
 /** The hub: Assigned / Templates, search, and "Create New Care Plan" (nurses). */
@@ -107,7 +149,9 @@ const CarePlans: React.FC<Props> = ({ route }) => {
   const bookingId = route.params?.bookingId;
   const [tab, setTab] = useState<Tab>(route.params?.tab ?? "assigned");
   const [status, setStatus] = useState<PlanListStatus>("active");
+  const [showFilter, setShowFilter] = useState(false);
   const [search, setSearch] = useState("");
+  const hasHistory = useNavigationState((state) => state.index > 0);
   const query = useDebounced(search.trim(), 300);
 
   // The server decides who can author; the app never reads the nurse skill (it is not in any response).
@@ -161,17 +205,21 @@ const CarePlans: React.FC<Props> = ({ route }) => {
       );
     }
     if (!templates.data) return <LoadingState testID="templates-loading" />;
-    const shown = templates.data.items.filter((t) => matchesQuery(t, search));
-    if (shown.length === 0) {
-      return <EmptyState icon="search" title="No templates match" hint="Try a different word." />;
+    if (templates.data.items.length === 0) {
+      return <EmptyState icon="clipboard" title="No templates yet" hint="Templates appear here when they are published." />;
     }
     return (
       <View style={{ gap: theme.spacing.md }}>
-        {shown.map((template) => (
+        {templates.data.items.map((template) => (
           <TemplateCard
             key={template.id}
             template={template}
-            onOpen={() => navigation.navigate("CarePlanTemplate", { templateId: template.id, bookingId })}
+            onPreview={() => navigation.navigate("CarePlanTemplate", { templateId: template.id, bookingId })}
+            onUse={() =>
+              bookingId
+                ? navigation.navigate("CreateCarePlan", { bookingId, templateId: template.id })
+                : navigation.navigate("CarePlanClients", { templateId: template.id })
+            }
           />
         ))}
       </View>
@@ -181,37 +229,85 @@ const CarePlans: React.FC<Props> = ({ route }) => {
   const active = tab === "assigned" ? plans : templates;
 
   return (
-    <ScreenShell
-      title="Care plans"
-      refreshControl={<RefreshControl refreshing={active.isRefetching} onRefresh={() => void active.refetch()} />}
-    >
-      <View style={{ gap: theme.spacing.md }}>
-        <View style={{ flexDirection: "row" }}>
-          <TabButton testID="tab-assigned" label="Assigned Care Plan" active={tab === "assigned"} onPress={() => switchTab("assigned")} />
-          <TabButton testID="tab-templates" label="Templates" active={tab === "templates"} onPress={() => switchTab("templates")} />
+    <View style={{ flex: 1, backgroundColor: theme.colors.careBackground }}>
+      <ScrollView
+        keyboardShouldPersistTaps="handled"
+        refreshControl={<RefreshControl refreshing={active.isRefetching} onRefresh={() => void active.refetch()} />}
+        contentContainerStyle={{ paddingBottom: theme.spacing.xl }}
+      >
+        <View
+          style={{
+            backgroundColor: theme.colors.primary,
+            paddingHorizontal: theme.spacing.md,
+            paddingTop: theme.spacing.xxl,
+            paddingBottom: theme.spacing.md,
+            borderBottomLeftRadius: theme.borderRadius.xxl + 8,
+            borderBottomRightRadius: theme.borderRadius.xxl + 8,
+            gap: theme.spacing.md,
+          }}
+        >
+          <View style={{ alignSelf: "flex-start" }}>{hasHistory ? <RoundBack light onPress={() => navigation.goBack()} /> : null}</View>
+          <Text variant="h2" weight="bold" color={theme.colors.white} accessibilityRole="header">
+            Careplan System
+          </Text>
+          {canAuthor ? (
+            <Pressable
+              testID="create-new-plan"
+              accessibilityRole="button"
+              accessibilityLabel="Create New Care Plan"
+              onPress={create}
+              style={{ alignSelf: "flex-end", flexDirection: "row", alignItems: "center", gap: theme.spacing.xs }}
+            >
+              <Feather name="plus" size={18} color={theme.colors.white} />
+              <Text variant="small" weight="medium" color={theme.colors.white}>
+                Create New Care Plan
+              </Text>
+            </Pressable>
+          ) : null}
+          <View style={{ flexDirection: "row", backgroundColor: theme.colors.white, borderRadius: theme.borderRadius.round, padding: theme.spacing.xs }}>
+            <TabButton testID="tab-assigned" label="Assigned Care Plan" active={tab === "assigned"} onPress={() => switchTab("assigned")} />
+            <TabButton testID="tab-templates" label="Care Plan Templates" active={tab === "templates"} onPress={() => switchTab("templates")} />
+          </View>
         </View>
 
-        <Input
-          testID="plans-search"
-          placeholder={tab === "assigned" ? "Search by client name" : "Search templates"}
-          value={search}
-          onChangeText={setSearch}
-          autoCorrect={false}
-          leftIcon={<Feather name="search" size={18} color={theme.colors.textLight} />}
-        />
+        <View style={{ padding: theme.spacing.md, gap: theme.spacing.md }}>
+          {tab === "assigned" ? (
+            <>
+              <View style={{ flexDirection: "row", alignItems: "center", gap: theme.spacing.sm }}>
+                <Input
+                  testID="plans-search"
+                  placeholder="Search Plan"
+                  value={search}
+                  onChangeText={setSearch}
+                  autoCorrect={false}
+                  backgroundColor={theme.colors.primaryLight}
+                  leftIcon={<Feather name="search" size={18} color={theme.colors.textLight} />}
+                  containerStyle={{ flex: 1 }}
+                />
+                <Pressable
+                  testID="plans-filter"
+                  accessibilityRole="button"
+                  accessibilityLabel="Filter plans"
+                  accessibilityState={{ expanded: showFilter }}
+                  onPress={() => setShowFilter((v) => !v)}
+                  style={{ width: 48, height: 48, borderRadius: theme.borderRadius.lg, backgroundColor: theme.colors.primary, alignItems: "center", justifyContent: "center" }}
+                >
+                  <Feather name="sliders" size={20} color={theme.colors.white} />
+                </Pressable>
+              </View>
+              {showFilter ? (
+                <View style={{ flexDirection: "row", gap: theme.spacing.sm }}>
+                  <Chip testID="status-active" label="Active" selected={status === "active"} onPress={() => setStatus("active")} />
+                  <Chip testID="status-completed" label="Completed" selected={status === "completed"} onPress={() => setStatus("completed")} />
+                </View>
+              ) : null}
+            </>
+          ) : null}
 
-        {tab === "assigned" ? (
-          <View style={{ flexDirection: "row", gap: theme.spacing.sm }}>
-            <Chip testID="status-active" label="Active" selected={status === "active"} onPress={() => setStatus("active")} />
-            <Chip testID="status-completed" label="Completed" selected={status === "completed"} onPress={() => setStatus("completed")} />
-          </View>
-        ) : null}
-
-        {canAuthor ? <Button testID="create-new-plan" title="Create New Care Plan" onPress={create} /> : null}
-
-        {tab === "assigned" ? assigned() : templateList()}
-      </View>
-    </ScreenShell>
+          {tab === "assigned" ? assigned() : templateList()}
+        </View>
+      </ScrollView>
+    </View>
   );
 };
 

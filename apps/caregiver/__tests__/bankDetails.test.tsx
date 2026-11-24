@@ -50,11 +50,17 @@ async function renderScreen() {
   );
 }
 
+/** "Update Payment Details" is both the page title and Figma's button: the button is the last one on screen. */
+async function pressUpdate() {
+  const matches = await screen.findAllByText("Update Payment Details");
+  await fireEvent.press(matches[matches.length - 1]!);
+}
+
 async function fillAndCheck() {
-  await fireEvent.press(await screen.findByLabelText("Choose your bank"));
+  await fireEvent.press(await screen.findByLabelText("Choose Bank"));
   await fireEvent.press(await screen.findByText("Placeholder Bank"));
   await fireEvent.changeText(screen.getByPlaceholderText("10 digits"), "0000000000");
-  await fireEvent.press(screen.getByText("Check account"));
+  await pressUpdate();
 }
 
 beforeEach(async () => {
@@ -69,16 +75,25 @@ afterEach(async () => {
   });
 });
 
-describe("bank picker modal (DP2-06)", () => {
-  it("has a Back link that closes the list, and starts below the top inset", async () => {
+describe("bank picker modal (Figma 8.15.33)", () => {
+  it("is a card titled Select Bank with Close and a Search bank field; Close dismisses it", async () => {
     await renderScreen();
-    await fireEvent.press(await screen.findByLabelText("Choose your bank"));
-    expect(await screen.findByPlaceholderText("Search banks")).toBeTruthy();
-    expect(screen.getAllByText("Back")).toHaveLength(2); // the screen's own Back behind the list, and the list's
-    // jest's safe-area mock has a zero top inset: the padding is the inset plus 12, never the old fixed 56.
-    expect(screen.getByTestId("bank-picker").props.style.paddingTop).toBe(12);
+    await fireEvent.press(await screen.findByLabelText("Choose Bank"));
+    expect(await screen.findByPlaceholderText("Search bank")).toBeTruthy();
+    expect(screen.getAllByText("Select Bank").length).toBe(2); // the field's label and the card's title
+    expect(screen.getByText("Close")).toBeTruthy();
+    // jest's safe-area mock has a zero top inset: the card starts a fixed gap below the inset.
+    expect(screen.getByTestId("bank-picker").props.style.paddingTop).toBe(60);
     await fireEvent.press(screen.getByLabelText("Close bank list"));
-    await waitFor(() => expect(screen.queryByPlaceholderText("Search banks")).toBeNull());
+    await waitFor(() => expect(screen.queryByPlaceholderText("Search bank")).toBeNull());
+  });
+
+  it("picking a bank shows its name in the field", async () => {
+    await renderScreen();
+    await fireEvent.press(await screen.findByLabelText("Choose Bank"));
+    await fireEvent.press(await screen.findByText("Placeholder Bank"));
+    await waitFor(() => expect(screen.queryByPlaceholderText("Search bank")).toBeNull());
+    expect(screen.getByText("Placeholder Bank")).toBeTruthy();
   });
 });
 
@@ -99,8 +114,11 @@ describe("BankDetails screen", () => {
 
   it("empty: no account yet opens the add form", async () => {
     await renderScreen();
-    expect(await screen.findByText("Add your bank account")).toBeTruthy();
-    expect(screen.getByText("Check account")).toBeTruthy();
+    expect(await screen.findByText("Select Bank")).toBeTruthy();
+    expect(screen.getByText("Enter Account Details")).toBeTruthy();
+    expect(screen.getByText("Account Name")).toBeTruthy();
+    expect(screen.getAllByText("Update Payment Details").length).toBe(2); // the title and the button
+    expect(screen.queryByText("Check account")).toBeNull();
     expect(screen.queryByText("Cancel")).toBeNull();
   });
 
@@ -147,7 +165,7 @@ describe("BankDetails screen", () => {
   it("validation: needs a bank and a 10-digit number before any lookup", async () => {
     const resolve = jest.spyOn(walletService, "resolveBankAccount");
     await renderScreen();
-    await fireEvent.press(await screen.findByText("Check account"));
+    await pressUpdate();
     expect(screen.getByText("Choose a bank from the list.")).toBeTruthy();
     expect(screen.getByText("An account number has 10 digits.")).toBeTruthy();
     expect(resolve).not.toHaveBeenCalled();
@@ -157,7 +175,8 @@ describe("BankDetails screen", () => {
     const resolve = jest.spyOn(walletService, "resolveBankAccount").mockResolvedValue(resolved);
     await renderScreen();
     await fillAndCheck();
-    expect(await screen.findByText("PLACEHOLDER CAREGIVER A")).toBeTruthy();
+    // Figma's Account Name field fills in with the name the bank gives, for the caregiver to confirm.
+    expect(await screen.findByDisplayValue("PLACEHOLDER CAREGIVER A")).toBeTruthy();
     expect(resolve).toHaveBeenCalledWith({ bank_code: "058", account_number: "0000000000" });
     expect(screen.getByText("Yes, this is my account")).toBeTruthy();
   });
@@ -211,7 +230,7 @@ describe("BankDetails screen", () => {
     (walletService.getBankAccount as jest.Mock).mockResolvedValue(saved);
     await renderScreen();
     await fireEvent.press(await screen.findByText("Change bank account"));
-    expect(await screen.findByText("Check account")).toBeTruthy();
+    expect(await screen.findByText("Enter Account Details")).toBeTruthy();
     await fireEvent.press(screen.getByText("Cancel"));
     expect(await screen.findByText("PLACEHOLDER CAREGIVER A")).toBeTruthy();
   });
@@ -219,10 +238,10 @@ describe("BankDetails screen", () => {
   it("bank picker: searches the list and shows a retry when it fails to load", async () => {
     jest.spyOn(walletService, "getBanks").mockRejectedValueOnce(new ApiError(0, null, "x")).mockResolvedValue(banks);
     await renderScreen();
-    await fireEvent.press(await screen.findByLabelText("Choose your bank"));
+    await fireEvent.press(await screen.findByLabelText("Choose Bank"));
     expect(await screen.findByText(/Can't reach Oakly/)).toBeTruthy();
     await fireEvent.press(screen.getByText("Try again"));
-    await fireEvent.changeText(screen.getByPlaceholderText("Search banks"), "micro");
+    await fireEvent.changeText(screen.getByPlaceholderText("Search bank"), "micro");
     expect(await screen.findByText("Sample Microfinance Bank")).toBeTruthy();
     expect(screen.queryByText("Placeholder Bank")).toBeNull();
   });

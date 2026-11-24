@@ -24,7 +24,7 @@ import type { CarePlan, NoteCategory } from "@/src/services/carePlans.service";
 const COPY: Record<NoteCategory, { empty: string; placeholder: string; submit: string; label: string }> = {
   observation: {
     empty: "No notes yet.",
-    placeholder: "Add comments and observations",
+    placeholder: "Add Comments & Observation",
     submit: "Submit Observation",
     label: "Observation",
   },

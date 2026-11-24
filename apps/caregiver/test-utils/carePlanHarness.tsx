@@ -1,5 +1,5 @@
 import { QueryClient, QueryClientProvider, type Mutation, type Query } from "@tanstack/react-query";
-import { cleanup, render } from "@testing-library/react-native";
+import { cleanup, fireEvent, render, screen } from "@testing-library/react-native";
 import React from "react";
 
 const clients: QueryClient[] = [];
@@ -43,3 +43,21 @@ export async function renderWithClient(ui: React.ReactElement) {
 
 /** Props a stack screen receives; only `route` is read by the care plan screens. */
 export const routeProps = <T,>(params: unknown) => ({ route: { params }, navigation: {} }) as unknown as T;
+
+const SECTIONS = ["section-client", "section-goals", "section-medications", "section-tasks", "section-notes", "section-observations"];
+
+/**
+ * The Care Plan Details sections start closed (as Figma draws them). Waits for the plan to load, then opens every
+ * section that is still closed. Does nothing when the plan never appears (an error or no-access screen).
+ */
+export async function openAllSections(): Promise<void> {
+  try {
+    await screen.findByTestId("details-header", {}, { timeout: 600 });
+  } catch {
+    return;
+  }
+  for (const id of SECTIONS) {
+    const toggle = screen.queryByTestId(`${id}-toggle`);
+    if (toggle && !toggle.props.accessibilityState?.expanded) await fireEvent.press(toggle);
+  }
+}

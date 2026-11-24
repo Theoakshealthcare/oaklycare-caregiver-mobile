@@ -5,6 +5,7 @@ import React from "react";
 import { session } from "../src/auth";
 import { ApiError } from "../src/api/errors";
 import Notifications from "../src/screens/account/Notifications";
+import { groupNotifications } from "../src/account/notificationModel";
 import { notificationService, type CaregiverNotification } from "../src/services/notification.service";
 
 const mockNavigate = jest.fn();
@@ -92,10 +93,26 @@ describe("Notifications screen", () => {
     expect(screen.getByTestId("notifications-loading")).toBeTruthy();
   });
 
-  it("shows the empty state", async () => {
+  it("is titled Notification and shows Figma's empty state, without the patient-only Start Booking Journey button", async () => {
     jest.spyOn(notificationService, "list").mockResolvedValue([]);
     await renderScreen();
-    expect(await screen.findByText("No notifications yet")).toBeTruthy();
+    expect(await screen.findByText("No Notification")).toBeTruthy();
+    expect(screen.getByTestId("notifications-empty")).toBeTruthy();
+    expect(screen.getByText("Notification")).toBeTruthy();
+    expect(screen.queryByText("Notifications")).toBeNull();
+    expect(screen.queryByText("Start Booking Journey")).toBeNull();
+  });
+
+  it("groups under Today with the relative time on the right, and older ones under their own day", async () => {
+    const stamp = (ms: number) => new Date(Date.now() - ms).toISOString().replace("Z", "");
+    const recent = { ...notification, id: "n-recent", created_at: stamp(10 * 60_000) };
+    const older = { ...notification, id: "n-old", booking_id: "b-old", created_at: stamp(3 * 24 * 3600_000) };
+    jest.spyOn(notificationService, "list").mockResolvedValue([older, recent]);
+    await renderScreen();
+    expect(await screen.findByText("Today")).toBeTruthy();
+    const agos = screen.getAllByTestId("notification-ago").map((n) => n.props.children);
+    expect(agos).toEqual(["10 Min Ago", "3 Days Ago"]);
+    expect(screen.queryByText("Yesterday")).toBeNull();
   });
 
   it("shows the friendly error with a retry that refetches", async () => {
@@ -167,5 +184,29 @@ describe("Notifications screen", () => {
       screen.getByTestId("notifications-list").props.refreshControl.props.onRefresh();
     });
     await waitFor(() => expect(list).toHaveBeenCalledTimes(2));
+  });
+});
+
+describe("groupNotifications", () => {
+  const now = new Date(2026, 10, 24, 15, 0, 0); // 24 Nov 2026, local time
+  const at = (d: Date) => ({ created_at: d.toISOString() });
+
+  it("labels Today and Yesterday, then the day, newest first", () => {
+    const groups = groupNotifications(
+      [
+        { id: "old", ...at(new Date(2026, 10, 20, 12)) },
+        { id: "today-early", ...at(new Date(2026, 10, 24, 9)) },
+        { id: "today-late", ...at(new Date(2026, 10, 24, 13)) },
+        { id: "yesterday", ...at(new Date(2026, 10, 23, 12)) },
+      ],
+      now,
+    );
+    expect(groups.map((g) => g.label)).toEqual(["Today", "Yesterday", expect.stringMatching(/20 Nov 2026/)]);
+    expect(groups[0]?.items.map((i) => i.id)).toEqual(["today-late", "today-early"]);
+  });
+
+  it("puts an unreadable time last under Earlier", () => {
+    const groups = groupNotifications([{ id: "bad", created_at: "not a date" }, { id: "ok", ...at(new Date(2026, 10, 24, 12)) }], now);
+    expect(groups.map((g) => g.label)).toEqual(["Today", "Earlier"]);
   });
 });

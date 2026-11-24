@@ -4,7 +4,9 @@ import type { PatientVital } from "../src/services/vitals.service";
 import {
   VITAL_KINDS,
   buildVitalInput,
-  chartBars,
+  ageAndSexLine,
+  chartPoints,
+  formatLastUpdated,
   groupReadingsByDay,
   parsePressure,
   formatReading,
@@ -116,51 +118,59 @@ describe("chart range", () => {
     expect(historyStart(NOW)).toBe("2026-09-27T12:00:00");
   });
 
-  it("scales bars between the lowest and highest value, never to zero", () => {
-    const bars = chartBars(
-      toReadings([
-        vital({ id: "lo", value: "60", recorded_at: "2026-10-27T08:00:00" }),
-        vital({ id: "hi", value: "100", recorded_at: "2026-10-27T09:00:00" }),
-      ]).reverse(),
+  it("turns readings into chart points by time, oldest first, leaving out what is not a number", () => {
+    const points = chartPoints(
+      readingsInRange(
+        toReadings([
+          vital({ id: "lo", value: "60", recorded_at: "2026-10-27T08:00:00" }),
+          vital({ id: "hi", value: "100", recorded_at: "2026-10-27T09:00:00" }),
+          vital({ id: "bad", value: "n/a", recorded_at: "2026-10-27T10:00:00" }),
+        ]),
+        "day",
+        NOW,
+      ),
     );
-    expect(bars.map((b) => b.id)).toEqual(["lo", "hi"]);
-    expect(bars[0].height).toBeCloseTo(0.15);
-    expect(bars[1].height).toBe(1);
+    expect(points.map((p) => [p.id, p.value, p.low])).toEqual([
+      ["lo", 60, undefined],
+      ["hi", 100, undefined],
+    ]);
+    expect(points[0].at).toBeLessThan(points[1].at);
+    expect(chartPoints([])).toEqual([]);
   });
 
-  it("draws equal readings at a steady height and no readings as no bars", () => {
-    const same = chartBars(toReadings([vital({ id: "a" }), vital({ id: "b", recorded_at: "2026-10-27T11:00:00" })]));
-    expect(same.map((b) => b.height)).toEqual([0.6, 0.6]);
-    expect(chartBars([])).toEqual([]);
-  });
-
-  it("draws a blood pressure bar from the bottom number to the top number on one shared scale", () => {
-    const bars = chartBars(
-      toReadings([
-        vital({ id: "a", vital_type: "blood_pressure", value: "120/80", unit: "mmHg", recorded_at: "2026-10-27T08:00:00" }),
-        vital({ id: "b", vital_type: "blood_pressure", value: "160/100", unit: "mmHg", recorded_at: "2026-10-27T09:00:00" }),
-        vital({ id: "bad", vital_type: "blood_pressure", value: "high", unit: "mmHg", recorded_at: "2026-10-27T10:00:00" }),
-      ]).reverse(),
+  it("follows the top blood pressure number with the bottom number as a second line", () => {
+    const points = chartPoints(
+      readingsInRange(
+        toReadings([
+          vital({ id: "a", vital_type: "blood_pressure", value: "120/80", unit: "mmHg", recorded_at: "2026-10-27T08:00:00" }),
+          vital({ id: "bad", vital_type: "blood_pressure", value: "high", unit: "mmHg", recorded_at: "2026-10-27T10:00:00" }),
+        ]),
+        "day",
+        NOW,
+      ),
     );
-    expect(bars.map((b) => b.id)).toEqual(["a", "b"]);
-    expect(bars[0].low).toBeCloseTo(0.1);
-    expect(bars[1].height).toBeCloseTo(0.9);
-    expect(bars[0].height).toBeGreaterThan(bars[0].low as number);
-    expect(bars[1].low).toBeGreaterThan(bars[0].low as number);
-    expect(bars.map((b) => b.label)).toEqual(["120/80", "160/100"]);
+    expect(points).toEqual([expect.objectContaining({ id: "a", value: 120, low: 80, label: "120/80" })]);
+  });
+});
+
+describe("client row text", () => {
+  const now = new Date(2026, 9, 27, 12, 0);
+  it("says Today with the clock for today and the date before", () => {
+    expect(formatLastUpdated(new Date(2026, 9, 27, 8, 45), now)).toBe("Today, 08:45");
+    expect(formatLastUpdated(new Date(2026, 9, 20, 8, 45), now)).toMatch(/^20 Oct/);
   });
 
-  it("keeps a single blood pressure reading visible, and no valid reading as no bars", () => {
-    const [only] = chartBars(toReadings([vital({ vital_type: "blood_pressure", value: "138/85", unit: "mmHg" })]));
-    expect(only.height).toBeCloseTo(0.9);
-    expect(only.low).toBeCloseTo(0.1);
-    const [flat] = chartBars(toReadings([vital({ vital_type: "blood_pressure", value: "90/90", unit: "mmHg" })]));
-    expect([flat.height, flat.low]).toEqual([0.6, 0.4]);
-    expect(chartBars(toReadings([vital({ vital_type: "blood_pressure", value: "n/a", unit: "mmHg" })]))).toEqual([]);
+  it("joins age and sex, and drops what the profile does not have", () => {
+    expect(ageAndSexLine({ age: 32, gender: "male" })).toBe("32, Male");
+    expect(ageAndSexLine({ age: 32, gender: null })).toBe("32");
+    expect(ageAndSexLine({ age: null, gender: "Female" })).toBe("Female");
+    expect(ageAndSexLine({ age: null, gender: null })).toBeNull();
+    expect(ageAndSexLine(undefined)).toBeNull();
   });
 
-  it("leaves other vitals without a lower edge", () => {
-    expect(chartBars(toReadings([vital({})]))[0].low).toBeUndefined();
+  it("gives the respiratory rate its Figma heading and every vital an entry sub-line", () => {
+    expect(VITAL_KINDS.find((k) => k.kind === "respiratory_rate")?.heading).toBe("Respiratory Rate");
+    for (const info of VITAL_KINDS) expect(info.entrySubtitle.length).toBeGreaterThan(0);
   });
 });
 

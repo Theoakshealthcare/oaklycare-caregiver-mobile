@@ -48,6 +48,8 @@ export const theme = {
     warningText: "#856404",
     infoText: "#0C5460",
     primaryLight: "#F2FDFD",
+    /** Off-white page behind the white cards of the care plan screens (Figma). */
+    careBackground: "#F9FBFA",
     soft: "#F8F8FC"
   },
   spacing: {

@@ -50,6 +50,15 @@ channel) lives in the backend repo: `docs/checklist/MASTER_CHECKLIST.md`. Update
 - [ ] Deferred: "Choose Service Time / Immediate booking" and the Wound Care service (no backend service or ASAP rule)
 - [ ] Owner decisions: the app's own lists (relations, assistance, conditions), contact phone and e-mail visible to the caregiver, coral failure title, step bar growth
 
+## Caregiver remaining parity with Figma: care plans, chat, vitals, bookings, account (2026-11-24)
+- [x] Care plan system: hub (teal header, tabs, search and filter, template and plan cards), details accordions in Figma order, goals, medications (full-page add), tasks (dropdowns), notes, create form, success pages
+- [x] Chat header, booking card, stamps, quick replies, composer; AI Notetaker "I'm Listening" with the orb and "Voice to text" (voice notes on); calling stays off
+- [x] Vitals: Clients Vitals, "<Vital> Monitoring" with area chart and Last synced, entry modals, "Vital Report Downloaded" page; status badge built, OFF (`VITAL_STATUS_BADGES`)
+- [x] Bookings (bell, New Request, cards, Start Service, Get Direction), Job Details, Notification groups; Payment & Earning, Earning Payment, payslip success, Update Payment Details, Edit Profile, Contact Us labels; Client Profile headings
+- [ ] **Not device-verified** (Jest, tsc and ESLint only; simulator was busy): built on `feat/caregiver-remaining-parity` ([SOP](../sop/2026-11-24-caregiver-remaining-parity.md))
+- [ ] Deferred, needs backend or content: Chats list, FallGuard for caregivers, patient name and price on offers, FAQ and About in-app copy, emergency contact name / address, vitals insights
+- [ ] Owner decisions: medication section collapsed (D4), "Total Amount Paid in / Withdrawn", "Continue Service", lock-screen app name
+
 ## Patient app parity with Figma, slice 3: bookings (2026-11-24)
 - [x] Bookings list (provider photo, name, Track chip, month heading and week strip, Chat / Cancel / Booking Details pills), Booking Details sheet, cancel dialogs, Caregiver Details (stage cards, Track opens the phone's maps), chat restyle; branch `feat/patient-bookings-parity` ([SOP](../sop/2026-11-24-patient-bookings-parity.md)); **seen on the iOS simulator only, not Android or a real phone**
 - [ ] Deferred: "Enter Booking Code" (no backend claim endpoint), nurse note after a visit (no patient endpoint), in-app map (no maps key), "Booking Canceled from website"

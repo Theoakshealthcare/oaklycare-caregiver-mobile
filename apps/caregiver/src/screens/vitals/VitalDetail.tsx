@@ -10,12 +10,13 @@ import ReadingChart from "@/src/components/vitals/ReadingChart";
 import { VitalsUnavailable } from "@/src/components/vitals/VitalsStates";
 import { theme } from "@/src/constants/theme";
 import { useVitals } from "@/src/hooks/queries";
+import { formatTimeAgo } from "@/src/utils/dates";
 import useNavigation from "@/src/hooks/use-navigation";
 import type { ScreenParamLists } from "@/src/navigation/Navigations";
 import {
   CHART_RANGES,
   GLUCOSE_CONTEXT_LABEL,
-  chartBars,
+  chartPoints,
   formatReading,
   formatUpdated,
   isVitalsAccessDenied,
@@ -38,7 +39,7 @@ const VitalDetail: React.FC<Props> = ({ route }) => {
 
   const all = useMemo(() => readingsOfKind(toReadings(vitals.data ?? []), kind), [vitals.data, kind]);
   const inRange = useMemo(() => readingsInRange(all, range), [all, range]);
-  const bars = useMemo(() => chartBars(inRange), [inRange]);
+  const points = useMemo(() => chartPoints(inRange), [inRange]);
   const current = all[0];
 
   const content = () => {
@@ -52,29 +53,34 @@ const VitalDetail: React.FC<Props> = ({ route }) => {
     if (!vitals.data) return <LoadingState testID="vital-detail-loading" />;
     return (
       <>
-        <View style={{ borderWidth: 1, borderColor: theme.colors.border, borderRadius: theme.borderRadius.xl, padding: theme.spacing.md, gap: theme.spacing.md }}>
+        <View style={{ borderWidth: 1, borderColor: theme.colors.border, borderRadius: theme.borderRadius.xl, padding: theme.spacing.md, gap: theme.spacing.md, ...theme.shadows.small, backgroundColor: theme.colors.white }}>
           <View style={{ flexDirection: "row", alignItems: "center", gap: theme.spacing.sm }}>
-            <Feather name={info.icon} size={20} color={theme.colors.primary} />
+            <Feather name={info.icon} size={22} color={theme.colors.primary} />
             <View style={{ flex: 1 }}>
-              <Text variant="body" weight="bold">
-                {info.label}
+              <Text variant="body" weight="bold" testID="vital-detail-name">
+                {info.heading}
               </Text>
+              {route.params.patientName ? (
+                <Text variant="caption" color={theme.colors.textLight} testID="vital-detail-patient">
+                  {route.params.patientName}
+                </Text>
+              ) : null}
             </View>
             {current ? (
               <Text variant="caption" color={theme.colors.textLight} testID="vital-detail-updated">
-                {formatUpdated(current.recordedAt)}
+                {`Last synced: ${formatTimeAgo(current.recordedAt)}`}
               </Text>
             ) : null}
           </View>
 
-          <ReadingChart bars={bars} />
+          <ReadingChart points={points} currentLabel={current && points.some((p) => p.id === current.id) ? current.value : undefined} />
 
           <View style={{ flexDirection: "row", alignItems: "flex-end", justifyContent: "space-between" }}>
             <View>
               <Text variant="caption" color={theme.colors.textLight}>
-                Latest
+                Current
               </Text>
-              <Text variant="h3" weight="bold" testID="vital-detail-current">
+              <Text variant="h3" weight="bold" color={theme.colors.primary} testID="vital-detail-current">
                 {current ? formatReading(current) : "No reading yet"}
               </Text>
             </View>
@@ -152,8 +158,8 @@ const VitalDetail: React.FC<Props> = ({ route }) => {
 
   return (
     <ScreenShell
-      title={`${info.label} monitoring`}
-      subtitle={route.params.patientName}
+      title={`${info.heading} Monitoring`}
+      subtitle="Vital Monitoring"
       refreshControl={<RefreshControl refreshing={vitals.isRefetching} onRefresh={() => void vitals.refetch()} />}
     >
       {content()}
