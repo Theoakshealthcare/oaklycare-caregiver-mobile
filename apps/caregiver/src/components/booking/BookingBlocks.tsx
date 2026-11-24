@@ -25,7 +25,7 @@ export const BookingAvatar: React.FC<{ initial?: string }> = ({ initial }) => (
 /** The small mint chip (service) or grey chip (status) beside the name. */
 export const BookingChip: React.FC<{ label: string; tone?: "service" | "status"; testID?: string }> = ({ label, tone = "service", testID }) => (
   <View style={[styles.chip, tone === "service" ? styles.chipService : styles.chipStatus]} testID={testID}>
-    <Text variant="caption" weight="medium" color={theme.colors.primary} numberOfLines={1}>
+    <Text variant="micro" weight="medium" color={theme.colors.primary} numberOfLines={1}>
       {label}
     </Text>
   </View>
@@ -34,9 +34,9 @@ export const BookingChip: React.FC<{ label: string; tone?: "service" | "status";
 /** An icon and one line: the address (calendar icon) and the time (clock icon) of a card. */
 export const BookingLine: React.FC<{ icon: IconName; text: string; testID?: string }> = ({ icon, text, testID }) => (
   <View style={styles.line}>
-    <Feather name={icon} size={14} color={theme.colors.primary} />
+    <Feather name={icon} size={13} color={theme.colors.primary} />
     <View style={{ flex: 1 }}>
-      <Text variant="caption" testID={testID}>
+      <Text variant="label" color={theme.colors.muted} testID={testID}>
         {text}
       </Text>
     </View>
@@ -62,8 +62,8 @@ export const ActionChip: React.FC<{
       onPress={onPress}
       style={[styles.action, { backgroundColor: coral ? theme.colors.secondaryLight : theme.colors.primary }, disabled && styles.dim]}
     >
-      {icon ? <Feather name={icon} size={14} color={color} /> : null}
-      <Text variant="caption" weight="medium" color={color}>
+      {icon ? <Feather name={icon} size={11} color={color} /> : null}
+      <Text variant="micro" weight="medium" color={color}>
         {label}
       </Text>
     </Pressable>
@@ -91,7 +91,7 @@ export const BookingCardFrame: React.FC<{
       <View style={styles.body}>
         <View style={styles.nameRow}>
           <View style={{ flex: 1 }}>
-            <Text variant="body" weight="bold" numberOfLines={1}>
+            <Text variant="body" weight="bold" color="#000000" numberOfLines={1}>
               {name}
             </Text>
           </View>
@@ -104,7 +104,7 @@ export const BookingCardFrame: React.FC<{
         ) : null}
         {lines}
         {price ? (
-          <Text variant="caption" color={theme.colors.textLight} testID="booking-price">
+          <Text variant="label" color={theme.colors.muted} testID="booking-price">
             {price}
           </Text>
         ) : null}
@@ -126,9 +126,9 @@ const styles = StyleSheet.create({
   body: { flex: 1, gap: theme.spacing.xs },
   nameRow: { flexDirection: "row", alignItems: "center", gap: theme.spacing.sm },
   avatar: {
-    width: 64,
-    height: 64,
-    borderRadius: theme.borderRadius.lg,
+    width: 72,
+    height: 72,
+    borderRadius: theme.borderRadius.xl,
     backgroundColor: theme.colors.primaryLight,
     alignItems: "center",
     justifyContent: "center",
@@ -137,13 +137,13 @@ const styles = StyleSheet.create({
   chipService: { backgroundColor: `${theme.colors.primary}26` },
   chipStatus: { backgroundColor: theme.colors.soft },
   line: { flexDirection: "row", alignItems: "center", gap: theme.spacing.sm },
-  actions: { flexDirection: "row", flexWrap: "wrap", gap: theme.spacing.sm, marginTop: theme.spacing.sm, paddingLeft: 64 + theme.spacing.md },
+  actions: { flexDirection: "row", flexWrap: "wrap", gap: 6, marginTop: theme.spacing.sm, paddingLeft: 72 + theme.spacing.md },
   action: {
     flexDirection: "row",
     alignItems: "center",
-    gap: 6,
+    gap: 4,
     paddingVertical: 6,
-    paddingHorizontal: theme.spacing.md,
+    paddingHorizontal: 9,
     borderRadius: theme.borderRadius.round,
   },
   dim: { opacity: 0.4 },

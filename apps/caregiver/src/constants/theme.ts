@@ -30,7 +30,8 @@ export const theme = {
     text: "#333333",
     textLight: "#757575",
     border: "#E0E0E0",
-    background: "#F5F5F5",
+    /** Page behind the white cards (Figma pixel #F9FBFB; the PNGs are Display P3, converted to sRGB). */
+    background: "#F9FBFB",
     success: "#4CAF50",
     /**
      * Green of the confirmation toast and title of the success pages. The Figma PNGs are exported in Display P3, so the
@@ -50,7 +51,19 @@ export const theme = {
     primaryLight: "#F2FDFD",
     /** Off-white page behind the white cards of the care plan screens (Figma). */
     careBackground: "#F9FBFA",
-    soft: "#F8F8FC"
+    soft: "#F8F8FC",
+    /** Figma Home/Bookings: section headings are a warm dark grey, names are black, secondary lines #878787 (P3 -> sRGB). */
+    sectionTitle: "#695E58",
+    muted: "#878787",
+    /** Pale pink of the Home CarePlan card (Figma #FFF6F5) and the light track of the availability switch (#F0EFEF). */
+    promoBackground: "#FFF6F5",
+    switchTrack: "#F0EFEF",
+    /** Inactive icons of the bottom bar (Figma #888888 on #1D1F24). */
+    /** Chat bubbles (Figma #F2F4F5 received, #F1FCFC sent; P3 -> sRGB). */
+    bubbleReceived: "#F1F4F5",
+    bubbleSent: "#EEFBFB",
+    navIcon: "#888888",
+    navBar: "#1D1F24",
   },
   spacing: {
     xs: scale(4),
@@ -70,9 +83,15 @@ export const theme = {
   },
   /** The only font sizes in the app (design values, scaled by width). Raw `fontSize:` numbers are banned. */
   sizes: {
+    /** Chips and tiny captions on the Figma cards (10 pt). */
+    micro: scale(10),
     /** Legal fine print (the terms line under sign-up and on the consent page; Figma 11 pt). */
     fine: scale(11),
+    /** Secondary lines on the Figma cards (12 pt). */
+    label: scale(12),
     caption: scale(13),
+    /** Compact body text of the Figma screens (14 pt). */
+    compact: scale(14),
     body: scale(15),
     subtitle: scale(17),
     title: scale(20),

@@ -34,17 +34,17 @@ const InfoCard: React.FC<{ children: React.ReactNode }> = ({ children }) => (
 
 const Row: React.FC<{ label: string; value: string; testID?: string; valueColor?: string }> = ({ label, value, testID, valueColor }) => (
   <View style={[globalStyles.row, { justifyContent: "space-between", alignItems: "flex-start" }]}>
-    <Text variant="body" color={theme.colors.textLight}>
+    <Text variant="small" color={theme.colors.textLight}>
       {label}
     </Text>
-    <Text variant="body" weight="medium" color={valueColor} testID={testID} style={{ flexShrink: 1, textAlign: "right" }}>
+    <Text variant="small" weight="medium" color={valueColor} testID={testID} style={{ flexShrink: 1, textAlign: "right" }}>
       {value}
     </Text>
   </View>
 );
 
 const Heading: React.FC<{ children: string }> = ({ children }) => (
-  <Text variant="h3" weight="bold" style={{ marginTop: theme.spacing.lg, marginBottom: theme.spacing.sm }}>
+  <Text variant="body" weight="bold" style={{ marginTop: theme.spacing.lg, marginBottom: theme.spacing.sm }}>
     {children}
   </Text>
 );
@@ -53,8 +53,8 @@ const Heading: React.FC<{ children: string }> = ({ children }) => (
 const Instructions: React.FC<{ text: string }> = ({ text }) => (
   <>
     <Heading>Special Instructions</Heading>
-    <View testID="special-instructions" style={{ backgroundColor: theme.colors.secondaryLight, borderRadius: theme.borderRadius.xl, padding: theme.spacing.md }}>
-      <Text variant="body" color={theme.colors.textLight}>
+    <View testID="special-instructions" style={{ backgroundColor: theme.colors.promoBackground, borderRadius: theme.borderRadius.xl, padding: theme.spacing.md }}>
+      <Text variant="small" color={theme.colors.textLight}>
         {text}
       </Text>
     </View>
@@ -225,7 +225,7 @@ const BookingDetails: React.FC<Props> = ({ route, navigation }) => {
         <View style={globalStyles.container}>
           <HeaderBack />
           <View style={{ marginTop: "5%" }}>
-            <Text variant="h2" weight="bold">
+            <Text variant="page" weight="bold">
               Job Details
             </Text>
           </View>

@@ -32,16 +32,17 @@ import { hasActiveVisit } from "@/src/supply/tracking";
 import { walletBalances } from "@/src/wallet/walletModel";
 
 const Header: React.FC<{ name: string | undefined; onMenu: () => void; onBell: () => void }> = ({ name, onMenu, onBell }) => (
-  <View style={{ paddingTop: 50, paddingBottom: 20, paddingHorizontal: 20, gap: 16 }}>
+  // The safe-area band above already clears the status bar; Figma puts the buttons right under it.
+  <View style={{ paddingTop: 4, paddingBottom: 16, paddingHorizontal: 20, gap: 14 }}>
     <View style={{ flexDirection: "row", justifyContent: "space-between", alignItems: "center" }}>
       <RoundIcon icon="menu" label="Menu" onPress={onMenu} />
       <RoundIcon icon="bell" label="Notifications" onPress={onBell} />
     </View>
     <View>
-      <Text variant="h2" weight="bold" color={theme.colors.white}>
+      <Text variant="h3" weight="bold" color={theme.colors.white}>
         {greetingLine(firstName(name))}
       </Text>
-      <Text variant="body" color={theme.colors.white} style={{ marginTop: 4 }}>
+      <Text variant="compact" color={theme.colors.white} style={{ marginTop: 4 }}>
         {HOME_SUBTITLE}
       </Text>
     </View>
@@ -59,16 +60,16 @@ const RoundIcon: React.FC<{ icon: React.ComponentProps<typeof Feather>["name"]; 
     accessibilityLabel={label}
     onPress={onPress}
     style={{
-      width: 44,
-      height: 44,
-      borderRadius: 22,
+      width: 40,
+      height: 40,
+      borderRadius: 20,
       borderWidth: 1,
       borderColor: theme.colors.white,
       alignItems: "center",
       justifyContent: "center",
     }}
   >
-    <Feather name={icon} size={22} color={theme.colors.white} />
+    <Feather name={icon} size={20} color={theme.colors.white} />
   </TouchableOpacity>
 );
 

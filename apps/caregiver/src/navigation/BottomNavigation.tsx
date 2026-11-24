@@ -93,8 +93,8 @@ const BottomNavigation = ({ route }: Partial<StackScreenProps<ScreenParamLists, 
             style={[
               globalStyles.row,
               {
-                height: width * 0.1,
-                width: width * 0.1,
+                height: width * 0.11,
+                width: width * 0.11,
                 alignItems: "center",
                 justifyContent: "center",
                 borderRadius: 50,
@@ -105,7 +105,8 @@ const BottomNavigation = ({ route }: Partial<StackScreenProps<ScreenParamLists, 
             <Animated.View style={[textStyle]}>
               <Image
                 source={tab === index ? item.icon_active : item.icon}
-                style={{ height: width * 0.05, width: width * 0.05 }}
+                // Figma draws the inactive icons mid grey (#888888); the PNG artwork is near black.
+                style={[{ height: width * 0.05, width: width * 0.05 }, tab === index ? null : { tintColor: theme.colors.navIcon }]}
               />
             </Animated.View>
             {tab === index && (

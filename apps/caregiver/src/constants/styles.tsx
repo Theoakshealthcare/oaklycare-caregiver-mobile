@@ -27,9 +27,9 @@ export const globalStyles = StyleSheet.create({
 
   tabCon: {
     flexDirection: "row",
-    backgroundColor: "#1E1E1E",
+    backgroundColor: theme.colors.navBar,
     borderRadius: 30,
-    paddingVertical: 12,
+    paddingVertical: 16,
     paddingHorizontal: 16,
     justifyContent: "space-between",
     position: "absolute",

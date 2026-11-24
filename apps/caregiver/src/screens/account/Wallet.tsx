@@ -78,13 +78,27 @@ const Wallet: React.FC = () => {
     const openEarnings = () => navigation.navigate("EarningPayment");
     return (
       <>
-        <View style={{ backgroundColor: theme.colors.primary, borderRadius: 20, padding: 24, alignItems: "center", marginBottom: 12 }}>
+        <View
+          style={{
+            // Figma: a taller card, a touch lighter than the brand teal, with pale wave shapes (drawn here as two big translucent discs).
+            backgroundColor: "#1A8A8B",
+            borderRadius: 20,
+            padding: 24,
+            minHeight: 172,
+            justifyContent: "center",
+            alignItems: "center",
+            marginBottom: 12,
+            overflow: "hidden",
+          }}
+        >
+          <View pointerEvents="none" style={{ position: "absolute", top: -90, left: -70, width: 240, height: 240, borderRadius: 120, backgroundColor: "rgba(255,255,255,0.10)" }} />
+          <View pointerEvents="none" style={{ position: "absolute", bottom: -150, right: -90, width: 280, height: 280, borderRadius: 140, backgroundColor: "rgba(255,255,255,0.06)" }} />
           <Pressable
             accessibilityRole="button"
             accessibilityLabel={hidden ? "Show balance" : "Hide balance"}
             hitSlop={12}
             onPress={() => setHidden((h) => !h)}
-            style={{ alignSelf: "flex-end" }}
+            style={{ position: "absolute", top: 16, right: 18 }}
           >
             <Feather name={hidden ? "eye-off" : "eye"} size={20} color={theme.colors.white} />
           </Pressable>

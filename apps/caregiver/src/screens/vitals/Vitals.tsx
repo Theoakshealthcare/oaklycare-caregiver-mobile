@@ -237,7 +237,7 @@ const Vitals: React.FC<{ active?: boolean; patientId?: string; onBack?: () => vo
               <Feather name="chevron-left" size={26} color={theme.colors.white} />
             </Pressable>
           ) : null}
-          <Text variant="h2" weight="bold" color={theme.colors.white}>
+          <Text variant="page" weight="bold" color={theme.colors.white}>
             Clients Vitals
           </Text>
         </View>

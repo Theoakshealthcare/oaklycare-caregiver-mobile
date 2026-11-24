@@ -341,7 +341,7 @@ const AINoteTaker: React.FC<StackScreenProps<ScreenParamLists, "AINoteTaker">> =
           <HeaderBack />
 
           <View style={{ marginVertical: "5%" }}>
-            <Text variant="h2" weight="bold">
+            <Text variant="page" weight="bold">
               AI Notetaker
             </Text>
             {voiceOn ? null : (

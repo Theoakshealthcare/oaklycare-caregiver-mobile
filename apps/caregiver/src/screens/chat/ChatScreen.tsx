@@ -131,13 +131,13 @@ const ChatScreen: React.FC<StackScreenProps<ScreenParamLists, "ChatScreen">> = (
           testID={isMyMessage ? "chat-bubble-mine" : "chat-bubble-theirs"}
           style={{
             flexShrink: 1,
-            backgroundColor: isMyMessage ? "rgba(22, 130, 131, 0.1)" : theme.colors.background,
-            paddingHorizontal: 16,
-            paddingVertical: 12,
-            borderRadius: 20,
+            backgroundColor: isMyMessage ? theme.colors.bubbleSent : theme.colors.bubbleReceived,
+            paddingHorizontal: 14,
+            paddingVertical: 10,
+            borderRadius: 16,
           }}
         >
-          <Text variant="body" color={theme.colors.text}>
+          <Text variant="small" color={theme.colors.text}>
             {message.message}
           </Text>
         </View>
@@ -153,7 +153,8 @@ const ChatScreen: React.FC<StackScreenProps<ScreenParamLists, "ChatScreen">> = (
           testID="chat-header"
           style={{
             backgroundColor: theme.colors.primary,
-            paddingTop: 50,
+            // Under the safe-area band already: Figma's back button sits about 20 pt below the status bar.
+            paddingTop: 20,
             paddingBottom: 16,
             paddingHorizontal: 20,
           }}
@@ -213,7 +214,7 @@ const ChatScreen: React.FC<StackScreenProps<ScreenParamLists, "ChatScreen">> = (
           ) : null}
           {rows.map((row) =>
             row.kind === "stamp" ? (
-              <Text key={row.key} variant="small" color={theme.colors.textLight} center testID="chat-stamp" style={{ marginVertical: theme.spacing.sm }}>
+              <Text key={row.key} variant="label" color={theme.colors.textLight} center testID="chat-stamp" style={{ marginVertical: theme.spacing.sm }}>
                 {row.label}
               </Text>
             ) : (
@@ -245,12 +246,12 @@ const ChatScreen: React.FC<StackScreenProps<ScreenParamLists, "ChatScreen">> = (
                   borderColor: theme.colors.border,
                   backgroundColor: theme.colors.white,
                   borderRadius: theme.borderRadius.round,
-                  paddingHorizontal: theme.spacing.md,
-                  paddingVertical: theme.spacing.xs,
+                  paddingHorizontal: theme.spacing.sm + 4,
+                  paddingVertical: 5,
                   opacity: send.isPending ? 0.5 : 1,
                 }}
               >
-                <Text variant="caption" color={theme.colors.text}>
+                <Text variant="micro" color={theme.colors.text}>
                   {reply}
                 </Text>
               </Pressable>
@@ -280,7 +281,7 @@ const ChatScreen: React.FC<StackScreenProps<ScreenParamLists, "ChatScreen">> = (
                 multiline
                 style={{
                   flex: 1,
-                  fontSize: theme.sizes.body,
+                  fontSize: theme.sizes.compact,
                   color: theme.colors.text,
                   maxHeight: 80,
                   paddingVertical: 8,
@@ -300,10 +301,10 @@ const ChatScreen: React.FC<StackScreenProps<ScreenParamLists, "ChatScreen">> = (
               disabled={!newMessage.trim() || send.isPending}
               style={{
                 backgroundColor: theme.colors.primary,
-                opacity: newMessage.trim() && !send.isPending ? 1 : 0.5,
-                width: 48,
-                height: 48,
-                borderRadius: 24,
+                opacity: newMessage.trim() && !send.isPending ? 1 : 0.7,
+                width: 44,
+                height: 44,
+                borderRadius: 22,
                 alignItems: "center",
                 justifyContent: "center",
               }}

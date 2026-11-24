@@ -43,7 +43,7 @@ const AccountData: React.FC = () => {
       <View style={globalStyles.container}>
         <HeaderBack />
         <View style={{ marginVertical: "5%" }}>
-          <Text variant="h2" weight="bold">
+          <Text variant="page" weight="bold">
             Account and Data
           </Text>
         </View>
