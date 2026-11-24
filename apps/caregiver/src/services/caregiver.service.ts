@@ -78,25 +78,54 @@ export function parseVerificationStatus(raw: unknown): VerificationStatus {
   };
 }
 
-/** GET /caregiver/form-options (untyped in the schema; shape from the backend guide capture 013). */
+/** One "I apply as" choice: `value` is what step 2 sends, `label` is what the caregiver reads. */
+export interface RoleOption {
+  value: string;
+  label: string;
+}
+
+/** GET /caregiver/form-options (typed loosely on purpose; shape from the backend guide, capture 013). */
 export interface FormOptions {
   specializations: string[];
   service_areas: string[];
   work_hours: string[];
   states: string[];
+  roles: RoleOption[];
 }
+
+/** Used only if the server sends no `roles` (an older backend): the same five values and labels the backend sends. */
+export const FALLBACK_ROLES: RoleOption[] = [
+  { value: "nurse", label: "Nurse" },
+  { value: "doctor", label: "Doctor" },
+  { value: "physiotherapist", label: "Physiotherapist" },
+  { value: "caregiver", label: "Caregiver" },
+  { value: "nutritionist", label: "Nutritionist" },
+];
 
 function stringList(value: unknown): string[] {
   return Array.isArray(value) ? value.filter((v): v is string => typeof v === "string") : [];
 }
 
+function roleList(value: unknown): RoleOption[] {
+  if (!Array.isArray(value)) return [];
+  const roles: RoleOption[] = [];
+  for (const item of value) {
+    if (!item || typeof item !== "object") continue;
+    const { value: v, label } = item as { value?: unknown; label?: unknown };
+    if (typeof v === "string" && typeof label === "string") roles.push({ value: v, label });
+  }
+  return roles;
+}
+
 export function parseFormOptions(raw: unknown): FormOptions {
   const body = raw && typeof raw === "object" ? (raw as Record<string, unknown>) : {};
+  const roles = roleList(body.roles);
   return {
     specializations: stringList(body.specializations),
     service_areas: stringList(body.service_areas),
     work_hours: stringList(body.work_hours),
     states: stringList(body.states),
+    roles: roles.length > 0 ? roles : FALLBACK_ROLES,
   };
 }
 

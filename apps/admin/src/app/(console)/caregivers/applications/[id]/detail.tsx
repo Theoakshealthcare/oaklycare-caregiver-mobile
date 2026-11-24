@@ -21,6 +21,7 @@ import {
   decideIdentity,
   getApplication,
   resetIdentity,
+  roleLabel,
   saveSkills,
   unmetFromError,
 } from "@/lib/caregivers";
@@ -71,6 +72,8 @@ export function ApplicationDetailView({ id }: { id: string }) {
   const detail: ApplicationDetail = query.data;
   const { profile } = detail;
   const canDecide = can("caregivers.approve");
+  // The roles the caregiver asked for. A request only: `detail.skills` is what an admin has confirmed.
+  const requested = detail.requested_skills ?? [];
 
   /** Negative decisions on an approved caregiver auto-suspend; tell the admin when it happened. */
   const report = (result: unknown, done: string) => {
@@ -227,9 +230,15 @@ export function ApplicationDetailView({ id }: { id: string }) {
       </Section>
 
       <Section title="Skills">
+        {requested.length > 0 ? (
+          <p data-testid="requested-roles" className="text-sm">
+            Requested by the caregiver: {requested.map(roleLabel).join(", ")}
+          </p>
+        ) : null}
         <SkillsEditor
-          key={JSON.stringify(detail.skills)}
+          key={JSON.stringify([detail.skills, requested])}
           skills={detail.skills}
+          requested={requested}
           editable={canDecide}
           onSave={async (skills) => {
             await saveSkills(id, skills);

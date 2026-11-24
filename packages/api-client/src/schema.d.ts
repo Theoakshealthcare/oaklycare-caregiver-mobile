@@ -4082,6 +4082,11 @@ export interface components {
             decision: components["schemas"]["DecisionOut"];
             /** Skills */
             skills: components["schemas"]["SkillOut"][];
+            /**
+             * Requested Skills
+             * @default []
+             */
+            requested_skills: ("nurse" | "doctor" | "physiotherapist" | "caregiver" | "nutritionist")[];
             /** Audit History */
             audit_history: components["schemas"]["AuditEntry"][];
         };
@@ -6332,6 +6337,8 @@ export interface components {
             preferred_work_hours?: string | null;
             /** Service Areas */
             service_areas?: string[] | null;
+            /** Applying As */
+            applying_as?: string[] | null;
             /** Profile Completion Step */
             profile_completion_step: number;
             /** Identity Verification Status */
@@ -6386,6 +6393,8 @@ export interface components {
             preferred_work_hours: string;
             /** Service Areas */
             service_areas: string[];
+            /** Applying As */
+            applying_as?: ("nurse" | "doctor" | "physiotherapist" | "caregiver" | "nutritionist")[] | null;
         };
         /** CaregiverTransactionOut */
         CaregiverTransactionOut: {
@@ -7034,6 +7043,8 @@ export interface components {
             work_hours: string[];
             /** States */
             states: string[];
+            /** Roles */
+            roles: components["schemas"]["RoleOption"][];
         };
         /** GoalCounts */
         GoalCounts: {
@@ -9073,6 +9084,16 @@ export interface components {
             items: string[];
             /** Note */
             note: string;
+        };
+        /** RoleOption */
+        RoleOption: {
+            /**
+             * Value
+             * @enum {string}
+             */
+            value: "nurse" | "doctor" | "physiotherapist" | "caregiver" | "nutritionist";
+            /** Label */
+            label: string;
         };
         /** ServiceCatalogOut */
         ServiceCatalogOut: {

@@ -299,6 +299,7 @@ describe("EditProfile screen", () => {
       service_areas: [],
       work_hours: [],
       states: ["Lagos", "Ogun"],
+      roles: [],
     });
     const step1 = jest.spyOn(caregiverService, "updateProfileStep1").mockResolvedValue({} as never);
     await renderWith(<EditProfile />);

@@ -21,7 +21,7 @@ import {
   type DocumentUploadResponse,
   type PickedFile,
 } from "@/src/services/caregiver.service"
-import { useFormOptions } from "@/src/hooks/queries"
+import { useCaregiverProfile, useFormOptions } from "@/src/hooks/queries"
 import { messageForError } from "@/src/api/errors"
 import { queryKeys } from "@/src/api/keys"
 import { kycEnabled } from "@/src/identity/config"
@@ -30,6 +30,7 @@ const CaregiverSetupStep2 = () => {
   const { navigation } = Navigation()
   const queryClient = useQueryClient()
   const { data: formOptions } = useFormOptions()
+  const { data: profile } = useCaregiverProfile()
 
   const [formData, setFormData] = useState({
     specialization: "",
@@ -38,6 +39,10 @@ const CaregiverSetupStep2 = () => {
     service_areas: [] as string[],
   })
 
+  // "I apply as": null until the caregiver touches it, so a saved choice (resume or edit) shows until then.
+  const [chosenRoles, setChosenRoles] = useState<string[] | null>(null)
+  const applyingAs = chosenRoles ?? profile?.applying_as ?? []
+
   const [uploadedFiles, setUploadedFiles] = useState<DocumentUploadResponse[]>([])
   const [errors, setErrors] = useState<Record<string, string>>({})
 
@@ -45,6 +50,7 @@ const CaregiverSetupStep2 = () => {
     mutationFn: (payload: CaregiverProfileStep2) => caregiverService.updateProfileStep2(payload),
     onSuccess: async () => {
       await queryClient.invalidateQueries({ queryKey: queryKeys.verificationStatus })
+      await queryClient.invalidateQueries({ queryKey: queryKeys.caregiverProfile })
       // Onboarding goes on to identity verification (when it is switched on) and then to consent; when an
       // admin asked for changes there is no consent step in this stack, the caregiver returns to the status
       // screen to resubmit.
@@ -87,9 +93,10 @@ const CaregiverSetupStep2 = () => {
       newErrors.years_of_experience = "Years of experience is required"
     }
     if (!formData.preferred_work_hours) newErrors.preferred_work_hours = "Preferred work hours is required"
+    if (applyingAs.length === 0) newErrors.applying_as = "Select at least one role"
     if (formData.service_areas.length === 0) newErrors.service_areas = "At least one service area is required"
     setErrors(newErrors)
-    if (Object.keys(newErrors).length === 0) save.mutate(formData)
+    if (Object.keys(newErrors).length === 0) save.mutate({ ...formData, applying_as: applyingAs as CaregiverProfileStep2["applying_as"] })
   }
 
   const experienceOptions = Array.from({ length: 20 }, (_, i) => ({
@@ -134,6 +141,21 @@ const CaregiverSetupStep2 = () => {
               onValueChange={(value) => updateFormData("years_of_experience", Number.parseInt(String(value), 10))}
               options={experienceOptions}
               error={errors.years_of_experience}
+            />
+
+            <Select
+              containerStyle={{ marginBottom: 0 }}
+              testID="apply-as"
+              label="I apply as"
+              placeholder="Select your role(s)"
+              multiple
+              values={applyingAs}
+              onValuesChange={(roles) => {
+                setChosenRoles(roles.map(String))
+                if (errors.applying_as) setErrors((prev) => ({ ...prev, applying_as: "" }))
+              }}
+              options={(formOptions?.roles ?? []).map((role) => ({ label: role.label, value: role.value }))}
+              error={errors.applying_as}
             />
 
             <View>

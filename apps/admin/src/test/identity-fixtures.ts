@@ -207,6 +207,7 @@ export function detailWith(identity: IdentityBlock, overrides: Partial<Applicati
     background_check: { status: "pending", evidence: null, decided_by: null, decided_at: null },
     decision: { approved_by: null, approved_at: null, suspended_at: null, suspension_reason: null, rejection_reason: null, changes_requested: null },
     skills: [],
+    requested_skills: [],
     audit_history: [],
   };
 }
