@@ -1,10 +1,11 @@
-import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
+import { useInfiniteQuery, useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 
 import { queryKeys } from "@/src/api/keys";
 import { useSession } from "@/src/auth";
 import { authService } from "@/src/services/auth.service";
 import { homePollInterval } from "@/src/home/homeModel";
 import { bookingService, type Booking, type BookingAction, type VisitAction } from "@/src/services/booking.service";
+import { chatsService, type ChatCursor } from "@/src/services/chats.service";
 import { clientsService } from "@/src/services/clients.service";
 import { caregiverService } from "@/src/services/caregiver.service";
 import { notificationService } from "@/src/services/notification.service";
@@ -100,11 +101,34 @@ export function useChatMessages(bookingId: string) {
   });
 }
 
+/** How often the Chats tab refreshes while it is showing (the chat itself polls every 5 s). */
+export const CHATS_POLL_MS = 20_000;
+
+/**
+ * The Chats tab: the caregiver's conversations, paged by the server's cursor. Fetches and polls only while the tab is
+ * showing (`active`); the pager keeps every tab mounted.
+ */
+export function useChatList(active = true) {
+  const signedIn = useSignedIn();
+  return useInfiniteQuery({
+    queryKey: queryKeys.chats,
+    queryFn: ({ pageParam }) => chatsService.listChats(pageParam),
+    initialPageParam: undefined as ChatCursor | undefined,
+    getNextPageParam: (last): ChatCursor | undefined =>
+      last.next_before && last.next_before_id ? { before: last.next_before, before_id: last.next_before_id } : undefined,
+    enabled: signedIn && active,
+    refetchInterval: active ? CHATS_POLL_MS : false,
+  });
+}
+
 export function useSendChatMessage(bookingId: string) {
   const client = useQueryClient();
   return useMutation({
     mutationFn: (message: string) => bookingService.sendChatMessage(bookingId, message),
-    onSuccess: () => client.invalidateQueries({ queryKey: queryKeys.chat(bookingId) }),
+    onSuccess: () => {
+      void client.invalidateQueries({ queryKey: queryKeys.chats });
+      return client.invalidateQueries({ queryKey: queryKeys.chat(bookingId) });
+    },
   });
 }
 

@@ -3,7 +3,7 @@ import { theme } from "../constants/theme";
 import Text from "../components/ui/text";
 import { globalStyles } from "../constants/styles";
 import Home from "../screens/home/Home";
-import { useEffect, useState } from "react";
+import React, { useEffect, useState } from "react";
 import type { StackScreenProps } from "@react-navigation/stack";
 import type { ScreenParamLists } from "./Navigations";
 import Booking from "../screens/booking/Booking";
@@ -12,14 +12,24 @@ import Image from "../components/ui/image";
 import ScreenSize from "../hooks/screen-size";
 import Animated from "react-native-reanimated";
 import useTextAnimation from "../hooks/use-text-animation";
+import Chats from "../screens/chats/Chats";
 import Vitals from "../screens/vitals/Vitals";
+import { Ionicons } from "@expo/vector-icons";
 
 const BottomNavigation = ({ route }: Partial<StackScreenProps<ScreenParamLists, "BottomNavigation">>) => {
   const [tab, setTab] = useState(0);
   const [key, setKey] = useState(0);
 
   // Each tab carries its own page, so a tab can never be drawn without one.
-  const tabs = [
+  const tabs: {
+    id: string;
+    icon?: number;
+    icon_active?: number;
+    /** A vector glyph where the tab set has no picture (Chats). */
+    glyph?: { off: "chatbubbles-outline"; on: "chatbubbles" };
+    label: string;
+    page: React.ReactElement;
+  }[] = [
     {
       id: "home",
       icon: require("@/assets/images/tabs/home.png"),
@@ -35,12 +45,19 @@ const BottomNavigation = ({ route }: Partial<StackScreenProps<ScreenParamLists, 
       page: <Booking />,
     },
     {
+      id: "chats",
+      glyph: { off: "chatbubbles-outline", on: "chatbubbles" },
+      label: "Chats",
+      // Fetches and polls only while its tab is showing (the pager keeps every page mounted).
+      page: <Chats active={tab === 2} />,
+    },
+    {
       id: "vitals",
       icon: require("@/assets/images/tabs/vital.png"),
       icon_active: require("@/assets/images/tabs/vital-active.png"),
       label: "Vitals",
       // Fetches only while its tab is showing (the pager keeps every page mounted).
-      page: <Vitals active={tab === 2} />,
+      page: <Vitals active={tab === 3} />,
     },
   ];
 
@@ -103,11 +120,20 @@ const BottomNavigation = ({ route }: Partial<StackScreenProps<ScreenParamLists, 
             ]}
           >
             <Animated.View style={[textStyle]}>
-              <Image
-                source={tab === index ? item.icon_active : item.icon}
-                // Figma draws the inactive icons mid grey (#888888); the PNG artwork is near black.
-                style={[{ height: width * 0.05, width: width * 0.05 }, tab === index ? null : { tintColor: theme.colors.navIcon }]}
-              />
+              {item.glyph ? (
+                <Ionicons
+                  testID={`tab-icon-${item.id}`}
+                  name={tab === index ? item.glyph.on : item.glyph.off}
+                  size={width * 0.055}
+                  color={tab === index ? theme.colors.white : theme.colors.navIcon}
+                />
+              ) : (
+                <Image
+                  source={tab === index ? item.icon_active : item.icon}
+                  // Figma draws the inactive icons mid grey (#888888); the PNG artwork is near black.
+                  style={[{ height: width * 0.05, width: width * 0.05 }, tab === index ? null : { tintColor: theme.colors.navIcon }]}
+                />
+              )}
             </Animated.View>
             {tab === index && (
               <Text variant="small" color={theme.colors.white}>
