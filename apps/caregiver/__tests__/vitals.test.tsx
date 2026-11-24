@@ -227,7 +227,8 @@ describe("Vitals tab", () => {
       listSpy.mockResolvedValue([vital({ id: "hr", recorded_at: iso(1) })]);
       await renderWith(<Vitals />);
       expect(await screen.findByTestId("vitals-age-sex")).toHaveTextContent("32, Male");
-      expect(screen.getByTestId("vitals-last-updated")).toHaveTextContent(/^Last updated: /);
+      // The readings come from a second query: wait for them too.
+      expect(await screen.findByTestId("vitals-last-updated")).toHaveTextContent(/^Last updated: /);
       expect(screen.queryByText("Patient")).toBeNull();
     });
 

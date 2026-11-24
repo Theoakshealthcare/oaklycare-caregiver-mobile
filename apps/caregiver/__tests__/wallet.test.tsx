@@ -136,9 +136,10 @@ describe("Wallet screen", () => {
     jest.spyOn(walletService, "getWallet").mockResolvedValue(wallet);
     await renderWith(<Wallet />);
     expect(await screen.findByText("Payment & Earning")).toBeTruthy();
-    expect(screen.getByText("Wallet Balance (NGN)")).toBeTruthy();
+    // The title is drawn before the wallet loads: wait for the data-dependent card, not just the header.
+    expect(await screen.findByText("Wallet Balance (NGN)")).toBeTruthy();
+    expect((await screen.findByTestId("wallet-balance")).props.children).toBe("₦25,000.00");
     expect(screen.queryByText("Available balance")).toBeNull();
-    expect(screen.getByTestId("wallet-balance").props.children).toBe("₦25,000.00");
     await fireEvent.press(screen.getByLabelText("Hide balance"));
     expect(screen.getByTestId("wallet-balance").props.children).toBe(HIDDEN_BALANCE);
     expect(screen.queryByText("₦25,000.00")).toBeNull();
