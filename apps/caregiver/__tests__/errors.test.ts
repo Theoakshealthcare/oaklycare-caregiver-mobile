@@ -49,7 +49,7 @@ describe("API error to message mapping", () => {
 
   it("login 401 is a credentials message; any other 401 is an expired session", () => {
     const err = error(401, { detail: "Incorrect email/phone or password" });
-    expect(messageForError(err, "login")).toBe("Incorrect email/phone or password.");
+    expect(messageForError(err, "login")).toBe("Incorrect email or password.");
     expect(messageForError(error(401, { detail: "Could not validate credentials" }))).toBe(SESSION_EXPIRED_MESSAGE);
   });
 

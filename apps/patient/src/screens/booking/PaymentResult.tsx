@@ -37,7 +37,8 @@ type Props = StackScreenProps<ScreenParamLists, "PaymentResult">;
  * "Pay now", anything else keeps "Pay now" so the person can try again.
  */
 /** The Figma result frames: a faint page, a round close at the top left, and the content centred. */
-const Frame: React.FC<{ onClose: () => void; children: React.ReactNode }> = ({ onClose, children }) => {
+/** `top` starts the content under the close button (Figma's success frame) instead of centring it (the failed frame). */
+const Frame: React.FC<{ onClose: () => void; children: React.ReactNode; top?: boolean }> = ({ onClose, children, top }) => {
   // The page tint runs edge to edge, over the status bar and under the home indicator too.
   useTopBand(theme.colors.pageTint);
   useBottomBand(theme.colors.pageTint);
@@ -46,7 +47,7 @@ const Frame: React.FC<{ onClose: () => void; children: React.ReactNode }> = ({ o
     <Pressable accessibilityRole="button" accessibilityLabel="Close" hitSlop={8} onPress={onClose} style={styles.close}>
       <Icon name="close-circle-outline" size={24} />
     </Pressable>
-    <View style={styles.center}>{children}</View>
+    <View style={[styles.center, top && styles.top]}>{children}</View>
   </View>
   );
 };
@@ -153,9 +154,9 @@ const PaymentResult: React.FC<Props> = ({ navigation, route }) => {
     // "View Caregiver" only when the booking really has one; right after payment the search has only just begun.
     const caregiver = booking_?.caregiver ?? null;
     return (
-      <Frame onClose={goBookings}>
+      <Frame onClose={goBookings} top>
         <SuccessIllustration />
-        <Text variant="page" weight="bold" color={theme.colors.successTitle} center style={styles.title}>
+        <Text variant="page" weight="bold" color={theme.colors.paymentSuccess} center style={styles.title}>
           {"Payment Successful.\nBooking Confirmed"}
         </Text>
         <Text variant="small" color={theme.colors.textLight} center style={styles.body}>
@@ -281,9 +282,10 @@ const styles = StyleSheet.create({
   frame: { flex: 1, backgroundColor: theme.colors.pageTint, paddingHorizontal: theme.spacing.md + 4, paddingTop: theme.spacing.lg },
   close: { alignSelf: "flex-start" },
   center: { flex: 1, alignItems: "center", justifyContent: "center", paddingBottom: theme.spacing.xxl, gap: theme.spacing.md },
+  top: { flex: 0, justifyContent: "flex-start", paddingTop: theme.spacing.lg + 20, paddingBottom: 0 },
   title: { width: "85%" },
   body: { width: "80%" },
-  receipt: { alignSelf: "stretch", backgroundColor: theme.colors.primaryLight, borderRadius: theme.borderRadius.lg, padding: theme.spacing.md, gap: theme.spacing.sm + 2, marginTop: theme.spacing.sm },
+  receipt: { alignSelf: "center", width: "80%", backgroundColor: theme.colors.primaryLight, borderRadius: theme.borderRadius.lg, padding: theme.spacing.md, gap: theme.spacing.sm + 2, marginTop: theme.spacing.sm },
   receiptRow: { flexDirection: "row", justifyContent: "space-between", gap: theme.spacing.md },
   pill: { width: "80%", marginTop: theme.spacing.sm },
 });

@@ -23,6 +23,10 @@ interface AuthPageProps {
   scrollToEndOnKeyboardShow?: boolean;
   /** Gap between the fields; 22 pt in the Figma forms. */
   gap?: number;
+  /** The booking frames draw the title one step larger (24 pt, Figma) with more air before the subtitle than the sign-in frames (22 pt). */
+  booking?: boolean;
+  /** Pinned under the scrolling form (Payment Details' button sits at the bottom of the screen in Figma). */
+  footer?: React.ReactNode;
   children: React.ReactNode;
 }
 
@@ -30,13 +34,13 @@ interface AuthPageProps {
  * The chrome of the signed-out Figma screens: "< Back" link, bold 22 pt title, grey subtitle, then the form with 22 pt
  * between fields, all on white with a 20 pt side margin.
  */
-const AuthPage: React.FC<AuthPageProps> = ({ title, subtitle, titleRight, onBackFallback, scroll = true, scrollToEndOnKeyboardShow, gap = 22, children }) => {
+const AuthPage: React.FC<AuthPageProps> = ({ title, subtitle, titleRight, onBackFallback, scroll = true, scrollToEndOnKeyboardShow, gap = 22, booking, footer, children }) => {
   const body = (
     <View style={styles.content}>
       <HeaderBack onFallback={onBackFallback} />
-      <View style={styles.heading}>
+      <View style={booking ? styles.bookingHeading : styles.heading}>
         <View style={styles.titleRow}>
-          <Text variant="page" weight="bold" style={styles.title}>
+          <Text variant={booking ? "h2" : "page"} weight="bold" style={[styles.title, booking && styles.bookingTitle]}>
             {title}
           </Text>
           {titleRight}
@@ -53,6 +57,7 @@ const AuthPage: React.FC<AuthPageProps> = ({ title, subtitle, titleRight, onBack
   return (
     <View style={styles.screen}>
       {scroll ? <KeyboardScrollView scrollToEndOnKeyboardShow={scrollToEndOnKeyboardShow}>{body}</KeyboardScrollView> : body}
+      {footer ? <View style={styles.footer}>{footer}</View> : null}
     </View>
   );
 };
@@ -61,6 +66,10 @@ const styles = StyleSheet.create({
   screen: { flex: 1, backgroundColor: theme.colors.white },
   content: { paddingHorizontal: FORM_PADDING, paddingTop: theme.spacing.lg, paddingBottom: theme.spacing.xxl },
   heading: { marginTop: 28, marginBottom: 24 },
+  /** Booking frames: title 24 pt, 10 pt more before the subtitle and 10 pt less after it (the form starts where it did). */
+  bookingHeading: { marginTop: 28, marginBottom: 14 },
+  bookingTitle: { marginBottom: 10 },
+  footer: { paddingHorizontal: FORM_PADDING, paddingTop: theme.spacing.sm, paddingBottom: 0 },
   titleRow: { flexDirection: "row", alignItems: "center", justifyContent: "space-between" },
   title: { flexShrink: 1 },
 });

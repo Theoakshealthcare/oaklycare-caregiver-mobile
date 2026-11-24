@@ -54,7 +54,7 @@ const BookingStep1: React.FC = () => {
 
   if (services.isError && !services.data) {
     return (
-      <AuthPage title="Book an Appointment" subtitle="Book your Appointments in 2 steps">
+      <AuthPage booking title="Book an Appointment" subtitle="Book your Appointments in 2 steps">
         <QueryError what="the services" error={services.error} onRetry={() => void services.refetch()} />
       </AuthPage>
     );
@@ -62,7 +62,7 @@ const BookingStep1: React.FC = () => {
 
   const noneOnSale = services.isSuccess && offered.length === 0;
   return (
-    <AuthPage title="Book an Appointment" subtitle="Book your Appointments in 2 steps">
+    <AuthPage booking title="Book an Appointment" subtitle="Book your Appointments in 2 steps">
       <StepBar step={1} total={2} />
       <Select label="Who are you Booking for ?" required placeholder="Select" options={RELATIONS} value={draft.forWhom} onChange={(v) => set({ forWhom: v }, "forWhom")} error={errors.forWhom} />
       <Select

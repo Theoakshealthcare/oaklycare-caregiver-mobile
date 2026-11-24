@@ -20,9 +20,7 @@ const NIL = "Nil";
 
 const Row: React.FC<{ label: string; value: string }> = ({ label, value }) => (
   <View style={styles.row}>
-    <Text variant="small" color={theme.colors.textLight}>
-      {label}
-    </Text>
+    <Text>{label}</Text>
     <Text weight="bold">{value || NIL}</Text>
   </View>
 );
@@ -55,7 +53,7 @@ const BookingSummary: React.FC = () => {
   );
 
   return (
-    <AuthPage title="Booking Summary" subtitle="Kindly confirm your appointment details" titleRight={edit} gap={0}>
+    <AuthPage booking title="Booking Summary" subtitle="Kindly confirm your appointment details" titleRight={edit} gap={0}>
       <Row label="Who are you Booking for" value={draft.forWhom} />
       <Row label="What Services are you Booking ?" value={draft.serviceLabel} />
       <Row label="What Assistance Do You Need?" value={helpNeeded(draft)} />
@@ -78,8 +76,8 @@ const BookingSummary: React.FC = () => {
         {q ? (
           <>
             <View style={styles.costRow}>
-              <Text>Estimated Cost</Text>
-              <Text weight="bold">{formatNaira(q.total)}</Text>
+              <Text variant="small">Estimated Cost</Text>
+              <Text variant="small" weight="bold">{formatNaira(q.total)}</Text>
             </View>
             <View style={styles.costRow}>
               <Text variant="small" color={theme.colors.textLight}>
@@ -133,7 +131,7 @@ const BookingSummary: React.FC = () => {
 };
 
 const styles = StyleSheet.create({
-  row: { paddingVertical: theme.spacing.sm + 2, gap: 2, borderBottomWidth: 1, borderBottomColor: theme.colors.border },
+  row: { paddingVertical: theme.spacing.md, gap: theme.spacing.xs, borderBottomWidth: 1, borderBottomColor: theme.colors.border },
   heading: { fontSize: theme.sizes.subtitle, marginTop: theme.spacing.md, marginBottom: theme.spacing.xs },
   edit: { flexDirection: "row", alignItems: "center", gap: theme.spacing.xs },
   cost: { backgroundColor: theme.colors.soft, borderRadius: theme.borderRadius.lg, padding: theme.spacing.md, gap: theme.spacing.xs, marginTop: theme.spacing.xs },

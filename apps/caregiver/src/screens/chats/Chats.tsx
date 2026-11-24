@@ -167,7 +167,8 @@ const Chats: React.FC<{ active?: boolean }> = ({ active = true }) => {
 
   return (
     <View style={{ flex: 1, backgroundColor: theme.colors.primary }} testID="chats-screen">
-      <View style={{ paddingTop: 50, paddingHorizontal: GUTTER, paddingBottom: GUTTER, gap: theme.spacing.lg }}>
+      {/* Figma 8.21.06: title 121 pt, search box 42 pt centred 54 pt under it, header 208 pt tall, avatars start 50 pt under it. */}
+      <View style={{ paddingTop: 44, paddingHorizontal: GUTTER, paddingBottom: 11, gap: 15 }}>
         <Text variant="page" weight="bold" color={theme.colors.white}>
           Chats
         </Text>
@@ -179,7 +180,7 @@ const Chats: React.FC<{ active?: boolean }> = ({ active = true }) => {
             backgroundColor: theme.colors.white,
             borderRadius: theme.borderRadius.xl,
             paddingHorizontal: theme.spacing.md,
-            height: 46,
+            height: 42,
           }}
         >
           <Feather name="search" size={18} color={theme.colors.textLight} />
@@ -209,7 +210,7 @@ const Chats: React.FC<{ active?: boolean }> = ({ active = true }) => {
           backgroundColor: theme.colors.background,
           borderTopLeftRadius: 24,
           borderTopRightRadius: 24,
-          paddingTop: GUTTER,
+          paddingTop: 50,
         }}
       >
         {renderBody()}

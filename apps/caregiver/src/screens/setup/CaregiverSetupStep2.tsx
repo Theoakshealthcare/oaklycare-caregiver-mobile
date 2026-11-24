@@ -117,7 +117,7 @@ const CaregiverSetupStep2 = () => {
 
             <StepIndicator step={ONBOARDING_STEP.work} />
 
-            <Text variant="h3" weight="bold" style={{ marginTop: 12 }}>
+            <Text variant="subtitle" weight="bold" style={{ marginTop: 12 }}>
               Work & Experience
             </Text>
           </View>

@@ -54,7 +54,7 @@ const Login: React.FC = () => {
 
       <View style={[globalStyles.column, { gap: 22 }]}>
         <Input
-          label="Email Address/Phone Number"
+          label="Email Address"
           placeholder="Provide your Email Address"
           value={emailPhone}
           onChangeText={(text: string) => {

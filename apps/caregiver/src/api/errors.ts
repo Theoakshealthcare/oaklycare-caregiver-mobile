@@ -265,7 +265,7 @@ export function messageForStatus(
   }
 
   if (status === 401) {
-    return context === "login" ? "Incorrect email/phone or password." : SESSION_EXPIRED_MESSAGE;
+    return context === "login" ? "Incorrect email or password." : SESSION_EXPIRED_MESSAGE;
   }
   if (status === 429) return "Too many attempts. Please wait a moment and try again.";
   if (status >= 500) return SERVER_MESSAGE;

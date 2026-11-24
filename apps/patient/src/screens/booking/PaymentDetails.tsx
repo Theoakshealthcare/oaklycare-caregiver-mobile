@@ -50,7 +50,13 @@ const PaymentDetails: React.FC = () => {
     );
 
   return (
-    <AuthPage title="Payment Details" subtitle="Book your Appointments in 2 steps" gap={theme.spacing.sm + 2}>
+    <AuthPage
+      booking
+      title="Payment Details"
+      subtitle="Book your Appointments in 2 steps"
+      gap={theme.spacing.sm + 2}
+      footer={<Button title="Make Payment" onPress={pay} loading={create.isPending} />}
+    >
       <View accessibilityRole="radiogroup" style={styles.methods}>
         {PAYMENT_CHANNELS.map((option) => {
           const selected = channel === option;
@@ -71,9 +77,6 @@ const PaymentDetails: React.FC = () => {
             </Pressable>
           );
         })}
-      </View>
-      <View style={styles.action}>
-        <Button title="Make Payment" onPress={pay} loading={create.isPending} />
       </View>
       <ErrorDialog visible={dialog !== null} title="Could not create the booking" message={dialog ?? ""} onClose={() => setDialog(null)} />
     </AuthPage>
@@ -96,7 +99,6 @@ const styles = StyleSheet.create({
   methodLabel: { flex: 1 },
   /** Not in the design (it draws no pick): a teal outline is the least that tells the person which row is chosen. */
   selected: { borderColor: theme.colors.primary },
-  action: { marginTop: theme.spacing.xl },
 });
 
 export default PaymentDetails;
