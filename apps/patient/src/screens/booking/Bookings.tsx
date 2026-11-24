@@ -1,10 +1,9 @@
-import { useIsFocused } from "@react-navigation/native";
 import type React from "react";
 import { useMemo, useState } from "react";
 import { Pressable, StyleSheet, View } from "react-native";
 
 import ProviderAvatar from "@/src/components/booking/ProviderAvatar";
-import { useTopBand } from "@/src/components/StatusBar/screenChrome";
+import { useTabTopBand } from "@/src/components/StatusBar/screenChrome";
 import Button from "@/src/components/ui/button";
 import { Card, EmptyState } from "@/src/components/ui/card";
 import Icon, { type IconName } from "@/src/components/ui/icon";
@@ -149,8 +148,7 @@ const WeekStrip: React.FC<{ start: Date; selected: Date | null; busy: (day: Date
 };
 
 const Bookings: React.FC = () => {
-  const focused = useIsFocused();
-  useTopBand(focused ? theme.colors.primary : null);
+  useTabTopBand(theme.colors.primary);
   const bookings = useBookings();
   const [tab, setTab] = useState<BookingTab>("upcoming");
   const [start, setStart] = useState(() => weekStart(new Date()));

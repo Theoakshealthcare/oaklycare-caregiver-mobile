@@ -70,7 +70,7 @@ const VitalDetail: React.FC<Props> = ({ navigation, route }) => {
           </View>
           {status ? <StatusBadge status={status} /> : null}
           {points.length > 0 ? (
-            <AreaChart points={points} from={from} to={now} color={meta.tint} accessibilityLabel={`${meta.title} chart, ${points.length} readings`} />
+            <AreaChart points={points} from={from} to={now} range={range} color={meta.tint} accessibilityLabel={`${meta.title} chart, ${points.length} readings`} />
           ) : (
             <View style={styles.empty}>
               <Text weight="bold" center>

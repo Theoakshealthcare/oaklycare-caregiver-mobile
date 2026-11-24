@@ -8,7 +8,7 @@ import { messageForError } from "@/src/api/errors";
 import Icon from "@/src/components/ui/icon";
 import KeyboardInsetView from "@/src/components/ui/keyboard-inset-view";
 import ProviderAvatar from "@/src/components/booking/ProviderAvatar";
-import { useTopBand } from "@/src/components/StatusBar/screenChrome";
+import { useBottomBand, useTopBand } from "@/src/components/StatusBar/screenChrome";
 import Text from "@/src/components/ui/text";
 import { MAX_FONT_SCALE, theme } from "@/src/constants/theme";
 import { sameDay, SHORT_WEEKDAYS } from "@/src/domain/bookingList";
@@ -26,6 +26,8 @@ const Chat: React.FC<Props> = ({ route, navigation }) => {
   const { id } = route.params;
   const focused = useIsFocused();
   useTopBand(focused ? theme.colors.primary : null);
+  // The message bar runs to the bottom edge, as in the design (no white strip under it).
+  useBottomBand(focused ? theme.colors.primaryLight : null);
   const booking = useBooking(id);
   const caregiver = booking.data?.caregiver ?? null;
   const me = useMe();

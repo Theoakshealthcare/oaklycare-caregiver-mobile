@@ -28,11 +28,11 @@ const Profile: React.FC = () => {
         <View style={styles.card}>
           <Avatar uri={me.data?.profile_image_url} name={me.data?.full_name} size={56} />
           <View style={styles.who}>
-            <Text variant="h3" weight="bold" numberOfLines={1}>
+            <Text weight="bold" numberOfLines={1} style={styles.name}>
               {me.data?.full_name ?? ""}
             </Text>
             {me.data?.is_verified ? (
-              <Text weight="bold" color={theme.colors.primary}>
+              <Text variant="small" weight="bold" color={theme.colors.primary}>
                 Verified User
               </Text>
             ) : null}
@@ -58,6 +58,7 @@ const styles = StyleSheet.create({
   content: { padding: theme.spacing.lg, paddingTop: theme.spacing.sm, paddingBottom: theme.spacing.xxl, gap: theme.spacing.md },
   card: { flexDirection: "row", alignItems: "center", gap: theme.spacing.md, backgroundColor: theme.colors.primaryLight, borderRadius: theme.borderRadius.xl, padding: theme.spacing.md },
   who: { flex: 1, gap: 2 },
+  name: { fontSize: theme.sizes.subtitle, lineHeight: Math.round(theme.sizes.subtitle * 1.35) },
 });
 
 export default Profile;

@@ -26,17 +26,18 @@ const AccountData: React.FC = () => {
   });
 
   return (
-    <Screen title="Account and Data" centerTitle>
+    <Screen title="Account and Data" centerTitle contentStyle={styles.page}>
       <View>
         <MenuRow
           icon="trash-outline"
           label="Delete Account"
+          dangerIcon
           onPress={() => {
             setProblem(null);
             setConfirming(true);
           }}
         />
-        <MenuRow icon="log-out-outline" label="Logout" destructive onPress={() => setLoggingOut(true)} />
+        <MenuRow icon="log-out-outline" label="Logout" destructive chevron={false} last onPress={() => setLoggingOut(true)} />
       </View>
       {/* Not in the design, kept on purpose: logging out asks first (audit P1-09). */}
       <ConfirmDialog
@@ -54,6 +55,7 @@ const AccountData: React.FC = () => {
       <CardModal
         visible={confirming}
         onClose={() => setConfirming(false)}
+        compact
         title="Are you sure you want to Delete Account"
         subtitle="Once you delete your account all your data will be deleted."
       >
@@ -72,8 +74,10 @@ const AccountData: React.FC = () => {
 };
 
 const styles = StyleSheet.create({
+  // Figma: the first row sits right under the title.
+  page: { paddingTop: 0 },
   buttons: { flexDirection: "row", gap: theme.spacing.sm, marginTop: theme.spacing.sm },
-  button: { flex: 1, paddingHorizontal: theme.spacing.sm },
+  button: { flex: 1, paddingHorizontal: theme.spacing.xs },
 });
 
 export default AccountData;

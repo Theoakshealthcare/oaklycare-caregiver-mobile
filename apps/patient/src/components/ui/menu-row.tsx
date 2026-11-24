@@ -10,20 +10,27 @@ interface MenuRowProps {
   icon: IconName;
   label: string;
   onPress: () => void;
-  /** Coral label for log out / delete. */
+  /** Coral icon and label (Logout). */
   destructive?: boolean;
+  /** Coral icon only, the label stays dark (Delete Account in the design). */
+  dangerIcon?: boolean;
+  /** Show the ">" at the end (default). Logout in the design has none. */
+  chevron?: boolean;
+  /** No line under the row. */
+  last?: boolean;
 }
 
 /** One tappable row of a settings list: icon, label, chevron. */
-const MenuRow: React.FC<MenuRowProps> = ({ icon, label, onPress, destructive }) => (
-  <Pressable accessibilityRole="button" accessibilityLabel={label} onPress={onPress} style={styles.row}>
-    <Icon name={icon} size={20} color={destructive ? theme.colors.secondary : theme.colors.primary} circleColor={destructive ? theme.colors.errorLight : theme.colors.primaryLight} />
+const MenuRow: React.FC<MenuRowProps> = ({ icon, label, onPress, destructive, dangerIcon, chevron = true, last }) => (
+  <Pressable accessibilityRole="button" accessibilityLabel={label} onPress={onPress} style={[styles.row, last && styles.last]}>
+    {/* The design draws a bare icon, not one on a disc. */}
+    <Icon name={icon} size={22} color={destructive || dangerIcon ? theme.colors.secondary : theme.colors.primary} />
     <View style={styles.label}>
       <Text weight="medium" color={destructive ? theme.colors.secondary : theme.colors.text}>
         {label}
       </Text>
     </View>
-    <Icon name="chevron-forward" size={18} color={theme.colors.textLight} />
+    {chevron ? <Icon name="chevron-forward" size={18} color={theme.colors.text} /> : null}
   </Pressable>
 );
 
@@ -32,10 +39,11 @@ const styles = StyleSheet.create({
     flexDirection: "row",
     alignItems: "center",
     gap: theme.spacing.md,
-    paddingVertical: theme.spacing.sm + 2,
+    paddingVertical: theme.spacing.md + 4,
     borderBottomWidth: StyleSheet.hairlineWidth,
     borderBottomColor: theme.colors.border,
   },
+  last: { borderBottomWidth: 0 },
   label: { flex: 1 },
 });
 

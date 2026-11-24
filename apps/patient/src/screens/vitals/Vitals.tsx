@@ -3,6 +3,7 @@ import { useState } from "react";
 import { Pressable, StyleSheet, View } from "react-native";
 
 import { messageForError } from "@/src/api/errors";
+import { useTabTopBand } from "@/src/components/StatusBar/screenChrome";
 import ErrorDialog from "@/src/components/ui/ErrorDialog";
 import Icon from "@/src/components/ui/icon";
 import KeyboardScrollView from "@/src/components/ui/keyboard-scroll-view";
@@ -30,6 +31,8 @@ const HOME_INSIGHTS = 2;
  */
 const Vitals: React.FC = () => {
   const navigation = useNav();
+  // The teal header runs up under the clock, as in the design.
+  useTabTopBand(theme.colors.primary);
   const readings = useVitalReadings();
   const insights = useVitalInsights();
   const download = useDownloadVitals();

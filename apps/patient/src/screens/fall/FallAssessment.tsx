@@ -2,10 +2,8 @@ import { useQueryClient } from "@tanstack/react-query";
 import type React from "react";
 import { useState } from "react";
 import { ActivityIndicator, Pressable, StyleSheet, View } from "react-native";
-import { useSafeAreaInsets } from "react-native-safe-area-context";
 
 import { messageForError } from "@/src/api/errors";
-import Button from "@/src/components/ui/button";
 import { EmptyState } from "@/src/components/ui/card";
 import ErrorDialog from "@/src/components/ui/ErrorDialog";
 import Icon from "@/src/components/ui/icon";
@@ -27,7 +25,6 @@ const FallAssessment: React.FC = () => {
   const client = useQueryClient();
   const questions = useFallguardQuestions();
   const submit = useSubmitFallguard();
-  const top = useSafeAreaInsets().top;
   const [index, setIndex] = useState(0);
   const [answers, setAnswers] = useState<FallguardAnswers>({});
   const [dialog, setDialog] = useState<string | null>(null);
@@ -39,7 +36,7 @@ const FallAssessment: React.FC = () => {
 
   if (!question) {
     return (
-      <View style={[styles.screen, { paddingTop: top + theme.spacing.sm }]}>
+      <View style={styles.screen}>
         <BackLink onPress={() => navigation.goBack()} />
         {questions.isError ? (
           <QueryError what="the questions" error={questions.error} onRetry={() => void questions.refetch()} />
@@ -75,7 +72,7 @@ const FallAssessment: React.FC = () => {
   };
 
   return (
-    <View style={[styles.screen, { paddingTop: top + theme.spacing.sm }]}>
+    <View style={styles.screen}>
       <BackLink onPress={goBack} disabled={submit.isPending} />
       <KeyboardScrollView contentContainerStyle={styles.content}>
         {section ? (
@@ -96,7 +93,7 @@ const FallAssessment: React.FC = () => {
             <View style={[styles.fill, { width: `${Math.max(1.5, (index / list.length) * 100)}%` }]} />
           </View>
         </View>
-        <Text variant="h3" weight="bold">
+        <Text weight="medium" style={styles.prompt}>
           {question.prompt}
         </Text>
         <View style={styles.options}>
@@ -120,7 +117,12 @@ const FallAssessment: React.FC = () => {
           })}
         </View>
         <View style={styles.back}>
-          <Button title="Back" variant="outline" small onPress={goBack} disabled={submit.isPending} />
+          <Pressable accessibilityRole="button" accessibilityLabel="Back" disabled={submit.isPending} onPress={goBack} style={styles.backButton}>
+            <Icon name="chevron-back" size={18} color={theme.colors.primary} />
+            <Text weight="bold" color={theme.colors.primary}>
+              Back
+            </Text>
+          </Pressable>
         </View>
         {submit.isPending ? (
           <View style={styles.sending}>
@@ -148,8 +150,10 @@ const styles = StyleSheet.create({
   screen: { flex: 1, backgroundColor: theme.colors.white },
   link: { flexDirection: "row", alignItems: "center", gap: 2, paddingHorizontal: theme.spacing.lg, paddingVertical: theme.spacing.sm, alignSelf: "flex-start" },
   content: { padding: theme.spacing.lg, paddingTop: theme.spacing.sm, paddingBottom: theme.spacing.xxl, gap: theme.spacing.md },
-  track: { height: 3, backgroundColor: theme.colors.border, borderRadius: 2, marginTop: theme.spacing.xs + 2 },
+  // Figma: a hairline track that is barely there, with the teal fill on it.
+  track: { height: 3, backgroundColor: "#F0F0F0", borderRadius: 2, marginTop: theme.spacing.xs + 2 },
   fill: { height: 3, backgroundColor: theme.colors.primary, borderRadius: 2 },
+  prompt: { fontSize: theme.sizes.subtitle, lineHeight: Math.round(theme.sizes.subtitle * 1.4) },
   options: { gap: theme.spacing.md },
   option: {
     flexDirection: "row",
@@ -158,7 +162,7 @@ const styles = StyleSheet.create({
     gap: theme.spacing.sm,
     borderWidth: 1,
     borderColor: theme.colors.primary,
-    borderRadius: theme.borderRadius.xl,
+    borderRadius: theme.borderRadius.lg,
     paddingHorizontal: theme.spacing.md,
     minHeight: 52,
     paddingVertical: theme.spacing.sm,
@@ -166,6 +170,17 @@ const styles = StyleSheet.create({
   selected: { backgroundColor: theme.colors.primaryLight, borderWidth: 2 },
   optionText: { flex: 1 },
   back: { alignSelf: "flex-start" },
+  // Figma: an outlined rounded box (not a pill) with a chevron and "Back" in bold teal.
+  backButton: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: theme.spacing.xs,
+    minHeight: 44,
+    paddingHorizontal: theme.spacing.md,
+    borderWidth: 1,
+    borderColor: theme.colors.primary,
+    borderRadius: theme.borderRadius.lg,
+  },
   sending: { flexDirection: "row", alignItems: "center", gap: theme.spacing.sm },
 });
 

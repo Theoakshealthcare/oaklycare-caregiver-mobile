@@ -1,7 +1,6 @@
 import type { StackScreenProps } from "@react-navigation/stack";
 import type React from "react";
 import { Pressable, Share, StyleSheet, View } from "react-native";
-import { useSafeAreaInsets } from "react-native-safe-area-context";
 
 import Button from "@/src/components/ui/button";
 import Icon from "@/src/components/ui/icon";
@@ -22,11 +21,10 @@ type Props = StackScreenProps<ScreenParamLists, "FallResult">;
  */
 const FallResult: React.FC<Props> = ({ navigation, route }) => {
   const { result } = route.params;
-  const top = useSafeAreaInsets().top;
   const band = riskBandFor(result.totalScore);
   const share = () => void Share.share({ message: `My Oakly FallGuard fall-risk score is ${result.totalScore} out of ${result.maxScore}.` });
   return (
-    <View style={[styles.screen, { paddingTop: top + theme.spacing.sm }]}>
+    <View style={styles.screen}>
       <Pressable
         accessibilityRole="button"
         accessibilityLabel="Go back"

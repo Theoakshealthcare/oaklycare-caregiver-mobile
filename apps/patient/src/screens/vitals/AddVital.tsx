@@ -6,6 +6,7 @@ import { KeyboardAvoidingView, Platform, ScrollView, StyleSheet, View } from "re
 import { messageForError } from "@/src/api/errors";
 import Button from "@/src/components/ui/button";
 import { CardSheet } from "@/src/components/ui/card-modal";
+import { useDimBands } from "@/src/components/StatusBar/screenChrome";
 import ErrorDialog from "@/src/components/ui/ErrorDialog";
 import FieldLabel from "@/src/components/ui/field-label";
 import Input from "@/src/components/ui/input";
@@ -18,6 +19,8 @@ import { useAddVital } from "@/src/hooks/useVitals";
 import type { ScreenParamLists } from "@/src/navigation/Navigations";
 
 type Props = StackScreenProps<ScreenParamLists, "AddVital">;
+
+const DIM = "rgba(0,0,0,0.45)";
 
 /**
  * Manual entry for any of the six vitals, as the Figma sheet: a card over the dimmed Vitals page with the vital's round icon, its
@@ -34,6 +37,7 @@ const AddVital: React.FC<Props> = ({ navigation, route }) => {
   const [unit, setUnit] = useState<string>(meta.unit);
   const [dialog, setDialog] = useState<string | null>(null);
   const add = useAddVital();
+  useDimBands(DIM);
 
   const set = (key: string) => (text: string) => {
     setValues((prev) => ({ ...prev, [key]: text }));
@@ -120,12 +124,12 @@ const AddVital: React.FC<Props> = ({ navigation, route }) => {
 };
 
 const styles = StyleSheet.create({
-  overlay: { flex: 1, backgroundColor: "rgba(0,0,0,0.45)" },
-  scroll: { flexGrow: 1, justifyContent: "center", padding: theme.spacing.lg, paddingTop: theme.spacing.xxl + 40 },
+  overlay: { flex: 1, backgroundColor: DIM },
+  scroll: { flexGrow: 1, justifyContent: "center", paddingHorizontal: "9.5%", paddingVertical: theme.spacing.lg, paddingTop: theme.spacing.xxl + 40 },
   fields: { gap: theme.spacing.md, marginTop: theme.spacing.sm },
   button: { marginTop: theme.spacing.xs },
   bpRow: { flexDirection: "row", alignItems: "flex-start", gap: theme.spacing.sm },
-  bpBox: { width: 84 },
+  bpBox: { width: 66 },
 });
 
 export default AddVital;

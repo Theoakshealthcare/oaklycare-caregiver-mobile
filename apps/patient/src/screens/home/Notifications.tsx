@@ -26,7 +26,7 @@ const Notifications: React.FC = () => {
   };
 
   return (
-    <Screen title="Notifications" scroll>
+    <Screen title="Notification" centerTitle scroll>
       {feed.isError && !feed.data ? (
         <QueryError what="your notifications" error={feed.error} onRetry={() => void feed.refetch()} />
       ) : feed.isLoading ? null : items.length === 0 ? (

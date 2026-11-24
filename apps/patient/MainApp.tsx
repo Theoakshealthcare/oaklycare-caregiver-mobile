@@ -14,6 +14,8 @@ const MainApp = () => {
   const bottomInset = useSafeAreaInsets().bottom;
   const bottomBand = useScreenChrome((s) => s.bottom);
   const topBand = useScreenChrome((s) => s.top);
+  const dim = useScreenChrome((s) => s.dim);
+  const topInset = useSafeAreaInsets().top;
 
   // Restore the stored session and the "intro seen" flag once on launch; the navigator shows the splash until they are known.
   useEffect(() => {
@@ -31,6 +33,13 @@ const MainApp = () => {
       </SafeAreaView>
       {/* The strip under the home indicator: white, or the colour a screen asked for (the welcome slides' panel). */}
       <View style={{ height: bottomInset, backgroundColor: bottomBand ?? theme.colors.white }} />
+      {/* A transparent modal route dims the page, but not these two strips: dim them the same way. */}
+      {dim ? (
+        <>
+          <View pointerEvents="none" style={{ position: "absolute", top: 0, left: 0, right: 0, height: topInset, backgroundColor: dim }} />
+          <View pointerEvents="none" style={{ position: "absolute", bottom: 0, left: 0, right: 0, height: bottomInset, backgroundColor: dim }} />
+        </>
+      ) : null}
     </View>
   );
 };

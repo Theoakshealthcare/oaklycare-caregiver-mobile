@@ -27,7 +27,7 @@ const Avatar: React.FC<AvatarProps> = ({ uri, name = "", size = 56 }) => {
   if (uri) return <Image accessibilityLabel="Profile picture" source={{ uri }} style={[styles.image, box]} />;
   return (
     <View accessibilityLabel="Profile picture" style={[styles.fallback, box]}>
-      <Text weight="bold" color={theme.colors.primary} style={{ fontSize: Math.round(size * 0.36) }}>
+      <Text weight="bold" color={theme.colors.primary} style={{ fontSize: Math.round(size * 0.36), lineHeight: Math.round(size * 0.5) }}>
         {initials(name)}
       </Text>
     </View>

@@ -1,10 +1,11 @@
-import { Ionicons } from "@expo/vector-icons";
+import { Ionicons, MaterialCommunityIcons } from "@expo/vector-icons";
 import type React from "react";
 import { View, type StyleProp, type ViewStyle } from "react-native";
 
 import { theme } from "../../constants/theme";
 
-export type IconName = keyof typeof Ionicons.glyphMap;
+/** An Ionicons name, or "wind" (Ionicons has none; drawn with the Material Community "weather-windy" glyph). */
+export type IconName = keyof typeof Ionicons.glyphMap | "wind";
 
 interface IconProps {
   name: IconName;
@@ -15,8 +16,15 @@ interface IconProps {
   style?: StyleProp<ViewStyle>;
 }
 
+const Glyph: React.FC<{ name: IconName; size: number; color: string; style?: StyleProp<ViewStyle> }> = ({ name, size, color, style }) =>
+  name === "wind" ? (
+    <MaterialCommunityIcons name="weather-windy" size={size} color={color} style={style as never} />
+  ) : (
+    <Ionicons name={name} size={size} color={color} style={style as never} />
+  );
+
 const Icon: React.FC<IconProps> = ({ name, size = 24, color = theme.colors.text, circleColor, style }) => {
-  if (!circleColor) return <Ionicons name={name} size={size} color={color} style={style as never} />;
+  if (!circleColor) return <Glyph name={name} size={size} color={color} style={style} />;
   const diameter = Math.round(size * 1.8);
   return (
     <View
@@ -26,7 +34,7 @@ const Icon: React.FC<IconProps> = ({ name, size = 24, color = theme.colors.text,
         style,
       ]}
     >
-      <Ionicons name={name} size={size} color={color} />
+      <Glyph name={name} size={size} color={color} />
     </View>
   );
 };
