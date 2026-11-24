@@ -1,5 +1,5 @@
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
-import { render, screen } from "@testing-library/react-native";
+import { fireEvent, render, screen } from "@testing-library/react-native";
 import React from "react";
 import { View } from "react-native";
 
@@ -14,6 +14,7 @@ jest.mock("react-native-pager-view", () => {
 });
 jest.mock("../src/screens/home/Home", () => ({ __esModule: true, default: () => <MockPage name="home" /> }));
 jest.mock("../src/screens/booking/Booking", () => ({ __esModule: true, default: () => <MockPage name="booking" /> }));
+jest.mock("../src/screens/chats/Chats", () => ({ __esModule: true, default: () => <MockPage name="chats" /> }));
 jest.mock("../src/hooks/use-navigation", () => ({
   __esModule: true,
   default: () => ({ navigation: { navigate: jest.fn(), goBack: jest.fn() } }),
@@ -45,12 +46,22 @@ describe("BottomNavigation", () => {
   it("has a page for every tab: none is ever blank", async () => {
     await renderNav();
     const pager = screen.getByTestId("pager");
-    // Home, Booking and Vitals. FallGuard is patient-side: the caregiver app has no Fall tab (DP1-18).
-    expect(pager.children).toHaveLength(3);
+    // Home, Bookings, Chats and Vitals. FallGuard is patient-side (no Fall tab, DP1-18); Learn has no backend (stays off).
+    expect(pager.children).toHaveLength(4);
     expect(screen.getByTestId("page-home")).toBeTruthy();
     expect(screen.getByTestId("page-booking")).toBeTruthy();
+    expect(screen.getByTestId("page-chats")).toBeTruthy();
     // Vitals: with no visit it explains itself rather than showing nothing.
     expect(await screen.findByText("No active visit")).toBeTruthy();
+  });
+
+  it("puts Chats third, between Bookings and Vitals, and has no Learn tab", async () => {
+    await renderNav();
+    expect(screen.getByTestId("tab-icon-chats")).toBeTruthy();
+    expect(screen.queryByText("Learn")).toBeNull();
+    // Only the open tab shows its label: open Chats and it reads "Chats".
+    fireEvent.press(screen.getByTestId("tab-icon-chats"));
+    expect(await screen.findByText("Chats")).toBeTruthy();
   });
 
   it("has no Fall tab and no FallGuard placeholder", async () => {

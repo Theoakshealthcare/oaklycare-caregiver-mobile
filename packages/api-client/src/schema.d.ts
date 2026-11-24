@@ -724,6 +724,30 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/v1/caregiver/chats": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * List Chats
+         * @description Your conversations, newest activity first: one per booking whose chat you may open (the bookings assigned to you).
+         *
+         *     Each row carries the booking id for `GET /booking/chat/{booking_id}/messages`, the patient's name, the service, the
+         *     booking status, the visit start and the last message cut to 140 characters (null when nobody has written yet). There is
+         *     no unread count: the chat does not record who has read what.
+         */
+        get: operations["list_chats_api_v1_caregiver_chats_get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/v1/caregiver/care-plan-templates": {
         parameters: {
             query?: never;
@@ -6101,6 +6125,45 @@ export interface components {
             /** Account Number */
             account_number: string;
         };
+        /** CaregiverChatList */
+        CaregiverChatList: {
+            /** Items */
+            items: components["schemas"]["CaregiverChatOut"][];
+            /**
+             * Next Before
+             * @description Pass as `before` for the next (older) page; null on the last.
+             */
+            next_before?: string | null;
+            /**
+             * Next Before Id
+             * @description Pass as `before_id` together with `before` (it breaks ties between conversations with the same activity time); null on the last.
+             */
+            next_before_id?: string | null;
+        };
+        /**
+         * CaregiverChatOut
+         * @description One conversation: the booking's chat with its patient. `booking_id` is what the chat routes take.
+         */
+        CaregiverChatOut: {
+            /**
+             * Booking Id
+             * Format: uuid
+             */
+            booking_id: string;
+            /** Patient Name */
+            patient_name: string;
+            /** Service Type */
+            service_type: string;
+            status: components["schemas"]["BookingStatus"];
+            /**
+             * Scheduled Date
+             * Format: date-time
+             * @description When the visit starts.
+             */
+            scheduled_date: string;
+            /** @description Null while nobody has written yet. */
+            last_message?: components["schemas"]["ChatLastMessage"] | null;
+        };
         /** CaregiverClientProfile */
         CaregiverClientProfile: {
             /**
@@ -6490,6 +6553,27 @@ export interface components {
             token_type: string;
             /** Detail */
             detail: string;
+        };
+        /**
+         * ChatLastMessage
+         * @description The newest message of a conversation, cut to a one-line preview. Never the full body.
+         */
+        ChatLastMessage: {
+            /**
+             * Text
+             * @description At most 140 characters; a longer message is cut and ends with an ellipsis.
+             */
+            text: string;
+            /**
+             * Sent At
+             * Format: date-time
+             */
+            sent_at: string;
+            /**
+             * From Me
+             * @description True when the signed-in caregiver sent it.
+             */
+            from_me: boolean;
         };
         /** ChatMessageCreate */
         ChatMessageCreate: {
@@ -11127,6 +11211,41 @@ export interface operations {
                     [name: string]: unknown;
                 };
                 content?: never;
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    list_chats_api_v1_caregiver_chats_get: {
+        parameters: {
+            query?: {
+                /** @description Return conversations with older activity than this (the previous page's `next_before`). */
+                before?: string | null;
+                /** @description With `before`: the previous page's `next_before_id`. */
+                before_id?: string | null;
+                limit?: number;
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["CaregiverChatList"];
+                };
             };
             /** @description Validation Error */
             422: {

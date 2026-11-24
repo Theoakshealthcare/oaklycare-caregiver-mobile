@@ -1494,6 +1494,95 @@
         }
       }
     },
+    "/api/v1/caregiver/chats": {
+      "get": {
+        "tags": [
+          "caregiver-chats"
+        ],
+        "summary": "List Chats",
+        "description": "Your conversations, newest activity first: one per booking whose chat you may open (the bookings assigned to you).\n\nEach row carries the booking id for `GET /booking/chat/{booking_id}/messages`, the patient's name, the service, the\nbooking status, the visit start and the last message cut to 140 characters (null when nobody has written yet). There is\nno unread count: the chat does not record who has read what.",
+        "operationId": "list_chats_api_v1_caregiver_chats_get",
+        "security": [
+          {
+            "OAuth2PasswordBearer": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "before",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string",
+                  "format": "date-time"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "description": "Return conversations with older activity than this (the previous page's `next_before`).",
+              "title": "Before"
+            },
+            "description": "Return conversations with older activity than this (the previous page's `next_before`)."
+          },
+          {
+            "name": "before_id",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string",
+                  "format": "uuid"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "description": "With `before`: the previous page's `next_before_id`.",
+              "title": "Before Id"
+            },
+            "description": "With `before`: the previous page's `next_before_id`."
+          },
+          {
+            "name": "limit",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "integer",
+              "maximum": 50,
+              "minimum": 1,
+              "default": 20,
+              "title": "Limit"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/CaregiverChatList"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
     "/api/v1/caregiver/care-plan-templates": {
       "get": {
         "tags": [
@@ -18022,6 +18111,95 @@
         ],
         "title": "CaregiverBankAccountUpdate"
       },
+      "CaregiverChatList": {
+        "properties": {
+          "items": {
+            "items": {
+              "$ref": "#/components/schemas/CaregiverChatOut"
+            },
+            "type": "array",
+            "title": "Items"
+          },
+          "next_before": {
+            "anyOf": [
+              {
+                "type": "string",
+                "format": "date-time"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Next Before",
+            "description": "Pass as `before` for the next (older) page; null on the last."
+          },
+          "next_before_id": {
+            "anyOf": [
+              {
+                "type": "string",
+                "format": "uuid"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Next Before Id",
+            "description": "Pass as `before_id` together with `before` (it breaks ties between conversations with the same activity time); null on the last."
+          }
+        },
+        "type": "object",
+        "required": [
+          "items"
+        ],
+        "title": "CaregiverChatList"
+      },
+      "CaregiverChatOut": {
+        "properties": {
+          "booking_id": {
+            "type": "string",
+            "format": "uuid",
+            "title": "Booking Id"
+          },
+          "patient_name": {
+            "type": "string",
+            "title": "Patient Name"
+          },
+          "service_type": {
+            "type": "string",
+            "title": "Service Type"
+          },
+          "status": {
+            "$ref": "#/components/schemas/BookingStatus"
+          },
+          "scheduled_date": {
+            "type": "string",
+            "format": "date-time",
+            "title": "Scheduled Date",
+            "description": "When the visit starts."
+          },
+          "last_message": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/ChatLastMessage"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "Null while nobody has written yet."
+          }
+        },
+        "type": "object",
+        "required": [
+          "booking_id",
+          "patient_name",
+          "service_type",
+          "status",
+          "scheduled_date"
+        ],
+        "title": "CaregiverChatOut",
+        "description": "One conversation: the booking's chat with its patient. `booking_id` is what the chat routes take."
+      },
       "CaregiverClientProfile": {
         "properties": {
           "booking_id": {
@@ -19027,6 +19205,33 @@
         ],
         "title": "ChangePasswordResponse",
         "description": "The caller's replacement tokens: every token issued before the change is dead, this pair is the one to keep."
+      },
+      "ChatLastMessage": {
+        "properties": {
+          "text": {
+            "type": "string",
+            "title": "Text",
+            "description": "At most 140 characters; a longer message is cut and ends with an ellipsis."
+          },
+          "sent_at": {
+            "type": "string",
+            "format": "date-time",
+            "title": "Sent At"
+          },
+          "from_me": {
+            "type": "boolean",
+            "title": "From Me",
+            "description": "True when the signed-in caregiver sent it."
+          }
+        },
+        "type": "object",
+        "required": [
+          "text",
+          "sent_at",
+          "from_me"
+        ],
+        "title": "ChatLastMessage",
+        "description": "The newest message of a conversation, cut to a one-line preview. Never the full body."
       },
       "ChatMessageCreate": {
         "properties": {

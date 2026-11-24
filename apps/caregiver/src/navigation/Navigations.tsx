@@ -23,7 +23,7 @@ export type ScreenParamLists = {
   ProfileSetupCompleted: undefined;
   // Signed in and approved
   /** `tab` + `at` select a tab on arrival (`at` is a changing nonce so repeating the same tab still applies). */
-  BottomNavigation: { tab?: "home" | "booking" | "vitals"; at?: number } | undefined;
+  BottomNavigation: { tab?: "home" | "booking" | "chats" | "vitals"; at?: number } | undefined;
   /** With `offer` it is an un-accepted job (offer view, nothing is fetched); without it, an assigned booking. */
   BookingDetails: { bookingId: string; offer?: Offer };
   ChatScreen: { bookingId: string; patientName?: string };

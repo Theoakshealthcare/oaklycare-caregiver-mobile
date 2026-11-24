@@ -8,6 +8,8 @@ export const queryKeys = {
   allBookings: ["bookings"] as const,
   booking: (id: string) => ["booking", id] as const,
   chat: (bookingId: string) => ["chat", bookingId] as const,
+  /** The Chats tab list (`GET /caregiver/chats`). */
+  chats: ["chats"] as const,
   notifications: ["notifications"] as const,
   wallet: ["wallet"] as const,
   walletTransactions: (month: string) => ["wallet-transactions", month] as const,

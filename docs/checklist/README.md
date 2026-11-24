@@ -57,7 +57,7 @@ channel) lives in the backend repo: `docs/checklist/MASTER_CHECKLIST.md`. Update
 - [x] Vitals: Clients Vitals, "<Vital> Monitoring" with area chart and Last synced, entry modals, "Vital Report Downloaded" page; status badge built, OFF (`VITAL_STATUS_BADGES`)
 - [x] Bookings (bell, New Request, cards, Start Service, Get Direction), Job Details, Notification groups; Payment & Earning, Earning Payment, payslip success, Update Payment Details, Edit Profile, Contact Us labels; Client Profile headings
 - [ ] **Not device-verified** (Jest, tsc and ESLint only; simulator was busy): built on `feat/caregiver-remaining-parity` ([SOP](../sop/2026-11-24-caregiver-remaining-parity.md))
-- [ ] Deferred, needs backend or content: Chats list, FallGuard for caregivers, patient name and price on offers, FAQ and About in-app copy, emergency contact name / address, vitals insights
+- [ ] Deferred, needs backend or content: FallGuard for caregivers, patient name and price on offers, FAQ and About in-app copy, emergency contact name / address, vitals insights (the Chats list is now built: see "Caregiver Chats tab" below)
 - [ ] Owner decisions: medication section collapsed (D4), "Total Amount Paid in / Withdrawn", "Continue Service", lock-screen app name
 - [x] Visual pass of the signed-in caregiver app on the iOS simulator (2026-11-24): safe-area strips follow the screen (white pages, teal headers), `Text` flex bug (consent line and menu chevrons), type sizes cut to the design (new `micro` / `label` / `compact` tokens), Home header and cards, bookings chips, chat card, Job Details, Profile, Wallet card, Notifications, Contact, clock dialogs, Client Profile, AI Notetaker consent card; branch `fix/caregiver-screens-visual` ([SOP](../sop/2026-11-24-caregiver-signed-in-visual.md), ledger `ledgers/SIM-caregiver-visual.md`); **iOS simulator only, nothing seen on Android or a real phone**
 - [ ] Left from that pass: vital detail round back and smooth chart fill, clock-out dialog sits on the visit page (Figma: over Home), Notetaker round back button, care plan hub / Contact Us / success pages not re-seen after the change
@@ -82,7 +82,7 @@ channel) lives in the backend repo: `docs/checklist/MASTER_CHECKLIST.md`. Update
 - [x] Profile Settings menu in Figma order with only the rows that exist (Care Plan for nurses, Security, Account and Data page with Logout and Delete Account)
 - [x] Cookies Policy link (https://www.oaklycare.com/cookies) on sign-up and consent
 - [ ] **Not device-verified** (Jest, tsc and ESLint only): built on `feat/caregiver-home-parity` ([SOP](../sop/2026-11-23-caregiver-home-parity.md))
-- [ ] Deferred, needs backend: Profile Completion card, Weekly Earning, patient first name and initial on offers, Chats tab (list endpoint), clients list for "Clients Profiles", `actual_start_time` on the booking
+- [ ] Deferred, needs backend: Profile Completion card, Weekly Earning, patient first name and initial on offers, clients list for "Clients Profiles", `actual_start_time` on the booking
 - [ ] Not built, stays off: Learn tab, Live Chat, Refer and Earn, Complaints
 - [ ] Owner decisions: CarePlan card wording, "Yes, Decline" vs "Yes, Cancel", Account and Data page title, menu button target
 
@@ -301,3 +301,7 @@ Owner decisions (2026-11-07): move the old app into the monorepo on SDK 57, copi
 - [ ] **Counsel still has to sign off the consent wording** (identity consent design 10.2 and the background-check consent)
 - [ ] Look at the links on a device (wrapping inside the sign-up sentence, tap size, in-app browser close button)
 - [ ] Owner: Cookies Policy URL (or drop the mention; it is not tappable today); optional Terms/Privacy rows in the caregiver Profile
+
+## Caregiver Chats tab (2026-11-24)
+- [x] Chats as the 3rd bottom tab (Home, Bookings, Chats, Vitals) from `GET /api/v1/caregiver/chats` (backend PR #77): header and search, avatar row, conversation rows with last message and time, pull to refresh, loading / error / empty states, opens the existing chat ([SOP](../sop/2026-11-24-caregiver-chats-tab.md)); branch `feat/caregiver-chats-tab`, depends on backend #77, not merged, not device-verified
+- [ ] Not built: "Oakly Admin" support conversation, filter button, unread badge (the server records no read state), photos in the avatars; Learn stays off
