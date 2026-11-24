@@ -72,6 +72,11 @@ export interface DocumentRow {
   download_url: string;
 }
 
+/** A role as an admin reads it ("nurse" -> "Nurse"). */
+export function roleLabel(serviceType: string): string {
+  return serviceType.charAt(0).toUpperCase() + serviceType.slice(1);
+}
+
 export interface SkillRow {
   service_type: Schemas["SkillIn"]["service_type"];
   sub_specialty: string | null;
@@ -130,6 +135,8 @@ export interface ApplicationDetail {
     changes_requested: unknown;
   };
   skills: SkillRow[];
+  /** What the caregiver asked for ("I apply as"): a request only, `[]` when none. Only `skills` are confirmed. */
+  requested_skills: SkillRow["service_type"][];
   audit_history: AuditEntry[];
 }
 

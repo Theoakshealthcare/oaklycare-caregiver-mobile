@@ -7,6 +7,11 @@ channel) lives in the backend repo: `docs/checklist/MASTER_CHECKLIST.md`. Update
 - [x] iOS **Debug** build links and runs on the simulator with Metro hot reload; one script, `pnpm --filter oaklycare-caregiver-mobile ios:debug dev` (2026-11-07, branch `chore/ios-debug-build`, see docs/sop/2026-11-07-caregiver-ios-debug-build.md). A JS edit shows on the simulator in seconds without a rebuild; no Release workaround, no manual `React.framework` copy
 - [ ] Physical iPhone build and signing (this script is simulator only)
 
+## Caregiver "I apply as" (2026-11-24)
+- [x] App: setup step 2 has a required multi-select **I apply as** (five roles, backend labels, saved value shown on resume), sent as `applying_as`; copy stays neutral, never a granted qualification ([SOP](../sop/2026-11-24-caregiver-requested-role.md); backend Theoakshealthcare/backend#76). **Not in Figma**, a deliberate owner-approved addition; Step 2 may now scroll.
+- [x] Console: caregiver page shows "Requested by the caregiver: ..." and the skills editor opens with those roles pre-selected and tagged "requested"; saving is the admin's click
+- [ ] Visual pass on the new field and the console editor; merge order: backend #76 with or before this
+
 ## Caregiver UI polish
 - [x] Fixed, width-damped type scale and capped OS text scaling (2026-10-07, see docs/sop/2026-10-07-caregiver-typography-layout.md)
 - [x] Onboarding Skip safe area, Login link on all slides, Back to home lands on Home

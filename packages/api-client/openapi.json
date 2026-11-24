@@ -13054,6 +13054,21 @@
             "type": "array",
             "title": "Skills"
           },
+          "requested_skills": {
+            "items": {
+              "type": "string",
+              "enum": [
+                "nurse",
+                "doctor",
+                "physiotherapist",
+                "caregiver",
+                "nutritionist"
+              ]
+            },
+            "type": "array",
+            "title": "Requested Skills",
+            "default": []
+          },
           "audit_history": {
             "items": {
               "$ref": "#/components/schemas/AuditEntry"
@@ -18797,6 +18812,20 @@
             ],
             "title": "Service Areas"
           },
+          "applying_as": {
+            "anyOf": [
+              {
+                "items": {
+                  "type": "string"
+                },
+                "type": "array"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Applying As"
+          },
           "profile_completion_step": {
             "type": "integer",
             "title": "Profile Completion Step"
@@ -18913,6 +18942,29 @@
             },
             "type": "array",
             "title": "Service Areas"
+          },
+          "applying_as": {
+            "anyOf": [
+              {
+                "items": {
+                  "type": "string",
+                  "enum": [
+                    "nurse",
+                    "doctor",
+                    "physiotherapist",
+                    "caregiver",
+                    "nutritionist"
+                  ]
+                },
+                "type": "array",
+                "maxItems": 5,
+                "minItems": 1
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Applying As"
           }
         },
         "type": "object",
@@ -20706,6 +20758,13 @@
             },
             "type": "array",
             "title": "States"
+          },
+          "roles": {
+            "items": {
+              "$ref": "#/components/schemas/RoleOption"
+            },
+            "type": "array",
+            "title": "Roles"
           }
         },
         "type": "object",
@@ -20713,7 +20772,8 @@
           "specializations",
           "service_areas",
           "work_hours",
-          "states"
+          "states",
+          "roles"
         ],
         "title": "FormOptionsOut"
       },
@@ -26397,6 +26457,31 @@
           "note"
         ],
         "title": "RequestChangesIn"
+      },
+      "RoleOption": {
+        "properties": {
+          "value": {
+            "type": "string",
+            "enum": [
+              "nurse",
+              "doctor",
+              "physiotherapist",
+              "caregiver",
+              "nutritionist"
+            ],
+            "title": "Value"
+          },
+          "label": {
+            "type": "string",
+            "title": "Label"
+          }
+        },
+        "type": "object",
+        "required": [
+          "value",
+          "label"
+        ],
+        "title": "RoleOption"
       },
       "ServiceCatalogOut": {
         "properties": {
