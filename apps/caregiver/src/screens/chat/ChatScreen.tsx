@@ -1,41 +1,107 @@
 "use client"
 
 import type React from "react"
-import { useState, useRef } from "react"
-import { View, ScrollView, TextInput, TouchableOpacity, Alert } from "react-native"
+import { useState, useRef, useMemo } from "react"
+import { View, ScrollView, TextInput, TouchableOpacity, Alert, Pressable } from "react-native"
 import type { StackScreenProps } from "@react-navigation/stack"
-import { Feather } from "@expo/vector-icons"
+import { Feather, Ionicons } from "@expo/vector-icons"
 
 import { theme, MAX_FONT_SCALE } from "@/src/constants/theme"
 import KeyboardInsetView from "@/src/components/ui/keyboard-inset-view"
 import Text from "@/src/components/ui/text"
+import Image from "@/src/components/ui/image"
 import { globalStyles } from "@/src/constants/styles"
 import Navigation from "@/src/hooks/use-navigation"
-import { useChatMessages, useMe, useSendChatMessage } from "@/src/hooks/queries"
+import { useBooking, useChatMessages, useMe, useSendChatMessage } from "@/src/hooks/queries"
 import { messageForError } from "@/src/api/errors"
 import { CALLING_ENABLED } from "@/src/config/calling"
-import { formatClock } from "@/src/utils/dates"
+import { voiceNotesMode } from "@/src/config/voiceNotes"
+import BookingContextCard from "@/src/components/chat/BookingContextCard"
+import { QUICK_REPLIES, bookingContext, withStamps } from "@/src/components/chat/chatModel"
 import type { ChatMessage } from "@/src/services/booking.service"
 import type { ScreenParamLists } from "@/src/navigation/Navigations"
+
+const AVATAR = 40
+
+/** The patient's photo when the booking carries one, else their first letter (there is no presence signal, so no "Active" dot). */
+const Avatar: React.FC<{ name: string; uri?: string | null; size?: number }> = ({ name, uri, size = AVATAR }) => (
+  <View
+    style={{
+      width: size,
+      height: size,
+      borderRadius: size / 2,
+      overflow: "hidden",
+      backgroundColor: theme.colors.primaryLight,
+      alignItems: "center",
+      justifyContent: "center",
+    }}
+  >
+    {uri ? (
+      <Image source={{ uri }} containerStyle={{ width: size, height: size }} imageStyle={{ width: size, height: size }} />
+    ) : (
+      <Text variant="body" weight="bold" color={theme.colors.primary} testID="chat-avatar-initial">
+        {name.trim().charAt(0).toUpperCase() || "P"}
+      </Text>
+    )}
+  </View>
+)
+
+const RoundIconButton: React.FC<{ icon: React.ComponentProps<typeof Feather>["name"]; label: string; onPress: () => void; testID: string }> = ({
+  icon,
+  label,
+  onPress,
+  testID,
+}) => (
+  <TouchableOpacity
+    testID={testID}
+    accessibilityRole="button"
+    accessibilityLabel={label}
+    onPress={onPress}
+    style={{
+      width: 36,
+      height: 36,
+      borderRadius: 18,
+      borderWidth: 1,
+      borderColor: "rgba(255,255,255,0.7)",
+      alignItems: "center",
+      justifyContent: "center",
+    }}
+  >
+    <Feather name={icon} size={18} color={theme.colors.white} />
+  </TouchableOpacity>
+)
 
 const ChatScreen: React.FC<StackScreenProps<ScreenParamLists, "ChatScreen">> = ({ route }) => {
   const { navigation } = Navigation()
   const { bookingId, patientName } = route.params
   const { data: me } = useMe()
   const { data: messages = [] } = useChatMessages(bookingId)
+  const { data: booking } = useBooking(bookingId)
   const send = useSendChatMessage(bookingId)
 
   const [newMessage, setNewMessage] = useState("")
   const scrollViewRef = useRef<ScrollView>(null)
 
-  const handleSendMessage = () => {
-    const text = newMessage.trim()
-    if (!text) return
+  const name = patientName ?? booking?.patient_details?.full_name ?? "Patient"
+  const photo = booking?.patient_details?.profile_image_url ?? null
+  const voiceOn = voiceNotesMode() !== "off"
+  const rows = useMemo(() => withStamps(messages), [messages])
+  const context = useMemo(() => (booking ? bookingContext(booking) : null), [booking])
+
+  const deliver = (text: string, onSent?: () => void) => {
     send.mutate(text, {
-      onSuccess: () => setNewMessage(""),
+      onSuccess: onSent,
       onError: (error) => Alert.alert("Message not sent", messageForError(error)),
     })
   }
+
+  const handleSendMessage = () => {
+    const text = newMessage.trim()
+    if (!text) return
+    deliver(text, () => setNewMessage(""))
+  }
+
+  const openNotetaker = () => navigation.navigate("AINoteTaker", { bookingId })
 
   const handleCall = () => {
     navigation.navigate("CallScreen", { bookingId, patientName })
@@ -52,83 +118,83 @@ const ChatScreen: React.FC<StackScreenProps<ScreenParamLists, "ChatScreen">> = (
       <View
         key={message.id}
         style={{
+          flexDirection: "row",
+          alignItems: "flex-end",
+          gap: theme.spacing.sm,
           alignSelf: isMyMessage ? "flex-end" : "flex-start",
-          backgroundColor: isMyMessage ? theme.colors.primary : theme.colors.white,
-          paddingHorizontal: 16,
-          paddingVertical: 12,
-          borderRadius: 20,
-          marginBottom: 8,
-          maxWidth: "80%",
-          shadowColor: "#000",
-          shadowOffset: { width: 0, height: 1 },
-          shadowOpacity: 0.1,
-          shadowRadius: 2,
-          elevation: 2,
+          maxWidth: "88%",
+          marginBottom: theme.spacing.sm,
         }}
       >
-        <Text variant="body" color={isMyMessage ? theme.colors.white : theme.colors.text}>
-          {message.message}
-        </Text>
-        <Text
-          variant="small"
-          color={isMyMessage ? theme.colors.white + "80" : theme.colors.textLight}
-          style={{ marginTop: 4, alignSelf: "flex-end" }}
+        {isMyMessage ? null : <Avatar name={name} uri={photo} size={32} />}
+        <View
+          testID={isMyMessage ? "chat-bubble-mine" : "chat-bubble-theirs"}
+          style={{
+            flexShrink: 1,
+            backgroundColor: isMyMessage ? "rgba(22, 130, 131, 0.1)" : theme.colors.background,
+            paddingHorizontal: 16,
+            paddingVertical: 12,
+            borderRadius: 20,
+          }}
         >
-          {formatClock(message.created_at)}
-        </Text>
+          <Text variant="body" color={theme.colors.text}>
+            {message.message}
+          </Text>
+        </View>
       </View>
     )
   }
 
   return (
     <KeyboardInsetView style={{ flex: 1 }}>
-      <View style={{ flex: 1, backgroundColor: theme.colors.background }}>
+      <View style={{ flex: 1, backgroundColor: theme.colors.careBackground }}>
         {/* Header */}
         <View
+          testID="chat-header"
           style={{
-            backgroundColor: theme.colors.white,
+            backgroundColor: theme.colors.primary,
             paddingTop: 50,
             paddingBottom: 16,
             paddingHorizontal: 20,
-            borderBottomWidth: 1,
-            borderBottomColor: theme.colors.border,
           }}
         >
           <View style={[globalStyles.row, { justifyContent: "space-between", alignItems: "center" }]}>
             <View style={[globalStyles.row, { alignItems: "center", flex: 1 }]}>
-              <TouchableOpacity onPress={() => navigation.goBack()} style={{ marginRight: 16 }}>
-                <Feather name="arrow-left" size={24} color={theme.colors.text} />
+              <TouchableOpacity
+                testID="chat-back"
+                accessibilityRole="button"
+                accessibilityLabel="Back"
+                onPress={() => navigation.goBack()}
+                style={{
+                  width: 36,
+                  height: 36,
+                  borderRadius: 18,
+                  borderWidth: 1,
+                  borderColor: "rgba(255,255,255,0.7)",
+                  alignItems: "center",
+                  justifyContent: "center",
+                }}
+              >
+                <Feather name="chevron-left" size={20} color={theme.colors.white} />
               </TouchableOpacity>
-              <View style={{ flex: 1 }}>
-                <Text variant="h3" weight="bold">
-                  {patientName ?? "Patient"}
-                </Text>
-                <View style={[globalStyles.row, { alignItems: "center" }]}>
-                  <View
-                    style={{
-                      width: 8,
-                      height: 8,
-                      borderRadius: 4,
-                      backgroundColor: theme.colors.success,
-                      marginRight: 6,
-                    }}
-                  />
-                  <Text variant="small" color={theme.colors.textLight}>
-                    Messages refresh every few seconds
-                  </Text>
-                </View>
-              </View>
+              <Avatar name={name} uri={photo} />
+              <Text variant="body" weight="bold" color={theme.colors.white} style={{ flexShrink: 1 }} numberOfLines={1} testID="chat-name">
+                {name}
+              </Text>
             </View>
-            {CALLING_ENABLED ? (
-              <View style={[globalStyles.row, { gap: 16 }]}>
-                <TouchableOpacity testID="chat-call" onPress={handleCall}>
-                  <Feather name="phone" size={24} color={theme.colors.primary} />
-                </TouchableOpacity>
-                <TouchableOpacity testID="chat-video-call" onPress={handleVideoCall}>
-                  <Feather name="video" size={24} color={theme.colors.primary} />
-                </TouchableOpacity>
-              </View>
-            ) : null}
+            <View style={[globalStyles.row, { gap: 12 }]}>
+              {voiceOn ? <RoundIconButton testID="chat-notetaker" icon="mic" label="AI Notetaker" onPress={openNotetaker} /> : null}
+              {CALLING_ENABLED ? (
+                <>
+                  <TouchableOpacity testID="chat-call" onPress={handleCall}>
+                    <Feather name="phone" size={24} color={theme.colors.white} />
+                  </TouchableOpacity>
+                  <TouchableOpacity testID="chat-video-call" onPress={handleVideoCall}>
+                    <Feather name="video" size={24} color={theme.colors.white} />
+                  </TouchableOpacity>
+                </>
+              ) : null}
+            </View>
           </View>
         </View>
 
@@ -142,49 +208,99 @@ const ChatScreen: React.FC<StackScreenProps<ScreenParamLists, "ChatScreen">> = (
           // The list shrinks when the keyboard opens: keep the latest message in view.
           onLayout={() => scrollViewRef.current?.scrollToEnd({ animated: true })}
         >
-          {messages.map(renderMessage)}
+          {context ? (
+            <BookingContextCard context={context} onViewDetails={() => navigation.popTo("BookingDetails", { bookingId })} />
+          ) : null}
+          {rows.map((row) =>
+            row.kind === "stamp" ? (
+              <Text key={row.key} variant="small" color={theme.colors.textLight} center testID="chat-stamp" style={{ marginVertical: theme.spacing.sm }}>
+                {row.label}
+              </Text>
+            ) : (
+              renderMessage(row.message)
+            ),
+          )}
         </ScrollView>
 
-        {/* Message Input */}
+        {/* Quick replies and message input */}
         <View
           style={{
-            backgroundColor: theme.colors.white,
+            backgroundColor: theme.colors.primaryLight,
             paddingHorizontal: 20,
-            paddingVertical: 16,
-            borderTopWidth: 1,
-            borderTopColor: theme.colors.border,
+            paddingTop: theme.spacing.sm,
+            paddingBottom: theme.spacing.md,
+            gap: theme.spacing.sm,
           }}
         >
-          <View style={[globalStyles.row, { alignItems: "flex-end", gap: 12 }]}>
+          <ScrollView horizontal showsHorizontalScrollIndicator={false} keyboardShouldPersistTaps="handled" contentContainerStyle={{ gap: theme.spacing.sm }}>
+            {QUICK_REPLIES.map((reply) => (
+              <Pressable
+                key={reply}
+                testID={`quick-reply-${reply}`}
+                accessibilityRole="button"
+                disabled={send.isPending}
+                onPress={() => deliver(reply)}
+                style={{
+                  borderWidth: 1,
+                  borderColor: theme.colors.border,
+                  backgroundColor: theme.colors.white,
+                  borderRadius: theme.borderRadius.round,
+                  paddingHorizontal: theme.spacing.md,
+                  paddingVertical: theme.spacing.xs,
+                  opacity: send.isPending ? 0.5 : 1,
+                }}
+              >
+                <Text variant="caption" color={theme.colors.text}>
+                  {reply}
+                </Text>
+              </Pressable>
+            ))}
+          </ScrollView>
+          <View style={[globalStyles.row, { alignItems: "center", gap: 12 }]}>
             <View
               style={{
                 flex: 1,
-                backgroundColor: theme.colors.background,
+                flexDirection: "row",
+                alignItems: "center",
+                backgroundColor: theme.colors.white,
+                borderWidth: 1,
+                borderColor: "rgba(22, 130, 131, 0.35)",
                 borderRadius: 25,
-                paddingHorizontal: 16,
-                paddingVertical: 12,
-                maxHeight: 100,
+                paddingLeft: 16,
+                paddingRight: 12,
+                paddingVertical: 4,
               }}
             >
               <TextInput
- maxFontSizeMultiplier={MAX_FONT_SCALE}
+                maxFontSizeMultiplier={MAX_FONT_SCALE}
                 value={newMessage}
                 onChangeText={setNewMessage}
                 placeholder="Type a message..."
                 placeholderTextColor={theme.colors.textLight}
                 multiline
                 style={{
+                  flex: 1,
                   fontSize: theme.sizes.body,
                   color: theme.colors.text,
                   maxHeight: 80,
+                  paddingVertical: 8,
                 }}
               />
+              {voiceOn ? (
+                <TouchableOpacity testID="chat-composer-mic" accessibilityRole="button" accessibilityLabel="Voice to text" onPress={openNotetaker} hitSlop={8}>
+                  <Feather name="mic" size={20} color={theme.colors.textLight} />
+                </TouchableOpacity>
+              ) : null}
             </View>
             <TouchableOpacity
+              testID="chat-send"
+              accessibilityRole="button"
+              accessibilityLabel="Send message"
               onPress={handleSendMessage}
               disabled={!newMessage.trim() || send.isPending}
               style={{
-                backgroundColor: newMessage.trim() ? theme.colors.primary : theme.colors.border,
+                backgroundColor: theme.colors.primary,
+                opacity: newMessage.trim() && !send.isPending ? 1 : 0.5,
                 width: 48,
                 height: 48,
                 borderRadius: 24,
@@ -192,7 +308,7 @@ const ChatScreen: React.FC<StackScreenProps<ScreenParamLists, "ChatScreen">> = (
                 justifyContent: "center",
               }}
             >
-              <Feather name="send" size={20} color={theme.colors.white} />
+              <Ionicons name="paper-plane-outline" size={22} color={theme.colors.white} />
             </TouchableOpacity>
           </View>
         </View>

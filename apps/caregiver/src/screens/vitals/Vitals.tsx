@@ -5,15 +5,19 @@ import { Feather } from "@expo/vector-icons";
 import { messageForError } from "@/src/api/errors";
 import { ErrorState, LoadingState } from "@/src/components/account/StateViews";
 import Button from "@/src/components/ui/button";
+import Image from "@/src/components/ui/image";
 import Text from "@/src/components/ui/text";
+import VitalStatusBadge, { statusTint, type VitalStatus } from "@/src/components/vitals/VitalStatusBadge";
 import { NoActiveVisit, VitalsUnavailable } from "@/src/components/vitals/VitalsStates";
 import { theme } from "@/src/constants/theme";
-import { useBookingsTab, useVitals } from "@/src/hooks/queries";
+import { useBookingsTab, useClientProfile, useVitals } from "@/src/hooks/queries";
 import useNavigation from "@/src/hooks/use-navigation";
 import { vitalsService } from "@/src/services/vitals.service";
-import { shareVitalsReport } from "@/src/vitals/report";
+import { holdReport } from "@/src/vitals/reportStore";
 import {
   VITAL_KINDS,
+  ageAndSexLine,
+  formatLastUpdated,
   formatUpdated,
   isVitalsAccessDenied,
   latestByKind,
@@ -22,21 +26,26 @@ import {
   type VitalKindInfo,
 } from "@/src/vitals/vitalsModel";
 
-const Tile: React.FC<{ info: VitalKindInfo; value: string | null; unit: string | null; updated: string | null; onPress: () => void }> = ({
-  info,
-  value,
-  unit,
-  updated,
-  onPress,
-}) => (
+const Tile: React.FC<{
+  info: VitalKindInfo;
+  value: string | null;
+  unit: string | null;
+  updated: string | null;
+  /** A clinician-approved status, when one exists. Nothing supplies it yet, and the badge stays off (`VITAL_STATUS_BADGES`). */
+  status?: VitalStatus | null;
+  onPress: () => void;
+}> = ({ info, value, unit, updated, status, onPress }) => (
   <Pressable
     testID={`vital-tile-${info.kind}`}
     accessibilityRole="button"
     accessibilityLabel={`${info.label}, open chart`}
     onPress={onPress}
-    style={{ width: "48%", backgroundColor: theme.colors.soft, borderRadius: theme.borderRadius.xl, padding: theme.spacing.md, marginBottom: theme.spacing.md, gap: theme.spacing.sm }}
+    style={{ width: "48%", backgroundColor: statusTint(status), borderRadius: theme.borderRadius.xl, padding: theme.spacing.md, marginBottom: theme.spacing.md, gap: theme.spacing.sm }}
   >
-    <Feather name={info.icon} size={22} color={theme.colors.primary} />
+    <View style={{ flexDirection: "row", alignItems: "center", justifyContent: "space-between" }}>
+      <Feather name={info.icon} size={22} color={theme.colors.primary} />
+      <VitalStatusBadge status={status} testID={`vital-status-${info.kind}`} />
+    </View>
     <Text variant="body" weight="medium">
       {info.label}
     </Text>
@@ -78,9 +87,11 @@ const Vitals: React.FC<{ active?: boolean; patientId?: string; onBack?: () => vo
   const patient = ready.find((p) => p.patientId === (pickedId ?? patientId)) ?? ready[0];
   const vitals = useVitals(patient?.patientId, active);
 
-  // A downloaded report belongs to one patient; it is kept in memory only, tagged with who it is for.
-  const [report, setReport] = useState<{ patientId: string; csv: string } | null>(null);
   const [downloading, setDownloading] = useState(false);
+
+  // Age, sex and photo come from the client profile of the live visit; without it the row shows the name alone.
+  const visitId = bookings.data?.find((b) => b.patient_id === patient?.patientId && b.status === "in_progress")?.id;
+  const profile = useClientProfile(visitId ?? "", active && !!visitId).data;
 
   const { refetch: refetchBookings } = bookings;
   const { refetch: refetchVitals } = vitals;
@@ -93,28 +104,25 @@ const Vitals: React.FC<{ active?: boolean; patientId?: string; onBack?: () => vo
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [active]);
 
-  const csv = report && report.patientId === patient?.patientId ? report.csv : null;
-
   const latest = useMemo(() => latestByKind(toReadings(vitals.data ?? [])), [vitals.data]);
 
+  // The newest reading of any vital: when the client's vitals were last updated.
+  const lastUpdated = useMemo(() => {
+    const times = Object.values(latest).map((r) => r.recordedAt.getTime());
+    return times.length ? formatLastUpdated(new Date(Math.max(...times))) : null;
+  }, [latest]);
+
+  // The report goes to the success page, which shares it; it is held in memory only and never put in the route.
   const download = async () => {
     if (!patient) return;
     setDownloading(true);
     try {
-      setReport({ patientId: patient.patientId, csv: await vitalsService.downloadCsv(patient.patientId) });
+      holdReport(patient.patientId, await vitalsService.downloadCsv(patient.patientId));
+      navigation.navigate("VitalReportDownloaded", { patientId: patient.patientId });
     } catch (error) {
       Alert.alert("Couldn't download the report", isVitalsAccessDenied(error) ? "Reports are available during an active visit." : messageForError(error));
     } finally {
       setDownloading(false);
-    }
-  };
-
-  const share = async () => {
-    if (csv === null) return;
-    try {
-      await shareVitalsReport(csv);
-    } catch (error) {
-      Alert.alert("Couldn't share the report", error instanceof Error ? error.message : messageForError(error));
     }
   };
 
@@ -134,18 +142,31 @@ const Vitals: React.FC<{ active?: boolean; patientId?: string; onBack?: () => vo
     return (
       <>
         <View style={{ flexDirection: "row", alignItems: "center", gap: theme.spacing.md, marginBottom: theme.spacing.md }}>
-          <View style={{ width: 48, height: 48, borderRadius: 24, backgroundColor: theme.colors.primaryLight, alignItems: "center", justifyContent: "center" }}>
-            <Text variant="h3" weight="bold" color={theme.colors.primary}>
-              {patient.name.charAt(0).toUpperCase()}
-            </Text>
+          <View style={{ width: 48, height: 48, borderRadius: 24, overflow: "hidden", backgroundColor: theme.colors.primaryLight, alignItems: "center", justifyContent: "center" }}>
+            {profile?.profile_image_url ? (
+              <Image source={{ uri: profile.profile_image_url }} containerStyle={{ width: 48, height: 48 }} imageStyle={{ width: 48, height: 48 }} />
+            ) : (
+              <Text variant="h3" weight="bold" color={theme.colors.primary}>
+                {patient.name.charAt(0).toUpperCase()}
+              </Text>
+            )}
           </View>
           <View style={{ flex: 1 }}>
-            <Text variant="caption" color={theme.colors.textLight}>
-              Patient
-            </Text>
-            <Text variant="body" weight="bold" testID="vitals-patient-name">
-              {patient.name}
-            </Text>
+            <View style={{ flexDirection: "row", alignItems: "baseline", gap: theme.spacing.sm, flexWrap: "wrap" }}>
+              <Text variant="body" weight="bold" testID="vitals-patient-name">
+                {patient.name}
+              </Text>
+              {ageAndSexLine(profile) ? (
+                <Text variant="caption" color={theme.colors.textLight} testID="vitals-age-sex">
+                  {ageAndSexLine(profile)}
+                </Text>
+              ) : null}
+            </View>
+            {lastUpdated ? (
+              <Text variant="caption" color={theme.colors.textLight} testID="vitals-last-updated">
+                {`Last updated: ${lastUpdated}`}
+              </Text>
+            ) : null}
           </View>
         </View>
 
@@ -190,16 +211,7 @@ const Vitals: React.FC<{ active?: boolean; patientId?: string; onBack?: () => vo
           Last 30 days. Readings are shown as recorded; Oakly does not rate them.
         </Text>
 
-        {csv !== null ? (
-          <View style={{ gap: theme.spacing.sm }}>
-            <Text variant="body" weight="medium" color={theme.colors.primary} testID="vitals-downloaded">
-              Vital report downloaded
-            </Text>
-            <Button title="Share report" onPress={() => void share()} />
-          </View>
-        ) : (
-          <Button title="Download report" variant="outline" onPress={() => void download()} loading={downloading} />
-        )}
+        <Button testID="download-report" title="Download Report" onPress={() => void download()} loading={downloading} />
       </>
     );
   };
@@ -226,7 +238,7 @@ const Vitals: React.FC<{ active?: boolean; patientId?: string; onBack?: () => vo
             </Pressable>
           ) : null}
           <Text variant="h2" weight="bold" color={theme.colors.white}>
-            Vitals
+            Clients Vitals
           </Text>
         </View>
         {patient ? (
@@ -238,7 +250,7 @@ const Vitals: React.FC<{ active?: boolean; patientId?: string; onBack?: () => vo
           >
             <Feather name="plus" size={18} color={theme.colors.white} />
             <Text variant="small" weight="medium" color={theme.colors.white}>
-              Add new readings
+              Add New Readings
             </Text>
           </Pressable>
         ) : null}

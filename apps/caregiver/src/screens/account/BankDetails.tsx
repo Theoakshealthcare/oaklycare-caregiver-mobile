@@ -97,13 +97,6 @@ const BankForm: React.FC<{ hasAccount: boolean; onSaved: (account: BankAccount) 
 
   return (
     <View>
-      <Text variant="body" weight="bold" style={{ marginBottom: 4 }}>
-        {hasAccount ? "Change bank account" : "Add your bank account"}
-      </Text>
-      <Text variant="small" color={theme.colors.textLight} style={{ marginBottom: 16 }}>
-        Choose your bank and enter your account number. We will show the name on the account so you can confirm it is yours.
-      </Text>
-
       <BankPicker
         banks={banks.data}
         loading={banks.isPending}
@@ -118,7 +111,7 @@ const BankForm: React.FC<{ hasAccount: boolean; onSaved: (account: BankAccount) 
         }}
       />
       <Input
-        label="Account number"
+        label="Enter Account Details"
         value={number}
         keyboardType="number-pad"
         maxLength={10}
@@ -132,6 +125,16 @@ const BankForm: React.FC<{ hasAccount: boolean; onSaved: (account: BankAccount) 
           setNumberProblem(undefined);
           reset();
         }}
+        containerStyle={{ marginBottom: 16 }}
+      />
+      {/* The name is read back from the bank, not typed: it fills in once the account is checked, and the caregiver confirms it is theirs. */}
+      <Input
+        label="Account Name"
+        value={resolved?.account_name ?? ""}
+        editable={false}
+        placeholder="Shown after your account is checked"
+        testID="bank-resolved"
+        containerStyle={{ opacity: resolved ? 1 : 0.6 }}
       />
 
       {failure ? (
@@ -150,26 +153,16 @@ const BankForm: React.FC<{ hasAccount: boolean; onSaved: (account: BankAccount) 
       ) : null}
 
       {resolved ? (
-        <View style={{ padding: 16, borderRadius: 16, backgroundColor: theme.colors.primaryLight, marginTop: 16, marginBottom: 16 }} testID="bank-resolved">
-          <Text variant="small" color={theme.colors.textLight}>
-            Name on this account
-          </Text>
-          <Text variant="body" weight="bold" style={{ marginBottom: 8 }}>
-            {resolved.account_name}
-          </Text>
-          <Text variant="small" color={theme.colors.textLight}>
+        <>
+          <Text variant="small" color={theme.colors.textLight} style={{ marginTop: 12 }}>
             {`${resolved.bank_name} · ${resolved.account_number}`}
           </Text>
-        </View>
-      ) : null}
-
-      {resolved ? (
-        <>
-          <Button title="Yes, this is my account" onPress={() => void confirm()} loading={save.isPending} />
+          <Button title="Yes, this is my account" onPress={() => void confirm()} loading={save.isPending} style={{ marginTop: 16 }} />
           <Button title="No, change details" variant="ghost" onPress={reset} style={{ marginTop: 8 }} />
         </>
       ) : (
-        <Button title="Check account" onPress={() => void check()} loading={resolve.isPending} style={{ marginTop: 16 }} />
+        // Figma's one button. It checks the account first (the owner keeps the name confirmation); saving follows the "Yes".
+        <Button title="Update Payment Details" onPress={() => void check()} loading={resolve.isPending} style={{ marginTop: 24 }} />
       )}
       {hasAccount ? <Button title="Cancel" variant="ghost" onPress={onCancel} style={{ marginTop: 8 }} /> : null}
     </View>
@@ -232,7 +225,8 @@ const BankDetails: React.FC = () => {
     );
   };
 
-  return <ScreenShell title="Payment details">{body()}</ScreenShell>;
+  const formShown = bank.data === null || editing;
+  return <ScreenShell title={formShown ? "Update Payment Details" : "Payment Details"}>{body()}</ScreenShell>;
 };
 
 export default BankDetails;

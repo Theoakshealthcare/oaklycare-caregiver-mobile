@@ -8,7 +8,7 @@ import CarePlanDetails from "../src/screens/careplan/CarePlanDetails";
 import CarePlanSuccess from "../src/screens/careplan/CarePlanSuccess";
 import { carePlansService } from "../src/services/carePlans.service";
 import { clientsService } from "../src/services/clients.service";
-import { renderWithClient, routeProps } from "../test-utils/carePlanHarness";
+import { openAllSections, renderWithClient, routeProps } from "../test-utils/carePlanHarness";
 import {
   INVALID_END_DATE,
   MEDICATION_A,
@@ -55,8 +55,12 @@ afterEach(async () => {
   await session.signOut();
 });
 
-const renderDetails = () =>
-  renderWithClient(<CarePlanDetails {...routeProps<React.ComponentProps<typeof CarePlanDetails>>({ planId: PLAN_ID })} />);
+const renderDetails = async () => {
+  const view = await renderWithClient(<CarePlanDetails {...routeProps<React.ComponentProps<typeof CarePlanDetails>>({ planId: PLAN_ID })} />);
+  // The sections start closed, as Figma draws them; these tests read what is inside them.
+  await openAllSections();
+  return view;
+};
 
 describe("Care plan details: medication schedules (the list and the notice)", () => {
   it("always shows the notice, with the words as the backend gives them, even with no medications", async () => {
@@ -71,16 +75,17 @@ describe("Care plan details: medication schedules (the list and the notice)", ()
     jest.spyOn(carePlansService, "getPlan").mockResolvedValue(readOnlyPlan({ medications: [medication()] }));
     await renderDetails();
     expect(await screen.findByTestId("medication-notice")).toHaveTextContent(MEDICATION_NOTICE);
-    expect(screen.getByText("Placeholder medicine A")).toBeTruthy();
+    expect(screen.getByText("Placeholder medicine A 500 mg")).toBeTruthy();
     expect(screen.queryByTestId("medication-add")).toBeNull();
   });
 
   it("shows each medicine as it was recorded: dose, schedule, reason, prescriber, dates and note", async () => {
     jest.spyOn(carePlansService, "getPlan").mockResolvedValue(plan({ medications: [medication(), minimalMedication()] }));
     await renderDetails();
-    expect(await screen.findByText("Placeholder medicine A")).toBeTruthy();
-    expect(screen.getByText("500 mg · 1 tablet · oral")).toBeTruthy();
-    expect(screen.getByText("Twice daily · 8:00 AM, 8:00 PM")).toBeTruthy();
+    expect(await screen.findByText("Placeholder medicine A 500 mg")).toBeTruthy();
+    expect(screen.getByText("1 tablet · oral")).toBeTruthy();
+    expect(screen.getByTestId(`medication-times-${MEDICATION_A}`)).toHaveTextContent("8:00 AM, 8:00 PM");
+    expect(screen.getByText("Twice daily")).toBeTruthy();
     expect(screen.getByText("For: Placeholder reason")).toBeTruthy();
     expect(screen.getByText("Prescribed by Placeholder prescriber")).toBeTruthy();
     expect(screen.getByText("From 28 Oct 2026 to 25 Nov 2026")).toBeTruthy();
@@ -105,7 +110,7 @@ describe("Care plan details: medication schedules (the list and the notice)", ()
   it("offers nothing that treats a medicine as an instruction: no reminders, no given ticks, no due or overdue", async () => {
     jest.spyOn(carePlansService, "getPlan").mockResolvedValue(plan({ medications: [medication()] }));
     await renderDetails();
-    await screen.findByText("Placeholder medicine A");
+    await screen.findByText("Placeholder medicine A 500 mg");
     expect(screen.queryByText(/remind(er)? me|overdue|due now|mark as given|next dose/i)).toBeNull();
     expect(screen.queryByTestId(`task-toggle-${MEDICATION_A}`)).toBeNull();
   });
@@ -115,10 +120,22 @@ describe("Care plan details: medication schedules (the list and the notice)", ()
     await renderDetails();
     expect(await screen.findByTestId("details-read-only")).toBeTruthy();
     expect(screen.getByTestId("medication-notice")).toBeTruthy();
-    expect(screen.getByText("Placeholder medicine A")).toBeTruthy();
+    expect(screen.getByText("Placeholder medicine A 500 mg")).toBeTruthy();
     expect(screen.queryByTestId("medication-add")).toBeNull();
   });
 });
+
+/** Picks a date through the date field's own sheet (the picker's value changes, then Done). */
+const setDate = async (id: string, date: Date) => {
+  await fireEvent.press(screen.getByTestId(id));
+  await fireEvent(screen.getByTestId(`${id}-picker`), "valueChange", {}, date);
+  await fireEvent.press(screen.getByTestId(`${id}-done`));
+};
+/** Opens a dropdown and chooses one of its options. */
+const choose = async (id: string, value: string) => {
+  await fireEvent.press(screen.getByTestId(id));
+  await fireEvent.press(screen.getByTestId(`${id}-option-${value}`));
+};
 
 describe("Care plan details: add medication (authors)", () => {
   const openModal = async () => {
@@ -137,7 +154,7 @@ describe("Care plan details: add medication (authors)", () => {
     expect(add).not.toHaveBeenCalled();
 
     await fireEvent.changeText(screen.getByTestId("medication-name"), "  Placeholder medicine B ");
-    await fireEvent.press(screen.getByTestId("medication-frequency-as_needed"));
+    await choose("medication-frequency", "as_needed");
     await fireEvent.press(screen.getByTestId("medication-save"));
 
     await waitFor(() => expect(mockNavigate).toHaveBeenCalledWith("CarePlanSuccess", { kind: "medication_added", planId: PLAN_ID }));
@@ -158,10 +175,10 @@ describe("Care plan details: add medication (authors)", () => {
     await type("medication-route", "oral");
     await type("medication-reason", "Placeholder reason");
     await type("medication-prescribed-by", "Placeholder prescriber");
-    await fireEvent.press(screen.getByTestId("medication-frequency-twice_daily"));
+    await choose("medication-frequency", "twice_daily");
     await type("medication-times", "20:00, 08:00");
-    await type("medication-start", "2026-10-28");
-    await type("medication-end", "2026-11-25");
+    await setDate("medication-start", new Date(2026, 9, 28));
+    await setDate("medication-end", new Date(2026, 10, 25));
     await type("medication-note", "Placeholder note");
     await fireEvent.press(screen.getByTestId("medication-save"));
 
@@ -181,7 +198,7 @@ describe("Care plan details: add medication (authors)", () => {
       end_date: "2026-11-25",
     });
     // The cached plan took the new medicine and the new version (no reload was needed).
-    await waitFor(() => expect(screen.getByText("Placeholder medicine A")).toBeTruthy());
+    await waitFor(() => expect(screen.getByText("Placeholder medicine A 500 mg")).toBeTruthy());
     const cached = client.getQueryData<{ version: number; medications: unknown[] }>(["care-plan", PLAN_ID]);
     expect(cached?.version).toBe(2);
     expect(cached?.medications).toHaveLength(1);
@@ -194,8 +211,8 @@ describe("Care plan details: add medication (authors)", () => {
     await openModal();
     await fireEvent.changeText(screen.getByTestId("medication-name"), "Placeholder medicine");
     await fireEvent.changeText(screen.getByTestId("medication-times"), "8am");
-    await fireEvent.changeText(screen.getByTestId("medication-start"), "2026-11-25");
-    await fireEvent.changeText(screen.getByTestId("medication-end"), "2026-10-28");
+    await setDate("medication-start", new Date(2026, 10, 25));
+    await setDate("medication-end", new Date(2026, 9, 28));
     await fireEvent.press(screen.getByTestId("medication-save"));
     expect(screen.getByText(/24-hour format HH:MM/)).toBeTruthy();
     expect(screen.getByText("The end date can't be before the start date.")).toBeTruthy();
@@ -233,10 +250,10 @@ describe("Care plan details: add medication (authors)", () => {
     await renderDetails();
     await openModal();
     await fireEvent.changeText(screen.getByTestId("medication-name"), "Placeholder medicine");
-    await fireEvent.changeText(screen.getByTestId("medication-end"), "2020-01-01");
+    await setDate("medication-end", new Date(2020, 0, 1));
     await fireEvent.press(screen.getByTestId("medication-save"));
     expect(await screen.findByText("The end date can't be before the start date.")).toBeTruthy();
-    expect(screen.getByTestId("medication-end").props.value).toBe("2020-01-01");
+    expect(screen.getByTestId("medication-end").props.accessibilityLabel).toContain("1 Jan 2020");
   });
 
   it("shows the server's words for another invalid_care_plan refusal above the button (the wording of the 40-medicine limit is an assumed shape: that case is not live in the guide)", async () => {
@@ -308,7 +325,7 @@ describe("Care plan details: add medication (authors)", () => {
     await openModal();
     await fireEvent.changeText(screen.getByTestId("medication-name"), "Placeholder medicine");
     await fireEvent.press(screen.getByTestId("medication-save"));
-    expect(await screen.findByText("Placeholder medicine A")).toBeTruthy();
+    expect(await screen.findByText("Placeholder medicine A 500 mg")).toBeTruthy();
   });
 
   it("does not trust its cached version when the answer skips one: another nurse changed the plan, so it reloads", async () => {
@@ -384,12 +401,13 @@ describe("Care plan details: add medication (authors)", () => {
 
 describe("Care plan success page: medication added", () => {
   it("says the medicine is recorded, promises nothing more, and returns to the plan", async () => {
+    jest.spyOn(carePlansService, "getPlan").mockResolvedValue(plan());
     await renderWithClient(<CarePlanSuccess {...routeProps<React.ComponentProps<typeof CarePlanSuccess>>({ kind: "medication_added", planId: PLAN_ID })} />);
-    expect(screen.getByTestId("success-title")).toHaveTextContent("Medication added successfully");
-    expect(screen.getByText("The medication is now recorded on the client's care plan.")).toBeTruthy();
+    expect(screen.getByTestId("success-title")).toHaveTextContent("New Medication Schedule has been added Successfully");
+    expect(await screen.findByTestId("success-message")).toHaveTextContent("New Medication Schedule has been added for Placeholder Client");
     expect(screen.queryByText(/remind/i)).toBeNull();
+    expect(screen.getByText("View Medication Schedule")).toBeTruthy();
     await fireEvent.press(screen.getByTestId("success-action"));
-    expect(screen.getByText("View Medications")).toBeTruthy();
     expect(mockGoBack).toHaveBeenCalled();
   });
 });

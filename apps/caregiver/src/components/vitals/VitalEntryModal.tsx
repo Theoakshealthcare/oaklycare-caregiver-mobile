@@ -82,55 +82,83 @@ const VitalEntryModal: React.FC<{
     );
   };
 
+  const ICON = 72;
+  const fieldLabel =
+    kind === "blood_pressure"
+      ? `Enter Blood Pressure (${info.units[0]})`
+      : kind === "temperature"
+        ? `Temperature Reading (${info.units.join(" / ")})`
+        : `Enter ${info.heading} (${unit})`;
+
   return (
     <Modal transparent animationType="fade" visible onRequestClose={onClose}>
       <View style={{ flex: 1, backgroundColor: "rgba(0,0,0,0.45)", justifyContent: "center", padding: theme.spacing.md }}>
         <View style={{ backgroundColor: theme.colors.white, borderRadius: theme.borderRadius.xxl, padding: theme.spacing.lg, gap: theme.spacing.md }}>
-          <Pressable accessibilityRole="button" onPress={onClose} style={{ flexDirection: "row", alignItems: "center", gap: theme.spacing.xs }} testID="entry-close">
+          <Pressable accessibilityRole="button" onPress={onClose} style={{ flexDirection: "row", alignItems: "center", gap: theme.spacing.xs, alignSelf: "flex-start" }} testID="entry-close">
             <Feather name="x-circle" size={18} color={theme.colors.textLight} />
             <Text variant="small" color={theme.colors.textLight}>
               Close
             </Text>
           </Pressable>
 
+          {/* The round icon floats above the card's top edge, to the right of Close (Figma). */}
+          <View
+            testID="entry-icon"
+            style={{
+              position: "absolute",
+              top: -ICON / 2,
+              alignSelf: "center",
+              width: ICON,
+              height: ICON,
+              borderRadius: ICON / 2,
+              backgroundColor: theme.colors.white,
+              borderWidth: 1,
+              borderColor: theme.colors.border,
+              alignItems: "center",
+              justifyContent: "center",
+            }}
+          >
+            <Feather name={info.icon} size={30} color={theme.colors.primary} />
+          </View>
+
           <View style={{ alignItems: "center", gap: theme.spacing.xs }}>
-            <Feather name={info.icon} size={28} color={theme.colors.primary} />
-            <Text variant="h3" weight="bold" color={theme.colors.primary}>
-              {info.label}
+            <Text variant="h3" weight="bold" color={theme.colors.primary} testID="entry-title">
+              {info.heading}
+            </Text>
+            <Text variant="caption" color={theme.colors.text} testID="entry-subtitle">
+              {info.entrySubtitle}
             </Text>
           </View>
 
           {kind === "blood_pressure" ? (
-            <View style={{ flexDirection: "row", alignItems: "center", gap: theme.spacing.sm }}>
-              <Input
-                containerStyle={{ flex: 1 }}
-                label="Top (mmHg)"
-                placeholder="120"
-                keyboardType="number-pad"
-                value={value}
-                onChangeText={edit(setValue)}
-                testID="entry-systolic"
-              />
-              <Text variant="h3">/</Text>
-              <Input
-                containerStyle={{ flex: 1 }}
-                label="Bottom (mmHg)"
-                placeholder="80"
-                keyboardType="number-pad"
-                value={diastolic}
-                onChangeText={edit(setDiastolic)}
-                testID="entry-diastolic"
-              />
+            <View style={{ gap: theme.spacing.sm }}>
+              <Text variant="small" weight="medium" testID="entry-label">
+                {fieldLabel}
+              </Text>
+              <View style={{ flexDirection: "row", alignItems: "center", gap: theme.spacing.sm }}>
+                <Input
+                  containerStyle={{ flex: 1 }}
+                  placeholder="120"
+                  keyboardType="number-pad"
+                  value={value}
+                  onChangeText={edit(setValue)}
+                  testID="entry-systolic"
+                  accessibilityLabel="Top number (mmHg)"
+                />
+                <Text variant="h3">/</Text>
+                <Input
+                  containerStyle={{ flex: 1 }}
+                  placeholder="80"
+                  keyboardType="number-pad"
+                  value={diastolic}
+                  onChangeText={edit(setDiastolic)}
+                  testID="entry-diastolic"
+                  accessibilityLabel="Bottom number (mmHg)"
+                />
+              </View>
             </View>
           ) : (
-            <Input
-              label={`Enter ${info.label.toLowerCase()} (${unit})`}
-              placeholder="0"
-              keyboardType="decimal-pad"
-              value={value}
-              onChangeText={edit(setValue)}
-              testID="entry-value"
-            />
+            <Input label={fieldLabel} placeholder="0" keyboardType="decimal-pad" value={value} onChangeText={edit(setValue)} testID="entry-value" />
           )}
 
           {info.units.length > 1 ? (
@@ -166,7 +194,7 @@ const VitalEntryModal: React.FC<{
             </Text>
           ) : null}
 
-          <Button title={`Save ${info.label.toLowerCase()}`} onPress={save} loading={create.isPending} />
+          <Button title={`Update ${info.heading}`} onPress={save} loading={create.isPending} style={{ borderRadius: theme.borderRadius.round }} />
         </View>
       </View>
     </Modal>

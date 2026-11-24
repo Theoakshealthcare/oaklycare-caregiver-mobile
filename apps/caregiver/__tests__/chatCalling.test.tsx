@@ -13,6 +13,7 @@ jest.mock("../src/hooks/use-navigation", () => ({
 jest.mock("../src/hooks/queries", () => ({
   useMe: () => ({ data: { id: "u1" } }),
   useChatMessages: () => ({ data: [] }),
+  useBooking: () => ({ data: undefined }),
   useSendChatMessage: () => ({ mutate: jest.fn() }),
 }));
 // The constant read live, so one file can show both settings.

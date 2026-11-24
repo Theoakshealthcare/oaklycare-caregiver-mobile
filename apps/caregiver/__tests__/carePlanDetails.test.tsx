@@ -7,7 +7,7 @@ import { session } from "../src/auth";
 import CarePlanDetails from "../src/screens/careplan/CarePlanDetails";
 import { carePlansService } from "../src/services/carePlans.service";
 import { clientsService, type ClientProfile } from "../src/services/clients.service";
-import { renderWithClient, routeProps } from "../test-utils/carePlanHarness";
+import { openAllSections, renderWithClient, routeProps } from "../test-utils/carePlanHarness";
 import { GOAL_ID, NOT_A_NURSE, NO_ACCESS, PLAN_ID, dayView, notePage, plan, readOnlyPlan, versionConflict } from "../test-utils/carePlanFixtures";
 
 const mockNavigate = jest.fn();
@@ -38,6 +38,8 @@ const clientProfile = {
 
 beforeEach(async () => {
   await session.signIn({ accessToken: "access", refreshToken: "refresh" });
+  // The client section loads the client's profile when it is opened.
+  jest.spyOn(clientsService, "getClientProfile").mockResolvedValue(clientProfile);
   // The tasks section is part of this screen (M2); its own behaviour is tested in carePlanTasks.test.tsx.
   jest.spyOn(carePlansService, "getTaskDay").mockResolvedValue(dayView());
   jest.spyOn(carePlansService, "listNotes").mockResolvedValue(notePage([]));
@@ -49,8 +51,12 @@ afterEach(async () => {
   await session.signOut();
 });
 
-const renderDetails = () =>
-  renderWithClient(<CarePlanDetails {...routeProps<React.ComponentProps<typeof CarePlanDetails>>({ planId: PLAN_ID })} />);
+const renderDetails = async (openSections = true) => {
+  const view = await renderWithClient(<CarePlanDetails {...routeProps<React.ComponentProps<typeof CarePlanDetails>>({ planId: PLAN_ID })} />);
+  // The sections start closed, as Figma draws them; most of these tests read what is inside them.
+  if (openSections) await openAllSections();
+  return view;
+};
 
 const goal = (over: Record<string, unknown> = {}) => ({
   id: GOAL_ID,
@@ -68,20 +74,26 @@ describe("Care plan details", () => {
     );
     await renderDetails();
     expect(await screen.findByTestId("details-client-name")).toHaveTextContent("Placeholder Client");
-    expect(screen.getByText("Age 71. Female")).toBeTruthy();
+    expect(screen.getByText("Female · 71")).toBeTruthy();
     expect(screen.getByTestId("details-status")).toHaveTextContent("Active Care Plan");
+    // The rest of the plan's header is in the Client Profile section.
     expect(screen.getByText("Placeholder diagnosis")).toBeTruthy();
     expect(screen.getByTestId("details-risk")).toHaveTextContent("High risk");
-    expect(screen.getByText("Starts 28 Oct 2026 · 30 days")).toBeTruthy();
+    expect(screen.getByText("30 Days (Review Every 2 Weeks)")).toBeTruthy();
+    expect(screen.getByText("28 Oct 2026")).toBeTruthy();
     expect(screen.getByTestId("details-review")).toHaveTextContent("Review every 14 days (next 11 Nov 2026)");
-    expect(screen.getByTestId("details-author")).toHaveTextContent("Created by Placeholder Nurse · Stroke Recovery template");
+    expect(screen.getByText("Placeholder Nurse · Stroke Recovery template")).toBeTruthy();
   });
 
   it("lists the goals (discontinued ones hidden) and the allergies and instructions", async () => {
     jest.spyOn(carePlansService, "getPlan").mockResolvedValue(
       plan({ goals: [goal(), goal({ id: "g2", title: "Hidden goal", status: "discontinued" }), goal({ id: "g3", title: "Done goal", status: "achieved" })] }),
     );
-    await renderDetails();
+    await renderDetails(false);
+    // Every section starts closed (Figma); a section's contents appear when it is opened.
+    await screen.findByTestId("details-header");
+    expect(screen.queryByText("Placeholder goal")).toBeNull();
+    await fireEvent.press(screen.getByTestId("section-goals-toggle"));
     expect(await screen.findByText("Placeholder goal")).toBeTruthy();
     expect(screen.queryByText("Hidden goal")).toBeNull();
     expect(screen.getByTestId("goal-achieved-g3")).toBeTruthy();
@@ -97,14 +109,13 @@ describe("Care plan details", () => {
     jest.spyOn(carePlansService, "getPlan").mockResolvedValue(plan({ goals: [], allergies: [], special_instructions: [] }));
     await renderDetails();
     expect(await screen.findByTestId("goals-empty")).toBeTruthy();
-    await fireEvent.press(screen.getByTestId("section-notes-toggle"));
     expect(screen.getAllByText("None recorded.")).toHaveLength(2);
   });
 
   it("loads the client's profile only when that section is opened, labelling the record's own allergies", async () => {
     jest.spyOn(carePlansService, "getPlan").mockResolvedValue(plan());
     const get = jest.spyOn(clientsService, "getClientProfile").mockResolvedValue(clientProfile);
-    await renderDetails();
+    await renderDetails(false);
     await screen.findByTestId("details-client-name");
     expect(get).not.toHaveBeenCalled();
 
@@ -466,7 +477,6 @@ describe("Care plan details: edit plan sheet", () => {
 describe("Care plan details: allergies and special instructions", () => {
   const openList = async (testID: string) => {
     await screen.findByTestId("details-client-name");
-    await fireEvent.press(screen.getByTestId("section-notes-toggle"));
     await fireEvent.press(screen.getByTestId(testID));
     expect(screen.getByTestId("list-edit")).toBeTruthy();
   };

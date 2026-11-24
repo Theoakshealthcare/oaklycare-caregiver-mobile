@@ -136,7 +136,7 @@ describe("Clock-out dialog (Complete visit)", () => {
 describe("Success page: task added", () => {
   it("uses the shared page with the task wording and goes back to the details", async () => {
     await renderWithClient(<CarePlanSuccess {...routeProps<React.ComponentProps<typeof CarePlanSuccess>>({ kind: "task_added", planId: PLAN_ID })} />);
-    expect(screen.getByTestId("success-title")).toHaveTextContent("New Daily Task added successfully");
+    expect(screen.getByTestId("success-title")).toHaveTextContent("New Daily Task added Successfully");
     expect(screen.getByText("View Task")).toBeTruthy();
     await fireEvent.press(screen.getByTestId("success-action"));
     expect(mockGoBack).toHaveBeenCalled();

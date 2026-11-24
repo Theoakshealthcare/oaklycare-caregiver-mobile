@@ -36,6 +36,10 @@ export type ScreenParamLists = {
   EditProfile: undefined;
   ChangePassword: undefined;
   Wallet: undefined;
+  /** The month's payments and Download Payslip, behind the totals on the wallet. */
+  EarningPayment: undefined;
+  /** "April Payslip Downloaded Successfully", after the share sheet closes. `month` is YYYY-MM. */
+  PayslipDownloaded: { month: string };
   BankDetails: undefined;
   Contact: undefined;
   /** Who the visit is for (age, emergency contact, history, latest vitals) while the visit is live. */
@@ -46,6 +50,7 @@ export type ScreenParamLists = {
   PatientVitals: { patientId: string };
   /** Every reading of one vital on record, grouped by day. */
   VitalHistory: { patientId: string; patientName?: string; kind: VitalKind };
+  VitalReportDownloaded: { patientId: string };
   /** Manual vital entry for the patient on the current visit. */
   AddVitals: { patientId: string; patientName?: string };
   /** Care plans hub (nurses): Assigned / Templates. With `bookingId` it was opened from that client's profile, so "Use template" skips the client picker. */

@@ -107,6 +107,33 @@ describe("voice notes off (the default)", () => {
   });
 });
 
+describe("Figma layout (voice notes on)", () => {
+  it("shows the AI Notetaker title, the orb and the Voice to text pill, and says it is listening only while recording", async () => {
+    await render();
+    await waitFor(() => {
+      expect(screen.getByTestId("voice-panel")).toBeTruthy();
+      expect(screen.getByTestId("consent-checkbox")).toBeTruthy();
+    });
+    expect(screen.getByText("AI Notetaker")).toBeTruthy();
+    expect(screen.queryByText("AI, Notetaker")).toBeNull();
+    expect(screen.getByTestId("ai-orb", { includeHiddenElements: true })).toBeTruthy();
+    expect(screen.getByText("Voice to text")).toBeTruthy();
+    expect(screen.getByTestId("listening-label")).toHaveTextContent("Ready to listen");
+    await press("consent-checkbox");
+    await press("mic-button");
+    await waitFor(() => expect(screen.getByTestId("recording-indicator")).toBeTruthy());
+    expect(screen.getByTestId("listening-label")).toHaveTextContent("I'm Listening");
+    expect(screen.queryByText("Voice to text")).toBeNull();
+  });
+
+  it("keeps the typed note form under the voice panel", async () => {
+    await render();
+    await waitFor(() => expect(screen.getByTestId("voice-panel")).toBeTruthy());
+    expect(screen.getByPlaceholderText("Note title...")).toBeTruthy();
+    expect(screen.getByText("Save Note")).toBeTruthy();
+  });
+});
+
 describe("test-mode banner", () => {
   it("is shown in fake mode only: a live build says nothing about sample text", async () => {
     await render();

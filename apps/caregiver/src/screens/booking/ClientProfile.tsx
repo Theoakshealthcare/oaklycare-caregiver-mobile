@@ -137,15 +137,21 @@ const ClientProfile: React.FC<Props> = ({ route }) => {
               Booked by a family member for this client.
             </Text>
           ) : null}
+          {/* Figma also has a "FallGuards" button here: FallGuard data is not served to caregivers, so it is not drawn. */}
           <View style={{ flexDirection: "row", gap: theme.spacing.sm }}>
-            <Button title="Add notes" variant="outline" onPress={() => navigation.navigate("AINoteTaker", { bookingId })} style={{ flex: 1 }} />
+            <Button
+              title="Add Notes"
+              onPress={() => navigation.navigate("AINoteTaker", { bookingId })}
+              style={{ minHeight: 36, paddingVertical: theme.spacing.xs, borderRadius: theme.borderRadius.round }}
+              textStyle={{ fontSize: theme.sizes.caption }}
+            />
           </View>
         </Card>
 
         <ClientCarePlanRow bookingId={bookingId} clientName={profile.full_name} />
 
         <Section
-          title="Latest vitals"
+          title="Latest Vitals"
           action={{ label: "View all", onPress: () => navigation.navigate("PatientVitals", { patientId: profile.patient_id }) }}
         >
           {vitals === null ? (
@@ -183,7 +189,7 @@ const ClientProfile: React.FC<Props> = ({ route }) => {
         </Section>
 
         {history ? (
-          <Section title="Medical history">
+          <Section title="Medical History">
             <Card testID="client-history">
               {history.blood_group ? <LabelledLine label="Blood group" value={history.blood_group} /> : null}
               {history.medical_conditions ? <LabelledLine label="Conditions" value={history.medical_conditions} /> : null}
@@ -201,7 +207,7 @@ const ClientProfile: React.FC<Props> = ({ route }) => {
         ) : null}
 
         {contact ? (
-          <Section title="Emergency contact">
+          <Section title="Emergency Contact">
             <Card testID="client-contact">
               <View style={{ flexDirection: "row", alignItems: "center", gap: theme.spacing.md }}>
                 <View style={{ flex: 1 }}>
@@ -246,7 +252,7 @@ const ClientProfile: React.FC<Props> = ({ route }) => {
 
   return (
     <ScreenShell
-      title="Client profile"
+      title="Client Profile"
       refreshControl={<RefreshControl refreshing={query.isRefetching} onRefresh={() => void query.refetch()} />}
     >
       {content()}

@@ -52,6 +52,12 @@ const renderForm = (params: { bookingId: string; templateId?: string; clientName
 
 const type = (testID: string, text: string) => fireEvent.changeText(screen.getByTestId(testID), text);
 
+/** Risk level is a dropdown: open it and choose. */
+const chooseRisk = async (value: "low" | "medium" | "high") => {
+  await fireEvent.press(screen.getByTestId("create-risk"));
+  await fireEvent.press(screen.getByTestId(`create-risk-option-${value}`));
+};
+
 describe("Create care plan: blank", () => {
   it("checks the diagnosis and risk level before sending anything", async () => {
     const create = jest.spyOn(carePlansService, "createPlan");
@@ -65,10 +71,10 @@ describe("Create care plan: blank", () => {
   it("creates the plan and moves to the success page", async () => {
     const create = jest.spyOn(carePlansService, "createPlan").mockResolvedValue(plan());
     await renderForm({ bookingId: BOOKING, clientName: "Placeholder Client" });
-    expect(screen.getByText("Placeholder Client")).toBeTruthy();
+    expect(screen.getByTestId("create-for")).toHaveTextContent("For Placeholder Client");
 
     await type("create-diagnosis", "Placeholder diagnosis");
-    await fireEvent.press(screen.getByTestId("risk-high"));
+    await chooseRisk("high");
     await type("create-duration", "30");
     await type("create-review", "14");
     await type("create-allergies", "Placeholder allergen\nSecond allergen");
@@ -92,7 +98,7 @@ describe("Create care plan: blank", () => {
     const create = jest.spyOn(carePlansService, "createPlan").mockResolvedValue(plan());
     await renderForm();
     await type("create-diagnosis", "Placeholder diagnosis");
-    await fireEvent.press(screen.getByTestId("risk-low"));
+    await chooseRisk("low");
 
     await fireEvent.press(screen.getByTestId("create-goal-add"));
     expect(screen.getByTestId("create-goal-problem")).toHaveTextContent("Enter the goal.");
@@ -119,7 +125,7 @@ describe("Create care plan: blank", () => {
     const create = jest.spyOn(carePlansService, "createPlan");
     await renderForm();
     await type("create-diagnosis", "Placeholder diagnosis");
-    await fireEvent.press(screen.getByTestId("risk-low"));
+    await chooseRisk("low");
     await type("create-duration", "400");
     await fireEvent.press(screen.getByTestId("create-submit"));
     expect(screen.getByText(/whole number of days from 1 to 365/)).toBeTruthy();
@@ -132,7 +138,7 @@ describe("Create care plan: blank", () => {
     expect(screen.getByTestId("create-review").props.value).toBe("14");
     // The start date is a picker row showing today in the shared format, not a free-text box.
     expect(screen.queryByPlaceholderText(/YYYY-MM-DD/)).toBeNull();
-    expect(screen.getByTestId("create-start").props.accessibilityLabel).toMatch(/^Start date: \d{1,2} \w{3} \d{4}$/);
+    expect(screen.getByTestId("create-start").props.accessibilityLabel).toMatch(/^Start Date \*: \d{1,2} \w{3} \d{4}$/);
   });
 });
 
@@ -177,7 +183,7 @@ describe("Create care plan: from a template", () => {
 describe("Create care plan: refusals", () => {
   const fillAndSubmit = async () => {
     await type("create-diagnosis", "Placeholder diagnosis typed by the nurse");
-    await fireEvent.press(screen.getByTestId("risk-medium"));
+    await chooseRisk("medium");
     await fireEvent.press(screen.getByTestId("create-submit"));
   };
 
@@ -227,8 +233,10 @@ describe("Success page", () => {
 
   it("after a plan is created, opens its details over the hub: the creation screens leave the stack (DP1-26)", async () => {
     await renderSuccess("created");
-    expect(screen.getByTestId("success-title")).toHaveTextContent("Care plan created");
-    await fireEvent.press(screen.getByText("View care plan"));
+    expect(screen.getByTestId("success-title")).toHaveTextContent("New Care Plan Created Successfully");
+    // Figma draws this page with a title only: Close is what opens the plan.
+    expect(screen.queryByTestId("success-action")).toBeNull();
+    await fireEvent.press(screen.getByTestId("success-close"));
     expect(mockDispatch).toHaveBeenCalledTimes(1);
     // What the dispatched action does to a real stack: hub, picker, form, success -> hub, plan.
     const action = mockDispatch.mock.calls[0]?.[0] as (state: unknown) => { payload: { routes: { name: string }[]; index: number } };
@@ -241,8 +249,10 @@ describe("Success page", () => {
   });
 
   it("after a goal is added, returns to the details underneath", async () => {
+    jest.spyOn(carePlansService, "getPlan").mockResolvedValue(plan());
     await renderSuccess("goal_added");
-    expect(screen.getByTestId("success-title")).toHaveTextContent("New Care Goal has been added");
+    expect(screen.getByTestId("success-title")).toHaveTextContent("New Care Goal has been added Successfully");
+    expect(await screen.findByTestId("success-message")).toHaveTextContent("New Care Goal has been added for Placeholder Client");
     await fireEvent.press(screen.getByText("View Care Goal"));
     expect(mockGoBack).toHaveBeenCalled();
     expect(mockReplace).not.toHaveBeenCalled();

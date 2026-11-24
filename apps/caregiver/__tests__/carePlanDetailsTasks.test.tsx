@@ -5,7 +5,7 @@ import { session } from "../src/auth";
 import CarePlanDetails from "../src/screens/careplan/CarePlanDetails";
 import { carePlansService } from "../src/services/carePlans.service";
 import { clientsService } from "../src/services/clients.service";
-import { renderWithClient, routeProps } from "../test-utils/carePlanHarness";
+import { openAllSections, renderWithClient, routeProps } from "../test-utils/carePlanHarness";
 import { NOT_A_NURSE, NO_ACCESS, PLAN_ID, TASK_A, dayView, note, notePage, plan, readOnlyPlan } from "../test-utils/carePlanFixtures";
 
 const mockNavigate = jest.fn();
@@ -34,15 +34,29 @@ afterEach(async () => {
   await session.signOut();
 });
 
-const renderDetails = (params: { from?: "clock_out" } = {}) =>
-  renderWithClient(<CarePlanDetails {...routeProps<React.ComponentProps<typeof CarePlanDetails>>({ planId: PLAN_ID, ...params })} />);
+const renderDetails = async (params: { from?: "clock_out" } = {}, openSections = true) => {
+  const view = await renderWithClient(<CarePlanDetails {...routeProps<React.ComponentProps<typeof CarePlanDetails>>({ planId: PLAN_ID, ...params })} />);
+  // The sections start closed (Figma); most tests read what is inside them.
+  if (openSections) await openAllSections();
+  return view;
+};
+
+/** Opens a dropdown and chooses one of its options. */
+const choose = async (id: string, value: string) => {
+  await fireEvent.press(screen.getByTestId(id));
+  await fireEvent.press(screen.getByTestId(`${id}-option-${value}`));
+};
 
 describe("Care plan details: daily tasks section", () => {
-  it("shows the tasks open by default, the notes section closed, and links to View progress", async () => {
+  it("shows the tasks and notes closed until opened, and links to View Progress", async () => {
     jest.spyOn(carePlansService, "getPlan").mockResolvedValue(plan());
-    await renderDetails();
-    expect(await screen.findByText("Placeholder morning task")).toBeTruthy();
+    await renderDetails({}, false);
+    await screen.findByTestId("details-header");
+    expect(screen.queryByText("Placeholder morning task")).toBeNull();
     expect(screen.queryByTestId("notes-observation")).toBeNull();
+    await fireEvent.press(screen.getByTestId("section-tasks-toggle"));
+    expect(await screen.findByText("Placeholder morning task")).toBeTruthy();
+    await fireEvent.press(screen.getByTestId("section-client-toggle"));
     await fireEvent.press(screen.getByTestId("details-progress"));
     expect(mockNavigate).toHaveBeenCalledWith("CarePlanProgress", { planId: PLAN_ID, clientName: "Placeholder Client" });
   });
@@ -94,10 +108,11 @@ describe("Care plan details: add task (authors)", () => {
     expect(add).not.toHaveBeenCalled();
 
     await fireEvent.changeText(screen.getByTestId("task-title"), "  Physiotherapy appointment ");
-    await fireEvent.press(screen.getByTestId("task-slot-afternoon"));
+    await choose("task-slot", "afternoon");
     await fireEvent.changeText(screen.getByTestId("task-time"), "13:00");
-    await fireEvent.press(screen.getByTestId("task-days-weekdays"));
-    // Weekdays minus Tuesday and Thursday.
+    await choose("task-frequency", "weekdays");
+    // Weekdays minus Tuesday and Thursday: "Choose days" keeps the weekdays and shows the day buttons.
+    await choose("task-frequency", "custom");
     await fireEvent.press(screen.getByTestId("task-day-2"));
     await fireEvent.press(screen.getByTestId("task-day-4"));
     await fireEvent.press(screen.getByTestId("task-save"));
@@ -137,6 +152,7 @@ describe("Care plan details: add task (authors)", () => {
     expect(screen.getByText(/24-hour format HH:MM/)).toBeTruthy();
 
     await fireEvent.changeText(screen.getByTestId("task-time"), "");
+    await choose("task-frequency", "custom");
     for (let day = 1; day <= 7; day++) await fireEvent.press(screen.getByTestId(`task-day-${day}`));
     await fireEvent.press(screen.getByTestId("task-save"));
     expect(screen.getByTestId("task-days-error")).toHaveTextContent("Choose at least one day.");
@@ -171,8 +187,8 @@ describe("Care plan details: notes sections", () => {
     const list = jest.spyOn(carePlansService, "listNotes").mockImplementation(async (_id, category) =>
       notePage(category === "observation" ? [note({ body: "Placeholder observation text" })] : [note({ id: "s1", category: "special_note", body: "Placeholder special text" })]),
     );
-    await renderDetails();
-    await screen.findByText("Placeholder morning task");
+    await renderDetails({}, false);
+    await screen.findByTestId("details-header");
     // Collapsed sections do not load until opened.
     expect(list).not.toHaveBeenCalled();
 
@@ -189,8 +205,8 @@ describe("Care plan details: notes sections", () => {
 
   it("keeps a half-written note when the section is closed and opened again", async () => {
     jest.spyOn(carePlansService, "getPlan").mockResolvedValue(plan());
-    await renderDetails();
-    await screen.findByText("Placeholder morning task");
+    await renderDetails({}, false);
+    await screen.findByTestId("details-header");
     await fireEvent.press(screen.getByTestId("section-observations-toggle"));
     await fireEvent.changeText(await screen.findByTestId("note-input-observation"), "Placeholder draft");
     await fireEvent.press(screen.getByTestId("section-observations-toggle"));
@@ -200,8 +216,8 @@ describe("Care plan details: notes sections", () => {
 
   it("opens the notes first when the caregiver came from the clock-out prompt", async () => {
     jest.spyOn(carePlansService, "getPlan").mockResolvedValue(plan());
-    await renderDetails({ from: "clock_out" });
+    await renderDetails({ from: "clock_out" }, false);
     expect(await screen.findByTestId("notes-observation")).toBeTruthy();
-    expect(screen.getByText("Placeholder morning task")).toBeTruthy();
+    expect(await screen.findByText("Placeholder morning task")).toBeTruthy();
   });
 });
