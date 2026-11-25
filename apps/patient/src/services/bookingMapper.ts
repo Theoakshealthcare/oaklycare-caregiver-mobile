@@ -1,6 +1,7 @@
 import type { Schemas } from "@oakly/api-client";
 
 import { conditionText, helpNeeded, type BookableService, type Booking, type BookingDraft, type BookingQuote, type CancelResult, type CancelTerms, type Refund } from "@/src/domain/booking";
+import { utcIso } from "@/src/domain/dates";
 import { firstNameOf } from "@/src/domain/names";
 import type { PaymentChannel } from "@/src/domain/paymentMethods";
 import { toLocalDate } from "@/src/domain/slots";
@@ -44,6 +45,8 @@ export function toBooking(b: BookingResponse): Booking {
     cancelFee: b.cancel_fee ?? null,
     cancelFeeTier: b.cancel_fee_tier ?? null,
     refund: refundOf(b.refund),
+    chatOpen: b.chat_open ?? null,
+    chatClosesAt: b.chat_closes_at ? utcIso(b.chat_closes_at) : null,
   };
 }
 

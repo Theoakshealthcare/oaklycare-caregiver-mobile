@@ -334,3 +334,13 @@ Owner decisions (2026-11-07): move the old app into the monorepo on SDK 57, copi
 ## Caregiver typed visit-note entry UX (2026-11-25)
 - [x] Labelled, outlined Title and Note fields (shared `Input`, placeholders "Note title" / "Write your note here"), multiline body min 140 / max 200 pt, "Save Note" pinned above the keyboard with the shared bottom gap, form scrolled into view on focus; AI Notetaker block and Voice notes list unchanged (branch `fix/caregiver-notes-entry-ux`, [SOP](../sop/2026-11-25-caregiver-notes-entry-ux.md); Jest, tsc, lint; **seen on the iOS simulator, Android not seen**)
 - [ ] Deferred: a time window and length cap for typed notes (backend has none today), per-field inline errors
+
+## Chat and visit notes close after the visit; stale-location nudge (2026-11-25, both apps)
+- [x] `@oakly/api-client`: `chat_open` / `chat_closes_at` / `notes_*` from backend #81, shared `chatWindow` / `notesWindow` and the `chat_closed` / `visit_not_active` / `not_found` codes, with node tests
+- [x] Patient chat and caregiver chat room: closed line in place of the composer (visit over / booking cancelled), "You can chat until ..." hint, a racing 409 closes the screen with no toast; caregiver Chats list "Closed" label
+- [x] Caregiver notes screen: closed banner and no entry forms, "You can add notes until ..." after completion, 409 on save keeps the typed note, 404 / expired read shows "These notes are no longer available."
+- [x] `location_stale` push: tap opens Home and sends one position; a push with the app open does the same, no banner
+- [x] **Seen on the iOS simulator** (fake API answering with the backend's captures): every state above except the notification tap and the cancelled-booking line; branch `feature/apps-post-visit-windows` ([SOP](../sop/2026-11-25-apps-post-visit-windows.md), ledger `ledgers/LEDGER-apps-windows-ui.md`)
+- [ ] **Not seen:** Android, a real phone, a real notification tap (Jest only)
+- [ ] Merge after the owner's "merge #N" with CI green; backend #81 is already on `develop`
+

@@ -11,7 +11,7 @@ import { pushTokenStorage } from "@/src/auth/secureStorage";
 import { useSession } from "@/src/auth";
 import { pushService } from "@/src/services/push.service";
 
-import { parseJobOffer, registerForPush, type PushRegistrationDeps } from "./registration";
+import { isLocationStale, parseJobOffer, registerForPush, type PushRegistrationDeps } from "./registration";
 
 /** EAS project id from app config. Absent until `eas init` has been run for this app. */
 export function easProjectId(): string | undefined {
@@ -55,16 +55,18 @@ let handlerInstalled = false;
 
 /**
  * Foreground behaviour: a job offer is shown by the app's own banner (see `InAppBanner`), so the
- * system banner is suppressed for it. Everything else keeps the default.
+ * system banner is suppressed for it; so is the "update your location" nudge. Everything else keeps the default.
  */
 export function installNotificationHandler(): void {
   if (handlerInstalled) return;
   handlerInstalled = true;
   Notifications.setNotificationHandler({
     handleNotification: async (notification) => {
-      const isOffer = parseJobOffer(notification.request.content.data) !== null;
+      const data = notification.request.content.data;
+      // An offer has its own in-app banner; the location nudge needs no banner on top of an app that is already open.
+      const quiet = parseJobOffer(data) !== null || isLocationStale(data);
       return {
-        shouldShowBanner: !isOffer,
+        shouldShowBanner: !quiet,
         shouldShowList: true,
         shouldPlaySound: true,
         shouldSetBadge: false,

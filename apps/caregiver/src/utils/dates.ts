@@ -104,3 +104,17 @@ export function formatTimeAgo(value: string | Date | null | undefined, now: Date
   const days = Math.floor(hours / 24);
   return `${days} ${days === 1 ? "day" : "days"} ago`;
 }
+
+/**
+ * When a window ends, 24-hour in the phone's zone: "09:14" for a time later today, "09:14 tomorrow" for the next day,
+ * else "28 Oct, 09:14" ("You can chat until ...", "You can add notes until ...").
+ */
+export function formatUntil(value: string | Date | null | undefined, now: Date = new Date()): string {
+  const date = toDate(value);
+  if (!date) return "";
+  const startOf = (d: Date) => new Date(d.getFullYear(), d.getMonth(), d.getDate()).getTime();
+  const diff = Math.round((startOf(date) - startOf(now)) / 86_400_000);
+  if (diff <= 0) return formatClock(date);
+  if (diff === 1) return `${formatClock(date)} tomorrow`;
+  return formatStamp(date);
+}

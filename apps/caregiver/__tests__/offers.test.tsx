@@ -58,6 +58,7 @@ const offerView: Booking = {
   payment_url: null,
   payment_access_code: null,
   payment_error: null,
+  chat_open: true,
 };
 
 const DECOYS = [

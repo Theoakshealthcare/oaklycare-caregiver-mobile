@@ -1,4 +1,4 @@
-import { parseChatMessage, parseJobOffer, registerForPush, type PushRegistrationDeps } from "../src/push/registration";
+import { isLocationStale, parseChatMessage, parseJobOffer, registerForPush, type PushRegistrationDeps } from "../src/push/registration";
 import { resolveOffer } from "../src/push/openOffer";
 import type { CaregiverHome } from "../src/supply/locationService";
 
@@ -255,5 +255,20 @@ describe("parseChatMessage (the new-message push: data.type chat_message, bookin
 
   it("is never mistaken for a job offer", () => {
     expect(parseJobOffer({ type: "chat_message", booking_id: "b1" })).toBeNull();
+  });
+});
+
+describe("isLocationStale (the nudge for an Available caregiver whose position is over 6 hours old: data.type location_stale)", () => {
+  it("accepts the captured payload (backend capture 013: data is just the type)", () => {
+    expect(isLocationStale({ type: "location_stale" })).toBe(true);
+  });
+
+  it.each([null, undefined, "location_stale", {}, { type: "chat_message", booking_id: "b1" }, { type: "job_offer", booking_id: "b1" }, { type: 7 }])("ignores %p", (data) => {
+    expect(isLocationStale(data)).toBe(false);
+  });
+
+  it("is never mistaken for an offer or a chat message", () => {
+    expect(parseJobOffer({ type: "location_stale" })).toBeNull();
+    expect(parseChatMessage({ type: "location_stale" })).toBeNull();
   });
 });

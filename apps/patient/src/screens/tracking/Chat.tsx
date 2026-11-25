@@ -1,10 +1,13 @@
 import type { StackScreenProps } from "@react-navigation/stack";
 import type React from "react";
 import { useIsFocused } from "@react-navigation/native";
+import { CHAT_CLOSED, chatWindow, errorCode } from "@oakly/api-client";
+import { useQueryClient } from "@tanstack/react-query";
 import { useRef, useState } from "react";
 import { Pressable, ScrollView, StyleSheet, TextInput, View } from "react-native";
 
-import { messageForError } from "@/src/api/errors";
+import { ApiError, messageForError } from "@/src/api/errors";
+import { queryKeys } from "@/src/api/keys";
 import Icon from "@/src/components/ui/icon";
 import KeyboardInsetView from "@/src/components/ui/keyboard-inset-view";
 import ProviderAvatar from "@/src/components/booking/ProviderAvatar";
@@ -13,7 +16,7 @@ import Text from "@/src/components/ui/text";
 import { MAX_FONT_SCALE, theme } from "@/src/constants/theme";
 import { sameDay, SHORT_WEEKDAYS } from "@/src/domain/bookingList";
 import { MAX_MESSAGE_LENGTH } from "@/src/domain/chat";
-import { formatTime } from "@/src/domain/format";
+import { formatTime, formatUntil } from "@/src/domain/format";
 import { useBooking } from "@/src/hooks/useBookings";
 import { useChat, useSendMessage } from "@/src/hooks/useChat";
 import { useMe } from "@/src/hooks/queries";
@@ -21,7 +24,18 @@ import type { ScreenParamLists } from "@/src/navigation/Navigations";
 
 type Props = StackScreenProps<ScreenParamLists, "Chat">;
 
-/** Text chat with the caregiver on a booking. No call, video or voice-note buttons in v1. */
+/** The two calm lines a closed chat shows in place of the message bar. */
+export const CHAT_CLOSED_VISIT_OVER = "This chat has closed because the visit is over.";
+export const CHAT_CLOSED_CANCELLED = "This chat is closed because the booking was cancelled.";
+
+/**
+ * Text chat with the caregiver on a booking. No call, video or voice-note buttons in v1.
+ *
+ * The chat can be written to until 24 hours after the visit is completed (`chat_open` / `chat_closes_at` on the booking),
+ * and never once the booking was cancelled. A closed chat keeps its history but loses the message bar. A missing field
+ * counts as open (the server has the last word: a send after the cutoff is a 409 `chat_closed`, which closes the screen
+ * instead of showing an error).
+ */
 const Chat: React.FC<Props> = ({ route, navigation }) => {
   const { id } = route.params;
   const focused = useIsFocused();
@@ -35,6 +49,13 @@ const Chat: React.FC<Props> = ({ route, navigation }) => {
   const send = useSendMessage(id);
   const [text, setText] = useState("");
   const list = useRef<ScrollView>(null);
+  const client = useQueryClient();
+  // A send that came back 409 `chat_closed`: the chat closed while this screen was open.
+  const [closedByServer, setClosedByServer] = useState(false);
+  const gate = chatWindow(booking.data ? { status: booking.data.status, chat_open: booking.data.chatOpen, chat_closes_at: booking.data.chatClosesAt } : null);
+  const closed = closedByServer || !gate.open;
+  const closedText = !gate.open && gate.reason === "cancelled" ? CHAT_CLOSED_CANCELLED : CHAT_CLOSED_VISIT_OVER;
+  const hint = gate.open && !closedByServer && gate.closesAt ? `You can chat until ${formatUntil(gate.closesAt.toISOString())}` : null;
 
   const submit = () => {
     const message = text.trim();
@@ -42,7 +63,15 @@ const Chat: React.FC<Props> = ({ route, navigation }) => {
     setText("");
     send.mutate(message, {
       // The message did not go: give the words back (unless the person has started typing something else).
-      onError: () => setText((current) => (current ? current : message)),
+      onError: (error) => {
+        if (error instanceof ApiError && errorCode(error.body) === CHAT_CLOSED) {
+          setClosedByServer(true);
+          // The booking carries the reason (and the time); read it again so the banner is right on the next visit too.
+          void client.invalidateQueries({ queryKey: queryKeys.booking(id) });
+          return;
+        }
+        setText((current) => (current ? current : message));
+      },
     });
   };
 
@@ -125,33 +154,48 @@ const Chat: React.FC<Props> = ({ route, navigation }) => {
           </View>
         ) : null}
       </ScrollView>
-      {send.isError ? (
+      {send.isError && !closedByServer ? (
         <View style={styles.notice} accessibilityRole="alert">
           <Text variant="small">{`Your message was not sent. ${messageForError(send.error)}`}</Text>
         </View>
       ) : null}
-      <View style={styles.composer}>
-        <TextInput
-          accessibilityLabel="Message"
-          style={styles.input}
-          placeholder="Type a message..."
-          placeholderTextColor={theme.colors.textLight}
-          value={text}
-          onChangeText={setText}
-          maxLength={MAX_MESSAGE_LENGTH}
-          multiline
-          maxFontSizeMultiplier={MAX_FONT_SCALE}
-        />
-        <Pressable
-          accessibilityRole="button"
-          accessibilityLabel="Send message"
-          accessibilityState={{ disabled: send.isPending }}
-          onPress={submit}
-          style={[styles.send, send.isPending && styles.sending]}
-        >
-          <Icon name="send" size={18} color={theme.colors.white} />
-        </Pressable>
-      </View>
+      {closed ? (
+        <View style={styles.closedBar} testID="chat-closed-banner" accessibilityRole="alert">
+          <Text variant="small" center>
+            {closedText}
+          </Text>
+        </View>
+      ) : (
+        <View style={styles.bar}>
+          {hint ? (
+            <Text variant="small" color={theme.colors.textLight} center testID="chat-closes-hint">
+              {hint}
+            </Text>
+          ) : null}
+          <View style={styles.composer}>
+            <TextInput
+              accessibilityLabel="Message"
+              style={styles.input}
+              placeholder="Type a message..."
+              placeholderTextColor={theme.colors.textLight}
+              value={text}
+              onChangeText={setText}
+              maxLength={MAX_MESSAGE_LENGTH}
+              multiline
+              maxFontSizeMultiplier={MAX_FONT_SCALE}
+            />
+            <Pressable
+              accessibilityRole="button"
+              accessibilityLabel="Send message"
+              accessibilityState={{ disabled: send.isPending }}
+              onPress={submit}
+              style={[styles.send, send.isPending && styles.sending]}
+            >
+              <Icon name="send" size={18} color={theme.colors.white} />
+            </Pressable>
+          </View>
+        </View>
+      )}
     </KeyboardInsetView>
   );
 };
@@ -182,7 +226,9 @@ const styles = StyleSheet.create({
   timeMine: { alignSelf: "flex-end", marginRight: 4 },
   sending: { opacity: 0.6 },
   notice: { marginHorizontal: theme.spacing.lg, padding: theme.spacing.sm + 2, gap: theme.spacing.xs, borderRadius: theme.borderRadius.lg, backgroundColor: theme.colors.secondaryLight },
-  composer: { flexDirection: "row", alignItems: "flex-end", gap: theme.spacing.sm, padding: theme.spacing.md, backgroundColor: theme.colors.primaryLight },
+  bar: { backgroundColor: theme.colors.primaryLight, paddingTop: theme.spacing.sm },
+  closedBar: { backgroundColor: theme.colors.primaryLight, padding: theme.spacing.lg },
+  composer: { flexDirection: "row", alignItems: "flex-end", gap: theme.spacing.sm, padding: theme.spacing.md },
   input: {
     flex: 1,
     maxHeight: 120,

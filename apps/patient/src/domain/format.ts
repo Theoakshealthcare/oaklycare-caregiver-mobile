@@ -45,3 +45,15 @@ export function formatUpdated(iso: string, now: Date = new Date()): string {
   }
   return `Updated ${d.getDate()} ${MONTHS[d.getMonth()]}`;
 }
+
+/**
+ * When a window ends, in the phone's own time zone: "2:30 PM" for a time later today, "2:30 PM tomorrow" for the next day,
+ * else "2:30 PM on 27 Nov" ("You can chat until ...": the chat closes 24 hours after the visit, so it is usually tomorrow).
+ */
+export function formatUntil(iso: string, now: Date = new Date()): string {
+  const d = new Date(iso);
+  const days = Math.round((new Date(d.getFullYear(), d.getMonth(), d.getDate()).getTime() - new Date(now.getFullYear(), now.getMonth(), now.getDate()).getTime()) / 86_400_000);
+  if (days <= 0) return formatTime(iso);
+  if (days === 1) return `${formatTime(iso)} tomorrow`;
+  return `${formatTime(iso)} on ${d.getDate()} ${MONTHS[d.getMonth()]}`;
+}

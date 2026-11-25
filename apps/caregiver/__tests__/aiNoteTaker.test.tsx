@@ -13,6 +13,7 @@ jest.mock("../src/components/back/HeaderBack", () => ({ __esModule: true, defaul
 
 let mockNotes: unknown[] = [];
 jest.mock("../src/hooks/queries", () => ({
+  useBooking: () => ({ data: undefined }),
   useNotes: () => ({ data: mockNotes }),
   useCreateNote: () => ({ mutate: jest.fn(), isPending: false }),
 }));
