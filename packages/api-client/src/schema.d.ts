@@ -3093,7 +3093,7 @@ export interface paths {
         put?: never;
         /**
          * Approve Bank Review
-         * @description Confirm the account is the caregiver's: payouts to it resume. ``account_last4`` must be the account the reviewer saw.
+         * @description Confirm the account is the caregiver's: payouts to it resume. ``review_token`` must be the one the queue returned for the account the reviewer saw.
          */
         post: operations["approve_bank_review_api_v1_admin_payouts_bank_reviews__caregiver_id__approve_post"];
         delete?: never;
@@ -4551,14 +4551,14 @@ export interface components {
         };
         /**
          * BankReviewDecisionIn
-         * @description Finance's decision on a held account. ``account_last4`` is the account they looked at; if the caregiver saved another
-         *     one since, the decision is refused with 409.
+         * @description Finance's decision on a held account. ``review_token`` is the token the queue returned for the account they looked at; if the
+         *     caregiver changed the account since (number, bank or holder name), the decision is refused with 409.
          */
         BankReviewDecisionIn: {
             /** Reason */
             reason: string;
-            /** Account Last4 */
-            account_last4: string;
+            /** Review Token */
+            review_token: string;
         };
         /** BankReviewList */
         BankReviewList: {
@@ -4596,6 +4596,8 @@ export interface components {
             submitted_at: string;
             /** Decided At */
             decided_at?: string | null;
+            /** Review Token */
+            review_token: string;
         };
         /** BatchDetail */
         BatchDetail: {
@@ -6977,7 +6979,7 @@ export interface components {
         };
         /**
          * ClientVital
-         * @description The newest reading of one vital type. No status: the backend does not rate readings.
+         * @description The newest reading of one vital type, with its clinician-approved flag (null for weight, sleep, unreadable values).
          */
         ClientVital: {
             /** Vital Type */
@@ -6991,6 +6993,9 @@ export interface components {
              * Format: date-time
              */
             recorded_at: string;
+            flag?: components["schemas"]["VitalFlagOut"] | null;
+            /** Glucose Context */
+            glucose_context?: string | null;
         };
         /**
          * ClinicalOut
@@ -8559,6 +8564,9 @@ export interface components {
              * Format: uuid
              */
             recorded_by_user_id: string;
+            flag?: components["schemas"]["VitalFlagOut"] | null;
+            /** Glucose Context */
+            glucose_context?: string | null;
         };
         /** PatientVitalUpdate */
         PatientVitalUpdate: {
@@ -10281,6 +10289,25 @@ export interface components {
             author_scope: "full" | "caregiver_templates";
             /** @description The client's active plan; null if there is none yet. */
             plan?: components["schemas"]["CarePlanSummary"] | null;
+        };
+        /**
+         * VitalFlagOut
+         * @description The clinician-approved rating of one reading (``app/services/vital_flags.py``). Additive: older clients ignore it.
+         */
+        VitalFlagOut: {
+            /** Status */
+            status: string;
+            /** Label */
+            label: string;
+            /** Reason */
+            reason?: string | null;
+            /**
+             * Emergency
+             * @default false
+             */
+            emergency: boolean;
+            /** Message */
+            message?: string | null;
         };
         /**
          * VitalSource

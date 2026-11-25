@@ -8,6 +8,7 @@ import InsightList from "@/src/components/vitals/InsightList";
 import { theme } from "@/src/constants/theme";
 import { formatDateTime } from "@/src/domain/format";
 import { GLUCOSE_CONTEXTS, readingText, vitalMeta } from "@/src/domain/vitals";
+import StatusBadge from "@/src/components/vitals/StatusBadge";
 import { useVitalInsights, useVitalReadings } from "@/src/hooks/useVitals";
 
 /**
@@ -44,6 +45,7 @@ const VitalHistory: React.FC = () => {
           <Card key={r.id}>
             <Text weight="bold">{`${meta.label}: ${readingText(r)} ${r.unit}`}</Text>
             {r.glucoseContext ? <Text variant="small">{GLUCOSE_CONTEXTS.find((g) => g.value === r.glucoseContext)?.label}</Text> : null}
+            <StatusBadge flag={r.flag} testID="history-status" />
             {r.sleepStart && r.sleepWake ? <Text variant="small">{`${r.sleepStart} to ${r.sleepWake}`}</Text> : null}
             <Text variant="small" color={theme.colors.textLight}>
               {formatDateTime(r.recordedAt)}

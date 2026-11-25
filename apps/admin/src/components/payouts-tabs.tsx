@@ -9,6 +9,7 @@ const TABS = [
   { href: "/money/payouts", label: "Batches" },
   { href: "/money/payouts/all", label: "All payouts" },
   { href: "/money/payouts/attention", label: "Needs attention" },
+  { href: "/money/payouts/bank-reviews", label: "Account reviews" },
 ];
 
 export function PayoutsTabs() {

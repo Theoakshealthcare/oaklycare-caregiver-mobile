@@ -13,7 +13,6 @@ import InsightList from "@/src/components/vitals/InsightList";
 import StatusBadge from "@/src/components/vitals/StatusBadge";
 import { theme } from "@/src/constants/theme";
 import { formatAgo } from "@/src/domain/format";
-import { vitalStatus } from "@/src/domain/vitalStatus";
 import { convertUnit, readingText, vitalMeta, type VitalRange } from "@/src/domain/vitals";
 import { useVitalInsights, useVitalReadings } from "@/src/hooks/useVitals";
 import type { ScreenParamLists } from "@/src/navigation/Navigations";
@@ -31,8 +30,8 @@ const HOME_INSIGHTS = 2;
 /**
  * "<Vital> Monitoring" (Figma): the vital's card with when it was last recorded, an area chart of the readings in the chosen
  * window with the latest one marked, the current value and Day / Week / Month, then "History & Insights". Readings saved in
- * another unit (°F against °C, mmol/L against mg/dL) are drawn in the unit of the latest one. The Normal / Critical line is
- * built but off (`domain/vitalStatus.ts`). A blood pressure chart follows the top (systolic) number.
+ * another unit (°F against °C, mmol/L against mg/dL) are drawn in the unit of the latest one. The Normal / High / Low / Critical line is
+ * the server's rating of the latest reading (`domain/vitalStatus.ts`). A blood pressure chart follows the top (systolic) number.
  */
 const VitalDetail: React.FC<Props> = ({ navigation, route }) => {
   const { kind } = route.params;
@@ -48,7 +47,6 @@ const VitalDetail: React.FC<Props> = ({ navigation, route }) => {
   const from = now - DAYS[range] * 24 * 3_600_000;
   const inRange = all.filter((r) => new Date(r.recordedAt).getTime() >= from);
   const points = inRange.map((r) => ({ t: new Date(r.recordedAt).getTime(), v: convertUnit(kind, r.value, r.unit, unit) }));
-  const status = latest ? vitalStatus(latest) : null;
   const notes = insights.data ?? [];
 
   return (
@@ -68,7 +66,7 @@ const VitalDetail: React.FC<Props> = ({ navigation, route }) => {
               <Text variant="small" color={theme.colors.textLight}>{`Last synced: ${formatAgo(latest.recordedAt)}`}</Text>
             ) : null}
           </View>
-          {status ? <StatusBadge status={status} /> : null}
+          <StatusBadge flag={latest?.flag} testID="vital-detail-status" />
           {points.length > 0 ? (
             <AreaChart points={points} from={from} to={now} range={range} color={meta.tint} accessibilityLabel={`${meta.title} chart, ${points.length} readings`} />
           ) : (

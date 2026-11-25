@@ -102,7 +102,21 @@ describe("ClientProfile", () => {
     expect(await screen.findByTestId("client-vital-heart_rate")).toHaveTextContent(/84 bpm/);
     expect(screen.getByTestId("client-vital-blood_pressure")).toHaveTextContent(/138\/85 mmHg/);
     expect(screen.queryByText("ok")).toBeNull();
-    expect(screen.queryByText(/critical|normal/i)).toBeNull();
+    expect(screen.queryAllByTestId(/^client-vital-status-/)).toHaveLength(0); // the server sent no flag
+  });
+
+  it("shows the server's flag on a client's latest vital, and nothing on one without a flag", async () => {
+    getSpy.mockResolvedValue(
+      profile({
+        latest_vitals: [
+          { vital_type: "heart_rate", value: "130", unit: "bpm", recorded_at: "2026-10-27T10:45:00", flag: { status: "high", label: "High", reason: "Heart rate above 100 bpm.", emergency: false, message: null } },
+          { vital_type: "sleep_duration", value: "5", unit: "hrs", recorded_at: "2026-10-27T10:40:00", flag: null },
+        ],
+      }),
+    );
+    await renderProfile();
+    expect(await screen.findByTestId("client-vital-status-heart_rate")).toHaveTextContent(/High/);
+    expect(screen.queryByTestId("client-vital-status-sleep_duration")).toBeNull();
   });
 
   it("says vitals are available during an active visit when the backend sends null, and when none exist", async () => {

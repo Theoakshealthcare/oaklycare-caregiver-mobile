@@ -3,6 +3,7 @@ import type { Schemas } from "@oakly/api-client";
 import type { IconName } from "@/src/components/ui/icon";
 
 import { utcIso } from "./dates";
+import { toFlag, type VitalFlag } from "./vitalStatus";
 
 /**
  * The six vitals. The backend stores `vital_type` as free text, so these keys are the apps' shared vocabulary: the caregiver
@@ -28,7 +29,7 @@ export interface VitalMeta {
   monitorTitle: string;
   /** The line under the tile name on the manual list ("Enter Heart Rate Manually"). */
   manualHint: string;
-  /** The vital's own icon colour (a soft tint sits behind it). Never a health status: nothing here says a reading is good or bad. */
+  /** The vital's own icon colour (a soft tint sits behind it). Never a health status: the rating is the server's `flag`. */
   tint: string;
 }
 
@@ -129,6 +130,8 @@ export interface VitalReading {
   /** ISO with a zone. */
   recordedAt: string;
   glucoseContext?: GlucoseContext;
+  /** The server's Normal / High / Low / Critical rating; null for sleep and for a reading it could not rate (nothing is drawn). */
+  flag: VitalFlag | null;
   /** Sleep only, "22:30" / "06:30", when the entry recorded them. */
   sleepStart?: string;
   sleepWake?: string;
@@ -184,7 +187,7 @@ const SLEEP_NOTE = /^(\d{1,2}:\d{2})-(\d{1,2}:\d{2})$/;
 export function toReading(row: ApiVital): VitalReading | null {
   if (!KINDS.includes(row.vital_type)) return null;
   const kind = row.vital_type as VitalKind;
-  const base = { id: row.id, kind, unit: row.unit?.trim() || vitalMeta(kind).unit, recordedAt: utcIso(row.recorded_at) };
+  const base = { id: row.id, kind, unit: row.unit?.trim() || vitalMeta(kind).unit, recordedAt: utcIso(row.recorded_at), flag: toFlag(row.flag) };
   const text = row.value.trim();
   if (kind === "blood_pressure") {
     const parts = text.split("/").map((p) => p.trim());

@@ -75,9 +75,13 @@ describe("toReadings / latestByKind", () => {
     expect(odd.glucoseContext).toBeNull();
   });
 
-  it("has no status or threshold on a reading: the app never rates a value", () => {
-    const [r] = toReadings([vital({})]);
-    expect(Object.keys(r).sort()).toEqual(["glucoseContext", "id", "kind", "plot", "recordedAt", "unit", "value"]);
+  it("carries the server's flag and has no threshold of its own: the app never rates a value", () => {
+    const [plain] = toReadings([vital({})]);
+    expect(Object.keys(plain).sort()).toEqual(["flag", "glucoseContext", "id", "kind", "plot", "recordedAt", "unit", "value"]);
+    expect(plain.flag).toBeNull(); // the server sent none: unrated, not Normal
+    const flag = { status: "high", label: "High", reason: "Heart rate above 100 bpm.", emergency: false, message: null };
+    const [rated] = toReadings([vital({ value: "130", flag })]);
+    expect(rated.flag).toEqual(flag);
   });
 });
 

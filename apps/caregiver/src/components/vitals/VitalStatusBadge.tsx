@@ -3,32 +3,45 @@ import { View } from "react-native";
 
 import Text from "@/src/components/ui/text";
 import { theme } from "@/src/constants/theme";
-import { VITAL_STATUS_BADGES } from "@/src/config/vitals";
+import type { VitalFlag, VitalFlagStatus } from "@/src/vitals/vitalFlag";
 
-/** What a clinician-approved status can be. The app never derives one from a reading. */
-export type VitalStatus = "normal" | "critical";
+const DOT: Record<VitalFlagStatus, string> = {
+  normal: theme.colors.success,
+  high: theme.colors.warning,
+  low: theme.colors.info,
+  critical: theme.colors.error,
+};
+const TINT: Record<VitalFlagStatus, string> = {
+  normal: theme.colors.successLight,
+  high: theme.colors.warningLight,
+  low: theme.colors.primaryLight,
+  critical: theme.colors.errorLight,
+};
 
-const LABEL: Record<VitalStatus, string> = { normal: "Normal", critical: "Critical" };
-const DOT: Record<VitalStatus, string> = { normal: theme.colors.success, critical: theme.colors.error };
-const TINT: Record<VitalStatus, string> = { normal: theme.colors.successLight, critical: theme.colors.secondaryLight };
-
-/** The tile background for a status (green or red tint); the neutral tile colour when the badges are off or there is no status. */
-export function statusTint(status: VitalStatus | null | undefined): string {
-  return VITAL_STATUS_BADGES && status ? TINT[status] : theme.colors.soft;
+/** The tile background for a flag (a light tint of its colour); the neutral tile colour when the reading has no flag. */
+export function statusTint(flag: VitalFlag | null | undefined): string {
+  return flag ? TINT[flag.status] : theme.colors.soft;
 }
 
 /**
- * The Figma "Normal" / "Critical" mark on a vital tile: a coloured dot and the word. Built but OFF: it draws nothing while
- * `VITAL_STATUS_BADGES` is false (`config/vitals.ts`), and nothing feeds it a status yet.
+ * The Normal / High / Low / Critical mark on a vital: a coloured dot and the word the server sent. A critical reading also shows
+ * the emergency message ("Call 112 now"). Draws nothing for a reading with no flag (sleep, weight, an unreadable value).
  */
-const VitalStatusBadge: React.FC<{ status: VitalStatus | null | undefined; testID?: string }> = ({ status, testID = "vital-status" }) => {
-  if (!VITAL_STATUS_BADGES || !status) return null;
+const VitalStatusBadge: React.FC<{ flag: VitalFlag | null | undefined; testID?: string }> = ({ flag, testID = "vital-status" }) => {
+  if (!flag) return null;
   return (
-    <View testID={testID} accessibilityLabel={LABEL[status]} style={{ flexDirection: "row", alignItems: "center", gap: theme.spacing.xs }}>
-      <View testID={`${testID}-dot`} style={{ width: 8, height: 8, borderRadius: 4, backgroundColor: DOT[status] }} />
-      <Text variant="caption" color={theme.colors.text}>
-        {LABEL[status]}
-      </Text>
+    <View testID={testID} accessibilityLabel={flag.emergency && flag.message ? `${flag.label}. ${flag.message}` : flag.label} style={{ gap: theme.spacing.xs }}>
+      <View style={{ flexDirection: "row", alignItems: "center", gap: theme.spacing.xs }}>
+        <View testID={`${testID}-dot`} style={{ width: 8, height: 8, borderRadius: 4, backgroundColor: DOT[flag.status] }} />
+        <Text variant="caption" weight={flag.status === "normal" ? undefined : "medium"} color={theme.colors.text}>
+          {flag.label}
+        </Text>
+      </View>
+      {flag.emergency && flag.message ? (
+        <Text testID={`${testID}-emergency`} variant="caption" weight="bold" color={theme.colors.error}>
+          {flag.message}
+        </Text>
+      ) : null}
     </View>
   );
 };

@@ -11,10 +11,9 @@ import MenuRow from "@/src/components/ui/menu-row";
 import QueryError from "@/src/components/ui/query-error";
 import Text from "@/src/components/ui/text";
 import InsightList from "@/src/components/vitals/InsightList";
-import StatusBadge from "@/src/components/vitals/StatusBadge";
+import StatusBadge, { EmergencyLine } from "@/src/components/vitals/StatusBadge";
 import { theme } from "@/src/constants/theme";
 import { formatUpdated } from "@/src/domain/format";
-import { vitalStatus } from "@/src/domain/vitalStatus";
 import { readingText, VITALS } from "@/src/domain/vitals";
 import { useDownloadVitals, useVitalInsights, useVitalReadings } from "@/src/hooks/useVitals";
 import { useNav } from "@/src/navigation/Navigations";
@@ -27,7 +26,7 @@ const HOME_INSIGHTS = 2;
  * The Vitals home (Figma "Vital Digital"): the teal header with "Download Report", the six tiles with the latest reading, and
  * "History & Insights". Wearables, Heart Alerts and caregiver access requests are not in v1 (no device or endpoint), so the
  * "Connect to Wearable Device" link, the Wearable / Manual switch and those two sections are left out. Every reading is typed in
- * by hand, so each tile carries a "+" (in the corner where the Normal / Critical badge goes once thresholds are signed).
+ * by hand, so each tile carries a "+" (beside the Normal / High / Low / Critical badge, which is the server's rating of the latest reading).
  */
 const Vitals: React.FC = () => {
   const navigation = useNav();
@@ -86,7 +85,6 @@ const Vitals: React.FC = () => {
         <View style={styles.grid}>
           {VITALS.map((meta) => {
             const latest = readings.data?.find((r) => r.kind === meta.kind);
-            const status = latest ? vitalStatus(latest) : null;
             return (
               <Pressable
                 key={meta.kind}
@@ -98,7 +96,7 @@ const Vitals: React.FC = () => {
                 <View style={styles.tileTop}>
                   <Icon name={meta.icon} size={22} color={meta.tint} />
                   <View style={styles.tileCorner}>
-                    {status ? <StatusBadge status={status} /> : null}
+                    <StatusBadge flag={latest?.flag} showMessage={false} testID={`vital-status-${meta.kind}`} />
                     <Pressable
                       accessibilityRole="button"
                       accessibilityLabel={`Add ${meta.label} reading`}
@@ -127,6 +125,7 @@ const Vitals: React.FC = () => {
                   </Text>
                 )}
                 <Text variant="small">{latest ? formatUpdated(latest.recordedAt) : " "}</Text>
+                <EmergencyLine flag={latest?.flag} testID={`vital-status-${meta.kind}-emergency`} />
               </Pressable>
             );
           })}

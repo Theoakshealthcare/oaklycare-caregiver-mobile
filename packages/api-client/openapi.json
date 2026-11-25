@@ -9740,7 +9740,7 @@
           "admin-payouts"
         ],
         "summary": "Approve Bank Review",
-        "description": "Confirm the account is the caregiver's: payouts to it resume. ``account_last4`` must be the account the reviewer saw.",
+        "description": "Confirm the account is the caregiver's: payouts to it resume. ``review_token`` must be the one the queue returned for the account the reviewer saw.",
         "operationId": "approve_bank_review_api_v1_admin_payouts_bank_reviews__caregiver_id__approve_post",
         "security": [
           {
@@ -14336,20 +14336,20 @@
             "minLength": 1,
             "title": "Reason"
           },
-          "account_last4": {
+          "review_token": {
             "type": "string",
-            "pattern": "^\\d{4}$",
-            "title": "Account Last4"
+            "pattern": "^[0-9a-f]{32}$",
+            "title": "Review Token"
           }
         },
         "additionalProperties": false,
         "type": "object",
         "required": [
           "reason",
-          "account_last4"
+          "review_token"
         ],
         "title": "BankReviewDecisionIn",
-        "description": "Finance's decision on a held account. ``account_last4`` is the account they looked at; if the caregiver saved another\none since, the decision is refused with 409."
+        "description": "Finance's decision on a held account. ``review_token`` is the token the queue returned for the account they looked at; if the\ncaregiver changed the account since (number, bank or holder name), the decision is refused with 409."
       },
       "BankReviewList": {
         "properties": {
@@ -14431,6 +14431,10 @@
               }
             ],
             "title": "Decided At"
+          },
+          "review_token": {
+            "type": "string",
+            "title": "Review Token"
           }
         },
         "type": "object",
@@ -14441,7 +14445,8 @@
           "account_number",
           "status",
           "balance_kobo",
-          "submitted_at"
+          "submitted_at",
+          "review_token"
         ],
         "title": "BankReviewOut"
       },
@@ -20368,6 +20373,27 @@
             "type": "string",
             "format": "date-time",
             "title": "Recorded At"
+          },
+          "flag": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/VitalFlagOut"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "glucose_context": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Glucose Context"
           }
         },
         "type": "object",
@@ -20377,7 +20403,7 @@
           "recorded_at"
         ],
         "title": "ClientVital",
-        "description": "The newest reading of one vital type. No status: the backend does not rate readings."
+        "description": "The newest reading of one vital type, with its clinician-approved flag (null for weight, sleep, unreadable values)."
       },
       "ClinicalOut": {
         "properties": {
@@ -24603,6 +24629,27 @@
             "type": "string",
             "format": "uuid",
             "title": "Recorded By User Id"
+          },
+          "flag": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/VitalFlagOut"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "glucose_context": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Glucose Context"
           }
         },
         "type": "object",
@@ -29359,6 +29406,52 @@
           "can_author"
         ],
         "title": "VisitCarePlan"
+      },
+      "VitalFlagOut": {
+        "properties": {
+          "status": {
+            "type": "string",
+            "title": "Status"
+          },
+          "label": {
+            "type": "string",
+            "title": "Label"
+          },
+          "reason": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Reason"
+          },
+          "emergency": {
+            "type": "boolean",
+            "title": "Emergency",
+            "default": false
+          },
+          "message": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Message"
+          }
+        },
+        "type": "object",
+        "required": [
+          "status",
+          "label"
+        ],
+        "title": "VitalFlagOut",
+        "description": "The clinician-approved rating of one reading (``app/services/vital_flags.py``). Additive: older clients ignore it."
       },
       "VitalSource": {
         "type": "string",
