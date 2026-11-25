@@ -129,7 +129,7 @@ describe("Figma layout (voice notes on)", () => {
   it("keeps the typed note form under the voice panel", async () => {
     await render();
     await waitFor(() => expect(screen.getByTestId("voice-panel")).toBeTruthy());
-    expect(screen.getByPlaceholderText("Note title...")).toBeTruthy();
+    expect(screen.getByPlaceholderText("Note title")).toBeTruthy();
     expect(screen.getByText("Save Note")).toBeTruthy();
   });
 });
@@ -347,8 +347,8 @@ describe("the typed note path", () => {
     await render();
     // Let the consent lookup finish first: a state update landing in the middle of an act() scope is what warns.
     await waitFor(() => expect(screen.getByTestId("consent-card")).toBeTruthy());
-    await fireEvent.changeText(screen.getByPlaceholderText("Note title..."), "Evening check");
-    await fireEvent.changeText(screen.getByPlaceholderText("Write your observations here..."), "Ate well, no pain.");
+    await fireEvent.changeText(screen.getByPlaceholderText("Note title"), "Evening check");
+    await fireEvent.changeText(screen.getByPlaceholderText("Write your note here"), "Ate well, no pain.");
     await fireEvent.press(screen.getByText("Save Note"));
     expect(mockCreateNote).toHaveBeenCalledWith({ title: "Evening check", content: "Ate well, no pain." }, expect.any(Object));
     expect(sent()).toEqual([]); // the typed path never touches the voice note service

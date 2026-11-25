@@ -1,4 +1,4 @@
-import React, { useCallback, useEffect, useRef, useState } from "react";
+import React, { useCallback, useEffect, useImperativeHandle, useRef, useState } from "react";
 import {
   Keyboard,
   Platform,
@@ -10,6 +10,9 @@ import {
   type ScrollViewProps,
 } from "react-native";
 
+/** What a screen may do to the scroll view inside: scroll it. */
+export type KeyboardScrollHandle = Pick<ScrollView, "scrollTo">;
+
 interface Props extends ScrollViewProps {
   /**
    * Scroll to the bottom each time the keyboard opens, so a primary button under the last field ends up above it
@@ -17,6 +20,12 @@ interface Props extends ScrollViewProps {
    * in out of view.
    */
   scrollToEndOnKeyboardShow?: boolean;
+  /**
+   * Hands the inner ScrollView to a screen that has to scroll to a field itself, because something else (a pinned
+   * button bar inside a `KeyboardInsetView`) already shrinks the scroll area, so neither platform's own keyboard
+   * handling here sees the keyboard covering it.
+   */
+  innerScrollRef?: React.Ref<KeyboardScrollHandle>;
 }
 
 /** Space kept between the field being typed in and the top of the keyboard. */
@@ -41,7 +50,7 @@ export const keyboardOverlap = (frameBottom: number, keyboardTop: number) => Mat
  *
  * Taps on buttons still register with the keyboard open, and dragging dismisses it.
  */
-const KeyboardScrollView: React.FC<Props> = ({ scrollToEndOnKeyboardShow, onScroll, ...props }) => {
+const KeyboardScrollView: React.FC<Props> = ({ scrollToEndOnKeyboardShow, innerScrollRef, onScroll, ...props }) => {
   const scrollRef = useRef<ScrollView>(null);
   const frameRef = useRef<View>(null);
   const scrollY = useRef(0);
@@ -85,6 +94,8 @@ const KeyboardScrollView: React.FC<Props> = ({ scrollToEndOnKeyboardShow, onScro
     }, 60);
     return () => clearTimeout(timer);
   }, [android, overlap, scrollToEndOnKeyboardShow]);
+
+  useImperativeHandle(innerScrollRef, () => ({ scrollTo: (...args: Parameters<ScrollView["scrollTo"]>) => scrollRef.current?.scrollTo(...args) }), []);
 
   const handleScroll = useCallback(
     (event: NativeSyntheticEvent<NativeScrollEvent>) => {
