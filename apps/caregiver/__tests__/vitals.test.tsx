@@ -53,6 +53,13 @@ const vital = (over: Partial<PatientVital>): PatientVital => ({
   ...over,
 });
 
+const FLAG = {
+  normal: { status: "normal", label: "Normal", reason: null, emergency: false, message: null },
+  high: { status: "high", label: "High", reason: "Blood pressure above 140/90 mmHg.", emergency: false, message: null },
+  low: { status: "low", label: "Low", reason: "Breathing rate below 12 per minute.", emergency: false, message: null },
+  critical: { status: "critical", label: "Critical", reason: null, emergency: true, message: "This may be an emergency. Call 112 now." },
+};
+
 // react-query keeps a 5 minute garbage-collection timer per query; without clearing the clients the Jest process idles for
 // five minutes after the last test before it exits.
 const clients: QueryClient[] = [];
@@ -112,7 +119,7 @@ describe("Vitals tab", () => {
     expect(screen.queryByTestId("vital-tile-heart_rate")).toBeNull();
   });
 
-  it("shows the latest reading of each vital for the patient on the visit, with no status chips", async () => {
+  it("shows the latest reading of each vital for the patient on the visit", async () => {
     listSpy.mockResolvedValue([
       vital({ id: "hr-new", value: "84", recorded_at: iso(1) }),
       vital({ id: "hr-old", value: "70", recorded_at: iso(30) }),
@@ -128,8 +135,8 @@ describe("Vitals tab", () => {
     for (const kind of ["temperature", "respiratory_rate", "sleep_duration"]) {
       expect(screen.getByTestId(`vital-empty-${kind}`)).toHaveTextContent("No reading yet");
     }
-    // Nothing rates a reading: the backend sends no status and the thresholds are not signed off.
-    expect(screen.queryByText(/critical|normal/i)).toBeNull();
+    // These rows carry no flag (the server sent none): the app does not rate them itself.
+    expect(screen.queryAllByTestId(/^vital-status-/)).toHaveLength(0);
 
     expect(listSpy).toHaveBeenCalledWith(PATIENT, expect.stringMatching(/^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}$/));
   });
@@ -240,11 +247,30 @@ describe("Vitals tab", () => {
       expect(screen.queryByTestId("vitals-last-updated")).toBeNull();
     });
 
-    it("draws no Normal / Critical status on a tile while the status badges are off", async () => {
+    it("draws no status on a tile whose reading has no flag", async () => {
       listSpy.mockResolvedValue([vital({ id: "hr" })]);
       await renderWith(<Vitals />);
       await screen.findByTestId("vital-value-heart_rate");
       expect(screen.queryByTestId("vital-status-heart_rate")).toBeNull();
+    });
+
+    it("shows the server's Normal / High / Low / Critical flag on each tile, and the 112 message on a critical one", async () => {
+      listSpy.mockResolvedValue([
+        vital({ id: "hr", value: "45", flag: { ...FLAG.critical, reason: "Heart rate below 50 bpm." } }),
+        vital({ id: "bp", vital_type: "blood_pressure", value: "150/95", unit: "mmHg", flag: FLAG.high }),
+        vital({ id: "rr", vital_type: "respiratory_rate", value: "10", unit: "breaths/min", flag: FLAG.low }),
+        vital({ id: "t", vital_type: "temperature", value: "36.8", unit: "°C", flag: FLAG.normal }),
+        vital({ id: "sl", vital_type: "sleep_duration", value: "5", unit: "hrs", flag: null }),
+      ]);
+      await renderWith(<Vitals />);
+      await screen.findByTestId("vital-value-heart_rate");
+      expect(screen.getByTestId("vital-status-heart_rate")).toHaveTextContent(/Critical/);
+      expect(screen.getByTestId("vital-status-heart_rate-emergency")).toHaveTextContent(/Call 112 now/);
+      expect(screen.getByTestId("vital-status-blood_pressure")).toHaveTextContent(/High/);
+      expect(screen.getByTestId("vital-status-respiratory_rate")).toHaveTextContent(/Low/);
+      expect(screen.getByTestId("vital-status-temperature")).toHaveTextContent(/Normal/);
+      expect(screen.queryByTestId("vital-status-sleep_duration")).toBeNull(); // sleep is never flagged
+      expect(screen.queryByTestId("vital-status-blood_glucose")).toBeNull(); // no reading yet
     });
   });
 });
@@ -358,10 +384,33 @@ describe("VitalDetail: blood pressure and sleep", () => {
     expect(chartReadings()).toBe(1);
   });
 
+  it("shows the flag of the current reading, with the 112 message when it is critical", async () => {
+    listSpy.mockResolvedValue([vital({ id: "bp", vital_type: "blood_pressure", value: "85/50", unit: "mmHg", flag: FLAG.critical })]);
+    await renderWith(<VitalDetail route={route("blood_pressure")} navigation={nav} />);
+    expect(await screen.findByTestId("vital-detail-status")).toHaveTextContent(/Critical/);
+    expect(screen.getByTestId("vital-detail-status-emergency")).toHaveTextContent(/Call 112 now/);
+  });
+
   it("opens the full history of this vital", async () => {
     await renderWith(<VitalDetail route={route("blood_pressure")} navigation={nav} />);
     await fireEvent.press(await screen.findByTestId("view-all-history"));
     expect(mockNavigate).toHaveBeenCalledWith("VitalHistory", { patientId: PATIENT, patientName: "Placeholder Patient", kind: "blood_pressure" });
+  });
+});
+
+describe("VitalHistory flags", () => {
+  const route = () =>
+    ({ params: { patientId: PATIENT, patientName: "Placeholder Patient", kind: "heart_rate" } }) as unknown as React.ComponentProps<typeof VitalHistory>["route"];
+  const nav = {} as React.ComponentProps<typeof VitalHistory>["navigation"];
+
+  it("marks each row with the flag the server sent", async () => {
+    listSpy.mockResolvedValue([
+      vital({ id: "a", value: "110", flag: { ...FLAG.high, reason: "Heart rate above 100 bpm." }, recorded_at: iso(1) }),
+      vital({ id: "b", value: "72", flag: FLAG.normal, recorded_at: iso(2) }),
+    ]);
+    await renderWith(<VitalHistory route={route()} navigation={nav} />);
+    const marks = await screen.findAllByTestId("history-status");
+    expect(marks.map((m) => m.props.accessibilityLabel)).toEqual(["High", "Normal"]);
   });
 });
 

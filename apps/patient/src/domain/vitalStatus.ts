@@ -1,22 +1,35 @@
-import type { VitalKind, VitalReading } from "./vitals";
-
-export type VitalStatus = "normal" | "critical";
+import type { Schemas } from "@oakly/api-client";
 
 /**
- * The Normal / Critical badges of the Vitals home and the monitoring page. The component is built (`StatusBadge`) but the
- * badges are OFF, on purpose (owner, 2026-11-23): the thresholds below need a clinician's signature
- * (`backend/docs/clinical/clinician-review-pack.md`, section 3), and a wrong "Normal" can delay care. Nothing here may be
- * filled in from a guess or from the Figma numbers (the design's "Critical" on 138/85 and 16 breaths a minute are sample data).
+ * The Normal / High / Low / Critical rating of a reading. It is the SERVER's (`flag` on every reading the vitals API returns;
+ * thresholds signed off by the clinical lead, in `backend/app/services/vital_flags.py`): the app shows what it is sent and never
+ * works a rating out from a number. `flag` is null for sleep (never rated) and for a reading the server could not rate, and
+ * then nothing is drawn: no badge is not "Normal".
  */
-export const VITAL_STATUS_ENABLED = false;
+export type VitalStatus = "normal" | "high" | "low" | "critical";
 
-/** Inclusive normal band per vital, in the vital's own unit. Empty until a clinician signs the numbers. */
-export const VITAL_THRESHOLDS: Partial<Record<VitalKind, { min: number; max: number }>> = {};
+export interface VitalFlag {
+  status: VitalStatus;
+  /** "Normal" | "High" | "Low" | "Critical", as the server words it. */
+  label: string;
+  /** Why it is flagged; null for normal. */
+  reason: string | null;
+  /** True for critical: show `message`. */
+  emergency: boolean;
+  /** "This may be an emergency. Call 112 now." when `emergency`, else null. */
+  message: string | null;
+}
 
-/** The status of a reading, or null while the badges are off or the vital has no signed band. */
-export function vitalStatus(reading: Pick<VitalReading, "kind" | "value">): VitalStatus | null {
-  if (!VITAL_STATUS_ENABLED) return null;
-  const band = VITAL_THRESHOLDS[reading.kind];
-  if (!band) return null;
-  return reading.value >= band.min && reading.value <= band.max ? "normal" : "critical";
+const STATUSES: readonly string[] = ["normal", "high", "low", "critical"];
+
+/** The flag of a server row, or null when there is none or its status is one this build does not know (shown unrated, never guessed). */
+export function toFlag(raw: Schemas["PatientVitalResponse"]["flag"] | undefined): VitalFlag | null {
+  if (!raw || !STATUSES.includes(raw.status)) return null;
+  return {
+    status: raw.status as VitalStatus,
+    label: raw.label,
+    reason: raw.reason ?? null,
+    emergency: raw.emergency === true,
+    message: raw.message ?? null,
+  };
 }

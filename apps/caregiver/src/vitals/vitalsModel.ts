@@ -2,14 +2,15 @@ import { ApiError } from "@/src/api/errors";
 import type { Booking } from "@/src/services/booking.service";
 import type { PatientVital } from "@/src/services/vitals.service";
 import { formatClock, formatDayHeading, formatStamp, parseBackendDate } from "@/src/utils/dates";
+import { toFlag, type VitalFlag } from "@/src/vitals/vitalFlag";
 
 /**
  * The six vitals on the design's grid. The backend stores `vital_type` as free text, so these keys
  * are the app's own vocabulary (the model's comment names `blood_pressure`, `heart_rate`,
  * `temperature`; the other three follow the same snake_case). Readings of any other type are ignored.
  *
- * Nothing here judges a reading: there are no normal ranges and no Critical/Normal status, because
- * the backend sends none and the thresholds need clinical sign-off first.
+ * Nothing here judges a reading: the Normal / High / Low / Critical flag is the server's (`vitalFlag.ts`), carried
+ * through unchanged; the app has no normal ranges of its own.
  */
 export type VitalKind =
   | "heart_rate"
@@ -67,6 +68,8 @@ export interface Reading {
   glucoseContext: GlucoseContext | null;
   /** The number a chart plots (systolic for blood pressure), null when the value is not numeric. */
   plot: number | null;
+  /** The server's rating of this reading; null for sleep and for a reading it could not rate. */
+  flag: VitalFlag | null;
 }
 
 const KIND_KEYS: string[] = VITAL_KINDS.map((k) => k.kind);
@@ -94,6 +97,7 @@ export function toReadings(vitals: PatientVital[]): Reading[] {
       recordedAt,
       glucoseContext: kind === "blood_glucose" ? context : null,
       plot: plotValue(kind, v.value),
+      flag: toFlag(v.flag),
     });
   }
   return readings.sort((a, b) => b.recordedAt.getTime() - a.recordedAt.getTime());
