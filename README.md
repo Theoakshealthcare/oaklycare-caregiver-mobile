@@ -7,7 +7,7 @@ apps talk to it through `@oakly/api-client`, which is generated from the backend
 |---|---|---|
 | `apps/caregiver` | Expo app for nurses and caregivers: onboarding, job offers, visits, earnings | Active |
 | `apps/patient` | Expo app for patients and families (Oakly Health). Shell only so far: login, placeholder home, logout; the old app's screens are ported in later slices | Foundation |
-| `apps/admin` | Next.js admin console (caregiver approval, bookings, refunds, payouts) | Active |
+| `apps/admin` | Next.js admin console (caregiver approval, bookings, refunds, earnings, payouts) | Active |
 | `apps/companion` | Patient web companion opened from WhatsApp links (tracking, vitals, video) | Planned |
 | `packages/api-client` | Typed backend client (`openapi-fetch` + generated types) | Active |
 

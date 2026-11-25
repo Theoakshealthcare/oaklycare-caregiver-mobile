@@ -78,4 +78,23 @@ describe("permission-gated navigation", () => {
     const labels = visibleNav(["dashboard.read", "caregivers.read", "clinical.read"]).flatMap((g) => g.items.map((i) => i.label));
     expect(labels).not.toContain("Refunds");
   });
+  it("shows Earnings under Money to anyone who can read payments, and to no one else", () => {
+    expect(visibleNav(["payments.read"]).flatMap((g) => g.items.map((i) => i.label))).toContain("Earnings");
+    expect(visibleNav(["ledger.adjust_request", "payouts.execute"]).flatMap((g) => g.items.map((i) => i.label))).not.toContain("Earnings");
+    render(<SideNav permissions={["payments.read"]} pathname="/money/earnings" />);
+    expect(screen.getByRole("link", { name: "Earnings" })).toHaveAttribute("aria-current", "page");
+  });
+
+  it("shows a count badge on the Earnings item, with a spoken label, and none for zero or no data", () => {
+    const badges = { "/money/earnings": { count: 3, label: "held for review" } };
+    const { rerender } = render(<SideNav permissions={["payments.read"]} pathname="/" badges={badges} />);
+    const link = screen.getByRole("link", { name: "Earnings 3 held for review" });
+    expect(link).toHaveAttribute("href", "/money/earnings");
+    rerender(<SideNav permissions={["payments.read"]} pathname="/" badges={{ "/money/earnings": { count: 120, label: "held for review" } }} />);
+    expect(screen.getByRole("link", { name: "Earnings 120 held for review" })).toHaveTextContent("99+");
+    rerender(<SideNav permissions={["payments.read"]} pathname="/" badges={{ "/money/earnings": { count: 0, label: "held for review" } }} />);
+    expect(screen.getByRole("link", { name: "Earnings" })).toBeInTheDocument();
+    rerender(<SideNav permissions={["payments.read"]} pathname="/" />);
+    expect(screen.getByRole("link", { name: "Earnings" })).toBeInTheDocument();
+  });
 });

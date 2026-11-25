@@ -193,6 +193,15 @@ channel) lives in the backend repo: `docs/checklist/MASTER_CHECKLIST.md`. Update
 - [ ] Live Paystack account exercised (guide §12.11 captures use a local fake)
 - [ ] Playwright e2e for the payouts flow
 
+## Admin console: earnings (Money > Earnings, 2026-11-25)
+- [x] Nav entry "Earnings" under Money (`payments.read`), with a "held for review" count badge
+- [x] List with tabs: Held for review, On hold by admin, Pending, Released, All; caregiver, booking link, amount, status, why held (short visit / no-show flag / admin hold), dates
+- [x] Detail drawer with Hold, Release hold and Void, each with a reason and a confirm; the API's refusal shown verbatim; Hold and Release hold need `ledger.adjust_request`, Void and releasing a no-show hold need `ledger.adjust`; actions not rendered without them
+- [x] "Caregiver earning" card on the booking detail page (status from `GET /admin/earnings?booking_id=`; the booking payload carries only the amount)
+- [x] Vitest/RTL, typecheck and lint clean. Branch `feature/admin-earnings-page`, see docs/sop/2026-11-25-admin-earnings-page.md
+- [ ] **Not verified against a live API or in a browser** (fixtures follow the backend schema); capture real responses on staging
+- [ ] Backend: a hold-kind field (the page reads it off the reason wording); Playwright e2e for the earnings flow
+
 ## Admin console: bookings operations (A2 UI)
 - [x] Nav "Bookings" (`bookings.read`) and "Unmatched" (dispatch/assign/address) (2026-10-19, see docs/sop/2026-10-19-admin-bookings-ops-console.md)
 - [x] Bookings list: search, status/payment/dispatch/channel/city/date filters, address-check and no-show toggles, paging, masking markers

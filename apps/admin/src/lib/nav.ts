@@ -53,6 +53,7 @@ export const NAV: NavGroup[] = [
     label: "Money",
     items: [
       { label: "Payments", href: "/money/payments", anyOf: ["payments.read"], available: false },
+      { label: "Earnings", href: "/money/earnings", anyOf: ["payments.read"], available: true },
       { label: "Payouts", href: "/money/payouts", anyOf: ["payments.read"], available: true },
       { label: "Reconciliation", href: "/money/reconciliation", anyOf: ["payments.reconcile"], available: false },
     ],

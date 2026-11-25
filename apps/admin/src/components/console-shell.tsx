@@ -9,6 +9,7 @@ import { IdleWarning } from "@/components/idle-warning";
 import { SideNav } from "@/components/side-nav";
 import { Button } from "@/components/ui/button";
 import { ErrorState, Skeleton } from "@/components/ui/states";
+import { EARNINGS_READ, useHeldForReviewCount } from "@/lib/earnings";
 import { humanize } from "@/lib/format";
 
 /** Auth gate plus the app frame. Children render only for a signed-in admin. */
@@ -17,6 +18,11 @@ export function ConsoleShell({ children }: { children: React.ReactNode }) {
   const pathname = usePathname();
   const router = useRouter();
   const [menuOpen, setMenuOpen] = React.useState(false);
+  // Earnings waiting for Finance, as a badge on the Earnings nav item (only for admins who can read them).
+  const held = useHeldForReviewCount(status === "authenticated" && !!admin?.permissions.includes(EARNINGS_READ));
+  const badges = held
+    ? { "/money/earnings": { count: held.count, truncated: held.truncated, label: "held for review" } }
+    : undefined;
 
   React.useEffect(() => {
     if (status === "anonymous") router.replace(`/login?next=${encodeURIComponent(pathname)}`);
@@ -45,7 +51,7 @@ export function ConsoleShell({ children }: { children: React.ReactNode }) {
     <div className="min-h-screen lg:grid lg:grid-cols-[16rem_1fr]">
       <aside className="hidden border-r bg-sidebar p-4 lg:block">
         <div className="mb-6 px-2 text-base font-semibold">Oakly admin</div>
-        <SideNav permissions={admin.permissions} pathname={pathname} />
+        <SideNav permissions={admin.permissions} pathname={pathname} badges={badges} />
       </aside>
 
       <div className="flex min-w-0 flex-col">
@@ -73,7 +79,7 @@ export function ConsoleShell({ children }: { children: React.ReactNode }) {
         </header>
         {menuOpen ? (
           <div className="border-b bg-sidebar p-4 lg:hidden">
-            <SideNav permissions={admin.permissions} pathname={pathname} onNavigate={() => setMenuOpen(false)} />
+            <SideNav permissions={admin.permissions} pathname={pathname} onNavigate={() => setMenuOpen(false)} badges={badges} />
           </div>
         ) : null}
         <main id="main" className="min-w-0 flex-1 p-6">
