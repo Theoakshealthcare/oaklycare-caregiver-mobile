@@ -321,3 +321,7 @@ Owner decisions (2026-11-07): move the old app into the monorepo on SDK 57, copi
 - [x] `+234` pre-filled phone fields (Edit Profile phone and emergency phone, setup step 1), E.164 normalised; Full Name locked after identity verification; Chats photos (`patient_photo_url`, optional) in list, strip and chat header; Android chat keyboard fix; `chat_message` push tap opens the chat; shared `BottomCta` gap (branch `fix/caregiver-field-gaps`, [SOP](../sop/2026-11-25-caregiver-field-gaps.md); Jest, tsc and lint only, **not seen on the simulator or any device**)
 - [ ] Look at it on a real Android phone and the iOS simulator
 - [ ] Server-side lock of `full_name` after verification; backend `patient_photo_url` and `chat_message` push
+
+## Caregiver typed visit-note entry UX (2026-11-25)
+- [x] Labelled, outlined Title and Note fields (shared `Input`, placeholders "Note title" / "Write your note here"), multiline body min 140 / max 200 pt, "Save Note" pinned above the keyboard with the shared bottom gap, form scrolled into view on focus; AI Notetaker block and Voice notes list unchanged (branch `fix/caregiver-notes-entry-ux`, [SOP](../sop/2026-11-25-caregiver-notes-entry-ux.md); Jest, tsc, lint; **seen on the iOS simulator, Android not seen**)
+- [ ] Deferred: a time window and length cap for typed notes (backend has none today), per-field inline errors

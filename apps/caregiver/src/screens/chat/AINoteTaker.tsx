@@ -1,8 +1,8 @@
 "use client"
 
 import type React from "react"
-import { useState, useEffect, useCallback } from "react"
-import { View, TouchableOpacity, Alert, TextInput, Linking } from "react-native"
+import { useState, useEffect, useCallback, useRef } from "react"
+import { View, TouchableOpacity, Alert, Linking, Keyboard, type LayoutChangeEvent } from "react-native"
 import { useQueryClient } from "@tanstack/react-query"
 import { Feather } from "@expo/vector-icons"
 import type { StackScreenProps } from "@react-navigation/stack"
@@ -13,10 +13,13 @@ import {
   setAudioModeAsync,
 } from "expo-audio"
 
-import { theme, MAX_FONT_SCALE } from "@/src/constants/theme"
+import { theme } from "@/src/constants/theme"
 import Text from "@/src/components/ui/text"
 import Button from "@/src/components/ui/button"
-import KeyboardScrollView from "@/src/components/ui/keyboard-scroll-view"
+import KeyboardScrollView, { type KeyboardScrollHandle } from "@/src/components/ui/keyboard-scroll-view"
+import KeyboardInsetView from "@/src/components/ui/keyboard-inset-view"
+import BottomCta from "@/src/components/ui/bottom-cta"
+import Input from "@/src/components/ui/input"
 import AiOrb from "@/src/components/chat/AiOrb"
 import HeaderBack from "@/src/components/back/HeaderBack"
 import { globalStyles } from "@/src/constants/styles"
@@ -59,6 +62,23 @@ const AINoteTaker: React.FC<StackScreenProps<ScreenParamLists, "AINoteTaker">> =
   const [currentNote, setCurrentNote] = useState("")
   const [noteTitle, setNoteTitle] = useState("")
   const [recordingDuration, setRecordingDuration] = useState(0)
+
+  // Bringing the typed-note fields into view: the pinned Save Note bar shrinks the scroll area when the keyboard opens, so
+  // the page is scrolled to the form by hand, once the area has its new height (or at once if the keyboard is already up).
+  const scrollRef = useRef<KeyboardScrollHandle>(null)
+  const formTop = useRef(0)
+  const formFocused = useRef(false)
+  const scrollToForm = useCallback(() => scrollRef.current?.scrollTo({ y: Math.max(0, formTop.current - theme.spacing.sm), animated: true }), [])
+  const onFormFocus = () => {
+    formFocused.current = true
+    if (Keyboard.isVisible()) setTimeout(scrollToForm, 50)
+  }
+  const onFormBlur = () => {
+    formFocused.current = false
+  }
+  const onScrollAreaResized = (_event: LayoutChangeEvent) => {
+    if (formFocused.current) scrollToForm()
+  }
 
   // The voice note flow (consent, upload, transcribe, review). Off by default: the screen then behaves as it always has.
   const voiceOn = voiceNotesMode() !== "off"
@@ -335,8 +355,8 @@ const AINoteTaker: React.FC<StackScreenProps<ScreenParamLists, "AINoteTaker">> =
   ) : null
 
   return (
-    <View style={{ flex: 1, backgroundColor: theme.colors.white }}>
-      <KeyboardScrollView>
+    <KeyboardInsetView style={{ flex: 1, backgroundColor: theme.colors.white }}>
+      <KeyboardScrollView innerScrollRef={scrollRef} onLayout={onScrollAreaResized}>
         <View style={globalStyles.container}>
           <HeaderBack />
 
@@ -468,46 +488,44 @@ const AINoteTaker: React.FC<StackScreenProps<ScreenParamLists, "AINoteTaker">> =
             </View>
           ) : null}
 
-          {/* Note Input */}
+          {/* Note Input: two labelled, outlined fields (the shared Input), Save Note is the pinned bar under the page */}
           <View
-            style={{
-              backgroundColor: theme.colors.white,
-              borderRadius: 12,
-              padding: 16,
-              marginBottom: 20,
+            testID="note-form"
+            onLayout={(event) => {
+              formTop.current = event.nativeEvent.layout.y
             }}
+            style={{ marginBottom: 20, gap: theme.spacing.md }}
           >
-            <TextInput
- maxFontSizeMultiplier={MAX_FONT_SCALE}
-              placeholder="Note title..."
+            <Text variant="h3" weight="bold">
+              Write a note
+            </Text>
+
+            <Input
+              label="Title"
+              placeholder="Note title"
               value={noteTitle}
               onChangeText={setNoteTitle}
-              style={{
-                fontSize: theme.sizes.subtitle,
-                fontWeight: "bold",
-                color: theme.colors.text,
-                marginBottom: 12,
-              }}
+              onFocus={onFormFocus}
+              onBlur={onFormBlur}
+              returnKeyType="next"
+              accessibilityLabel="Note title"
             />
 
-            <TextInput
- maxFontSizeMultiplier={MAX_FONT_SCALE}
-              placeholder="Write your observations here..."
+            <Input
+              label="Note"
+              placeholder="Write your note here"
               value={currentNote}
               onChangeText={setCurrentNote}
+              onFocus={onFormFocus}
+              onBlur={onFormBlur}
               multiline
-              numberOfLines={4}
-              style={{
-                fontSize: theme.sizes.body,
-                color: theme.colors.text,
-                textAlignVertical: "top",
-                marginBottom: 16,
-              }}
+              inputStyle={{ minHeight: 140, maxHeight: 200, textAlignVertical: "top" }}
+              accessibilityLabel="Write your note here"
             />
 
             {/* Recording Controls: the typed screen keeps its round mic; with voice notes on the Voice to text pill above replaces it */}
             {voiceOn ? null : (
-              <View style={[globalStyles.row, { justifyContent: "center", marginBottom: 16 }]}>
+              <View style={[globalStyles.row, { justifyContent: "center" }]}>
                 <TouchableOpacity
                   testID="mic-button"
                   accessibilityRole="button"
@@ -530,8 +548,6 @@ const AINoteTaker: React.FC<StackScreenProps<ScreenParamLists, "AINoteTaker">> =
             )}
 
             {voiceOn ? null : recordingIndicator}
-
-            <Button title="Save Note" onPress={saveTextNote} loading={createNote.isPending} />
           </View>
 
           {/* Saved voice notes: the final text the caregiver saved */}
@@ -563,7 +579,12 @@ const AINoteTaker: React.FC<StackScreenProps<ScreenParamLists, "AINoteTaker">> =
           </View>
         </View>
       </KeyboardScrollView>
-    </View>
+
+      {/* Save Note stays under the page, above the keyboard and with the shared bottom gap */}
+      <BottomCta testID="note-save-bar" style={{ backgroundColor: theme.colors.white }}>
+        <Button title="Save Note" onPress={saveTextNote} loading={createNote.isPending} />
+      </BottomCta>
+    </KeyboardInsetView>
   )
 }
 
