@@ -17,6 +17,8 @@ export const queryKeys = {
   banks: ["banks"] as const,
   caregiverProfile: ["caregiver-profile"] as const,
   notes: (bookingId: string) => ["notes", bookingId] as const,
+  /** The caregiver's own documentation of one visit (private to them and the admin console). */
+  visitDocumentation: (bookingId: string) => ["visit-documentation", bookingId] as const,
   /** The caregiver's own voice notes of one visit (every status). */
   voiceNotes: (bookingId: string) => ["voice-notes", bookingId] as const,
   voiceNote: (noteId: string) => ["voice-note", noteId] as const,

@@ -308,6 +308,28 @@ describe("Client profile: Care plan row", () => {
     expect(screen.queryByTestId("care-plan-create")).toBeNull();
   });
 
+  it("offers a caregiver who is not a nurse only the template the server lists for them (Elderly)", async () => {
+    jest.spyOn(carePlansService, "getVisitPlan").mockResolvedValue(visitPlan({ can_author: false, author_scope: "caregiver_templates" }));
+    const list = jest.spyOn(carePlansService, "listTemplates").mockResolvedValue({
+      items: [templateItem({ id: "elderly-id", key: "elderly_daily_living_dementia", name: "Elderly Daily Living and Dementia Support", caregiver_can_use: true })],
+    });
+    await renderRow();
+    const button = await screen.findByTestId("care-plan-use-elderly_daily_living_dementia");
+    expect(screen.queryByTestId("care-plan-create")).toBeNull(); // no blank plan for a non-nurse
+    expect(screen.getByText("Use the Elderly Daily Living and Dementia Support template")).toBeTruthy();
+    await fireEvent.press(button);
+    expect(mockNavigate).toHaveBeenCalledWith("CarePlanTemplate", { templateId: "elderly-id", bookingId: BOOKING });
+    expect(list).toHaveBeenCalledTimes(1);
+  });
+
+  it("does not fetch templates for a nurse or when a plan already exists", async () => {
+    const list = jest.spyOn(carePlansService, "listTemplates").mockResolvedValue({ items: [] });
+    jest.spyOn(carePlansService, "getVisitPlan").mockResolvedValue(visitPlan());
+    await renderRow();
+    await screen.findByTestId("care-plan-create");
+    expect(list).not.toHaveBeenCalled();
+  });
+
   it("says a plan isn't available when the client cannot be identified", async () => {
     jest.spyOn(carePlansService, "getVisitPlan").mockResolvedValue(visitPlan({ subject_ready: false, can_author: false }));
     await renderRow();

@@ -42,14 +42,14 @@ export const plan = (over: Partial<CarePlan> = {}): CarePlan => ({
   goals: [{ id: GOAL_ID, title: "Placeholder goal", target: "Placeholder target", frequency: "daily", status: "active" }],
   tasks: [{ id: "b24a7f07-adf8-4417-a884-d6aeead43669", title: "Placeholder task", time_slot: "morning", time_of_day: "08:00", days_of_week: [1, 3, 5] }],
   medications: [],
-  capabilities: { can_edit_plan: true, can_tick_tasks: true, can_add_observation: true },
+  capabilities: { can_edit_plan: true, can_edit_medications: true, can_tick_tasks: true, can_add_observation: true },
   created_at: "2026-10-28T10:10:50.058340",
   updated_at: "2026-10-28T10:10:50.058343",
   ...over,
 });
 
 export const readOnlyPlan = (over: Partial<CarePlan> = {}): CarePlan =>
-  plan({ capabilities: { can_edit_plan: false, can_tick_tasks: false, can_add_observation: false }, ...over });
+  plan({ capabilities: { can_edit_plan: false, can_edit_medications: false, can_tick_tasks: false, can_add_observation: false }, ...over });
 
 export const listItem = (over: Partial<CarePlanListItem> = {}): CarePlanListItem => ({
   id: PLAN_ID,
@@ -73,6 +73,7 @@ export const templateItem = (over: Partial<CarePlanTemplateItem> = {}): CarePlan
   default_risk_level: "high",
   clinical_review_status: "pending",
   version: 1,
+  caregiver_can_use: false,
   ...over,
 });
 
@@ -102,6 +103,7 @@ export const visitPlan = (over: Partial<VisitCarePlan> = {}): VisitCarePlan => (
   booking_id: BOOKING,
   subject_ready: true,
   can_author: true,
+  author_scope: "full",
   plan: null,
   ...over,
 });

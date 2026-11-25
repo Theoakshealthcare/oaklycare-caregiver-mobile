@@ -12,7 +12,7 @@ import {
   isNoAccess,
   planLength,
 } from "@/src/careplan/carePlanModel";
-import { useVisitCarePlan } from "@/src/hooks/useCarePlans";
+import { usePlanTemplates, useVisitCarePlan } from "@/src/hooks/useCarePlans";
 import useNavigation from "@/src/hooks/use-navigation";
 
 /**
@@ -22,6 +22,9 @@ import useNavigation from "@/src/hooks/use-navigation";
 const ClientCarePlanRow: React.FC<{ bookingId: string; clientName?: string }> = ({ bookingId, clientName }) => {
   const { navigation } = useNavigation();
   const query = useVisitCarePlan(bookingId);
+  // A caregiver who is not a nurse may start a plan only from a template flagged for them (Elderly): the server lists just those.
+  const caregiverOnly = query.data?.author_scope === "caregiver_templates" && !query.data.plan && query.data.subject_ready;
+  const templates = usePlanTemplates(caregiverOnly === true);
 
   const body = () => {
     if (query.isError) {
@@ -81,6 +84,20 @@ const ClientCarePlanRow: React.FC<{ bookingId: string; clientName?: string }> = 
               variant="outline"
               onPress={() => navigation.navigate("CarePlans", { tab: "templates", bookingId })}
             />
+          </View>
+        ) : templates.data && templates.data.items.length > 0 ? (
+          <View style={{ gap: theme.spacing.sm }}>
+            {templates.data.items.map((template) => (
+              <Button
+                key={template.id}
+                testID={`care-plan-use-${template.key}`}
+                title={`Use the ${template.name} template`}
+                onPress={() => navigation.navigate("CarePlanTemplate", { templateId: template.id, bookingId })}
+              />
+            ))}
+            <Text variant="small" color={theme.colors.textLight} testID="care-plan-row-ask">
+              {ASK_THE_NURSE_HINT}
+            </Text>
           </View>
         ) : (
           <Text variant="small" color={theme.colors.textLight} testID="care-plan-row-ask">

@@ -45,6 +45,23 @@ const renderNotes = async (category: "observation" | "special_note" = "observati
   return { onNoAccess, ...view };
 };
 
+describe("Notes in the nurse's 2-hour window after the visit", () => {
+  it("shows when adding closes and keeps the note box", async () => {
+    jest.spyOn(carePlansService, "listNotes").mockResolvedValue(notePage([]));
+    const closes = new Date(Date.now() + 3600_000).toISOString().slice(0, 19);
+    await renderNotes("observation", plan({ observations_close_at: closes }));
+    expect(await screen.findByTestId("notes-observation-window")).toHaveTextContent(/You can add notes until/);
+    expect(screen.getByTestId("note-input-observation")).toBeTruthy();
+  });
+
+  it("shows no window line during a live visit", async () => {
+    jest.spyOn(carePlansService, "listNotes").mockResolvedValue(notePage([]));
+    await renderNotes();
+    await screen.findByTestId("note-input-observation");
+    expect(screen.queryByTestId("notes-observation-window")).toBeNull();
+  });
+});
+
 describe("Notes and observations", () => {
   it("lists the notes newest first with their author and asks for one category only", async () => {
     const list = jest.spyOn(carePlansService, "listNotes").mockResolvedValue(
@@ -157,7 +174,7 @@ describe("Notes and observations", () => {
 
   it("shows no box before the visit has started, with the reason, but still lists the notes", async () => {
     jest.spyOn(carePlansService, "listNotes").mockResolvedValue(notePage([note()]));
-    await renderNotes("observation", plan({ capabilities: { can_edit_plan: false, can_tick_tasks: false, can_add_observation: false } }));
+    await renderNotes("observation", plan({ capabilities: { can_edit_plan: false, can_edit_medications: false, can_tick_tasks: false, can_add_observation: false } }));
     expect(await screen.findByText("Placeholder observation: ate well.")).toBeTruthy();
     expect(screen.queryByTestId("note-input-observation")).toBeNull();
     expect(screen.getByTestId("notes-observation-hint")).toHaveTextContent("Available during an active visit.");

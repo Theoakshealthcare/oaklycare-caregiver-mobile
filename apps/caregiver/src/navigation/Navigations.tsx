@@ -29,6 +29,8 @@ export type ScreenParamLists = {
   ChatScreen: { bookingId: string; patientName?: string; /** From the Chats list, so the header shows the photo before the booking has loaded. */ patientPhotoUrl?: string };
   CallScreen: { bookingId: string; patientName?: string; isVideo?: boolean };
   AINoteTaker: { bookingId: string };
+  /** The caregiver's own, private documentation of a visit (any caregiver; never shown to the family). */
+  VisitDocumentation: { bookingId: string };
   /** Check, edit and save the draft of a voice note (only reachable while the voice note flow is on). */
   VoiceNoteReview: { bookingId: string; noteId: string };
   Notifications: undefined;
