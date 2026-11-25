@@ -1,5 +1,7 @@
 import * as Location from "expo-location";
 
+import { formatPlace } from "@/src/domain/visitLocation";
+
 export interface Coordinates {
   latitude: number;
   longitude: number;
@@ -46,4 +48,49 @@ export async function getCurrentCoordinates(): Promise<Coordinates> {
   } finally {
     if (timer) clearTimeout(timer);
   }
+}
+
+/**
+ * The address text for a position, read with the phone's own geocoder (Apple's on iOS, Android's `Geocoder`): no Google key and no
+ * server call. Null when the phone has none, is offline, or knows nothing about that spot: the caller then says only that the
+ * location is saved.
+ */
+export async function addressOf(coords: Coordinates): Promise<string | null> {
+  try {
+    const places = await Location.reverseGeocodeAsync(coords);
+    return formatPlace(places[0]);
+  } catch {
+    return null;
+  }
+}
+
+/** A typed address found on the map: where it is, and the address text the geocoder gives for that spot (null when it gives none). */
+export interface FoundAddress extends Coordinates {
+  label: string | null;
+}
+
+/** Thrown by `findAddress` when the phone's geocoder could not be asked at all (offline, no geocoder service), as opposed to "no match". */
+export class GeocoderUnavailable extends Error {
+  constructor() {
+    super("We could not look the address up right now.");
+    this.name = "GeocoderUnavailable";
+  }
+}
+
+/**
+ * The typed address looked up on the phone (forward geocoding, `Location.geocodeAsync`), for a visit at somebody else's home. Needs
+ * no location permission. Null when the geocoder found nothing; `GeocoderUnavailable` when it could not be asked. The first match is
+ * used, and its address text is read back so the person can see what was understood.
+ */
+export async function findAddress(query: string): Promise<FoundAddress | null> {
+  let matches: Location.LocationGeocodedLocation[];
+  try {
+    matches = await Location.geocodeAsync(query);
+  } catch {
+    throw new GeocoderUnavailable();
+  }
+  const first = matches[0];
+  if (!first || !Number.isFinite(first.latitude) || !Number.isFinite(first.longitude)) return null;
+  const coords = { latitude: first.latitude, longitude: first.longitude };
+  return { ...coords, label: await addressOf(coords) };
 }

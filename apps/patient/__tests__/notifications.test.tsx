@@ -38,8 +38,10 @@ describe("notifications (live-shaped)", () => {
     it("reads a push tap from `data` (where `type` and `notification_id` live, unlike the feed row)", () => {
       const id = "11111111-1111-4111-8111-111111111111";
       const booking = "22222222-2222-4222-8222-222222222222";
-      expect(parsePushTap({ type: "caregiver_found", booking_id: booking, target: "booking_detail", notification_id: id })).toEqual({ bookingId: booking, notificationId: id });
-      expect(parsePushTap({ booking_id: booking, target: "booking_detail" })).toEqual({ bookingId: booking, notificationId: null });
+      expect(parsePushTap({ type: "caregiver_found", booking_id: booking, target: "booking_detail", notification_id: id })).toEqual({ bookingId: booking, notificationId: id, destination: "booking" });
+      expect(parsePushTap({ booking_id: booking, target: "booking_detail" })).toEqual({ bookingId: booking, notificationId: null, destination: "booking" });
+      expect(parsePushTap({ type: "chat_message", booking_id: booking })).toEqual({ bookingId: booking, notificationId: null, destination: "chat" });
+      expect(parsePushTap({ type: "chat_message" })).toBeNull();
       expect(parsePushTap({ booking_id: booking, target: "elsewhere" })).toBeNull();
       expect(parsePushTap(null)).toBeNull();
     });

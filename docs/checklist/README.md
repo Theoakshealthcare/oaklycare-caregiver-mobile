@@ -57,6 +57,10 @@ channel) lives in the backend repo: `docs/checklist/MASTER_CHECKLIST.md`. Update
 - [ ] Deferred: "Choose Service Time / Immediate booking" and the Wound Care service (no backend service or ASAP rule)
 - [ ] Owner decisions: the app's own lists (relations, assistance, conditions), contact phone and e-mail visible to the caregiver, coral failure title, step bar growth
 
+## Patient app: gaps from the first real-phone test (2026-11-25)
+- [x] One `+234` phone input (booking contact, Edit Profile phone and emergency phone); one shared pinned-button spacing; chat composer above the Android keyboard; visit location read back, "Find this address" with Confirm / Edit and stale-clear; payment return link `oaklypatient://payment-complete`; chat push tap opens the chat; branch `fix/patient-field-gaps` ([SOP](../sop/2026-11-25-patient-field-gaps.md)); **iOS simulator for the phone input, chat photo and keyboard, and the return link; Android, the Find-this-address flow and the button spacing not seen**
+- [ ] Owner: re-test on the Android phone (keyboard, spacing under Make Payment, return from Paystack, a booking for a parent's address)
+
 ## Caregiver remaining parity with Figma: care plans, chat, vitals, bookings, account (2026-11-24)
 - [x] Care plan system: hub (teal header, tabs, search and filter, template and plan cards), details accordions in Figma order, goals, medications (full-page add), tasks (dropdowns), notes, create form, success pages
 - [x] Chat header, booking card, stamps, quick replies, composer; AI Notetaker "I'm Listening" with the orb and "Voice to text" (voice notes on); calling stays off

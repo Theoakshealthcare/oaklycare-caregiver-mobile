@@ -1,4 +1,5 @@
-import { fireEvent, screen, waitFor } from "@testing-library/react-native";
+import { act, fireEvent, screen, waitFor } from "@testing-library/react-native";
+import { Linking } from "react-native";
 
 import { queryClient } from "../src/api/queryClient";
 import { EMPTY_DRAFT, useBookingDraft } from "../src/hooks/bookingDraft";
@@ -18,14 +19,18 @@ jest.mock("expo-location", () => ({
   Accuracy: { Balanced: 3 },
   requestForegroundPermissionsAsync: jest.fn(async () => ({ status: "granted", canAskAgain: true })),
   getCurrentPositionAsync: jest.fn(async () => ({ coords: { latitude: 6.4474, longitude: 3.4723 } })),
+  reverseGeocodeAsync: jest.fn(async () => [{ streetNumber: "5", street: "Own Road", city: "Lekki", region: "Lagos" }]),
+  geocodeAsync: jest.fn(async () => [{ latitude: 6.6018, longitude: 3.3515 }]),
 }));
-jest.mock("expo-web-browser", () => ({ openBrowserAsync: jest.fn(async () => ({ type: "dismiss" })) }));
+jest.mock("expo-web-browser", () => ({ openBrowserAsync: jest.fn(async () => ({ type: "dismiss" })), dismissBrowser: jest.fn(async () => ({ type: "dismiss" })) }));
 
 const Location = jest.requireMock("expo-location") as {
   requestForegroundPermissionsAsync: jest.Mock;
   getCurrentPositionAsync: jest.Mock;
+  reverseGeocodeAsync: jest.Mock;
+  geocodeAsync: jest.Mock;
 };
-const WebBrowser = jest.requireMock("expo-web-browser") as { openBrowserAsync: jest.Mock };
+const WebBrowser = jest.requireMock("expo-web-browser") as { openBrowserAsync: jest.Mock; dismissBrowser: jest.Mock };
 
 const press = (name: string | RegExp) => fireEvent.press(screen.getByRole("button", { name }));
 const pick = (name: string) => fireEvent.press(screen.getByRole("radio", { name }));
@@ -311,6 +316,120 @@ describe("bookings (real backend calls, answered with captured bodies)", () => {
       await choose("Duration", "1 hour 30 minutes");
     }
 
+    describe("the visit location", () => {
+      const AT_PARENT = [{ streetNumber: "12", street: "Sample Street", city: "Ikeja", region: "Lagos" }];
+
+      async function toStepTwo() {
+        const { view } = await renderSignedIn({ [SERVICES]: services });
+        await fillStepOne();
+        await press("Save & Continue");
+        await screen.findByText("Where do you need Care ?");
+        await choose("State", "Lagos");
+        await type("City", "Ikeja");
+        await type("House Address", "12 Sample Street");
+        return view;
+      }
+
+      it("reads the phone's position back as an address once it is saved", async () => {
+        const view = await toStepTwo();
+        await press("Use my current location");
+        expect(await screen.findByText("Location saved")).toBeTruthy();
+        expect(screen.getByText("5 Own Road, Lekki, Lagos")).toBeTruthy();
+        expect(useBookingDraft.getState().draft).toMatchObject({ latitude: 6.4474, longitude: 3.4723, locationSource: "device" });
+        view.unmount();
+      });
+
+      it("with no address from the geocoder it still says the location is saved, and says it could not name it", async () => {
+        Location.reverseGeocodeAsync.mockResolvedValueOnce([]);
+        const view = await toStepTwo();
+        await press("Use my current location");
+        expect(await screen.findByText("Location saved")).toBeTruthy();
+        expect(screen.getByText("We saved this spot, but the phone could not name the address.")).toBeTruthy();
+        view.unmount();
+      });
+
+      it("Find this address shows what it found, and only Confirm uses it (a visit at someone else's home)", async () => {
+        Location.reverseGeocodeAsync.mockResolvedValueOnce(AT_PARENT);
+        const view = await toStepTwo();
+        await press("Find this address");
+        expect(await screen.findByText("Is this the place?")).toBeTruthy();
+        expect(screen.getByText("12 Sample Street, Ikeja, Lagos")).toBeTruthy();
+        expect(Location.geocodeAsync).toHaveBeenLastCalledWith("12 Sample Street, Ikeja, Lagos, Nigeria");
+        expect(useBookingDraft.getState().draft.latitude).toBeNull();
+        await press("Confirm");
+        expect(await screen.findByText("Location saved")).toBeTruthy();
+        expect(useBookingDraft.getState().draft).toMatchObject({ latitude: 6.6018, longitude: 3.3515, locationSource: "address" });
+        // never the booker's own GPS
+        expect(Location.getCurrentPositionAsync).not.toHaveBeenCalled();
+        view.unmount();
+      });
+
+      it("Edit drops the found address without saving it", async () => {
+        const view = await toStepTwo();
+        await press("Find this address");
+        await screen.findByText("Is this the place?");
+        await press("Edit");
+        expect(screen.queryByText("Is this the place?")).toBeNull();
+        expect(useBookingDraft.getState().draft.latitude).toBeNull();
+        view.unmount();
+      });
+
+      it("an edit of the address after it was confirmed clears the coordinates and says so", async () => {
+        const view = await toStepTwo();
+        await press("Find this address");
+        await screen.findByText("Is this the place?");
+        await press("Confirm");
+        await screen.findByText("Location saved");
+        await type("House Address", "99 Another Street");
+        expect(await screen.findByText(/You changed the address, so the saved location was cleared/)).toBeTruthy();
+        expect(useBookingDraft.getState().draft.latitude).toBeNull();
+        view.unmount();
+      });
+
+      it("typing the address after standing there with the phone's position keeps the position (not an edit)", async () => {
+        const { view } = await renderSignedIn({ [SERVICES]: services });
+        await fillStepOne();
+        await press("Save & Continue");
+        await screen.findByText("Where do you need Care ?");
+        await press("Use my current location");
+        await screen.findByText("Location saved");
+        await type("City", "Ikeja");
+        await type("House Address", "12 Sample Street");
+        expect(screen.getByText("Location saved")).toBeTruthy();
+        expect(useBookingDraft.getState().draft.latitude).toBe(6.4474);
+        view.unmount();
+      });
+
+      it("an address the geocoder does not know says so clearly and points to the phone's position", async () => {
+        Location.geocodeAsync.mockResolvedValueOnce([]);
+        const view = await toStepTwo();
+        await press("Find this address");
+        expect(await screen.findByText(/We couldn't find that address on the map/)).toBeTruthy();
+        expect(screen.getByRole("button", { name: "Use my current location" })).toBeTruthy();
+        expect(useBookingDraft.getState().draft.latitude).toBeNull();
+        view.unmount();
+      });
+
+      it("a geocoder that cannot be asked says so (not 'not found')", async () => {
+        Location.geocodeAsync.mockRejectedValueOnce(new Error("no geocoder"));
+        const view = await toStepTwo();
+        await press("Find this address");
+        expect(await screen.findByText(/We couldn't look the address up just now/)).toBeTruthy();
+        view.unmount();
+      });
+
+      it("Find this address needs the typed address first", async () => {
+        const { view } = await renderSignedIn({ [SERVICES]: services });
+        await fillStepOne();
+        await press("Save & Continue");
+        await screen.findByText("Where do you need Care ?");
+        await press("Find this address");
+        expect(await screen.findByText(/Fill in the State, City and House Address above first/)).toBeTruthy();
+        expect(Location.geocodeAsync).not.toHaveBeenCalled();
+        view.unmount();
+      });
+    });
+
     /** "Proceed to Payment" opens Payment Details; "Make Payment" (nothing picked, or the method named) is what creates the booking. */
     async function makePayment(method?: string) {
       await screen.findByText("Payment Details");
@@ -443,13 +562,37 @@ describe("bookings (real backend calls, answered with captured bodies)", () => {
       await press("Save & Continue");
       await screen.findByText("Where do you need Care ?");
       expect(screen.getByLabelText("Email Address").props.value).toBe("ada.placeholder@example.com");
-      expect(screen.getByLabelText("Phone Number").props.value).toBe(""); // the account has no phone yet
+      expect(screen.getByLabelText("Phone Number").props.value).toBe("+234"); // the account has no phone yet: only the prefix shows
       await type("Email Address", "not-an-email");
       await press("Save & Continue");
       expect(screen.getByText("State is required")).toBeTruthy();
       expect(screen.getByText("Phone number is required")).toBeTruthy();
       expect(screen.getByText("Enter a valid email address")).toBeTruthy();
       view.unmount();
+    });
+
+    it("the payment return link (oaklypatient://payment-complete) closes the browser, opens that booking's result screen and asks the backend", async () => {
+      const urlListeners: ((event: { url: string }) => void)[] = [];
+      const linkSpy = jest.spyOn(Linking, "addEventListener").mockImplementation(((_name: string, cb: (event: { url: string }) => void) => {
+        urlListeners.push(cb);
+        return { remove: jest.fn() };
+      }) as never);
+      const verify = jest.fn(() => ({ status: 200, body: paid() }));
+      const { view } = await renderSignedIn({
+        [`GET /api/v1/booking/booking/${NEW_ID}`]: () => ({ status: 200, body: created({ payment_status: "paid" }) }),
+        [VERIFY]: verify,
+      });
+      expect(urlListeners.length).toBeGreaterThan(0);
+      await act(async () => urlListeners.at(-1)?.({ url: `oaklypatient://payment-complete?booking_id=${NEW_ID}` }));
+      expect(await screen.findByText(/Payment Successful\./)).toBeTruthy();
+      expect(verify).toHaveBeenCalled();
+      expect(WebBrowser.dismissBrowser).toHaveBeenCalled();
+      // not a link of ours: nothing happens
+      verify.mockClear();
+      await act(async () => urlListeners.at(-1)?.({ url: "oaklypatient://something-else" }));
+      expect(verify).not.toHaveBeenCalled();
+      view.unmount();
+      linkSpy.mockRestore();
     });
 
     it("a closed browser marks nothing paid: Paystack says abandoned, so 'Payment Failed! Try Again', and Try Again opens the same checkout", async () => {

@@ -41,11 +41,22 @@ export function toNotification(item: NotificationOut): AppNotification {
 export interface PushTap {
   bookingId: string;
   notificationId: string | null;
+  /** Where the tap goes: the booking's details sheet, or (a new chat message) that booking's chat. */
+  destination: "booking" | "chat";
 }
 
+/**
+ * A chat message push is `{ type: "chat_message", booking_id }` (no `target`) and opens that booking's chat. Everything else
+ * opens a booking only with `target: "booking_detail"`; anything the app does not know stays where it is.
+ */
 export function parsePushTap(data: unknown): PushTap | null {
+  if (!data || typeof data !== "object") return null;
+  const { notification_id: notificationId, type, booking_id: chatBookingId } = data as { notification_id?: unknown; type?: unknown; booking_id?: unknown };
+  const id = typeof notificationId === "string" && notificationId.length > 0 ? notificationId : null;
+  if (type === "chat_message" && typeof chatBookingId === "string" && chatBookingId.length > 0) {
+    return { bookingId: chatBookingId, notificationId: id, destination: "chat" };
+  }
   const bookingId = bookingIdOf(data);
   if (!bookingId) return null;
-  const { notification_id: notificationId } = data as { notification_id?: unknown };
-  return { bookingId, notificationId: typeof notificationId === "string" && notificationId.length > 0 ? notificationId : null };
+  return { bookingId, notificationId: id, destination: "booking" };
 }

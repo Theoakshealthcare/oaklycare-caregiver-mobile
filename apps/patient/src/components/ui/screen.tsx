@@ -4,6 +4,7 @@ import { Pressable, StyleSheet, View, type StyleProp, type ViewStyle } from "rea
 
 import { theme } from "@/src/constants/theme";
 
+import BottomBar from "./bottom-bar";
 import Icon from "./icon";
 import KeyboardScrollView from "./keyboard-scroll-view";
 import Text from "./text";
@@ -70,7 +71,7 @@ const Screen: React.FC<ScreenProps> = ({ title, noBack, headerRight, centerTitle
     ) : (
       <View style={[styles.content, styles.fill, contentStyle]}>{children}</View>
     )}
-    {footer ? <View style={styles.footer}>{footer}</View> : null}
+    {footer ? <BottomBar>{footer}</BottomBar> : null}
   </View>
 );
 
@@ -100,7 +101,6 @@ const styles = StyleSheet.create({
   /** Room under the last item, so a button at the end of a long page (the chat button under the visit-code card) is never cut at the edge. */
   scrollContent: { paddingBottom: theme.spacing.xxl },
   fill: { flex: 1 },
-  footer: { padding: theme.spacing.lg, paddingTop: theme.spacing.sm },
 });
 
 export default Screen;

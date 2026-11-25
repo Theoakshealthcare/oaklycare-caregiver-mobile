@@ -135,6 +135,23 @@ describe("push registration", () => {
       view.unmount();
     });
 
+    it("opens that booking's chat when a chat message push is tapped (data.type chat_message, no target)", async () => {
+      const row = liveBody("feed-default").items[0];
+      const bookingId = row.data.booking_id as string;
+      const { view } = await renderSignedIn({
+        "POST /api/v1/devices/push-token": () => liveReply("push-register"),
+        [`GET /api/v1/booking/booking/${bookingId}`]: () => ({ status: 404, body: { detail: "not found" } }),
+        [`GET /api/v1/booking/chat/${bookingId}/messages`]: () => ({ status: 200, body: [] }),
+      });
+      await waitFor(() => expect(Notifications.addNotificationResponseReceivedListener).toHaveBeenCalled());
+      const onTap = (Notifications.addNotificationResponseReceivedListener as jest.Mock).mock.calls.at(-1)[0];
+      await act(async () => {
+        onTap({ notification: { request: { content: { data: { type: "chat_message", booking_id: bookingId } } } } });
+      });
+      expect(await screen.findByLabelText("Message")).toBeTruthy();
+      view.unmount();
+    });
+
     it("ignores a push that points nowhere the app knows", async () => {
       const { view } = await renderSignedIn({ "POST /api/v1/devices/push-token": () => liveReply("push-register") });
       await waitFor(() => expect(Notifications.addNotificationResponseReceivedListener).toHaveBeenCalled());

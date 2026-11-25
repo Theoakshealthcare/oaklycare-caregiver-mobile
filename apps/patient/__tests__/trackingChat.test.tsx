@@ -255,6 +255,15 @@ describe("chat (real calls, answered with captured bodies)", () => {
     view.unmount();
   });
 
+  it("shows the caregiver's photo (not a letter) in the chat header and message rows when the booking has one", async () => {
+    const withPhoto = answer("022-p-b2-detail-accepted", (b) => ({ ...b, caregiver_details: { ...b.caregiver_details, profile_image_url: "https://img.example.com/caregiver.jpg" } }));
+    const { view } = await openChat({ [DETAIL]: withPhoto, [MESSAGES]: () => liveReply("chat-list") });
+    await screen.findByText("Hello, I have been assigned to your visit.");
+    // the header photo, plus one beside each of the caregiver's messages (the bookings list behind may draw its own)
+    expect(screen.getAllByTestId("provider-photo").length).toBeGreaterThanOrEqual(2);
+    view.unmount();
+  });
+
   it("invites the first message when the conversation is empty", async () => {
     const { view } = await openChat({ [MESSAGES]: () => liveReply("chat-empty-before-caregiver") });
     expect(await screen.findByText("No messages yet. Say hello to your caregiver.")).toBeTruthy();
