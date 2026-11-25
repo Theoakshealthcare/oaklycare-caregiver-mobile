@@ -6741,7 +6741,7 @@ export interface components {
         };
         /**
          * ClientVital
-         * @description The newest reading of one vital type. No status: the backend does not rate readings.
+         * @description The newest reading of one vital type, with its clinician-approved flag (null for weight, sleep, unreadable values).
          */
         ClientVital: {
             /** Vital Type */
@@ -6755,6 +6755,9 @@ export interface components {
              * Format: date-time
              */
             recorded_at: string;
+            flag?: components["schemas"]["VitalFlagOut"] | null;
+            /** Glucose Context */
+            glucose_context?: string | null;
         };
         /**
          * ClinicalOut
@@ -8267,6 +8270,9 @@ export interface components {
              * Format: uuid
              */
             recorded_by_user_id: string;
+            flag?: components["schemas"]["VitalFlagOut"] | null;
+            /** Glucose Context */
+            glucose_context?: string | null;
         };
         /** PatientVitalUpdate */
         PatientVitalUpdate: {
@@ -9970,6 +9976,25 @@ export interface components {
             can_author: boolean;
             /** @description The client's active plan; null if there is none yet. */
             plan?: components["schemas"]["CarePlanSummary"] | null;
+        };
+        /**
+         * VitalFlagOut
+         * @description The clinician-approved rating of one reading (``app/services/vital_flags.py``). Additive: older clients ignore it.
+         */
+        VitalFlagOut: {
+            /** Status */
+            status: string;
+            /** Label */
+            label: string;
+            /** Reason */
+            reason?: string | null;
+            /**
+             * Emergency
+             * @default false
+             */
+            emergency: boolean;
+            /** Message */
+            message?: string | null;
         };
         /**
          * VitalSource

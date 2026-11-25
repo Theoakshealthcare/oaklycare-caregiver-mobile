@@ -64,7 +64,7 @@ channel) lives in the backend repo: `docs/checklist/MASTER_CHECKLIST.md`. Update
 ## Caregiver remaining parity with Figma: care plans, chat, vitals, bookings, account (2026-11-24)
 - [x] Care plan system: hub (teal header, tabs, search and filter, template and plan cards), details accordions in Figma order, goals, medications (full-page add), tasks (dropdowns), notes, create form, success pages
 - [x] Chat header, booking card, stamps, quick replies, composer; AI Notetaker "I'm Listening" with the orb and "Voice to text" (voice notes on); calling stays off
-- [x] Vitals: Clients Vitals, "<Vital> Monitoring" with area chart and Last synced, entry modals, "Vital Report Downloaded" page; status badge built, OFF (`VITAL_STATUS_BADGES`)
+- [x] Vitals: Clients Vitals, "<Vital> Monitoring" with area chart and Last synced, entry modals, "Vital Report Downloaded" page; status badge ON from 2026-11-25 (server `flag`, [SOP](../sop/2026-11-25-vitals-flags-badges.md))
 - [x] Bookings (bell, New Request, cards, Start Service, Get Direction), Job Details, Notification groups; Payment & Earning, Earning Payment, payslip success, Update Payment Details, Edit Profile, Contact Us labels; Client Profile headings
 - [ ] **Not device-verified** (Jest, tsc and ESLint only; simulator was busy): built on `feat/caregiver-remaining-parity` ([SOP](../sop/2026-11-24-caregiver-remaining-parity.md))
 - [ ] Deferred, needs backend or content: FallGuard for caregivers, patient name and price on offers, FAQ and About in-app copy, emergency contact name / address, vitals insights (the Chats list is now built: see "Caregiver Chats tab" below)
@@ -80,7 +80,7 @@ channel) lives in the backend repo: `docs/checklist/MASTER_CHECKLIST.md`. Update
 
 ## Patient app parity with Figma, slice 4: profile, vitals and FallGuard (2026-11-24)
 - [x] Profile Settings, Edit Profile (photo upload, gender, age, Update Password row, toast), Account and Data, Contact Us; Vitals home (Download Report, History & Insights), manual-entry sheets (glucose in mg/dL or mmol/L with three boxes, sleep pickers, BP row), "<Vital> Monitoring" pages, History & Insights, report success page; FallGuard intro, questions (sections, progress bar, "Score : N" from the server), result; branch `feat/patient-profile-vitals-parity` ([SOP](../sop/2026-11-24-patient-profile-vitals-fallguard-parity.md)); **Jest only: the simulator was busy, so the visual pass is pending; nothing seen on Android or a real phone**
-- [x] Built and OFF by owner decision: Normal / Critical badges (`domain/vitalStatus.ts`), FallGuard risk band badge and "What does this mean?" (`RISK_BANDS`)
+- [x] Vitals Normal / High / Low / Critical badges ON from 2026-11-25 (server `flag`, [SOP](../sop/2026-11-25-vitals-flags-badges.md)); still built and OFF by owner decision: FallGuard risk band badge and "What does this mean?" (`RISK_BANDS`)
 - [ ] **Rebuild the patient dev build** (new native modules `expo-image-picker`, `expo-file-system`, `expo-sharing`)
 - [ ] Clinician sign-off: vital thresholds, FallGuard bands and reassessment interval, the three reversed-looking questions (21, 23, 24) now that scores show
 - [ ] Deferred: native FAQ accordion (needs answers), support chat and WhatsApp number, Track pages (slice 3), Heart Alerts and caregiver access requests (no endpoint)

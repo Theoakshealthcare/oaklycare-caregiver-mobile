@@ -16,6 +16,8 @@ import useNavigation from "@/src/hooks/use-navigation";
 import type { ScreenParamLists } from "@/src/navigation/Navigations";
 import type { ClientProfile as Profile, ClientVital } from "@/src/services/clients.service";
 import { parseBackendDate } from "@/src/utils/dates";
+import VitalStatusBadge from "@/src/components/vitals/VitalStatusBadge";
+import { toFlag } from "@/src/vitals/vitalFlag";
 import { VITAL_KINDS, formatReading, formatUpdated, kindInfo, type VitalKind } from "@/src/vitals/vitalsModel";
 
 type Props = StackScreenProps<ScreenParamLists, "ClientProfile">;
@@ -179,6 +181,7 @@ const ClientProfile: React.FC<Props> = ({ route }) => {
                   <Text variant="subtitle" weight="bold">
                     {formatReading({ value: vital.value, unit: vital.unit ?? null })}
                   </Text>
+                  <VitalStatusBadge flag={toFlag(vital.flag)} testID={`client-vital-status-${kind}`} />
                   <Text variant="label" color={theme.colors.textLight}>
                     {formatUpdated(parseBackendDate(vital.recorded_at))}
                   </Text>

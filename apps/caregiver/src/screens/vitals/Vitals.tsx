@@ -7,13 +7,14 @@ import { ErrorState, LoadingState } from "@/src/components/account/StateViews";
 import Button from "@/src/components/ui/button";
 import Image from "@/src/components/ui/image";
 import Text from "@/src/components/ui/text";
-import VitalStatusBadge, { statusTint, type VitalStatus } from "@/src/components/vitals/VitalStatusBadge";
+import VitalStatusBadge, { statusTint } from "@/src/components/vitals/VitalStatusBadge";
 import { NoActiveVisit, VitalsUnavailable } from "@/src/components/vitals/VitalsStates";
 import { theme } from "@/src/constants/theme";
 import { useBookingsTab, useClientProfile, useVitals } from "@/src/hooks/queries";
 import useNavigation from "@/src/hooks/use-navigation";
 import { vitalsService } from "@/src/services/vitals.service";
 import { holdReport } from "@/src/vitals/reportStore";
+import type { VitalFlag } from "@/src/vitals/vitalFlag";
 import {
   VITAL_KINDS,
   ageAndSexLine,
@@ -31,20 +32,20 @@ const Tile: React.FC<{
   value: string | null;
   unit: string | null;
   updated: string | null;
-  /** A clinician-approved status, when one exists. Nothing supplies it yet, and the badge stays off (`VITAL_STATUS_BADGES`). */
-  status?: VitalStatus | null;
+  /** The server's clinician-approved rating of the latest reading; null when it has none (sleep, no reading). */
+  flag?: VitalFlag | null;
   onPress: () => void;
-}> = ({ info, value, unit, updated, status, onPress }) => (
+}> = ({ info, value, unit, updated, flag, onPress }) => (
   <Pressable
     testID={`vital-tile-${info.kind}`}
     accessibilityRole="button"
     accessibilityLabel={`${info.label}, open chart`}
     onPress={onPress}
-    style={{ width: "48%", backgroundColor: statusTint(status), borderRadius: theme.borderRadius.xl, padding: theme.spacing.md, marginBottom: theme.spacing.md, gap: theme.spacing.sm }}
+    style={{ width: "48%", backgroundColor: statusTint(flag), borderRadius: theme.borderRadius.xl, padding: theme.spacing.md, marginBottom: theme.spacing.md, gap: theme.spacing.sm }}
   >
     <View style={{ flexDirection: "row", alignItems: "center", justifyContent: "space-between" }}>
       <Feather name={info.icon} size={22} color={theme.colors.primary} />
-      <VitalStatusBadge status={status} testID={`vital-status-${info.kind}`} />
+      <VitalStatusBadge flag={flag} testID={`vital-status-${info.kind}`} />
     </View>
     <Text variant="body" weight="medium">
       {info.label}
@@ -202,13 +203,14 @@ const Vitals: React.FC<{ active?: boolean; patientId?: string; onBack?: () => vo
                 value={reading?.value ?? null}
                 unit={reading?.unit ?? null}
                 updated={reading ? formatUpdated(reading.recordedAt) : null}
+                flag={reading?.flag ?? null}
                 onPress={() => navigation.navigate("VitalDetail", { patientId: patient.patientId, patientName: patient.name, kind: info.kind })}
               />
             );
           })}
         </View>
         <Text variant="caption" color={theme.colors.textLight} style={{ marginBottom: theme.spacing.md }}>
-          Last 30 days. Readings are shown as recorded; Oakly does not rate them.
+          Last 30 days. Normal, High and Low follow the clinical thresholds set for Oakly; they are not a diagnosis.
         </Text>
 
         <Button testID="download-report" title="Download Report" onPress={() => void download()} loading={downloading} />

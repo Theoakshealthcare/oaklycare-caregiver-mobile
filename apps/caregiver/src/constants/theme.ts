@@ -45,6 +45,8 @@ export const theme = {
     error: "#F44336",
     warning: "#FFC107",
     info: "#2196F3",
+    warningLight: "#FDF6EC",
+    errorLight: "#FCEDEB",
     errorText: "#721C24",
     warningText: "#856404",
     infoText: "#0C5460",

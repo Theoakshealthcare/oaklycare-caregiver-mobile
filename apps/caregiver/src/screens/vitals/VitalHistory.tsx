@@ -5,6 +5,7 @@ import type { StackScreenProps } from "@react-navigation/stack";
 import ScreenShell from "@/src/components/account/ScreenShell";
 import { EmptyState, ErrorState, LoadingState } from "@/src/components/account/StateViews";
 import Text from "@/src/components/ui/text";
+import VitalStatusBadge from "@/src/components/vitals/VitalStatusBadge";
 import { VitalsUnavailable } from "@/src/components/vitals/VitalsStates";
 import { theme } from "@/src/constants/theme";
 import { useVitalHistory } from "@/src/hooks/queries";
@@ -63,6 +64,7 @@ const VitalHistory: React.FC<Props> = ({ route }) => {
                       {GLUCOSE_CONTEXT_LABEL[r.glucoseContext]}
                     </Text>
                   ) : null}
+                  <VitalStatusBadge flag={r.flag} testID="history-status" />
                 </View>
                 <Text variant="caption" color={theme.colors.textLight}>
                   {formatTime(r.recordedAt)}
@@ -72,7 +74,7 @@ const VitalHistory: React.FC<Props> = ({ route }) => {
           </View>
         ))}
         <Text variant="caption" color={theme.colors.textLight}>
-          Readings are shown as recorded; Oakly does not rate them.
+          Normal, High and Low follow the clinical thresholds set for Oakly; they are not a diagnosis.
         </Text>
       </>
     );

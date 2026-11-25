@@ -2,7 +2,7 @@ import { fireEvent, screen, waitFor } from "@testing-library/react-native";
 
 import { queryClient } from "../src/api/queryClient";
 import { formatAgo, formatUpdated } from "../src/domain/format";
-import { VITAL_STATUS_ENABLED, VITAL_THRESHOLDS, vitalStatus } from "../src/domain/vitalStatus";
+import { toFlag } from "../src/domain/vitalStatus";
 import { convertUnit, durationLabel, entryToInputs, sleepHours, timeLabel, toCreateBody, toInsights, toReading, validateEntry } from "../src/domain/vitals";
 import { disableCacheGcForTests } from "../test-utils/fakeApi";
 import { live, liveBody, liveReply } from "../test-utils/live";
@@ -153,11 +153,15 @@ describe("vitals (live-shaped)", () => {
       expect(formatUpdated("2026-11-03T10:45:00", now)).toBe("Updated 3 Nov");
     });
 
-    it("keeps Normal / Critical off: no thresholds are signed, so no reading gets a status", () => {
-      expect(VITAL_STATUS_ENABLED).toBe(false);
-      expect(VITAL_THRESHOLDS).toEqual({});
-      expect(vitalStatus({ kind: "heart_rate", value: 300 })).toBeNull();
-      expect(vitalStatus({ kind: "heart_rate", value: 70 })).toBeNull();
+    it("takes the rating from the server's flag and never works one out from a number", () => {
+      const row = { ...liveBody<any[]>("vitals-list").find((r) => r.vital_type === "heart_rate") };
+      expect(toReading({ ...row, value: "300" })?.flag).toBeNull(); // the captured rows carry no flag: unrated, not Normal
+      expect(toReading({ ...row, value: "72" })?.flag).toBeNull();
+      // a flag exactly as the API sends it (docs/fe-captures/vitals-flags/002 in the backend)
+      const critical = { status: "critical", label: "Critical", reason: "Heart rate below 50 bpm. Contact the family and arrange an ambulance.", emergency: true, message: "This may be an emergency. Call 112 now." };
+      expect(toReading({ ...row, value: "45", flag: critical })?.flag).toEqual(critical);
+      expect(toFlag({ status: "urgent", label: "Urgent", emergency: false })).toBeNull(); // a status this build does not know
+      expect(toFlag(null)).toBeNull();
     });
   });
 
@@ -385,6 +389,64 @@ describe("vitals (live-shaped)", () => {
       expect(screen.getAllByText("98.6")).toHaveLength(2);
       expect(screen.getByText("°F")).toBeTruthy();
       view.unmount();
+    });
+
+    describe("flags", () => {
+      // The flags are the ones the backend returned in docs/fe-captures/vitals-flags (001, 002, 003, 004, 010).
+      const flagged = (kind: string, value: string, unit: string, flag: any) => ({
+        ...liveBody<any[]>("vitals-list").find((r) => r.vital_type === kind),
+        id: `flag-${kind}`,
+        value,
+        unit,
+        flag,
+        recorded_at: new Date(Date.now() - 3_600_000).toISOString().replace("Z", ""),
+      });
+      const FLAGS = {
+        critical: { status: "critical", label: "Critical", reason: "Heart rate below 50 bpm. Contact the family and arrange an ambulance.", emergency: true, message: "This may be an emergency. Call 112 now." },
+        normal: { status: "normal", label: "Normal", reason: null, emergency: false, message: null },
+        low: { status: "low", label: "Low", reason: "Blood pressure below 100/60 mmHg.", emergency: false, message: null },
+        high: { status: "high", label: "High", reason: "Heart rate above 100 bpm. Tell the family or the patient's doctor for a medical review.", emergency: false, message: null },
+      };
+
+      it("draws Normal / High / Low / Critical on the tiles, the 112 message on a critical one, and nothing on sleep", async () => {
+        const body = [
+          flagged("heart_rate", "45", "bpm", FLAGS.critical),
+          flagged("blood_pressure", "96/58", "mmHg", FLAGS.low),
+          flagged("temperature", "36.8", "°C", FLAGS.normal),
+          flagged("respiratory_rate", "22", "breaths/min", { ...FLAGS.high, reason: "Breathing rate above 20 per minute." }),
+          flagged("sleep_duration", "5", "hrs", null),
+        ];
+        const { view } = await renderSignedIn(listRoutes({ [LIST]: () => ({ status: 200, body }) }), me());
+        await tab("Vitals");
+        expect(await screen.findByTestId("vital-status-heart_rate")).toHaveTextContent(/Critical/);
+        expect(screen.getByTestId("vital-status-heart_rate-emergency")).toHaveTextContent(/Call 112 now/);
+        expect(screen.getByTestId("vital-status-blood_pressure")).toHaveTextContent(/Low/);
+        expect(screen.getByTestId("vital-status-temperature")).toHaveTextContent(/Normal/);
+        expect(screen.getByTestId("vital-status-respiratory_rate")).toHaveTextContent(/High/);
+        expect(screen.queryByTestId("vital-status-sleep_duration")).toBeNull();
+        expect(screen.queryByTestId("vital-status-blood_glucose")).toBeNull();
+        view.unmount();
+      });
+
+      it("shows the flag on the monitoring page, with the 112 message when critical", async () => {
+        const body = [flagged("heart_rate", "45", "bpm", FLAGS.critical)];
+        const { view } = await renderSignedIn(listRoutes({ [LIST]: () => ({ status: 200, body }) }), me());
+        await tab("Vitals");
+        await fireEvent.press(await screen.findByRole("button", { name: "Heart Rate" }));
+        expect(await screen.findByTestId("vital-detail-status")).toHaveTextContent(/Critical/);
+        expect(screen.getByTestId("vital-detail-status-emergency")).toHaveTextContent(/Call 112 now/);
+        view.unmount();
+      });
+
+      it("marks each reading in the history with its flag", async () => {
+        const body = [flagged("heart_rate", "110", "bpm", FLAGS.high), { ...flagged("temperature", "36.8", "°C", FLAGS.normal), id: "t" }];
+        const { view } = await renderSignedIn(listRoutes({ [LIST]: () => ({ status: 200, body }), [INSIGHTS]: insightsOk }), me());
+        await tab("Vitals");
+        await fireEvent.press(await screen.findByRole("button", { name: "View all History" }));
+        const marks = await screen.findAllByTestId("history-status");
+        expect(marks.map((m) => m.props.accessibilityLabel).sort()).toEqual(["Status: High", "Status: Normal"]);
+        view.unmount();
+      });
     });
 
     it("history shows the AI's notes first, then every shown reading with its glucose context and sleep times", async () => {

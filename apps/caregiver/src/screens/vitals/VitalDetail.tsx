@@ -7,6 +7,7 @@ import ScreenShell from "@/src/components/account/ScreenShell";
 import { EmptyState, ErrorState, LoadingState } from "@/src/components/account/StateViews";
 import Text from "@/src/components/ui/text";
 import ReadingChart from "@/src/components/vitals/ReadingChart";
+import VitalStatusBadge from "@/src/components/vitals/VitalStatusBadge";
 import { VitalsUnavailable } from "@/src/components/vitals/VitalsStates";
 import { theme } from "@/src/constants/theme";
 import { useVitals } from "@/src/hooks/queries";
@@ -83,6 +84,7 @@ const VitalDetail: React.FC<Props> = ({ route }) => {
               <Text variant="h3" weight="bold" color={theme.colors.primary} testID="vital-detail-current">
                 {current ? formatReading(current) : "No reading yet"}
               </Text>
+              {current?.flag ? <VitalStatusBadge flag={current.flag} testID="vital-detail-status" /> : null}
             </View>
             <View style={{ flexDirection: "row", gap: theme.spacing.xs }}>
               {CHART_RANGES.map((r) => (
