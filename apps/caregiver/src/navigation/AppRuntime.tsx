@@ -8,11 +8,11 @@ import InAppBanner from "@/src/components/booking/InAppBanner";
 import { useCaregiverHome } from "@/src/hooks/queries";
 import { bannerStore } from "@/src/push/banner";
 import { resolveOffer } from "@/src/push/openOffer";
-import { parseChatMessage, parseJobOffer } from "@/src/push/registration";
+import { isLocationStale, parseChatMessage, parseJobOffer } from "@/src/push/registration";
 import { stopVisitUpdates, startVisitUpdates } from "@/src/supply/backgroundLocationTask";
-import { createExpoForegroundTracker } from "@/src/supply/foregroundTracker";
+import { createExpoForegroundTracker, readCurrentPosition } from "@/src/supply/foregroundTracker";
 import { shouldRefetchHomeAfterPing } from "@/src/home/homeModel";
-import { locationService, type CaregiverHome } from "@/src/supply/locationService";
+import { locationService, type CaregiverHome, type Coords } from "@/src/supply/locationService";
 import { locationPermissionStore, useLocationPermissions } from "@/src/supply/permissionState";
 import { decideTracking } from "@/src/supply/tracking";
 
@@ -36,6 +36,28 @@ function openChat(bookingId: string): void {
   if (navigationRef.isReady()) navigationRef.navigate("ChatScreen", { bookingId });
 }
 
+/** The tap on the "update your location" nudge opens the app on Home (the same landing as a normal launch). */
+function openHome(): void {
+  if (navigationRef.isReady()) navigationRef.navigate("BottomNavigation", { tab: "home", at: Date.now() });
+}
+
+/**
+ * One location ping, and the Home refetch after the first one (the warning on Home is judged from the last fetched home: DP1-14).
+ * The ping never carries `is_available`, so it cannot change whether the caregiver is available.
+ */
+async function sendPing(coords: Coords): Promise<void> {
+  await locationService.ping(coords);
+  if (shouldRefetchHomeAfterPing(queryClient.getQueryData<CaregiverHome>(queryKeys.home), Date.now())) {
+    void queryClient.invalidateQueries({ queryKey: queryKeys.home });
+  }
+}
+
+/** A fresh position now, for the "update your location" nudge (the watcher alone only reports a move of 100 m, or waits out its 60 s heartbeat). */
+async function pingNow(): Promise<void> {
+  const coords = await readCurrentPosition();
+  if (coords) await sendPing(coords).catch(() => undefined);
+}
+
 /**
  * Everything that runs while an approved caregiver is in the app: location tracking decided by
  * `decideTracking`, push-tap routing and the in-app banner. Renders only the banner.
@@ -44,13 +66,7 @@ function openChat(bookingId: string): void {
 const AppRuntime: React.FC = () => {
   const home = useCaregiverHome();
   const permissions = useLocationPermissions();
-  const [foregroundTracker] = useState(() => createExpoForegroundTracker(async (coords) => {
-      await locationService.ping(coords);
-      // The warning on Home is judged from the last fetched home: refetch once the first ping lands (DP1-14).
-      if (shouldRefetchHomeAfterPing(queryClient.getQueryData<CaregiverHome>(queryKeys.home), Date.now())) {
-        void queryClient.invalidateQueries({ queryKey: queryKeys.home });
-      }
-    }));
+  const [foregroundTracker] = useState(() => createExpoForegroundTracker(sendPing));
   const handled = useRef(new Set<string>());
 
   // Location permission can change in Settings while the app is in the background.
@@ -82,6 +98,12 @@ const AppRuntime: React.FC = () => {
     }),
   );
 
+  // The latest tracking mode, for the push handlers below (they are created once).
+  const modeRef = useRef(mode);
+  useEffect(() => {
+    modeRef.current = mode;
+  }, [mode]);
+
   useEffect(() => {
     tracking.apply(mode).catch((error: unknown) => {
       if (__DEV__) console.warn("[tracking] could not apply mode", mode, error);
@@ -98,6 +120,14 @@ const AppRuntime: React.FC = () => {
   const handleResponse = useCallback((response: Notifications.NotificationResponse) => {
     const id = response.notification.request.identifier;
     const data = response.notification.request.content.data;
+    if (isLocationStale(data)) {
+      if (handled.current.has(id)) return;
+      handled.current.add(id);
+      openHome();
+      // Tracking is on only while the caregiver is available: then take a position now rather than waiting for the heartbeat.
+      if (modeRef.current !== "off") void pingNow();
+      return;
+    }
     const offer = parseJobOffer(data);
     const chat = offer ? null : parseChatMessage(data);
     if ((!offer && !chat) || handled.current.has(id)) return;
@@ -117,6 +147,10 @@ const AppRuntime: React.FC = () => {
     // A push in the foreground: show the banner and refresh offers (push is a hint, home is the truth).
     const received = Notifications.addNotificationReceivedListener((notification) => {
       const data = notification.request.content.data;
+      if (isLocationStale(data)) {
+        if (modeRef.current !== "off") void pingNow();
+        return;
+      }
       const chat = parseChatMessage(data);
       if (chat) {
         // A message arrived while the app is open: the open chat and the Chats list show it without waiting for the next poll.

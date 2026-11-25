@@ -5,6 +5,7 @@ import { useState, useEffect, useCallback, useRef } from "react"
 import { View, TouchableOpacity, Alert, Linking, Keyboard, type LayoutChangeEvent } from "react-native"
 import { useQueryClient } from "@tanstack/react-query"
 import { Feather } from "@expo/vector-icons"
+import { errorCode, isVisitNotActiveError, NOT_FOUND, notesWindow } from "@oakly/api-client"
 import type { StackScreenProps } from "@react-navigation/stack"
 import {
   useAudioRecorder,
@@ -20,12 +21,13 @@ import KeyboardScrollView, { type KeyboardScrollHandle } from "@/src/components/
 import KeyboardInsetView from "@/src/components/ui/keyboard-inset-view"
 import BottomCta from "@/src/components/ui/bottom-cta"
 import Input from "@/src/components/ui/input"
+import Notice from "@/src/components/ui/notice"
 import AiOrb from "@/src/components/chat/AiOrb"
 import HeaderBack from "@/src/components/back/HeaderBack"
 import { globalStyles } from "@/src/constants/styles"
-import { messageForError } from "@/src/api/errors"
-import { formatStamp } from "@/src/utils/dates"
-import { useCreateNote, useNotes } from "@/src/hooks/queries"
+import { ApiError, messageForError } from "@/src/api/errors"
+import { formatStamp, formatUntil } from "@/src/utils/dates"
+import { useBooking, useCreateNote, useNotes } from "@/src/hooks/queries"
 import { queryKeys } from "@/src/api/keys"
 import { voiceNotesMode } from "@/src/config/voiceNotes"
 import useNavigation from "@/src/hooks/use-navigation"
@@ -52,16 +54,45 @@ import {
 import type { BookingNote } from "@/src/services/booking.service"
 import type { ScreenParamLists } from "@/src/navigation/Navigations"
 
+export const NOTES_CLOSED = "Notes for this visit are closed."
+export const NOTES_NOT_SAVED = "Your note could not be saved."
+export const NOTES_GONE = "These notes are no longer available."
+
 const AINoteTaker: React.FC<StackScreenProps<ScreenParamLists, "AINoteTaker">> = ({ route }) => {
   const { bookingId } = route.params
 
   const [isRecording, setIsRecording] = useState(false)
   const recorder = useAudioRecorder(RecordingPresets.HIGH_QUALITY)
-  const { data: notes = [] } = useNotes(bookingId)
+  const notesQuery = useNotes(bookingId)
+  const notes = notesQuery.data ?? []
   const createNote = useCreateNote(bookingId)
+  const { data: booking } = useBooking(bookingId)
+
+  // Notes can be added during the visit and for 2 h after it (`notes_open`), and read by the caregiver for 24 h after it
+  // (`notes_readable_until`; after that the API answers 404 `not_found`). A missing field counts as open. A save that
+  // comes back 409 `visit_not_active` means the window ended while the note was being typed: the text stays on screen.
+  const win = notesWindow(booking)
+  // When this screen opened: a notes window that had already ended by then is not drawn (a clock read during render would not be pure).
+  const [openedAt] = useState(() => Date.now())
+  const [closedByServer, setClosedByServer] = useState(false)
+  const readError = notesQuery.error
+  const notesGone =
+    (readError instanceof ApiError && readError.status === 404 && errorCode(readError.body) === NOT_FOUND) ||
+    (win.readableUntil !== null && win.readableUntil.getTime() <= openedAt)
+  // Closed by what the payload (or a 404) says: nothing to type into, so no entry forms at all.
+  const entryClosed = !win.open || notesGone
+  // Closed by a 409 on save: the typed note stays visible, but it can no longer be saved.
+  const closed = entryClosed || closedByServer
   const [currentNote, setCurrentNote] = useState("")
   const [noteTitle, setNoteTitle] = useState("")
   const [recordingDuration, setRecordingDuration] = useState(0)
+  const banner = closed
+    ? closedByServer && !entryClosed && (noteTitle.trim() || currentNote.trim())
+      ? `${NOTES_CLOSED} ${NOTES_NOT_SAVED}`
+      : NOTES_CLOSED
+    : win.closesAt
+      ? `Visit complete. You can add notes until ${formatUntil(win.closesAt)}.`
+      : null
 
   // Bringing the typed-note fields into view: the pinned Save Note bar shrinks the scroll area when the keyboard opens, so
   // the page is scrolled to the form by hand, once the area has its new height (or at once if the keyboard is already up).
@@ -236,7 +267,15 @@ const AINoteTaker: React.FC<StackScreenProps<ScreenParamLists, "AINoteTaker">> =
           setCurrentNote("")
           Alert.alert("Success", "Note saved!")
         },
-        onError: (error) => Alert.alert("Error", messageForError(error)),
+        onError: (error) => {
+          if (isVisitNotActiveError(error instanceof ApiError ? error.body : null)) {
+            setClosedByServer(true)
+            // The booking carries the times: read it again so the banner is right when the screen is opened next.
+            void client.invalidateQueries({ queryKey: queryKeys.booking(bookingId) })
+            return
+          }
+          Alert.alert("Error", messageForError(error))
+        },
       },
     )
   }
@@ -376,7 +415,9 @@ const AINoteTaker: React.FC<StackScreenProps<ScreenParamLists, "AINoteTaker">> =
             ) : null}
           </View>
 
-          {voiceOn ? (
+          {banner ? <Notice testID="notes-window-banner" message={banner} style={{ marginBottom: theme.spacing.lg }} /> : null}
+
+          {voiceOn && !closed ? (
             <View>
               {consent.loaded && !consent.consented ? <ConsentCard checked={false} onChange={consent.setConsented} /> : null}
               {consent.consented ? (
@@ -427,7 +468,7 @@ const AINoteTaker: React.FC<StackScreenProps<ScreenParamLists, "AINoteTaker">> =
           ) : null}
 
           {/* Voice to text (Figma "I'm Listening"): the orb, the Voice to text pill, and the language choice */}
-          {voiceOn ? (
+          {voiceOn && !closed ? (
             <View testID="voice-panel" style={{ alignItems: "center", gap: theme.spacing.md, marginBottom: theme.spacing.lg }}>
               <Text variant="body" color={theme.colors.textLight} testID="listening-label">
                 {isRecording ? "I'm Listening" : "Ready to listen"}
@@ -489,6 +530,7 @@ const AINoteTaker: React.FC<StackScreenProps<ScreenParamLists, "AINoteTaker">> =
           ) : null}
 
           {/* Note Input: two labelled, outlined fields (the shared Input), Save Note is the pinned bar under the page */}
+          {entryClosed ? null : (
           <View
             testID="note-form"
             onLayout={(event) => {
@@ -505,6 +547,7 @@ const AINoteTaker: React.FC<StackScreenProps<ScreenParamLists, "AINoteTaker">> =
               placeholder="Note title"
               value={noteTitle}
               onChangeText={setNoteTitle}
+              editable={!closed}
               onFocus={onFormFocus}
               onBlur={onFormBlur}
               returnKeyType="next"
@@ -516,6 +559,7 @@ const AINoteTaker: React.FC<StackScreenProps<ScreenParamLists, "AINoteTaker">> =
               placeholder="Write your note here"
               value={currentNote}
               onChangeText={setCurrentNote}
+              editable={!closed}
               onFocus={onFormFocus}
               onBlur={onFormBlur}
               multiline
@@ -524,7 +568,7 @@ const AINoteTaker: React.FC<StackScreenProps<ScreenParamLists, "AINoteTaker">> =
             />
 
             {/* Recording Controls: the typed screen keeps its round mic; with voice notes on the Voice to text pill above replaces it */}
-            {voiceOn ? null : (
+            {voiceOn || closed ? null : (
               <View style={[globalStyles.row, { justifyContent: "center" }]}>
                 <TouchableOpacity
                   testID="mic-button"
@@ -549,6 +593,7 @@ const AINoteTaker: React.FC<StackScreenProps<ScreenParamLists, "AINoteTaker">> =
 
             {voiceOn ? null : recordingIndicator}
           </View>
+          )}
 
           {/* Saved voice notes: the final text the caregiver saved */}
           {voiceOn && voiceNotes.some((note) => note.status === "saved") ? (
@@ -567,9 +612,13 @@ const AINoteTaker: React.FC<StackScreenProps<ScreenParamLists, "AINoteTaker">> =
           {/* Previous Notes */}
           <View>
             <Text variant="h3" weight="bold" style={{ marginBottom: 16 }}>
-              Previous Notes ({notes.length})
+              {notesGone ? "Previous Notes" : `Previous Notes (${notes.length})`}
             </Text>
-            {notes.length === 0 ? (
+            {notesGone ? (
+              <Text variant="body" color={theme.colors.textLight} testID="notes-gone">
+                {NOTES_GONE}
+              </Text>
+            ) : notes.length === 0 ? (
               <Text variant="body" color={theme.colors.textLight} testID="notes-empty">
                 No notes for this visit yet. Notes you save appear here.
               </Text>
@@ -581,9 +630,11 @@ const AINoteTaker: React.FC<StackScreenProps<ScreenParamLists, "AINoteTaker">> =
       </KeyboardScrollView>
 
       {/* Save Note stays under the page, above the keyboard and with the shared bottom gap */}
-      <BottomCta testID="note-save-bar" style={{ backgroundColor: theme.colors.white }}>
-        <Button title="Save Note" onPress={saveTextNote} loading={createNote.isPending} />
-      </BottomCta>
+      {closed ? null : (
+        <BottomCta testID="note-save-bar" style={{ backgroundColor: theme.colors.white }}>
+          <Button title="Save Note" onPress={saveTextNote} loading={createNote.isPending} />
+        </BottomCta>
+      )}
     </KeyboardInsetView>
   )
 }

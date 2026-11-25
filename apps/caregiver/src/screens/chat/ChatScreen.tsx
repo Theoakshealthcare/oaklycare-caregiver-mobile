@@ -5,6 +5,8 @@ import { useState, useRef, useMemo } from "react"
 import { View, ScrollView, TextInput, TouchableOpacity, Alert, Pressable } from "react-native"
 import type { StackScreenProps } from "@react-navigation/stack"
 import { Feather, Ionicons } from "@expo/vector-icons"
+import { useQueryClient } from "@tanstack/react-query"
+import { CHAT_CLOSED, chatWindow, errorCode } from "@oakly/api-client"
 
 import { theme, MAX_FONT_SCALE } from "@/src/constants/theme"
 import KeyboardInsetView from "@/src/components/ui/keyboard-inset-view"
@@ -13,7 +15,9 @@ import PatientAvatar from "@/src/components/chat/PatientAvatar"
 import { globalStyles } from "@/src/constants/styles"
 import Navigation from "@/src/hooks/use-navigation"
 import { useBooking, useChatMessages, useMe, useSendChatMessage } from "@/src/hooks/queries"
-import { messageForError } from "@/src/api/errors"
+import { ApiError, messageForError } from "@/src/api/errors"
+import { queryKeys } from "@/src/api/keys"
+import { formatUntil } from "@/src/utils/dates"
 import { CALLING_ENABLED } from "@/src/config/calling"
 import { voiceNotesMode } from "@/src/config/voiceNotes"
 import BookingContextCard from "@/src/components/chat/BookingContextCard"
@@ -22,6 +26,10 @@ import type { ChatMessage } from "@/src/services/booking.service"
 import type { ScreenParamLists } from "@/src/navigation/Navigations"
 
 const AVATAR = 40
+
+/** The two calm lines a closed chat shows in place of the message bar. */
+export const CHAT_CLOSED_VISIT_OVER = "This chat has closed because the visit is over."
+export const CHAT_CLOSED_CANCELLED = "This chat is closed because the booking was cancelled."
 
 const RoundIconButton: React.FC<{ icon: React.ComponentProps<typeof Feather>["name"]; label: string; onPress: () => void; testID: string }> = ({
   icon,
@@ -58,6 +66,16 @@ const ChatScreen: React.FC<StackScreenProps<ScreenParamLists, "ChatScreen">> = (
 
   const [newMessage, setNewMessage] = useState("")
   const scrollViewRef = useRef<ScrollView>(null)
+  const client = useQueryClient()
+
+  // The chat can be written to until 24 h after the visit is completed, never once the booking was cancelled. A missing
+  // field counts as open; a send that comes back 409 `chat_closed` closes the screen (no error toast) because the
+  // server has the last word.
+  const [closedByServer, setClosedByServer] = useState(false)
+  const gate = chatWindow(booking)
+  const closed = closedByServer || !gate.open
+  const closedText = !gate.open && gate.reason === "cancelled" ? CHAT_CLOSED_CANCELLED : CHAT_CLOSED_VISIT_OVER
+  const hint = gate.open && !closedByServer && gate.closesAt ? `You can chat until ${formatUntil(gate.closesAt)}` : null
 
   const name = patientName ?? booking?.patient_details?.full_name ?? "Patient"
   const photo = patientPhotoUrl ?? booking?.patient_details?.profile_image_url ?? null
@@ -68,7 +86,15 @@ const ChatScreen: React.FC<StackScreenProps<ScreenParamLists, "ChatScreen">> = (
   const deliver = (text: string, onSent?: () => void) => {
     send.mutate(text, {
       onSuccess: onSent,
-      onError: (error) => Alert.alert("Message not sent", messageForError(error)),
+      onError: (error) => {
+        if (error instanceof ApiError && errorCode(error.body) === CHAT_CLOSED) {
+          setClosedByServer(true)
+          // The booking carries the reason and the time: read it again so the banner is right next time too.
+          void client.invalidateQueries({ queryKey: queryKeys.booking(bookingId) })
+          return
+        }
+        Alert.alert("Message not sent", messageForError(error))
+      },
     })
   }
 
@@ -200,7 +226,20 @@ const ChatScreen: React.FC<StackScreenProps<ScreenParamLists, "ChatScreen">> = (
           )}
         </ScrollView>
 
-        {/* Quick replies and message input */}
+        {closed ? (
+          <View
+            testID="chat-closed-banner"
+            accessibilityRole="alert"
+            style={{ backgroundColor: theme.colors.primaryLight, paddingHorizontal: 20, paddingVertical: theme.spacing.lg }}
+          >
+            <Text variant="small" center color={theme.colors.text}>
+              {closedText}
+            </Text>
+          </View>
+        ) : null}
+
+        {/* Quick replies and message input: not drawn once the chat is closed */}
+        {closed ? null : (
         <View
           style={{
             backgroundColor: theme.colors.primaryLight,
@@ -210,6 +249,11 @@ const ChatScreen: React.FC<StackScreenProps<ScreenParamLists, "ChatScreen">> = (
             gap: theme.spacing.sm,
           }}
         >
+          {hint ? (
+            <Text variant="label" center color={theme.colors.textLight} testID="chat-closes-hint">
+              {hint}
+            </Text>
+          ) : null}
           <ScrollView horizontal showsHorizontalScrollIndicator={false} keyboardShouldPersistTaps="handled" contentContainerStyle={{ gap: theme.spacing.sm }}>
             {QUICK_REPLIES.map((reply) => (
               <Pressable
@@ -290,6 +334,7 @@ const ChatScreen: React.FC<StackScreenProps<ScreenParamLists, "ChatScreen">> = (
             </TouchableOpacity>
           </View>
         </View>
+        )}
       </View>
     </KeyboardInsetView>
   )

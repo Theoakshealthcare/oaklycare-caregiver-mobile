@@ -40,6 +40,10 @@ export interface Booking {
   cancelFee: number | null;
   cancelFeeTier: FeeTier | null;
   refund: Refund | null;
+  /** `chat_open`: false once the chat closed (24 h after the visit, or the booking was cancelled); null when the API sent none, which counts as open. */
+  chatOpen: boolean | null;
+  /** `chat_closes_at` as an explicit-UTC time: set once the visit is completed; null before that and for a cancelled booking. */
+  chatClosesAt: string | null;
 }
 
 export function tabForStatus(status: BookingStatus): BookingTab {

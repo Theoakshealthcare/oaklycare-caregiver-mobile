@@ -1,7 +1,7 @@
 import * as Notifications from "expo-notifications";
 
 import { session } from "../src/auth";
-import { easProjectId, nativePushDeps } from "../src/push/native";
+import { easProjectId, installNotificationHandler, nativePushDeps } from "../src/push/native";
 import { registerForPush } from "../src/push/registration";
 import { authService } from "../src/services/auth.service";
 
@@ -86,5 +86,26 @@ describe("native push wiring", () => {
     // C2's logout reads the same secure-store key and sends DELETE with the token in a JSON body.
     await authService.logout();
     expect(requests[1]).toMatchObject({ method: "DELETE", body: { token: "ExponentPushToken[placeholder-live]" } });
+  });
+});
+
+describe("foreground notification handler", () => {
+  const handlerOf = async () => {
+    installNotificationHandler();
+    const call = (Notifications.setNotificationHandler as jest.Mock).mock.calls[0][0] as {
+      handleNotification: (n: unknown) => Promise<{ shouldShowBanner: boolean }>;
+    };
+    return (data: unknown) => call.handleNotification({ request: { content: { data } } });
+  };
+
+  it("shows no system banner for the 'update your location' nudge (the app is already open) or for an offer", async () => {
+    const handle = await handlerOf();
+    expect((await handle({ type: "location_stale" })).shouldShowBanner).toBe(false);
+    expect((await handle({ type: "job_offer", booking_id: "b1" })).shouldShowBanner).toBe(false);
+  });
+
+  it("keeps the default banner for everything else", async () => {
+    const handle = await handlerOf();
+    expect((await handle({ type: "chat_message", booking_id: "b1" })).shouldShowBanner).toBe(true);
   });
 });

@@ -45,10 +45,20 @@ const ChatRow: React.FC<{ chat: ChatSummary; onOpen: (chat: ChatSummary) => void
           {last ? last.text : NO_MESSAGES_YET}
         </Text>
       </View>
-      {last ? (
-        <Text variant="label" weight="medium" color={theme.colors.textLight} testID="chat-row-time">
-          {listTime(last.sent_at)}
-        </Text>
+      {last || chat.chat_open === false ? (
+        <View style={{ alignItems: "flex-end", gap: 2 }}>
+          {last ? (
+            <Text variant="label" weight="medium" color={theme.colors.textLight} testID="chat-row-time">
+              {listTime(last.sent_at)}
+            </Text>
+          ) : null}
+          {/* The chat closed (24 h after the visit, or the booking was cancelled): the history is still there. */}
+          {chat.chat_open === false ? (
+            <Text variant="label" color={theme.colors.textLight} testID="chat-row-closed">
+              Closed
+            </Text>
+          ) : null}
+        </View>
       ) : null}
     </Pressable>
   );

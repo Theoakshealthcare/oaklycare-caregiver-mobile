@@ -27,6 +27,7 @@ jest.mock("expo-file-system", () => ({
 
 const mockCreateNote = jest.fn();
 jest.mock("../src/hooks/queries", () => ({
+  useBooking: () => ({ data: undefined }),
   useNotes: () => ({ data: [] }),
   useCreateNote: () => ({ mutate: mockCreateNote, isPending: false }),
 }));

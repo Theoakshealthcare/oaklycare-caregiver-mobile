@@ -97,6 +97,14 @@ export function parseJobOffer(data: unknown): JobOfferNotification | null {
   return { bookingId };
 }
 
+/**
+ * The "update your location" nudge the server sends an Available caregiver whose last fix is older than 6 hours:
+ * `{ type: "location_stale" }`, no booking. A tap opens the app on Home (and refreshes the position).
+ */
+export function isLocationStale(data: unknown): boolean {
+  return !!data && typeof data === "object" && (data as { type?: unknown }).type === "location_stale";
+}
+
 /** The data payload of a new-chat-message push: `{ type: "chat_message", booking_id }`. */
 export function parseChatMessage(data: unknown): JobOfferNotification | null {
   if (!data || typeof data !== "object") return null;

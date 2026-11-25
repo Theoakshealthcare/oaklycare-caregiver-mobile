@@ -291,3 +291,81 @@ export function isNetworkFailure(error: unknown): boolean {
   if (EXPO_FETCH_PREFIX.test(message)) return !EXPO_FETCH_ABORTED.test(message);
   return error instanceof TypeError && TYPE_ERROR_NETWORK.test(message);
 }
+
+// ---- Post-visit windows: chat and visit notes (backend #81) ----
+
+/** `detail.code` of a coded FastAPI error body (`{ detail: { code, message } }`), else null. Read the code, never the sentence. */
+export function errorCode(error: unknown): string | null {
+  if (!error || typeof error !== "object") return null;
+  const detail = (error as { detail?: unknown }).detail;
+  if (!detail || typeof detail !== "object" || Array.isArray(detail)) return null;
+  const code = (detail as { code?: unknown }).code;
+  return typeof code === "string" ? code : null;
+}
+
+/** `409` on `POST /booking/chat/{id}/send`: the chat is closed (24 h after the visit, or the booking was cancelled). Nothing was saved. */
+export const CHAT_CLOSED = "chat_closed";
+/** `409` on `POST /booking/notes/{id}/create`: outside "in progress + 2 h after completion". */
+export const VISIT_NOT_ACTIVE = "visit_not_active";
+/** `404` on reading the caregiver's own notes after `notes_readable_until`. */
+export const NOT_FOUND = "not_found";
+
+export const isChatClosedError = (error: unknown): boolean => errorCode(error) === CHAT_CLOSED;
+export const isVisitNotActiveError = (error: unknown): boolean => errorCode(error) === VISIT_NOT_ACTIVE;
+export const isNotFoundCoded = (error: unknown): boolean => errorCode(error) === NOT_FOUND;
+
+/** The API sends UTC timestamps without a zone (`2026-11-26T06:06:02.106091`); read them as UTC. Null for missing or unreadable. */
+export function parseUtc(raw: string | null | undefined): Date | null {
+  if (!raw) return null;
+  const text = raw.trim().replace(" ", "T");
+  const date = new Date(/(?:Z|[+-]\d{2}:?\d{2})$/i.test(text) ? text : `${text}Z`);
+  return Number.isNaN(date.getTime()) ? null : date;
+}
+
+/** The booking fields the windows read. Every one is optional: an older backend sends none of them, and a missing field means open. */
+export interface WindowFields {
+  status?: string | null;
+  chat_open?: boolean | null;
+  chat_closes_at?: string | null;
+  notes_open?: boolean | null;
+  notes_closes_at?: string | null;
+  notes_readable_until?: string | null;
+}
+
+export type ChatWindow =
+  | { open: true; /** Set once the visit is completed and the chat will close; null while there is no fixed end. */ closesAt: Date | null }
+  | { open: false; reason: "cancelled" | "visit_over" };
+
+/**
+ * Whether the booking chat accepts messages. `chat_open === false` closes it; a missing field leaves it open (the server
+ * has the last word: a send after the cutoff is a 409 `chat_closed`). A cancelled or declined booking says so by `status`.
+ * A `chat_closes_at` already in the past closes it on the screen too, so a screen left open does not offer a send that
+ * is certain to fail (the phone's clock can be wrong, so the server's `chat_open` stays the authority whenever it is sent).
+ */
+export function chatWindow(booking: WindowFields | null | undefined, now: number = Date.now()): ChatWindow {
+  if (!booking) return { open: true, closesAt: null };
+  const cancelled = booking.status === "cancelled" || booking.status === "declined";
+  if (cancelled) return { open: false, reason: "cancelled" };
+  if (booking.chat_open === false) return { open: false, reason: "visit_over" };
+  const closesAt = parseUtc(booking.chat_closes_at);
+  if (booking.chat_open == null && closesAt && closesAt.getTime() <= now) return { open: false, reason: "visit_over" };
+  return { open: true, closesAt };
+}
+
+export interface NotesWindow {
+  /** A note can be added now. A missing `notes_open` leaves it open (as before the windows existed). */
+  open: boolean;
+  /** The visit is completed and the add window ends at this time: show "You can add notes until ...". */
+  closesAt: Date | null;
+  /** After this time the caregiver can no longer read their notes for the visit (404 `not_found`). */
+  readableUntil: Date | null;
+}
+
+export function notesWindow(booking: WindowFields | null | undefined): NotesWindow {
+  if (!booking) return { open: true, closesAt: null, readableUntil: null };
+  return {
+    open: booking.notes_open !== false,
+    closesAt: booking.status === "completed" ? parseUtc(booking.notes_closes_at) : null,
+    readableUntil: parseUtc(booking.notes_readable_until),
+  };
+}

@@ -735,7 +735,7 @@ export interface paths {
          * List Chats
          * @description Your conversations, newest activity first: one per booking whose chat you may open (the bookings assigned to you).
          *
-         *     Each row carries the booking id for `GET /booking/chat/{booking_id}/messages`, the patient's name, the service, the
+         *     Each row carries the booking id for `GET /booking/chat/{booking_id}/messages`, the patient's name and photo URL (null when none), the service, the
          *     booking status, the visit start and the last message cut to 140 characters (null when nobody has written yet). There is
          *     no unread count: the chat does not record who has read what.
          */
@@ -1693,6 +1693,30 @@ export interface paths {
          *     version (PUT); to go back, publish the old values again.
          */
         delete: operations["delete_booking_settings_api_v1_booking_settings__settings_id__delete"];
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/payment/callback": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Payment Callback
+         * @description Where Paystack sends the in-app browser after a payment (``PAYMENT_CALLBACK_URL``). A static page: the payment is being
+         *     confirmed, close this page and return to the app (button: ``oaklypatient://payment-complete``).
+         *
+         *     Public, 200 for any query string. It does not mark anything paid (the signed webhook does that) and ignores the
+         *     ``reference`` / ``trxref`` Paystack appends: nothing from the request is read or printed.
+         */
+        get: operations["payment_callback_api_v1_payment_callback_get"];
+        put?: never;
+        post?: never;
+        delete?: never;
         options?: never;
         head?: never;
         patch?: never;
@@ -5310,6 +5334,32 @@ export interface components {
             /** @description The booking's refund, newest one, when it has one. Patient views only; null for caregivers. */
             refund?: components["schemas"]["RefundSummary"] | null;
             /**
+             * Chat Open
+             * @description Whether the booking chat can still be written to: true while the booking is not over and for 24 hours after the visit was completed; false once it is closed or the booking was cancelled or declined. History stays readable either way. Sending to a closed chat is 409 `chat_closed`.
+             * @default true
+             */
+            chat_open: boolean;
+            /**
+             * Chat Closes At
+             * @description When the chat closes (UTC): the visit's end plus 24 hours, known once the booking is completed. Null while the booking is not completed, and for a cancelled or declined booking (closed already).
+             */
+            chat_closes_at?: string | null;
+            /**
+             * Notes Open
+             * @description Caregiver views of their own visit only (null for everyone else): whether a visit note can be added now, typed or voice. True while the visit is in progress and for 2 hours after it was completed.
+             */
+            notes_open?: boolean | null;
+            /**
+             * Notes Closes At
+             * @description Caregiver views only: when adding notes stops (UTC), known once the visit is completed; null while it is in progress or not started.
+             */
+            notes_closes_at?: string | null;
+            /**
+             * Notes Readable Until
+             * @description Caregiver views only: when the caregiver stops being able to read, save or delete their notes for the visit (UTC), 24 hours after completion; null until the visit is completed.
+             */
+            notes_readable_until?: string | null;
+            /**
              * Payment Url
              * @description Paystack payment URL to complete the booking payment
              * @example https://checkout.paystack.com/abcd1234
@@ -6159,7 +6209,7 @@ export interface components {
             patient_name: string;
             /**
              * Patient Photo Url
-             * @description Absolute URL of the patient's profile photo; null when they have none.
+             * @description Absolute URL of the patient's profile photo; null when they have not uploaded one.
              */
             patient_photo_url?: string | null;
             /** Service Type */
@@ -6173,6 +6223,16 @@ export interface components {
             scheduled_date: string;
             /** @description Null while nobody has written yet. */
             last_message?: components["schemas"]["ChatLastMessage"] | null;
+            /**
+             * Chat Open
+             * @description Whether this chat can still be written to: true while the booking is not over and for 24 hours after the visit was completed; false once closed or when the booking was cancelled or declined. The history stays readable. Sending to a closed chat is 409 `chat_closed`.
+             */
+            chat_open: boolean;
+            /**
+             * Chat Closes At
+             * @description When the chat closes (UTC): the visit's end plus 24 hours, known once the booking is completed. Null before that, and for a cancelled or declined booking (already closed).
+             */
+            chat_closes_at?: string | null;
         };
         /** CaregiverClientProfile */
         CaregiverClientProfile: {
@@ -8387,6 +8447,32 @@ export interface components {
             cancel_fee?: number | null;
             /** @description The booking's refund, newest one, when it has one. Patient views only; null for caregivers. */
             refund?: components["schemas"]["RefundSummary"] | null;
+            /**
+             * Chat Open
+             * @description Whether the booking chat can still be written to: true while the booking is not over and for 24 hours after the visit was completed; false once it is closed or the booking was cancelled or declined. History stays readable either way. Sending to a closed chat is 409 `chat_closed`.
+             * @default true
+             */
+            chat_open: boolean;
+            /**
+             * Chat Closes At
+             * @description When the chat closes (UTC): the visit's end plus 24 hours, known once the booking is completed. Null while the booking is not completed, and for a cancelled or declined booking (closed already).
+             */
+            chat_closes_at?: string | null;
+            /**
+             * Notes Open
+             * @description Caregiver views of their own visit only (null for everyone else): whether a visit note can be added now, typed or voice. True while the visit is in progress and for 2 hours after it was completed.
+             */
+            notes_open?: boolean | null;
+            /**
+             * Notes Closes At
+             * @description Caregiver views only: when adding notes stops (UTC), known once the visit is completed; null while it is in progress or not started.
+             */
+            notes_closes_at?: string | null;
+            /**
+             * Notes Readable Until
+             * @description Caregiver views only: when the caregiver stops being able to read, save or delete their notes for the visit (UTC), 24 hours after completion; null until the visit is completed.
+             */
+            notes_readable_until?: string | null;
             /**
              * Payment Url
              * @description Paystack payment URL to complete the booking payment
@@ -13813,6 +13899,26 @@ export interface operations {
                 };
                 content: {
                     "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    payment_callback_api_v1_payment_callback_get: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "text/html": string;
                 };
             };
         };

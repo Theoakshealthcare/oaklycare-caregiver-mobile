@@ -23,6 +23,7 @@ const note = (id: string, created_at: string) => ({
 
 let mockNotes: ReturnType<typeof note>[] = [];
 jest.mock("../src/hooks/queries", () => ({
+  useBooking: () => ({ data: undefined }),
   useNotes: () => ({ data: mockNotes }),
   useCreateNote: () => ({ mutate: jest.fn(), isPending: false }),
 }));
