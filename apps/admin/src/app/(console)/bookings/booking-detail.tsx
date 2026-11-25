@@ -5,13 +5,16 @@ import { ArrowLeft, RefreshCw } from "lucide-react";
 import Link from "next/link";
 import * as React from "react";
 
+import { useAuth } from "@/components/auth-provider";
 import { BookingActions } from "@/components/booking-actions";
+import { EarningStatusBadge } from "@/components/earning-status-badge";
 import { StatusBadge } from "@/components/status-badge";
 import { Button } from "@/components/ui/button";
 import { ErrorState, Skeleton } from "@/components/ui/states";
 import { errorMessage } from "@/lib/api";
 import { type BookingDetail, BOOKINGS_KEY, fetchBooking } from "@/lib/bookings";
 import { cancelTermsSummary } from "@/lib/cancel-terms";
+import { EARNINGS_KEY, EARNINGS_READ, HOLD_KIND_LABEL, TYPE_LABEL, fetchEarnings, holdKind, reasonSummary } from "@/lib/earnings";
 import { formatMinutes, formatNaira, formatWat, humanize } from "@/lib/format";
 
 function Section({ title, children }: { title: string; children: React.ReactNode }) {
@@ -93,6 +96,7 @@ export function BookingView({ id }: { id: string }) {
         <AddressCard b={b} />
         <ClinicalCard b={b} />
         <PriceCard b={b} />
+        <EarningCard bookingId={b.id} />
         <CancelTermsCard b={b} />
         <NoShowCard b={b} />
         <DispatchCard b={b} />
@@ -257,6 +261,43 @@ function PriceCard({ b }: { b: BookingDetail }) {
           </tbody>
         </table>
       ) : null}
+    </Section>
+  );
+}
+
+/**
+ * The caregiver's earning(s) for this booking, from the earnings API (the booking payload carries only the amount, not the
+ * status): a short visit or no-show flag shows up here as "Held". Shown only to admins who can read payments, and silent
+ * when the read fails or there is no earning yet, so it never gets in the way of the booking itself.
+ */
+function EarningCard({ bookingId }: { bookingId: string }) {
+  const { can } = useAuth();
+  const earnings = useQuery({
+    queryKey: [...EARNINGS_KEY, "booking", bookingId],
+    queryFn: () => fetchEarnings({ bookingId, offset: 0, limit: 10 }),
+    enabled: can(EARNINGS_READ),
+    retry: false,
+    refetchOnWindowFocus: false,
+  });
+  if (!earnings.data || earnings.data.items.length === 0) return null;
+  return (
+    <Section title="Caregiver earning">
+      {earnings.data.items.map((e) => {
+        const kind = holdKind(e);
+        return (
+          <dl key={e.id} className="grid gap-1">
+            <Row label={TYPE_LABEL[e.type]}>
+              {formatNaira(e.amount_kobo)} <EarningStatusBadge status={e.status} />
+            </Row>
+            {kind ? <Row label="Why it is held">{HOLD_KIND_LABEL[kind]}</Row> : null}
+            {reasonSummary(e) ? <Row label="Reason">{reasonSummary(e)}</Row> : null}
+            <Row label="Clears after">{formatWat(e.available_at)}</Row>
+          </dl>
+        );
+      })}
+      <Link href="/money/earnings" className="w-fit text-sm underline underline-offset-2">
+        Review in Earnings
+      </Link>
     </Section>
   );
 }

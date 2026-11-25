@@ -14,6 +14,7 @@ import {
   makeActionResult,
   makeDetail,
 } from "@/test/booking-fixtures";
+import { SHORT_VISIT } from "@/test/earning-fixtures";
 import { jsonResponse, stubFetch, withAuth } from "@/test/helpers";
 
 import { BookingView } from "./booking-detail";
@@ -264,5 +265,44 @@ describe("BookingView", () => {
     await user.click(within(dialog).getByRole("button", { name: "Offer to caregiver" }));
     expect(await within(dialog).findByRole("alert")).toHaveTextContent("Only a pending booking without a caregiver can be offered");
     await waitFor(() => expect(detailCalls(calls)).toHaveLength(2));
+  });
+  describe("caregiver earning card", () => {
+    const EARNINGS = "GET /api/v1/admin/earnings";
+
+    it("shows a held earning and why, from the earnings read for this booking, with a link to Earnings", async () => {
+      const calls = stubFetch({
+        [`GET ${PATH}`]: () => jsonResponse(makeDetail()),
+        [EARNINGS]: () => jsonResponse({ items: [SHORT_VISIT], total: 1 }),
+      });
+      render(withAuth(["bookings.read", "payments.read"], <BookingView id={BOOKING_ID} />));
+      await screen.findByRole("heading", { level: 1, name: /Booking 12FF3CB2/ });
+      await screen.findByRole("heading", { level: 2, name: "Caregiver earning" });
+      const earning = card("Caregiver earning");
+      expect(await earning.findByText("Held")).toBeInTheDocument();
+      expect(earning.getByText("₦8,000", { exact: false })).toBeInTheDocument();
+      expect(earning.getByText("Short visit")).toBeInTheDocument();
+      expect(earning.getByText(/under 50% of the booked time/)).toBeInTheDocument();
+      expect(earning.getByRole("link", { name: "Review in Earnings" })).toHaveAttribute("href", "/money/earnings");
+      expect(calls.find((c) => c.key === EARNINGS)?.search).toBe(`?booking_id=${BOOKING_ID}&limit=10&offset=0`);
+    });
+
+    it("is not requested, and not shown, without payments.read", async () => {
+      const calls = stubFetch({ [`GET ${PATH}`]: () => jsonResponse(makeDetail()) });
+      render(withAuth(["bookings.read"], <BookingView id={BOOKING_ID} />));
+      await screen.findByRole("heading", { level: 1, name: /Booking 12FF3CB2/ });
+      expect(screen.queryByRole("heading", { level: 2, name: "Caregiver earning" })).not.toBeInTheDocument();
+      expect(calls.some((c) => c.key === EARNINGS)).toBe(false);
+    });
+
+    it("stays out of the way when there is no earning yet or the read fails", async () => {
+      stubFetch({
+        [`GET ${PATH}`]: () => jsonResponse(makeDetail()),
+        [EARNINGS]: () => jsonResponse({ detail: "boom" }, { status: 500 }),
+      });
+      render(withAuth(["bookings.read", "payments.read"], <BookingView id={BOOKING_ID} />));
+      await screen.findByRole("heading", { level: 1, name: /Booking 12FF3CB2/ });
+      await waitFor(() => expect(screen.queryByRole("heading", { level: 2, name: "Caregiver earning" })).not.toBeInTheDocument());
+      expect(screen.queryByRole("alert")).not.toBeInTheDocument();
+    });
   });
 });
