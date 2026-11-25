@@ -12292,6 +12292,316 @@
         }
       }
     },
+    "/api/v1/admin/care-alerts": {
+      "get": {
+        "tags": [
+          "admin-care-alerts"
+        ],
+        "summary": "List Care Alerts",
+        "description": "Critical first, then open before acknowledged, then the most recently fed. Summary only: ``detail`` and ``note`` are ``null`` here\n(``detail_masked`` still says whether this admin may open them with the detail route).",
+        "operationId": "list_care_alerts_api_v1_admin_care_alerts_get",
+        "security": [
+          {
+            "AdminBearer": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "status",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "enum": [
+                "active",
+                "open",
+                "acknowledged",
+                "resolved",
+                "all"
+              ],
+              "type": "string",
+              "description": "`active` = open + acknowledged",
+              "default": "active",
+              "title": "Status"
+            },
+            "description": "`active` = open + acknowledged"
+          },
+          {
+            "name": "severity",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "enum": [
+                    "warning",
+                    "critical"
+                  ],
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Severity"
+            }
+          },
+          {
+            "name": "type",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "enum": [
+                    "vital_out_of_range",
+                    "task_missed"
+                  ],
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Type"
+            }
+          },
+          {
+            "name": "limit",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "integer",
+              "maximum": 100,
+              "minimum": 1,
+              "default": 50,
+              "title": "Limit"
+            }
+          },
+          {
+            "name": "offset",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "integer",
+              "minimum": 0,
+              "default": 0,
+              "title": "Offset"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/CareAlertList"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/admin/care-alerts/{alert_id}": {
+      "get": {
+        "tags": [
+          "admin-care-alerts"
+        ],
+        "summary": "Get Care Alert",
+        "operationId": "get_care_alert_api_v1_admin_care_alerts__alert_id__get",
+        "security": [
+          {
+            "AdminBearer": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "alert_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid",
+              "title": "Alert Id"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/CareAlertOut"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Care alert not found"
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/admin/care-alerts/{alert_id}/acknowledge": {
+      "post": {
+        "tags": [
+          "admin-care-alerts"
+        ],
+        "summary": "Acknowledge Care Alert",
+        "description": "open -> acknowledged (\"I am on it\").",
+        "operationId": "acknowledge_care_alert_api_v1_admin_care_alerts__alert_id__acknowledge_post",
+        "security": [
+          {
+            "AdminBearer": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "alert_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid",
+              "title": "Alert Id"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/AlertActionIn"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/CareAlertOut"
+                }
+              }
+            }
+          },
+          "409": {
+            "description": "`already_acknowledged` or `already_resolved`.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/AlertErrorBody"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/admin/care-alerts/{alert_id}/resolve": {
+      "post": {
+        "tags": [
+          "admin-care-alerts"
+        ],
+        "summary": "Resolve Care Alert",
+        "description": "open or acknowledged -> resolved. A later occurrence for the same patient starts a new alert.",
+        "operationId": "resolve_care_alert_api_v1_admin_care_alerts__alert_id__resolve_post",
+        "security": [
+          {
+            "AdminBearer": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "alert_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid",
+              "title": "Alert Id"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/AlertActionIn"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/CareAlertOut"
+                }
+              }
+            }
+          },
+          "409": {
+            "description": "`already_acknowledged` or `already_resolved`.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/AlertErrorBody"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
     "/health": {
       "get": {
         "summary": "Health Check",
@@ -13095,6 +13405,25 @@
         "type": "object",
         "title": "AdminPatchIn"
       },
+      "AdminRef": {
+        "properties": {
+          "id": {
+            "type": "string",
+            "format": "uuid",
+            "title": "Id"
+          },
+          "email": {
+            "type": "string",
+            "title": "Email"
+          }
+        },
+        "type": "object",
+        "required": [
+          "id",
+          "email"
+        ],
+        "title": "AdminRef"
+      },
       "AdminTemplate": {
         "properties": {
           "id": {
@@ -13235,6 +13564,160 @@
           "items"
         ],
         "title": "AdminTemplateList"
+      },
+      "AlertActionIn": {
+        "properties": {
+          "note": {
+            "anyOf": [
+              {
+                "type": "string",
+                "maxLength": 1000
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Note"
+          }
+        },
+        "type": "object",
+        "title": "AlertActionIn"
+      },
+      "AlertDetail": {
+        "properties": {
+          "vital_type": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Vital Type"
+          },
+          "status": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Status"
+          },
+          "reason": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Reason"
+          },
+          "value": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Value"
+          },
+          "unit": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Unit"
+          },
+          "tasks": {
+            "anyOf": [
+              {
+                "items": {
+                  "type": "string"
+                },
+                "type": "array"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Tasks"
+          },
+          "days": {
+            "anyOf": [
+              {
+                "items": {
+                  "type": "string"
+                },
+                "type": "array"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Days"
+          }
+        },
+        "type": "object",
+        "title": "AlertDetail"
+      },
+      "AlertErrorBody": {
+        "properties": {
+          "code": {
+            "type": "string",
+            "title": "Code"
+          },
+          "message": {
+            "type": "string",
+            "title": "Message"
+          }
+        },
+        "type": "object",
+        "required": [
+          "code",
+          "message"
+        ],
+        "title": "AlertErrorBody"
+      },
+      "AlertPartyOut": {
+        "properties": {
+          "full_name": {
+            "type": "string",
+            "title": "Full Name"
+          },
+          "phone": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Phone"
+          },
+          "masked": {
+            "type": "boolean",
+            "title": "Masked"
+          }
+        },
+        "type": "object",
+        "required": [
+          "full_name",
+          "masked"
+        ],
+        "title": "AlertPartyOut"
       },
       "ApplicationDetail": {
         "properties": {
@@ -17381,6 +17864,272 @@
           "can_add_observation"
         ],
         "title": "Capabilities"
+      },
+      "CareAlertCounts": {
+        "properties": {
+          "open": {
+            "type": "integer",
+            "title": "Open"
+          },
+          "acknowledged": {
+            "type": "integer",
+            "title": "Acknowledged"
+          },
+          "resolved": {
+            "type": "integer",
+            "title": "Resolved"
+          },
+          "critical_active": {
+            "type": "integer",
+            "title": "Critical Active"
+          }
+        },
+        "type": "object",
+        "required": [
+          "open",
+          "acknowledged",
+          "resolved",
+          "critical_active"
+        ],
+        "title": "CareAlertCounts"
+      },
+      "CareAlertList": {
+        "properties": {
+          "items": {
+            "items": {
+              "$ref": "#/components/schemas/CareAlertOut"
+            },
+            "type": "array",
+            "title": "Items"
+          },
+          "total": {
+            "type": "integer",
+            "title": "Total"
+          },
+          "counts": {
+            "$ref": "#/components/schemas/CareAlertCounts"
+          }
+        },
+        "type": "object",
+        "required": [
+          "items",
+          "total",
+          "counts"
+        ],
+        "title": "CareAlertList"
+      },
+      "CareAlertOut": {
+        "properties": {
+          "id": {
+            "type": "string",
+            "format": "uuid",
+            "title": "Id"
+          },
+          "type": {
+            "type": "string",
+            "enum": [
+              "vital_out_of_range",
+              "task_missed"
+            ],
+            "title": "Type"
+          },
+          "severity": {
+            "type": "string",
+            "enum": [
+              "warning",
+              "critical"
+            ],
+            "title": "Severity"
+          },
+          "status": {
+            "type": "string",
+            "enum": [
+              "open",
+              "acknowledged",
+              "resolved"
+            ],
+            "title": "Status"
+          },
+          "summary": {
+            "type": "string",
+            "title": "Summary"
+          },
+          "created_at": {
+            "type": "string",
+            "format": "date-time",
+            "title": "Created At"
+          },
+          "last_occurred_at": {
+            "type": "string",
+            "format": "date-time",
+            "title": "Last Occurred At"
+          },
+          "occurrence_count": {
+            "type": "integer",
+            "title": "Occurrence Count"
+          },
+          "patient": {
+            "$ref": "#/components/schemas/AlertPartyOut"
+          },
+          "care_recipient_name": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Care Recipient Name"
+          },
+          "booking_id": {
+            "anyOf": [
+              {
+                "type": "string",
+                "format": "uuid"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Booking Id"
+          },
+          "booking_code": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Booking Code"
+          },
+          "vital_id": {
+            "anyOf": [
+              {
+                "type": "string",
+                "format": "uuid"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Vital Id"
+          },
+          "family_notified_count": {
+            "type": "integer",
+            "title": "Family Notified Count"
+          },
+          "family_notified_at": {
+            "anyOf": [
+              {
+                "type": "string",
+                "format": "date-time"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Family Notified At"
+          },
+          "admin_notified_at": {
+            "anyOf": [
+              {
+                "type": "string",
+                "format": "date-time"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Admin Notified At"
+          },
+          "acknowledged_by": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/AdminRef"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "acknowledged_at": {
+            "anyOf": [
+              {
+                "type": "string",
+                "format": "date-time"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Acknowledged At"
+          },
+          "resolved_by": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/AdminRef"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "resolved_at": {
+            "anyOf": [
+              {
+                "type": "string",
+                "format": "date-time"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Resolved At"
+          },
+          "note": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Note"
+          },
+          "detail": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/AlertDetail"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "detail_masked": {
+            "type": "boolean",
+            "title": "Detail Masked"
+          }
+        },
+        "type": "object",
+        "required": [
+          "id",
+          "type",
+          "severity",
+          "status",
+          "summary",
+          "created_at",
+          "last_occurred_at",
+          "occurrence_count",
+          "patient",
+          "family_notified_count",
+          "detail_masked"
+        ],
+        "title": "CareAlertOut"
       },
       "CarePlanCreate": {
         "properties": {

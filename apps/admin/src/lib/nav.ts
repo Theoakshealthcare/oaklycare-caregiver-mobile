@@ -37,6 +37,7 @@ export const NAV: NavGroup[] = [
         anyOf: ["refunds.request", "refunds.approve", "payments.read"],
         available: true,
       },
+      { label: "Care alerts", href: "/queues/care-alerts", anyOf: ["support.inbox"], available: true },
       { label: "Support", href: "/queues/support", anyOf: ["support.inbox"], available: false },
       { label: "Exceptions", href: "/queues/exceptions", anyOf: ["payments.read"], available: false },
     ],
