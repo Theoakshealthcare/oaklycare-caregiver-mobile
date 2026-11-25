@@ -22,6 +22,7 @@ import KeyboardInsetView from "@/src/components/ui/keyboard-inset-view"
 import BottomCta from "@/src/components/ui/bottom-cta"
 import Input from "@/src/components/ui/input"
 import Notice from "@/src/components/ui/notice"
+import PostVisitLinks from "@/src/components/visit/PostVisitLinks"
 import AiOrb from "@/src/components/chat/AiOrb"
 import HeaderBack from "@/src/components/back/HeaderBack"
 import { globalStyles } from "@/src/constants/styles"
@@ -416,6 +417,8 @@ const AINoteTaker: React.FC<StackScreenProps<ScreenParamLists, "AINoteTaker">> =
           </View>
 
           {banner ? <Notice testID="notes-window-banner" message={banner} style={{ marginBottom: theme.spacing.lg }} /> : null}
+
+          <PostVisitLinks bookingId={bookingId} completed={booking?.status === "completed"} />
 
           {voiceOn && !closed ? (
             <View>

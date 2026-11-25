@@ -19,6 +19,7 @@ import {
 import { useAddNote, useNotes } from "@/src/hooks/useCarePlanTasks";
 import { useQueryClient } from "@tanstack/react-query";
 import { queryKeys } from "@/src/api/keys";
+import { formatUntil } from "@/src/utils/dates";
 import type { CarePlan, NoteCategory } from "@/src/services/carePlans.service";
 
 const COPY: Record<NoteCategory, { empty: string; placeholder: string; submit: string; label: string }> = {
@@ -79,6 +80,11 @@ const NotesSection: React.FC<{ plan: CarePlan; category: NoteCategory; onNoAcces
 
   return (
     <View testID={`notes-${category}`} style={{ gap: theme.spacing.sm }}>
+      {plan.observations_close_at && canAdd ? (
+        <Text variant="caption" color={theme.colors.warningText} testID={`notes-${category}-window`}>
+          {`Visit complete. You can add notes until ${formatUntil(plan.observations_close_at)}.`}
+        </Text>
+      ) : null}
       {notes.isError && !notes.data ? (
         <ErrorState error={notes.error} onRetry={() => void notes.refetch()} />
       ) : !notes.data ? (

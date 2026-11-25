@@ -337,7 +337,7 @@ const CarePlanDetails: React.FC<Props> = ({ route }) => {
           ) : null}
         </Accordion>
 
-        <MedicationsSection plan={plan} onAdd={canEdit ? () => setSheet({ kind: "medication" }) : undefined} />
+        <MedicationsSection plan={plan} onAdd={plan.capabilities.can_edit_medications && canEdit ? () => setSheet({ kind: "medication" }) : undefined} />
 
         <Accordion testID="section-tasks" title="Daily Care Task" defaultOpen={finishing} keepMounted>
           <DailyTasks plan={plan} onNoAccess={onNoAccess} onAddTask={canEdit ? () => setSheet({ kind: "task" }) : undefined} />

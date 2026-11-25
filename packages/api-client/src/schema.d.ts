@@ -760,6 +760,7 @@ export interface paths {
         /**
          * List Templates
          * @description The seeded templates for the Templates tab. Not yet clinically reviewed while ``clinical_review_status`` is pending.
+         *     A nurse sees all of them; any other caregiver sees only the ones with `caregiver_can_use` (Elderly).
          */
         get: operations["list_templates_api_v1_caregiver_care_plan_templates_get"];
         put?: never;
@@ -779,7 +780,8 @@ export interface paths {
         };
         /**
          * Get Template
-         * @description Preview: the goals, tasks and special instructions a plan created from this template starts with.
+         * @description Preview: the goals, tasks and special instructions a plan created from this template starts with. 403 `not_a_nurse`
+         *     for a template a non-nurse caregiver may not use.
          */
         get: operations["get_template_api_v1_caregiver_care_plan_templates__template_id__get"];
         put?: never;
@@ -842,13 +844,15 @@ export interface paths {
          * Get Visit Care Plan
          * @description Care plan summary for one visit. 200 with ``plan: null`` means access is fine and the client has no active plan yet;
          *     ``subject_ready: false`` means this visit's client cannot be identified (an app booking for someone else); 404 means no
-         *     access.
+         *     access. The assigned nurse also gets it for the 2 hours after the visit was completed (`can_author` is then false: a plan is
+         *     created during a live visit), so the app can find the plan to add a note to.
          */
         get: operations["get_visit_care_plan_api_v1_caregiver_bookings__booking_id__care_plan_get"];
         put?: never;
         /**
          * Create Care Plan
-         * @description Create the client's plan, blank or from a template (the template only fills what the body leaves out).
+         * @description Create the client's plan, blank or from a template (the template only fills what the body leaves out). A caregiver who
+         *     is not a nurse may do this only from a template with `caregiver_can_use` (Elderly).
          */
         post: operations["create_care_plan_api_v1_caregiver_bookings__booking_id__care_plan_post"];
         delete?: never;
@@ -867,7 +871,8 @@ export interface paths {
         /**
          * Get Care Plan
          * @description The full plan, visible while any of my live visits is for this client. A completed or archived plan stays visible
-         *     as history.
+         *     as history. The assigned nurse can also read it for the 2 hours after the visit (to add a note): then the booking is
+         *     completed, only `can_add_observation` can be true and `observations_close_at` says when it closes.
          */
         get: operations["get_care_plan_api_v1_caregiver_care_plans__plan_id__get"];
         put?: never;
@@ -1015,8 +1020,10 @@ export interface paths {
         put?: never;
         /**
          * Add Observation
-         * @description Add a note during a visit of yours that is in progress. Any caregiver on the client may, not only a nurse. Notes
-         *     cannot be edited or deleted: a correction is a new note.
+         * @description Add a note during a visit of yours that is in progress. Any caregiver on the client may, not only a nurse. The assigned
+         *     **nurse** may also add one for 2 hours after the visit was completed (`VOICE_NOTE_POST_VISIT_GRACE_MINUTES`, the typed- and
+         *     voice-note window); later it is the same 404 as any lost access. Notes cannot be edited or deleted: a correction is a new
+         *     note.
          */
         post: operations["add_observation_api_v1_caregiver_care_plans__plan_id__observations_post"];
         delete?: never;
@@ -1105,6 +1112,33 @@ export interface paths {
          *     **Not clinical advice.** This is a record of what the prescriber ordered. Oakly does not check doses or interactions and does not remind anyone to give medicines. Follow the prescriber's instructions.
          */
         post: operations["stop_medication_api_v1_caregiver_care_plan_medications__medication_id__stop_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/caregiver/bookings/{booking_id}/documentation": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * List Documentation
+         * @description My own documentation for this visit, newest first. Only the caller's entries, never anyone else's (not even another
+         *     caregiver's on the same client).
+         */
+        get: operations["list_documentation_api_v1_caregiver_bookings__booking_id__documentation_get"];
+        put?: never;
+        /**
+         * Add Documentation
+         * @description Add an entry to my own documentation for this visit. Any caregiver on the visit may, not only a nurse. While the visit
+         *     is in progress and for 2 hours after it was completed. Entries cannot be edited or deleted: a correction is a new entry.
+         *     **Private**: not shown to the patient or the family.
+         */
+        post: operations["add_documentation_api_v1_caregiver_bookings__booking_id__documentation_post"];
         delete?: never;
         options?: never;
         head?: never;
@@ -3792,6 +3826,27 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/v1/admin/visit-documentation": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Admin List Documentation
+         * @description Caregivers' own documentation, newest first, filterable by visit, plan or caregiver. Needs `careplans.read`.
+         *     **Reading it is audited** (`visit_documentation.view`; the audit row holds the filters and the count, never the text).
+         */
+        get: operations["admin_list_documentation_api_v1_admin_visit_documentation_get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/v1/admin/bookings/{booking_id}/voice-notes": {
         parameters: {
             query?: never;
@@ -4020,6 +4075,53 @@ export interface components {
              */
             updated_at: string;
         };
+        /** AdminDocumentAuthor */
+        AdminDocumentAuthor: {
+            /**
+             * Id
+             * Format: uuid
+             */
+            id: string;
+            /** Name */
+            name: string;
+        };
+        /** AdminDocumentList */
+        AdminDocumentList: {
+            /** Items */
+            items: components["schemas"]["AdminDocumentOut"][];
+            /** Total */
+            total: number;
+            /** Limit */
+            limit: number;
+            /** Offset */
+            offset: number;
+        };
+        /** AdminDocumentOut */
+        AdminDocumentOut: {
+            /**
+             * Id
+             * Format: uuid
+             */
+            id: string;
+            /**
+             * Booking Id
+             * Format: uuid
+             */
+            booking_id: string;
+            /**
+             * Plan Id
+             * @description The client's active care plan when it was written; null if none.
+             */
+            plan_id?: string | null;
+            /** Body */
+            body: string;
+            /**
+             * Created At
+             * Format: date-time
+             */
+            created_at: string;
+            caregiver: components["schemas"]["AdminDocumentAuthor"];
+        };
         /** AdminInviteIn */
         AdminInviteIn: {
             /**
@@ -4158,6 +4260,12 @@ export interface components {
             clinical_review_status: "pending" | "approved";
             /** Version */
             version: number;
+            /**
+             * Caregiver Can Use
+             * @description true: a caregiver who is not a nurse may use this template (Elderly).
+             * @default false
+             */
+            caregiver_can_use: boolean;
             /** Goals */
             goals: components["schemas"]["TemplateGoal"][];
             /** Tasks */
@@ -5888,9 +5996,14 @@ export interface components {
         Capabilities: {
             /**
              * Can Edit Plan
-             * @description A nurse, and the plan is active.
+             * @description A nurse (or any caregiver, for a plan made from a caregiver-usable template such as Elderly), the plan is active, and the visit is live.
              */
             can_edit_plan: boolean;
+            /**
+             * Can Edit Medications
+             * @description A nurse, the plan is active, and the visit is live. A caregiver who is not a nurse can edit an Elderly-template plan but not its medicines.
+             */
+            can_edit_medications: boolean;
             /**
              * Can Tick Tasks
              * @description The plan is active and the caller has a visit for this client in progress.
@@ -5898,7 +6011,7 @@ export interface components {
             can_tick_tasks: boolean;
             /**
              * Can Add Observation
-             * @description Same rule as `can_tick_tasks`.
+             * @description Same rule as `can_tick_tasks`, plus: the assigned nurse for the 2 hours after the visit (`observations_close_at` says when it closes).
              */
             can_add_observation: boolean;
         };
@@ -6033,6 +6146,11 @@ export interface components {
             /** Tasks */
             tasks: components["schemas"]["TaskOut"][];
             capabilities: components["schemas"]["Capabilities"];
+            /**
+             * Observations Close At
+             * @description Only on the nurse's post-visit access (the visit is completed): when notes stop being accepted. null during a live visit.
+             */
+            observations_close_at?: string | null;
             /**
              * Created At
              * Format: date-time
@@ -7043,6 +7161,62 @@ export interface components {
             reason?: string | null;
             /** Expires On */
             expires_on?: string | null;
+        };
+        /** DocumentIn */
+        DocumentIn: {
+            /**
+             * Body
+             * @description The caregiver's own note for this visit. Private: never shown to the family.
+             */
+            body: string;
+        };
+        /** DocumentList */
+        DocumentList: {
+            /**
+             * Items
+             * @description The caller's own entries for this visit, newest first.
+             */
+            items: components["schemas"]["DocumentOut"][];
+            /**
+             * Can Add
+             * @description false once the 2-hour window after the visit has closed.
+             */
+            can_add: boolean;
+            /**
+             * Closes At
+             * @description When adding closes (2 h after completion); null while the visit is in progress.
+             */
+            closes_at?: string | null;
+            /**
+             * Readable Until
+             * @description When the caregiver stops seeing their entries (24 h after the visit ended); null until the visit is completed.
+             */
+            readable_until?: string | null;
+        };
+        /** DocumentOut */
+        DocumentOut: {
+            /**
+             * Id
+             * Format: uuid
+             */
+            id: string;
+            /**
+             * Booking Id
+             * Format: uuid
+             */
+            booking_id: string;
+            /**
+             * Plan Id
+             * @description The client's active care plan when it was written; null if none.
+             */
+            plan_id?: string | null;
+            /** Body */
+            body: string;
+            /**
+             * Created At
+             * Format: date-time
+             */
+            created_at: string;
         };
         /** DocumentUploadResponse */
         DocumentUploadResponse: {
@@ -9640,6 +9814,12 @@ export interface components {
             clinical_review_status: "pending" | "approved";
             /** Version */
             version: number;
+            /**
+             * Caregiver Can Use
+             * @description true: a caregiver who is not a nurse may use this template (Elderly).
+             * @default false
+             */
+            caregiver_can_use: boolean;
             /** Goals */
             goals: components["schemas"]["TemplateGoal"][];
             /** Tasks */
@@ -9694,6 +9874,12 @@ export interface components {
             clinical_review_status: "pending" | "approved";
             /** Version */
             version: number;
+            /**
+             * Caregiver Can Use
+             * @description true: a caregiver who is not a nurse may use this template (Elderly).
+             * @default false
+             */
+            caregiver_can_use: boolean;
         };
         /** TemplateRef */
         TemplateRef: {
@@ -10086,6 +10272,13 @@ export interface components {
              * @description A nurse, and a client who can have a plan.
              */
             can_author: boolean;
+            /**
+             * Author Scope
+             * @description `full`: a nurse (any template, or a blank plan). `caregiver_templates`: any other caregiver, who may start and edit a plan only from a template with `caregiver_can_use` (Elderly).
+             * @default full
+             * @enum {string}
+             */
+            author_scope: "full" | "caregiver_templates";
             /** @description The client's active plan; null if there is none yet. */
             plan?: components["schemas"]["CarePlanSummary"] | null;
         };
@@ -11506,13 +11699,6 @@ export interface operations {
                     "application/json": components["schemas"]["TemplateList"];
                 };
             };
-            /** @description `not_a_nurse`: the caregiver has no nurse skill. */
-            403: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content?: never;
-            };
         };
     };
     get_template_api_v1_caregiver_care_plan_templates__template_id__get: {
@@ -11610,13 +11796,6 @@ export interface operations {
                 content: {
                     "application/json": components["schemas"]["app__schemas__care_plan__CandidateList"];
                 };
-            };
-            /** @description `not_a_nurse`: the caregiver has no nurse skill. */
-            403: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content?: never;
             };
         };
     };
@@ -12464,6 +12643,100 @@ export interface operations {
                 content?: never;
             };
             /** @description `version_conflict` (body has the current `plan`) or `plan_not_editable`. */
+            409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    list_documentation_api_v1_caregiver_bookings__booking_id__documentation_get: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                booking_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["DocumentList"];
+                };
+            };
+            /** @description `not_found`: not your visit, or the 24-hour reading window is over. */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description `visit_not_active`: the visit is not in progress and the 2-hour window after it has closed. */
+            409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    add_documentation_api_v1_caregiver_bookings__booking_id__documentation_post: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                booking_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["DocumentIn"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            201: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["DocumentOut"];
+                };
+            };
+            /** @description `not_found`: not your visit, or the 24-hour reading window is over. */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description `visit_not_active`: the visit is not in progress and the 2-hour window after it has closed. */
             409: {
                 headers: {
                     [name: string]: unknown;
@@ -18208,6 +18481,41 @@ export interface operations {
                     [name: string]: unknown;
                 };
                 content?: never;
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    admin_list_documentation_api_v1_admin_visit_documentation_get: {
+        parameters: {
+            query?: {
+                booking_id?: string | null;
+                plan_id?: string | null;
+                caregiver_id?: string | null;
+                limit?: number;
+                offset?: number;
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["AdminDocumentList"];
+                };
             };
             /** @description Validation Error */
             422: {

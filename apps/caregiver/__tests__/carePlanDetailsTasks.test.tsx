@@ -62,7 +62,7 @@ describe("Care plan details: daily tasks section", () => {
   });
 
   it("lets a caregiver who is not an author tick but not add a task", async () => {
-    jest.spyOn(carePlansService, "getPlan").mockResolvedValue(plan({ capabilities: { can_edit_plan: false, can_tick_tasks: true, can_add_observation: true } }));
+    jest.spyOn(carePlansService, "getPlan").mockResolvedValue(plan({ capabilities: { can_edit_plan: false, can_edit_medications: false, can_tick_tasks: true, can_add_observation: true } }));
     await renderDetails();
     await screen.findByText("Placeholder morning task");
     expect(screen.queryByTestId("task-add")).toBeNull();

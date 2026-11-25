@@ -46,6 +46,12 @@ export const NAV: NavGroup[] = [
     items: [{ label: "Bookings", href: "/bookings", anyOf: ["bookings.read"], available: true }],
   },
   {
+    label: "Clinical",
+    items: [
+      { label: "Caregiver documentation", href: "/clinical/documentation", anyOf: ["careplans.read"], available: true },
+    ],
+  },
+  {
     label: "People",
     items: [{ label: "Patients and contacts", href: "/people", anyOf: ["people.read"], available: false }],
   },
