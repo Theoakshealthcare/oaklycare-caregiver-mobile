@@ -3,8 +3,7 @@ import { act, waitFor, fireEvent, render, screen } from "@testing-library/react-
 import React from "react";
 import { Keyboard, Linking, StyleSheet } from "react-native";
 
-import { ApiError, BANK_NAME_MISMATCH_MESSAGE, isBankNameMismatch } from "../src/api/errors";
-import { unwrap } from "../src/api/unwrap";
+import { ApiError } from "../src/api/errors";
 import { supportUrl } from "../src/config/contact";
 import * as toast from "../src/components/ui/toast";
 import { session } from "../src/auth";
@@ -28,7 +27,13 @@ const banks = [
   { name: "Placeholder Bank", code: "058" },
   { name: "Sample Microfinance Bank", code: "090" },
 ];
-const resolved = { account_name: "PLACEHOLDER CAREGIVER A", account_number: "0000000000", bank_code: "058", bank_name: "Placeholder Bank" };
+const resolved = {
+  account_name: "PLACEHOLDER CAREGIVER A",
+  account_number: "0000000000",
+  bank_code: "058",
+  bank_name: "Placeholder Bank",
+  needs_review: false,
+};
 const saved = {
   bank_name: "Placeholder Bank",
   bank_code: "058",
@@ -247,61 +252,56 @@ describe("BankDetails screen", () => {
   });
 });
 
-// What the backend answers when the resolved account name is not the caregiver's own (DP2-05): HTTP 422 with a
-// structured detail. Built through the real `unwrap`, so the app's own error construction is what is tested.
-// The shape comes from the backend branch brief, not from a live capture: that branch is not merged yet.
-const nameMismatch = () =>
-  unwrap(
-    Promise.resolve({
-      error: { detail: { code: "bank_account_name_mismatch", message: "Account name does not match your profile." } },
-      response: { ok: false, status: 422, headers: new Headers() } as Response,
-    }),
-  ).then(
-    () => {
-      throw new Error("expected the call to be refused");
-    },
-    (error: unknown) => error as ApiError,
-  );
+// A holder name that does not look like the profile name is saved but held (backend `needs_review`, `name_review_status`):
+// the lookup shows the name masked, the caregiver can still save, and Finance approves or rejects the account.
+// Shapes follow the backend tests, not a live capture (placeholder data only).
+const flagged = { ...resolved, account_name: "P******** C********* A", needs_review: true };
 
-describe("bank account name mismatch (DP2-05)", () => {
-  it("is read from detail.code, whatever the backend's sentence says", async () => {
-    const err = await nameMismatch();
-    expect(err.status).toBe(422);
-    expect(isBankNameMismatch(err)).toBe(true);
-    expect(isBankNameMismatch(new ApiError(422, { detail: "Some other 422" }, "x"))).toBe(false);
-    expect(isBankNameMismatch(new ApiError(400, { detail: { code: "bank_account_name_mismatch" } }, "x"))).toBe(false);
-    expect(isBankNameMismatch(new Error("x"))).toBe(false);
-  });
-
-  it("shows the inline message with a Contact support link when saving is refused", async () => {
-    const mismatch = await nameMismatch();
-    jest.spyOn(walletService, "resolveBankAccount").mockResolvedValue(resolved);
-    jest.spyOn(walletService, "updateBankAccount").mockRejectedValue(mismatch);
-    const open = jest.spyOn(Linking, "openURL").mockResolvedValue(true);
+describe("bank account holder name that is not the profile name", () => {
+  it("warns at the lookup step, offers to save for review, and saves", async () => {
+    jest.spyOn(walletService, "resolveBankAccount").mockResolvedValue(flagged);
+    const update = jest.spyOn(walletService, "updateBankAccount").mockResolvedValue({ ...saved, name_review_status: "pending" });
     await renderScreen();
     await fillAndCheck();
-    await fireEvent.press(await screen.findByText("Yes, this is my account"));
 
-    expect(await screen.findByTestId("bank-failure")).toHaveTextContent(
-      "The account name must match the name on your Oakly profile. If your name is different, contact support.",
-    );
-    expect(BANK_NAME_MISMATCH_MESSAGE).toBe(
-      "The account name must match the name on your Oakly profile. If your name is different, contact support.",
-    );
+    expect(await screen.findByTestId("bank-needs-review")).toHaveTextContent(/only pay into it after our team has checked it/);
+    expect(screen.queryByTestId("bank-failure")).toBeNull();
+    expect(screen.queryByText("Yes, this is my account")).toBeNull();
+    await fireEvent.press(screen.getByText("Save for review"));
+    await waitFor(() => expect(update).toHaveBeenCalledWith({ bank_code: "058", account_number: "0000000000" }));
+    expect(await screen.findByTestId("bank-saved-notice")).toHaveTextContent(/our team will check it before we pay into it/);
+  });
+
+  it("shows no warning when the name matches", async () => {
+    jest.spyOn(walletService, "resolveBankAccount").mockResolvedValue(resolved);
+    await renderScreen();
+    await fillAndCheck();
+    expect(await screen.findByText("Yes, this is my account")).toBeTruthy();
+    expect(screen.queryByTestId("bank-needs-review")).toBeNull();
+  });
+
+  it("tells the caregiver an account is waiting for review", async () => {
+    jest.spyOn(walletService, "getBankAccount").mockResolvedValue({ ...saved, name_review_status: "pending" });
+    await renderScreen();
+    expect(await screen.findByTestId("bank-name-pending")).toHaveTextContent(/checking that this account is yours/);
+    expect(screen.queryByTestId("bank-contact-support")).toBeNull();
+  });
+
+  it("tells the caregiver a rejected account cannot be paid, with a Contact support link", async () => {
+    jest.spyOn(walletService, "getBankAccount").mockResolvedValue({ ...saved, name_review_status: "rejected" });
+    const open = jest.spyOn(Linking, "openURL").mockResolvedValue(true);
+    await renderScreen();
+    expect(await screen.findByTestId("bank-name-rejected")).toHaveTextContent(/cannot pay into it/);
     await fireEvent.press(screen.getByTestId("bank-contact-support"));
     expect(open).toHaveBeenCalledWith(supportUrl());
   });
 
-  it("also covers a refusal at the lookup step, and clears when the caregiver changes the details", async () => {
-    jest.spyOn(walletService, "resolveBankAccount").mockRejectedValue(await nameMismatch());
+  it("says nothing about review for an approved account or a matched one", async () => {
+    jest.spyOn(walletService, "getBankAccount").mockResolvedValue({ ...saved, name_review_status: "approved" });
     await renderScreen();
-    await fillAndCheck();
-    expect(await screen.findByTestId("bank-failure")).toHaveTextContent(/must match the name on your Oakly profile/);
-    expect(screen.getByTestId("bank-contact-support")).toBeTruthy();
-
-    await fireEvent.changeText(screen.getByPlaceholderText("10 digits"), "000000000");
-    expect(screen.queryByTestId("bank-failure")).toBeNull();
-    expect(screen.queryByTestId("bank-contact-support")).toBeNull();
+    await screen.findByText("PLACEHOLDER CAREGIVER A");
+    expect(screen.queryByTestId("bank-name-pending")).toBeNull();
+    expect(screen.queryByTestId("bank-name-rejected")).toBeNull();
   });
 
   it("gives no support link for other bank failures", async () => {

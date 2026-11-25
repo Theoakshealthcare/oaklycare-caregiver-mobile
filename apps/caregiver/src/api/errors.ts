@@ -208,17 +208,6 @@ function arrivedTooEarlyMessage(body: unknown): string {
   return detailMessageOf(body) ?? "It's too early to mark yourself as arrived. Try again closer to the visit.";
 }
 
-/** HTTP 422 `detail.code` when the resolved bank account name does not match the caregiver's profile name. */
-export const BANK_NAME_MISMATCH_CODE = "bank_account_name_mismatch";
-
-export const BANK_NAME_MISMATCH_MESSAGE =
-  "The account name must match the name on your Oakly profile. If your name is different, contact support.";
-
-/** True when a bank lookup or save was refused because the account name is not the caregiver's own. */
-export function isBankNameMismatch(error: unknown): boolean {
-  return error instanceof ApiError && error.status === 422 && detailCodeOf(error.body) === BANK_NAME_MISMATCH_CODE;
-}
-
 export function messageForStatus(
   status: number,
   detail: string | null,
@@ -244,8 +233,6 @@ export function messageForStatus(
   // Bank lookups/saves: the backend's sentences are written for the caregiver (guide, section 10.3),
   // so show them as sent (wrong number, unknown bank, Paystack down, lookup rate limit).
   if (context === "bank" && detail && (status === 400 || status === 429 || status === 503)) return detail;
-  // Our own sentence for this one (the app's wording; the code is the contract, the backend's message may change).
-  if (context === "bank" && status === 422 && detailCodeOf(body) === BANK_NAME_MISMATCH_CODE) return BANK_NAME_MISMATCH_MESSAGE;
 
   if (context === "visit") {
     const mapped = visitMessage(status, detail, body, retryAfterSeconds);
