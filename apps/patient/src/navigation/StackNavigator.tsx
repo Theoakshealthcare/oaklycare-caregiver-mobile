@@ -4,6 +4,7 @@ import { useState } from "react";
 import { useSession } from "../auth";
 import { useOnboarding } from "../auth/onboarding";
 import { useMe } from "../hooks/queries";
+import { usePaymentDeepLink } from "../hooks/usePaymentDeepLink";
 import { usePushEffects } from "../push/native";
 import GateMessage from "../screens/GateMessage";
 import Splash from "../screens/Splash";
@@ -16,9 +17,10 @@ const Stack = createStackNavigator<ScreenParamLists>();
 
 const signOut = () => void authService.logout();
 
-/** Push registration and tap handling for the signed-in app; renders nothing. */
+/** Push registration and tap handling, and the payment return link, for the signed-in app; renders nothing. */
 const PushEffects = () => {
   usePushEffects();
+  usePaymentDeepLink();
   return null;
 };
 

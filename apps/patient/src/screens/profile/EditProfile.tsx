@@ -10,11 +10,13 @@ import ErrorDialog from "@/src/components/ui/ErrorDialog";
 import FieldLabel from "@/src/components/ui/field-label";
 import Icon from "@/src/components/ui/icon";
 import Input from "@/src/components/ui/input";
+import PhoneInput from "@/src/components/ui/phone-input";
 import Screen from "@/src/components/ui/screen";
 import Select from "@/src/components/ui/select";
 import Text from "@/src/components/ui/text";
 import { showToast } from "@/src/components/ui/toast";
 import { theme } from "@/src/constants/theme";
+import { isBlankPhone } from "@/src/domain/phone";
 import { useMe } from "@/src/hooks/queries";
 import { PROFILE_FIELDS, profileRefusal, useUpdateProfile, type ProfileField } from "@/src/hooks/useProfile";
 import { useNav } from "@/src/navigation/Navigations";
@@ -77,15 +79,21 @@ const EditProfile: React.FC = () => {
     for (const { field } of PROFILE_FIELDS) {
       if (edited[field] === undefined) continue;
       if (field === "fullName" && !value(field).trim()) found[field] = "Full name is required";
-      else if (field === "phone" && !value(field).trim() && stored(field)) found[field] = "Enter a phone number, or leave it as it is.";
+      else if (field === "phone" && isBlankPhone(value(field)) && stored(field)) found[field] = "Enter a phone number, or leave it as it is.";
       else if (field === "age" && value(field).trim() && !/^\d{1,3}$/.test(value(field).trim())) found[field] = "Enter your age in years, like 64";
       else if (field === "age" && value(field).trim() && (Number(value(field)) < 1 || Number(value(field)) > 120)) found[field] = "Enter an age from 1 to 120";
       // The backend ignores a blank value for these, so a cleared field would silently come back: say so instead.
-      else if (field !== "fullName" && field !== "phone" && !value(field).trim() && stored(field)) found[field] = "This can't be cleared yet. Change it to something else.";
+      else if (field === "emergencyPhone" && isBlankPhone(value(field)) && stored(field)) found[field] = "This can't be cleared yet. Change it to something else.";
+      else if (field !== "fullName" && field !== "phone" && field !== "emergencyPhone" && !value(field).trim() && stored(field)) found[field] = "This can't be cleared yet. Change it to something else.";
     }
     setErrors(found);
     if (Object.keys(found).length > 0) return;
-    update.mutate(edited, {
+    // A phone box left at the bare "+234" is "nothing typed": it is not sent (the field is optional, or already refused above).
+    const toSend = { ...edited };
+    for (const field of ["phone", "emergencyPhone"] as const) {
+      if (toSend[field] !== undefined && isBlankPhone(toSend[field])) delete toSend[field];
+    }
+    update.mutate(toSend, {
       onSuccess: () => {
         // What the server kept (a phone comes back without spaces) is what the boxes show from here on.
         setEdited({});
@@ -114,12 +122,12 @@ const EditProfile: React.FC = () => {
       <Input label="Full Name" placeholder="Provide your Full Name" value={value("fullName")} onChangeText={set("fullName")} error={errors.fullName} autoComplete="name" />
       <Input label="Email Address" placeholder="Provide your Email Address" value={me.data?.email ?? ""} editable={false} />
       <Text variant="small" color={theme.colors.textLight}>To change your email, contact support.</Text>
-      <Input label="Phone Number" placeholder="+234" value={value("phone")} onChangeText={set("phone")} keyboardType="phone-pad" error={errors.phone} />
+      <PhoneInput label="Phone Number" value={value("phone")} onChangeText={set("phone")} error={errors.phone} />
       <Input label="House Address" placeholder="Enter House Address" value={value("address")} onChangeText={set("address")} error={errors.address} />
       <Select label="Select Gender" placeholder="Select Gender" options={GENDER_OPTIONS} value={GENDER_OPTIONS.find((o) => o.value.toLowerCase() === value("gender").toLowerCase())?.value ?? value("gender")} onChange={set("gender")} error={errors.gender} />
       <Input label="Enter Age" placeholder="Enter Age" value={value("age")} onChangeText={set("age")} keyboardType="number-pad" error={errors.age} />
       <Input label="Emergency Contact Person Name" placeholder="Enter Name" value={value("emergencyName")} onChangeText={set("emergencyName")} error={errors.emergencyName} />
-      <Input label="Emergency Contact Person Phone Number" placeholder="+234" value={value("emergencyPhone")} onChangeText={set("emergencyPhone")} keyboardType="phone-pad" error={errors.emergencyPhone} />
+      <PhoneInput label="Emergency Contact Person Phone Number" value={value("emergencyPhone")} onChangeText={set("emergencyPhone")} error={errors.emergencyPhone} />
       <Input label="Emergency Contact Person Address" placeholder="Enter Address" value={value("emergencyAddress")} onChangeText={set("emergencyAddress")} error={errors.emergencyAddress} />
       <View>
         <FieldLabel>Update Password</FieldLabel>

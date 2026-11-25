@@ -222,9 +222,19 @@ export interface BookingDraft {
   /** Contact details (prefilled from the account). The booking has no field for them, so they travel inside the special instructions. */
   phone: string;
   email: string;
-  /** Where the phone was when the person tapped "Use my current location"; the API needs coordinates. */
+  /**
+   * Where the visit is; the API needs coordinates. They come from the phone's own position ("Use my current location", when the
+   * person is at the visit address) or from the typed address looked up on the phone ("Find this address", for a visit at someone
+   * else's home). Always set together with `locationSource`, `locationLabel` and `locationKey` (see `domain/visitLocation.ts`).
+   */
   latitude: number | null;
   longitude: number | null;
+  /** How the coordinates were found; null while there are none. */
+  locationSource: "device" | "address" | null;
+  /** The address text the phone's geocoder gave back for the coordinates (shown to the person); null when it gave none. */
+  locationLabel: string | null;
+  /** The typed address (`addressKey`) the coordinates were set against; an edit after that makes them stale. */
+  locationKey: string;
   /** "any" or one of the gender / language choices; they travel inside the special instructions text. */
   genderPreference: string;
   languagePreference: string;

@@ -1,28 +1,24 @@
 import type React from "react";
-import { useEffect, useState } from "react";
+import { useCallback, useEffect, useState } from "react";
 
 import StepBar from "@/src/components/booking/StepBar";
+import VisitLocationCard from "@/src/components/booking/VisitLocationCard";
 import AuthPage from "@/src/components/ui/auth-page";
 import Button from "@/src/components/ui/button";
-import { Card } from "@/src/components/ui/card";
 import Input from "@/src/components/ui/input";
+import PhoneInput from "@/src/components/ui/phone-input";
 import Select from "@/src/components/ui/select";
 import Text from "@/src/components/ui/text";
 import { theme } from "@/src/constants/theme";
 import { GENDERS, LANGUAGES, STATES } from "@/src/domain/bookingChoices";
+import { displayPhone, phoneProblem } from "@/src/domain/phone";
 import { isEmail } from "@/src/domain/validation";
+import { hasCoordinates, locationIsStale } from "@/src/domain/visitLocation";
 import { useBookingDraft } from "@/src/hooks/bookingDraft";
 import { useMe } from "@/src/hooks/queries";
 import { useNav } from "@/src/navigation/Navigations";
-import { getCurrentCoordinates, LocationError } from "@/src/services/location";
 
 type Field = "state" | "city" | "address" | "phone" | "email" | "location";
-
-/** A phone number needs at least seven digits (spaces, "+" and dashes are allowed). */
-const phoneProblem = (value: string): string | undefined => {
-  if (!value.trim()) return "Phone number is required";
-  return value.replace(/\D/g, "").length >= 7 ? undefined : "Enter a valid phone number";
-};
 
 /** The section headings of Figma's step 2 ("Where do you need Care ?", "Contact Details", "Preference"). */
 const Heading: React.FC<{ children: string }> = ({ children }) => (
@@ -32,22 +28,21 @@ const Heading: React.FC<{ children: string }> = ({ children }) => (
 );
 
 /**
- * Step 2 of 2 (Figma "Book an Appointment"): where the visit takes place, contact details and preferences. The phone's
- * location (the API needs coordinates) and the city are not drawn in Figma but the booking cannot be made without them.
+ * Step 2 of 2 (Figma "Book an Appointment"): where the visit takes place, contact details and preferences. The visit location
+ * (the API needs coordinates; see `VisitLocationCard`) and the city are not drawn in Figma but the booking cannot be made without them.
  */
 const BookingStep2: React.FC = () => {
   const navigation = useNav();
   const { draft, patch } = useBookingDraft();
   const me = useMe();
   const [errors, setErrors] = useState<Partial<Record<Field, string>>>({});
-  const [locating, setLocating] = useState(false);
 
   // Contact details start as the account's own (and stay editable); a person's typing is never overwritten.
   const accountPhone = me.data?.phone_number ?? "";
   const accountEmail = me.data?.email ?? "";
   useEffect(() => {
     const fill: Parameters<typeof patch>[0] = {};
-    if (!draft.phone && accountPhone) fill.phone = accountPhone;
+    if (!draft.phone && accountPhone) fill.phone = displayPhone(accountPhone);
     if (!draft.email && accountEmail) fill.email = accountEmail;
     if (Object.keys(fill).length > 0) patch(fill);
   }, [accountPhone, accountEmail, draft.phone, draft.email, patch]);
@@ -57,17 +52,7 @@ const BookingStep2: React.FC = () => {
     setErrors((prev) => ({ ...prev, [field]: undefined }));
   };
 
-  const captureLocation = async () => {
-    setLocating(true);
-    try {
-      const { latitude, longitude } = await getCurrentCoordinates();
-      set({ latitude, longitude }, "location");
-    } catch (error) {
-      setErrors((prev) => ({ ...prev, location: error instanceof LocationError ? error.message : "We could not read your location. Please try again." }));
-    } finally {
-      setLocating(false);
-    }
-  };
+  const locationResolved = useCallback(() => setErrors((prev) => ({ ...prev, location: undefined })), []);
 
   const next = () => {
     const found: Partial<Record<Field, string>> = {};
@@ -78,12 +63,14 @@ const BookingStep2: React.FC = () => {
     if (phone) found.phone = phone;
     if (!draft.email.trim()) found.email = "Email address is required";
     else if (!isEmail(draft.email)) found.email = "Enter a valid email address";
-    if (draft.latitude === null || draft.longitude === null) found.location = "Tap “Use my current location” while you are at the visit address";
+    if (!hasCoordinates(draft) || locationIsStale(draft)) found.location = "Tap “Find this address” (or “Use my current location” if you are at the visit address) so we know where to send the caregiver";
     setErrors(found);
-    if (Object.keys(found).length === 0) navigation.navigate("BookingSummary");
+    if (Object.keys(found).length === 0) {
+      patch({ phone: displayPhone(draft.phone) });
+      navigation.navigate("BookingSummary");
+    }
   };
 
-  const located = draft.latitude !== null && draft.longitude !== null;
   return (
     <AuthPage booking title="Book an Appointment" subtitle="Book your Appointments in 2 steps" gap={20}>
       <StepBar step={2} total={2} />
@@ -98,31 +85,9 @@ const BookingStep2: React.FC = () => {
         onChangeText={(v) => set({ address: v }, "address")}
         error={errors.address}
       />
-      <Card tone={located ? "tint" : "plain"}>
-        <Text weight="bold">{located ? "Location saved" : "Visit location"}</Text>
-        <Text variant="small" color={theme.colors.textLight}>
-          {located
-            ? "We will look for caregivers near this spot. Tap again if you moved."
-            : "Stand at the visit address and tap the button, so we can find caregivers close to it."}
-        </Text>
-        {errors.location ? (
-          <Text variant="small" color={theme.colors.secondary} accessibilityRole="alert">
-            {errors.location}
-          </Text>
-        ) : null}
-        <Button small variant={located ? "outline" : "primary"} title={located ? "Update my location" : "Use my current location"} onPress={() => void captureLocation()} loading={locating} />
-      </Card>
+      <VisitLocationCard draft={draft} patch={patch} error={errors.location} onResolved={locationResolved} />
       <Heading>Contact Details</Heading>
-      <Input
-        label="Phone Number"
-        required
-        placeholder="+234…"
-        value={draft.phone}
-        onChangeText={(v) => set({ phone: v }, "phone")}
-        keyboardType="phone-pad"
-        autoComplete="tel"
-        error={errors.phone}
-      />
+      <PhoneInput label="Phone Number" required value={draft.phone} onChangeText={(v) => set({ phone: v }, "phone")} error={errors.phone} />
       <Input
         label="Email Address"
         required

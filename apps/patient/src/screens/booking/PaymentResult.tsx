@@ -18,6 +18,7 @@ import TextLink from "@/src/components/ui/text-link";
 import { theme } from "@/src/constants/theme";
 import { fetchPaymentLink } from "@/src/hooks/fetchPaymentLink";
 import { usePaymentLinks } from "@/src/hooks/paymentLinks";
+import { usePaymentReturn } from "@/src/hooks/paymentReturn";
 import { paymentPolling, usePaymentCheck } from "@/src/hooks/usePaymentCheck";
 import { formatNaira } from "@/src/domain/format";
 import { useBooking } from "@/src/hooks/useBookings";
@@ -141,6 +142,15 @@ const PaymentResult: React.FC<Props> = ({ navigation, route }) => {
     });
     return () => subscription.remove();
   }, [browserOpen, check]);
+
+  // The payment return link ("Return to the app" on the page Paystack ends on) opened the app: ask the backend now.
+  const returned = usePaymentReturn((s) => s.pending[bookingId] === true);
+  const consumeReturn = usePaymentReturn((s) => s.consume);
+  useEffect(() => {
+    if (!returned) return;
+    consumeReturn(bookingId);
+    void check();
+  }, [returned, bookingId, consumeReturn, check]);
 
   const goBookings = () => navigation.navigate("Tabs", { tab: "bookings", at: Date.now() });
   const viewBooking = () =>

@@ -79,7 +79,7 @@ export function onDevicePushToken(token: { data: unknown }): void {
 /**
  * Mounted once while a patient is signed in and the app stack is showing (inside the navigation container, outside any
  * screen). Registers the Expo token (skipped without an EAS project), refetches the feed when a push arrives, and opens
- * the booking a tapped push points at after marking its feed row read (a 404 there is ignored).
+ * the booking (or, for a chat message, its chat) a tapped push points at after marking its feed row read (a 404 there is ignored).
  */
 export function usePushEffects(): void {
   const signedIn = useSession((s) => s.status === "signedIn");
@@ -100,7 +100,7 @@ export function usePushEffects(): void {
           .catch(() => undefined)
           .then(() => client.invalidateQueries({ queryKey: notificationKeys.all }));
       }
-      navigation.navigate("BookingDetails", { id: tap.bookingId });
+      navigation.navigate(tap.destination === "chat" ? "Chat" : "BookingDetails", { id: tap.bookingId });
     };
 
     const tokenListener = Notifications.addPushTokenListener(onDevicePushToken);

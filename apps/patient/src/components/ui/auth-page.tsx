@@ -4,6 +4,7 @@ import { StyleSheet, View } from "react-native";
 import HeaderBack from "@/src/components/back/HeaderBack";
 import { theme } from "@/src/constants/theme";
 
+import BottomBar from "./bottom-bar";
 import KeyboardScrollView from "./keyboard-scroll-view";
 import Text from "./text";
 
@@ -57,7 +58,7 @@ const AuthPage: React.FC<AuthPageProps> = ({ title, subtitle, titleRight, onBack
   return (
     <View style={styles.screen}>
       {scroll ? <KeyboardScrollView scrollToEndOnKeyboardShow={scrollToEndOnKeyboardShow}>{body}</KeyboardScrollView> : body}
-      {footer ? <View style={styles.footer}>{footer}</View> : null}
+      {footer ? <BottomBar>{footer}</BottomBar> : null}
     </View>
   );
 };
@@ -69,7 +70,6 @@ const styles = StyleSheet.create({
   /** Booking frames: title 24 pt, 10 pt more before the subtitle and 10 pt less after it (the form starts where it did). */
   bookingHeading: { marginTop: 28, marginBottom: 14 },
   bookingTitle: { marginBottom: 10 },
-  footer: { paddingHorizontal: FORM_PADDING, paddingTop: theme.spacing.sm, paddingBottom: 0 },
   titleRow: { flexDirection: "row", alignItems: "center", justifyContent: "space-between" },
   title: { flexShrink: 1 },
 });

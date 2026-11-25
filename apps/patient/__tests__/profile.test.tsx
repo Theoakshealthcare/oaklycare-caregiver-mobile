@@ -89,10 +89,10 @@ describe("profile (live-shaped)", () => {
       await press("Open profile");
       await press("Edit Personal Information");
       await type("Full Name", "  Placeholder Patient Edited  ");
-      await type("Phone Number", "+234 000 071 8205");
+      await type("Phone Number", "0801 234 5678");
       await press("Update Profile Details");
       expect(await screen.findByText("Profile has been updated")).toBeTruthy();
-      expect(calls.find((c) => c.method === "PUT")?.body).toEqual({ full_name: "Placeholder Patient Edited", phone_number: "+234 000 071 8205" });
+      expect(calls.find((c) => c.method === "PUT")?.body).toEqual({ full_name: "Placeholder Patient Edited", phone_number: "+2348012345678" });
       // The boxes show what the server holds now: trimmed name, phone with the separators removed (captured behaviour).
       expect(screen.getByLabelText("Full Name").props.value).toBe("Placeholder Patient Edited");
       expect(screen.getByLabelText("Phone Number").props.value).toBe("+2340000718205");
@@ -109,7 +109,7 @@ describe("profile (live-shaped)", () => {
       await type("Phone Number", "12");
       await press("Update Profile Details");
       expect(await screen.findByText(refused.body.detail[0].msg)).toBeTruthy();
-      expect(screen.getByLabelText("Phone Number").props.value).toBe("12");
+      expect(screen.getByLabelText("Phone Number").props.value).toBe("+23412");
       expect(screen.queryByText("Profile has been updated")).toBeNull();
       view.unmount();
     });
