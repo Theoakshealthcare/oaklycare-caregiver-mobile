@@ -8,7 +8,7 @@ import InAppBanner from "@/src/components/booking/InAppBanner";
 import { useCaregiverHome } from "@/src/hooks/queries";
 import { bannerStore } from "@/src/push/banner";
 import { resolveOffer } from "@/src/push/openOffer";
-import { parseJobOffer } from "@/src/push/registration";
+import { parseChatMessage, parseJobOffer } from "@/src/push/registration";
 import { stopVisitUpdates, startVisitUpdates } from "@/src/supply/backgroundLocationTask";
 import { createExpoForegroundTracker } from "@/src/supply/foregroundTracker";
 import { shouldRefetchHomeAfterPing } from "@/src/home/homeModel";
@@ -29,6 +29,11 @@ async function openOffer(bookingId: string): Promise<void> {
     return;
   }
   if (navigationRef.isReady()) navigationRef.navigate("BookingDetails", { bookingId, offer });
+}
+
+/** Opens the booking's chat, from the tap on a new-message push. Chat is reachable only from an accepted booking, so the id is the booking's. */
+function openChat(bookingId: string): void {
+  if (navigationRef.isReady()) navigationRef.navigate("ChatScreen", { bookingId });
 }
 
 /**
@@ -92,10 +97,13 @@ const AppRuntime: React.FC = () => {
 
   const handleResponse = useCallback((response: Notifications.NotificationResponse) => {
     const id = response.notification.request.identifier;
-    const offer = parseJobOffer(response.notification.request.content.data);
-    if (!offer || handled.current.has(id)) return;
+    const data = response.notification.request.content.data;
+    const offer = parseJobOffer(data);
+    const chat = offer ? null : parseChatMessage(data);
+    if ((!offer && !chat) || handled.current.has(id)) return;
     handled.current.add(id);
-    void openOffer(offer.bookingId);
+    if (offer) void openOffer(offer.bookingId);
+    else if (chat) openChat(chat.bookingId);
   }, []);
 
   // Cold start from a tap, and taps while the app is running.
@@ -108,7 +116,15 @@ const AppRuntime: React.FC = () => {
     const tap = Notifications.addNotificationResponseReceivedListener(handleResponse);
     // A push in the foreground: show the banner and refresh offers (push is a hint, home is the truth).
     const received = Notifications.addNotificationReceivedListener((notification) => {
-      const offer = parseJobOffer(notification.request.content.data);
+      const data = notification.request.content.data;
+      const chat = parseChatMessage(data);
+      if (chat) {
+        // A message arrived while the app is open: the open chat and the Chats list show it without waiting for the next poll.
+        void queryClient.invalidateQueries({ queryKey: queryKeys.chat(chat.bookingId) });
+        void queryClient.invalidateQueries({ queryKey: queryKeys.chats });
+        return;
+      }
+      const offer = parseJobOffer(data);
       if (!offer) return;
       bannerStore.getState().show({
         title: notification.request.content.title ?? "New visit request",

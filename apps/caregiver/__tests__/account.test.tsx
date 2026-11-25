@@ -81,6 +81,9 @@ const caregiverProfile = {
   updated_at: "2026-10-01T00:00:00",
 } as Awaited<ReturnType<typeof caregiverService.getProfile>>;
 
+/** Before the identity check has passed the name is still editable. */
+const unverifiedProfile = { ...caregiverProfile, identity_verification_status: "pending" };
+
 async function renderWith(ui: React.ReactElement) {
   const client = new QueryClient({ defaultOptions: { queries: { retry: false } } });
   return await render(<QueryClientProvider client={client}>{ui}</QueryClientProvider>);
@@ -280,7 +283,7 @@ describe("EditProfile screen", () => {
   });
 
   it("saves only what changed through PUT /auth/profile and goes back", async () => {
-    jest.spyOn(caregiverService, "getProfile").mockResolvedValue(caregiverProfile);
+    jest.spyOn(caregiverService, "getProfile").mockResolvedValue(unverifiedProfile);
     const update = jest.spyOn(accountService, "updateProfile").mockResolvedValue({} as never);
     const step1 = jest.spyOn(caregiverService, "updateProfileStep1");
     await renderWith(<EditProfile />);
@@ -319,7 +322,7 @@ describe("EditProfile screen", () => {
   });
 
   it("rejects an empty name before any request", async () => {
-    jest.spyOn(caregiverService, "getProfile").mockResolvedValue(caregiverProfile);
+    jest.spyOn(caregiverService, "getProfile").mockResolvedValue(unverifiedProfile);
     const update = jest.spyOn(accountService, "updateProfile");
     await renderWith(<EditProfile />);
     await fireEvent.changeText(await screen.findByDisplayValue("Ada Obi"), "  ");
@@ -329,7 +332,7 @@ describe("EditProfile screen", () => {
   });
 
   it("shows the server error when saving fails", async () => {
-    jest.spyOn(caregiverService, "getProfile").mockResolvedValue(caregiverProfile);
+    jest.spyOn(caregiverService, "getProfile").mockResolvedValue(unverifiedProfile);
     jest.spyOn(accountService, "updateProfile").mockRejectedValue(new ApiError(0, null, "x"));
     await renderWith(<EditProfile />);
     await fireEvent.changeText(await screen.findByDisplayValue("Ada Obi"), "Ada Okafor");
@@ -360,6 +363,59 @@ describe("EditProfile screen", () => {
     await fireEvent.press(await screen.findByText("Upload Image"));
     await waitFor(() => expect(alertSpy).toHaveBeenCalledWith("Photos are off", expect.any(String)));
     expect(upload).not.toHaveBeenCalled();
+  });
+});
+
+describe("EditProfile: verified name and +234 phone fields", () => {
+  it("locks the full name once identity is verified: not editable, helper text shown, name never sent", async () => {
+    jest.spyOn(caregiverService, "getProfile").mockResolvedValue(caregiverProfile);
+    const update = jest.spyOn(accountService, "updateProfile").mockResolvedValue({} as never);
+    await renderWith(<EditProfile />);
+    const name = await screen.findByTestId("edit-full-name");
+    expect(name.props.editable).toBe(false);
+    expect(screen.getByText("Your name is verified. To change it, contact support.")).toBeTruthy();
+    // Another field still saves, without the name.
+    await fireEvent.changeText(screen.getByDisplayValue("12 Placeholder Street, Lekki"), "5 Placeholder Road");
+    await fireEvent.press(screen.getByText("Update Profile Details"));
+    await waitFor(() => expect(update).toHaveBeenCalledWith({ address: "5 Placeholder Road" }));
+  });
+
+  it("keeps the name editable, without the helper text, before verification", async () => {
+    jest.spyOn(caregiverService, "getProfile").mockResolvedValue(unverifiedProfile);
+    await renderWith(<EditProfile />);
+    expect((await screen.findByTestId("edit-full-name")).props.editable).not.toBe(false);
+    expect(screen.queryByText("Your name is verified. To change it, contact support.")).toBeNull();
+  });
+
+  it("opens both phone fields with +234 when nothing is saved, and sends nothing for them", async () => {
+    jest.spyOn(caregiverService, "getProfile").mockResolvedValue({ ...unverifiedProfile, phone_number: null, emergency_contact_phone: null });
+    const update = jest.spyOn(accountService, "updateProfile").mockResolvedValue({} as never);
+    await renderWith(<EditProfile />);
+    expect((await screen.findByTestId("edit-phone")).props.value).toBe("+234");
+    expect(screen.getByTestId("edit-emergency-phone").props.value).toBe("+234");
+    await fireEvent.changeText(screen.getByDisplayValue("Ada Obi"), "Ada Okafor");
+    await fireEvent.press(screen.getByText("Update Profile Details"));
+    await waitFor(() => expect(update).toHaveBeenCalledWith({ full_name: "Ada Okafor" }));
+  });
+
+  it("normalises a typed leading 0 and sends E.164", async () => {
+    jest.spyOn(caregiverService, "getProfile").mockResolvedValue({ ...unverifiedProfile, phone_number: null });
+    const update = jest.spyOn(accountService, "updateProfile").mockResolvedValue({} as never);
+    await renderWith(<EditProfile />);
+    await fireEvent.changeText(await screen.findByTestId("edit-phone"), "+23408012345678");
+    expect(screen.getByTestId("edit-phone").props.value).toBe("+2348012345678");
+    await fireEvent.press(screen.getByText("Update Profile Details"));
+    await waitFor(() => expect(update).toHaveBeenCalledWith({ phone_number: "+2348012345678" }));
+  });
+
+  it("shows a saved local-format number as +234 and does not resend it unchanged", async () => {
+    jest.spyOn(caregiverService, "getProfile").mockResolvedValue({ ...unverifiedProfile, phone_number: "08012345678" });
+    const update = jest.spyOn(accountService, "updateProfile").mockResolvedValue({} as never);
+    await renderWith(<EditProfile />);
+    expect((await screen.findByTestId("edit-phone")).props.value).toBe("+2348012345678");
+    await fireEvent.changeText(screen.getByDisplayValue("Ada Obi"), "Ada Okafor");
+    await fireEvent.press(screen.getByText("Update Profile Details"));
+    await waitFor(() => expect(update).toHaveBeenCalledWith({ full_name: "Ada Okafor" }));
   });
 });
 

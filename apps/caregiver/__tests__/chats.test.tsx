@@ -128,4 +128,22 @@ describe("Chats tab", () => {
     await renderWithClient(<Chats active={false} />);
     expect(spy).not.toHaveBeenCalled();
   });
+  it("shows the patient's photo in the row and the avatar row when the list carries one, the letter otherwise", async () => {
+    const withPhoto = { ...ADA, patient_photo_url: "https://img.example/ada.jpg" } as ChatSummary;
+    jest.spyOn(chatsService, "listChats").mockResolvedValue(page([withPhoto, BEN]));
+    await renderWithClient(<Chats />);
+    await screen.findByTestId("chat-row-b1");
+    // Ada: one photo in her row, one in the avatar row. Ben has none, so he keeps his letter in both places.
+    expect(screen.getAllByTestId("patient-avatar-photo")).toHaveLength(2);
+    expect(screen.queryAllByText("B")).toHaveLength(2);
+    expect(screen.queryAllByText("A")).toHaveLength(0);
+  });
+
+  it("hands the photo to the chat room so its header can show it", async () => {
+    const withPhoto = { ...ADA, patient_photo_url: "https://img.example/ada.jpg" } as ChatSummary;
+    jest.spyOn(chatsService, "listChats").mockResolvedValue(page([withPhoto]));
+    await renderWithClient(<Chats />);
+    await fireEvent.press(await screen.findByTestId("chat-row-b1"));
+    expect(mockNavigate).toHaveBeenCalledWith("ChatScreen", { bookingId: "b1", patientName: "Ada Okafor", patientPhotoUrl: "https://img.example/ada.jpg" });
+  });
 });

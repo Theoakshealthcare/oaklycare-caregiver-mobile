@@ -50,6 +50,13 @@ beforeEach(() => {
 });
 
 describe("chat header", () => {
+  it("shows the patient's photo from the Chats list, and the letter when there is none", async () => {
+    const withPhoto = routeProps<React.ComponentProps<typeof ChatScreen>>({ bookingId: "b1", patientName: "Placeholder Patient", patientPhotoUrl: "https://img.example/p.jpg" });
+    await renderWithClient(<ChatScreen {...withPhoto} />);
+    expect(screen.getByTestId("patient-avatar-photo")).toBeTruthy();
+    expect(screen.queryByTestId("chat-avatar-initial")).toBeNull();
+  });
+
   it("shows the name and initial, never a made-up presence or the old refresh line", async () => {
     await renderWithClient(<ChatScreen {...props()} />);
     expect(screen.getByTestId("chat-name")).toHaveTextContent("Placeholder Patient");

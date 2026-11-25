@@ -6157,6 +6157,11 @@ export interface components {
             booking_id: string;
             /** Patient Name */
             patient_name: string;
+            /**
+             * Patient Photo Url
+             * @description Absolute URL of the patient's profile photo; null when they have none.
+             */
+            patient_photo_url?: string | null;
             /** Service Type */
             service_type: string;
             status: components["schemas"]["BookingStatus"];

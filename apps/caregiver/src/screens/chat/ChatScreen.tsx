@@ -9,7 +9,7 @@ import { Feather, Ionicons } from "@expo/vector-icons"
 import { theme, MAX_FONT_SCALE } from "@/src/constants/theme"
 import KeyboardInsetView from "@/src/components/ui/keyboard-inset-view"
 import Text from "@/src/components/ui/text"
-import Image from "@/src/components/ui/image"
+import PatientAvatar from "@/src/components/chat/PatientAvatar"
 import { globalStyles } from "@/src/constants/styles"
 import Navigation from "@/src/hooks/use-navigation"
 import { useBooking, useChatMessages, useMe, useSendChatMessage } from "@/src/hooks/queries"
@@ -22,29 +22,6 @@ import type { ChatMessage } from "@/src/services/booking.service"
 import type { ScreenParamLists } from "@/src/navigation/Navigations"
 
 const AVATAR = 40
-
-/** The patient's photo when the booking carries one, else their first letter (there is no presence signal, so no "Active" dot). */
-const Avatar: React.FC<{ name: string; uri?: string | null; size?: number }> = ({ name, uri, size = AVATAR }) => (
-  <View
-    style={{
-      width: size,
-      height: size,
-      borderRadius: size / 2,
-      overflow: "hidden",
-      backgroundColor: theme.colors.primaryLight,
-      alignItems: "center",
-      justifyContent: "center",
-    }}
-  >
-    {uri ? (
-      <Image source={{ uri }} containerStyle={{ width: size, height: size }} imageStyle={{ width: size, height: size }} />
-    ) : (
-      <Text variant="body" weight="bold" color={theme.colors.primary} testID="chat-avatar-initial">
-        {name.trim().charAt(0).toUpperCase() || "P"}
-      </Text>
-    )}
-  </View>
-)
 
 const RoundIconButton: React.FC<{ icon: React.ComponentProps<typeof Feather>["name"]; label: string; onPress: () => void; testID: string }> = ({
   icon,
@@ -73,7 +50,7 @@ const RoundIconButton: React.FC<{ icon: React.ComponentProps<typeof Feather>["na
 
 const ChatScreen: React.FC<StackScreenProps<ScreenParamLists, "ChatScreen">> = ({ route }) => {
   const { navigation } = Navigation()
-  const { bookingId, patientName } = route.params
+  const { bookingId, patientName, patientPhotoUrl } = route.params
   const { data: me } = useMe()
   const { data: messages = [] } = useChatMessages(bookingId)
   const { data: booking } = useBooking(bookingId)
@@ -83,7 +60,7 @@ const ChatScreen: React.FC<StackScreenProps<ScreenParamLists, "ChatScreen">> = (
   const scrollViewRef = useRef<ScrollView>(null)
 
   const name = patientName ?? booking?.patient_details?.full_name ?? "Patient"
-  const photo = booking?.patient_details?.profile_image_url ?? null
+  const photo = patientPhotoUrl ?? booking?.patient_details?.profile_image_url ?? null
   const voiceOn = voiceNotesMode() !== "off"
   const rows = useMemo(() => withStamps(messages), [messages])
   const context = useMemo(() => (booking ? bookingContext(booking) : null), [booking])
@@ -126,7 +103,7 @@ const ChatScreen: React.FC<StackScreenProps<ScreenParamLists, "ChatScreen">> = (
           marginBottom: theme.spacing.sm,
         }}
       >
-        {isMyMessage ? null : <Avatar name={name} uri={photo} size={32} />}
+        {isMyMessage ? null : <PatientAvatar name={name} uri={photo} size={32} initialTestID="chat-avatar-initial" />}
         <View
           testID={isMyMessage ? "chat-bubble-mine" : "chat-bubble-theirs"}
           style={{
@@ -178,7 +155,7 @@ const ChatScreen: React.FC<StackScreenProps<ScreenParamLists, "ChatScreen">> = (
               >
                 <Feather name="chevron-left" size={20} color={theme.colors.white} />
               </TouchableOpacity>
-              <Avatar name={name} uri={photo} />
+              <PatientAvatar name={name} uri={photo} size={AVATAR} initialTestID="chat-avatar-initial" />
               <Text variant="body" weight="bold" color={theme.colors.white} style={{ flexShrink: 1 }} numberOfLines={1} testID="chat-name">
                 {name}
               </Text>

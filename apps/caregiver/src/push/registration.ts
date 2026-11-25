@@ -96,3 +96,11 @@ export function parseJobOffer(data: unknown): JobOfferNotification | null {
   if (type !== "job_offer" || typeof bookingId !== "string" || bookingId.length === 0) return null;
   return { bookingId };
 }
+
+/** The data payload of a new-chat-message push: `{ type: "chat_message", booking_id }`. */
+export function parseChatMessage(data: unknown): JobOfferNotification | null {
+  if (!data || typeof data !== "object") return null;
+  const { type, booking_id: bookingId } = data as { type?: unknown; booking_id?: unknown };
+  if (type !== "chat_message" || typeof bookingId !== "string" || bookingId.length === 0) return null;
+  return { bookingId };
+}

@@ -3,6 +3,8 @@ import { Modal, Pressable, ScrollView, View } from "react-native";
 import { Feather } from "@expo/vector-icons";
 
 import Button from "@/src/components/ui/button";
+import BottomCta from "@/src/components/ui/bottom-cta";
+import KeyboardInsetView from "@/src/components/ui/keyboard-inset-view";
 import KeyboardScrollView from "@/src/components/ui/keyboard-scroll-view";
 import Text from "@/src/components/ui/text";
 import { globalStyles } from "@/src/constants/styles";
@@ -171,7 +173,7 @@ export const ModalFrame: React.FC<{ title: string; subtitle?: string; onClose: (
   children,
 }) => (
   <Modal transparent animationType="fade" visible onRequestClose={onClose}>
-    <View testID={testID} style={{ flex: 1, backgroundColor: "rgba(0,0,0,0.45)", justifyContent: "center", padding: theme.spacing.md }}>
+    <KeyboardInsetView outsideAppRoot testID={testID} style={{ flex: 1, backgroundColor: "rgba(0,0,0,0.45)", justifyContent: "center", padding: theme.spacing.md }}>
       <View style={{ backgroundColor: theme.colors.white, borderRadius: theme.borderRadius.xxl, maxHeight: "92%" }}>
         <ScrollView keyboardShouldPersistTaps="handled" contentContainerStyle={{ padding: theme.spacing.lg, gap: theme.spacing.md }}>
           <Pressable
@@ -198,7 +200,7 @@ export const ModalFrame: React.FC<{ title: string; subtitle?: string; onClose: (
           {children}
         </ScrollView>
       </View>
-    </View>
+    </KeyboardInsetView>
   </Modal>
 );
 
@@ -230,7 +232,10 @@ export const FullPageFrame: React.FC<{
         </View>
         {children}
       </KeyboardScrollView>
-      <View style={{ padding: theme.spacing.md, paddingBottom: theme.spacing.lg, backgroundColor: theme.colors.careBackground }}>{footer}</View>
+      {/* A Modal is outside the app root's bottom inset, so this bar adds the safe-area inset itself. */}
+      <BottomCta outsideAppRoot style={{ backgroundColor: theme.colors.careBackground }}>
+        {footer}
+      </BottomCta>
     </View>
   </Modal>
 );

@@ -4,9 +4,10 @@ import { Feather } from "@expo/vector-icons";
 import { useFocusEffect } from "@react-navigation/native";
 
 import { ErrorState, LoadingState } from "@/src/components/account/StateViews";
+import PatientAvatar from "@/src/components/chat/PatientAvatar";
 import Button from "@/src/components/ui/button";
 import Text from "@/src/components/ui/text";
-import { AVATAR_ROW_LIMIT, NO_MESSAGES_YET, filterChats, initialOf, listTime } from "@/src/chats/chatsModel";
+import { AVATAR_ROW_LIMIT, NO_MESSAGES_YET, filterChats, listTime } from "@/src/chats/chatsModel";
 import { MAX_FONT_SCALE, theme } from "@/src/constants/theme";
 import { useChatList } from "@/src/hooks/queries";
 import useNavigation from "@/src/hooks/use-navigation";
@@ -16,24 +17,6 @@ const ROW_AVATAR = 48;
 const STRIP_AVATAR = 62;
 /** The side margin of the Bookings screen, so the two tabs line up. */
 const GUTTER = 20;
-
-/** A round avatar with the patient's first letter (the list carries no photo). */
-const Avatar: React.FC<{ name: string; size: number; testID?: string }> = ({ name, size, testID }) => (
-  <View
-    style={{
-      width: size,
-      height: size,
-      borderRadius: size / 2,
-      backgroundColor: theme.colors.primaryLight,
-      alignItems: "center",
-      justifyContent: "center",
-    }}
-  >
-    <Text variant={size > ROW_AVATAR ? "h3" : "body"} weight="bold" color={theme.colors.primary} testID={testID}>
-      {initialOf(name)}
-    </Text>
-  </View>
-);
 
 const ChatRow: React.FC<{ chat: ChatSummary; onOpen: (chat: ChatSummary) => void }> = ({ chat, onOpen }) => {
   const last = chat.last_message;
@@ -53,7 +36,7 @@ const ChatRow: React.FC<{ chat: ChatSummary; onOpen: (chat: ChatSummary) => void
         marginBottom: theme.spacing.md,
       }}
     >
-      <Avatar name={chat.patient_name} size={ROW_AVATAR} />
+      <PatientAvatar name={chat.patient_name} uri={chat.patient_photo_url} size={ROW_AVATAR} />
       <View style={{ flex: 1, gap: 2 }}>
         <Text variant="body" weight="bold" numberOfLines={1} testID="chat-row-name">
           {chat.patient_name}
@@ -94,7 +77,7 @@ const Chats: React.FC<{ active?: boolean }> = ({ active = true }) => {
   const searching = query.trim().length > 0;
 
   const open = (chat: ChatSummary) =>
-    navigation.navigate("ChatScreen", { bookingId: chat.booking_id, patientName: chat.patient_name });
+    navigation.navigate("ChatScreen", { bookingId: chat.booking_id, patientName: chat.patient_name, patientPhotoUrl: chat.patient_photo_url ?? undefined });
 
   const renderBody = () => {
     if (list.isLoading) return <LoadingState testID="chats-loading" />;
@@ -131,7 +114,7 @@ const Chats: React.FC<{ active?: boolean }> = ({ active = true }) => {
                   accessibilityLabel={`Chat with ${chat.patient_name}`}
                   onPress={() => open(chat)}
                 >
-                  <Avatar name={chat.patient_name} size={STRIP_AVATAR} />
+                  <PatientAvatar name={chat.patient_name} uri={chat.patient_photo_url} size={STRIP_AVATAR} />
                 </Pressable>
               ))}
             </ScrollView>

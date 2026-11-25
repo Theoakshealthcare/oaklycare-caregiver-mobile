@@ -3,6 +3,7 @@ import { View, type RefreshControlProps } from "react-native";
 import { useNavigation, useNavigationState } from "@react-navigation/native";
 
 import { RoundBack } from "@/src/components/careplan/parts";
+import BottomCta from "@/src/components/ui/bottom-cta";
 import KeyboardScrollView from "@/src/components/ui/keyboard-scroll-view";
 import Text from "@/src/components/ui/text";
 import { theme } from "@/src/constants/theme";
@@ -39,7 +40,7 @@ const PlanScreen: React.FC<{
           {children}
         </View>
       </KeyboardScrollView>
-      {footer ? <View style={{ padding: theme.spacing.md, paddingBottom: theme.spacing.lg, backgroundColor: theme.colors.careBackground }}>{footer}</View> : null}
+      {footer ? <BottomCta style={{ backgroundColor: theme.colors.careBackground }}>{footer}</BottomCta> : null}
     </View>
   );
 };

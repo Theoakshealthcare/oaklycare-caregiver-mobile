@@ -1,4 +1,4 @@
-import { parseJobOffer, registerForPush, type PushRegistrationDeps } from "../src/push/registration";
+import { parseChatMessage, parseJobOffer, registerForPush, type PushRegistrationDeps } from "../src/push/registration";
 import { resolveOffer } from "../src/push/openOffer";
 import type { CaregiverHome } from "../src/supply/locationService";
 
@@ -236,5 +236,24 @@ describe("the OS token-changed event must not start a registration loop (staging
     await new Promise((resolve) => setTimeout(resolve, 20));
     await Promise.all(pending);
     expect(t.registered).toHaveLength(1);
+  });
+});
+
+describe("parseChatMessage (the new-message push: data.type chat_message, booking_id opens that chat)", () => {
+  it("accepts the chat payload", () => {
+    expect(parseChatMessage({ type: "chat_message", booking_id: "1b4b008b-c4d2-4fb1-a7b6-1eca61375802" })).toEqual({
+      bookingId: "1b4b008b-c4d2-4fb1-a7b6-1eca61375802",
+    });
+  });
+
+  it.each([null, undefined, "chat_message", {}, { type: "job_offer", booking_id: "x" }, { type: "chat_message" }, { type: "chat_message", booking_id: 7 }, { type: "chat_message", booking_id: "" }])(
+    "ignores %p",
+    (data) => {
+      expect(parseChatMessage(data)).toBeNull();
+    },
+  );
+
+  it("is never mistaken for a job offer", () => {
+    expect(parseJobOffer({ type: "chat_message", booking_id: "b1" })).toBeNull();
   });
 });

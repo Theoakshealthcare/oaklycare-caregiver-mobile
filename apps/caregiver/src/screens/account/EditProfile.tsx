@@ -12,6 +12,7 @@ import Button from "@/src/components/ui/button";
 import Image from "@/src/components/ui/image";
 import DateField from "@/src/components/ui/date-field";
 import Input from "@/src/components/ui/input";
+import PhoneInput from "@/src/components/ui/phone-input";
 import Select from "@/src/components/ui/select";
 import Text from "@/src/components/ui/text";
 import { theme } from "@/src/constants/theme";
@@ -19,6 +20,11 @@ import { useCaregiverProfile, useFormOptions, useMe } from "@/src/hooks/queries"
 import useNavigation from "@/src/hooks/use-navigation";
 import { accountService, type ProfileUpdate } from "@/src/services/account.service";
 import { caregiverService, type CaregiverProfile } from "@/src/services/caregiver.service";
+import { phoneForSave, toPhoneFieldValue } from "@/src/utils/phone";
+
+/** The value `identity_verification_status` carries once the identity check has passed (it is also what the setup status screen reads). */
+export const IDENTITY_VERIFIED = "verified";
+export const NAME_LOCKED_HELPER = "Your name is verified. To change it, contact support.";
 
 type Gender = "male" | "female" | "other";
 const GENDERS: { label: string; value: Gender }[] = [
@@ -40,12 +46,12 @@ interface FormState {
 function initialState(p: CaregiverProfile): FormState {
   return {
     fullName: p.full_name ?? "",
-    phone: p.phone_number ?? "",
+    phone: toPhoneFieldValue(p.phone_number),
     address: p.address ?? "",
     gender: p.gender ?? "",
     dateOfBirth: p.date_of_birth ?? "",
     state: p.state ?? "",
-    emergencyPhone: p.emergency_contact_phone ?? "",
+    emergencyPhone: toPhoneFieldValue(p.emergency_contact_phone),
   };
 }
 
@@ -57,6 +63,8 @@ const EditForm: React.FC<{ profile: CaregiverProfile }> = ({ profile }) => {
   const me = useMe();
   const { data: formOptions } = useFormOptions();
   const initial = initialState(profile);
+  // After the identity check the name on the account is the one on the ID: it is shown, not editable, and never sent.
+  const nameLocked = profile.identity_verification_status === IDENTITY_VERIFIED;
   const [form, setForm] = useState<FormState>(initial);
   const [errors, setErrors] = useState<Partial<Record<keyof FormState, string>>>({});
   const [photoUri, setPhotoUri] = useState<string | null>(null);
@@ -73,18 +81,18 @@ const EditForm: React.FC<{ profile: CaregiverProfile }> = ({ profile }) => {
     mutationFn: async () => {
       // PUT /auth/profile ignores empty values; send only what changed.
       const changes: ProfileUpdate = {};
-      if (form.fullName.trim() !== initial.fullName) changes.full_name = form.fullName.trim();
-      if (form.phone.trim() !== initial.phone && form.phone.trim()) changes.phone_number = form.phone.trim();
+      if (!nameLocked && form.fullName.trim() !== initial.fullName) changes.full_name = form.fullName.trim();
+      if (form.phone.trim() !== initial.phone && phoneForSave(form.phone)) changes.phone_number = phoneForSave(form.phone);
       if (form.address.trim() !== initial.address && form.address.trim()) changes.address = form.address.trim();
       if (form.gender !== initial.gender && form.gender) changes.gender = form.gender;
       if (form.dateOfBirth !== initial.dateOfBirth && form.dateOfBirth) changes.date_of_birth = form.dateOfBirth;
-      if (form.emergencyPhone.trim() !== initial.emergencyPhone && form.emergencyPhone.trim()) {
-        changes.emergency_contact_phone = form.emergencyPhone.trim();
+      if (form.emergencyPhone.trim() !== initial.emergencyPhone && phoneForSave(form.emergencyPhone)) {
+        changes.emergency_contact_phone = phoneForSave(form.emergencyPhone);
       }
       if (Object.keys(changes).length > 0) await accountService.updateProfile(changes);
       // `state` is not part of PUT /auth/profile; it lives in the step 1 profile, which takes all five fields.
       if (form.state !== initial.state && form.state) {
-        if (!isGender(form.gender) || !form.dateOfBirth || !form.address.trim() || !form.emergencyPhone.trim()) {
+        if (!isGender(form.gender) || !form.dateOfBirth || !form.address.trim() || !phoneForSave(form.emergencyPhone)) {
           throw new Error("Fill in your date of birth, gender, address and emergency phone to change your state.");
         }
         await caregiverService.updateProfileStep1({
@@ -92,7 +100,7 @@ const EditForm: React.FC<{ profile: CaregiverProfile }> = ({ profile }) => {
           gender: form.gender,
           state: form.state,
           address: form.address.trim(),
-          emergency_contact_phone: form.emergencyPhone.trim(),
+          emergency_contact_phone: phoneForSave(form.emergencyPhone),
         });
       }
     },
@@ -108,7 +116,7 @@ const EditForm: React.FC<{ profile: CaregiverProfile }> = ({ profile }) => {
 
   const submit = () => {
     const next: Partial<Record<keyof FormState, string>> = {};
-    if (!form.fullName.trim()) next.fullName = "Full name is required";
+    if (!nameLocked && !form.fullName.trim()) next.fullName = "Full name is required";
     if (form.dateOfBirth && !/^\d{4}-\d{2}-\d{2}$/.test(form.dateOfBirth)) next.dateOfBirth = "Use the format YYYY-MM-DD";
     setErrors(next);
     if (Object.keys(next).length === 0) save.mutate();
@@ -177,7 +185,23 @@ const EditForm: React.FC<{ profile: CaregiverProfile }> = ({ profile }) => {
       </View>
 
       <View style={{ gap: 16 }}>
-        <Input label="Full Name" value={form.fullName} onChangeText={set("fullName")} error={errors.fullName} placeholder="Provide your Full Name" />
+        <View>
+          <Input
+            testID="edit-full-name"
+            label="Full Name"
+            value={form.fullName}
+            onChangeText={set("fullName")}
+            error={errors.fullName}
+            placeholder="Provide your Full Name"
+            editable={!nameLocked}
+            containerStyle={nameLocked ? { opacity: 0.6 } : undefined}
+          />
+          {nameLocked ? (
+            <Text variant="small" color={theme.colors.textLight} testID="edit-full-name-locked" style={{ marginTop: 4 }}>
+              {NAME_LOCKED_HELPER}
+            </Text>
+          ) : null}
+        </View>
         <Input
           label="Email Address"
           value={profile.email}
@@ -185,7 +209,7 @@ const EditForm: React.FC<{ profile: CaregiverProfile }> = ({ profile }) => {
           placeholder="Provide your Email Address"
           containerStyle={{ opacity: 0.6 }}
         />
-        <Input label="Phone Number" value={form.phone} onChangeText={set("phone")} keyboardType="phone-pad" placeholder="+234" />
+        <PhoneInput testID="edit-phone" label="Phone Number" value={form.phone} onChangeText={set("phone")} />
         <Input label="House Address" value={form.address} onChangeText={set("address")} placeholder="Enter House Address" />
         <Select
           label="Select Gender"
@@ -211,12 +235,11 @@ const EditForm: React.FC<{ profile: CaregiverProfile }> = ({ profile }) => {
           value={form.state || undefined}
           onValueChange={(v) => set("state")(String(v))}
         />
-        <Input
+        <PhoneInput
+          testID="edit-emergency-phone"
           label="Emergency Contact Person Phone Number"
           value={form.emergencyPhone}
           onChangeText={set("emergencyPhone")}
-          keyboardType="phone-pad"
-          placeholder="+234"
         />
         <Button title="Update Profile Details" onPress={submit} loading={save.isPending} />
       </View>
