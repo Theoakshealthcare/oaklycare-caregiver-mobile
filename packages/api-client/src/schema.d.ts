@@ -3746,6 +3746,84 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/v1/admin/care-alerts": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * List Care Alerts
+         * @description Critical first, then open before acknowledged, then the most recently fed. Summary only: ``detail`` and ``note`` are ``null`` here
+         *     (``detail_masked`` still says whether this admin may open them with the detail route).
+         */
+        get: operations["list_care_alerts_api_v1_admin_care_alerts_get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/admin/care-alerts/{alert_id}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Get Care Alert */
+        get: operations["get_care_alert_api_v1_admin_care_alerts__alert_id__get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/admin/care-alerts/{alert_id}/acknowledge": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Acknowledge Care Alert
+         * @description open -> acknowledged ("I am on it").
+         */
+        post: operations["acknowledge_care_alert_api_v1_admin_care_alerts__alert_id__acknowledge_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/admin/care-alerts/{alert_id}/resolve": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Resolve Care Alert
+         * @description open or acknowledged -> resolved. A later occurrence for the same patient starts a new alert.
+         */
+        post: operations["resolve_care_alert_api_v1_admin_care_alerts__alert_id__resolve_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/health": {
         parameters: {
             query?: never;
@@ -4062,6 +4140,16 @@ export interface components {
             /** Status */
             status?: ("active" | "disabled") | null;
         };
+        /** AdminRef */
+        AdminRef: {
+            /**
+             * Id
+             * Format: uuid
+             */
+            id: string;
+            /** Email */
+            email: string;
+        };
         /**
          * AdminTemplate
          * @description A template with its review state. ``clinical_review_status`` is inherited.
@@ -4118,6 +4206,44 @@ export interface components {
         AdminTemplateList: {
             /** Items */
             items: components["schemas"]["AdminTemplate"][];
+        };
+        /** AlertActionIn */
+        AlertActionIn: {
+            /** Note */
+            note?: string | null;
+        };
+        /** AlertDetail */
+        AlertDetail: {
+            /** Vital Type */
+            vital_type?: string | null;
+            /** Status */
+            status?: string | null;
+            /** Reason */
+            reason?: string | null;
+            /** Value */
+            value?: string | null;
+            /** Unit */
+            unit?: string | null;
+            /** Tasks */
+            tasks?: string[] | null;
+            /** Days */
+            days?: string[] | null;
+        };
+        /** AlertErrorBody */
+        AlertErrorBody: {
+            /** Code */
+            code: string;
+            /** Message */
+            message: string;
+        };
+        /** AlertPartyOut */
+        AlertPartyOut: {
+            /** Full Name */
+            full_name: string;
+            /** Phone */
+            phone?: string | null;
+            /** Masked */
+            masked: boolean;
         };
         /** ApplicationDetail */
         ApplicationDetail: {
@@ -5785,6 +5911,88 @@ export interface components {
              * @description Same rule as `can_tick_tasks`.
              */
             can_add_observation: boolean;
+        };
+        /** CareAlertCounts */
+        CareAlertCounts: {
+            /** Open */
+            open: number;
+            /** Acknowledged */
+            acknowledged: number;
+            /** Resolved */
+            resolved: number;
+            /** Critical Active */
+            critical_active: number;
+        };
+        /** CareAlertList */
+        CareAlertList: {
+            /** Items */
+            items: components["schemas"]["CareAlertOut"][];
+            /** Total */
+            total: number;
+            counts: components["schemas"]["CareAlertCounts"];
+        };
+        /** CareAlertOut */
+        CareAlertOut: {
+            /**
+             * Id
+             * Format: uuid
+             */
+            id: string;
+            /**
+             * Type
+             * @enum {string}
+             */
+            type: "vital_out_of_range" | "task_missed";
+            /**
+             * Severity
+             * @enum {string}
+             */
+            severity: "warning" | "critical";
+            /**
+             * Status
+             * @enum {string}
+             */
+            status: "open" | "acknowledged" | "resolved";
+            /** Summary */
+            summary: string;
+            /**
+             * Created At
+             * Format: date-time
+             */
+            created_at: string;
+            /**
+             * Last Occurred At
+             * Format: date-time
+             */
+            last_occurred_at: string;
+            /** Occurrence Count */
+            occurrence_count: number;
+            patient: components["schemas"]["AlertPartyOut"];
+            /** Care Recipient Name */
+            care_recipient_name?: string | null;
+            /** Booking Id */
+            booking_id?: string | null;
+            /** Booking Code */
+            booking_code?: string | null;
+            /** Vital Id */
+            vital_id?: string | null;
+            /** Family Notified Count */
+            family_notified_count: number;
+            /** Family Notified At */
+            family_notified_at?: string | null;
+            /** Admin Notified At */
+            admin_notified_at?: string | null;
+            acknowledged_by?: components["schemas"]["AdminRef"] | null;
+            /** Acknowledged At */
+            acknowledged_at?: string | null;
+            resolved_by?: components["schemas"]["AdminRef"] | null;
+            /** Resolved At */
+            resolved_at?: string | null;
+            /** Note */
+            note?: string | null;
+            detail?: components["schemas"]["AlertDetail"] | null;
+            /** Detail Masked */
+            detail_masked: boolean;
         };
         /** CarePlanCreate */
         CarePlanCreate: {
@@ -18051,6 +18259,168 @@ export interface operations {
                 };
                 content: {
                     "application/json": components["schemas"]["VoiceNoteErrorBody"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    list_care_alerts_api_v1_admin_care_alerts_get: {
+        parameters: {
+            query?: {
+                /** @description `active` = open + acknowledged */
+                status?: "active" | "open" | "acknowledged" | "resolved" | "all";
+                severity?: ("warning" | "critical") | null;
+                type?: ("vital_out_of_range" | "task_missed") | null;
+                limit?: number;
+                offset?: number;
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["CareAlertList"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    get_care_alert_api_v1_admin_care_alerts__alert_id__get: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                alert_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["CareAlertOut"];
+                };
+            };
+            /** @description Care alert not found */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    acknowledge_care_alert_api_v1_admin_care_alerts__alert_id__acknowledge_post: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                alert_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["AlertActionIn"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["CareAlertOut"];
+                };
+            };
+            /** @description `already_acknowledged` or `already_resolved`. */
+            409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["AlertErrorBody"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    resolve_care_alert_api_v1_admin_care_alerts__alert_id__resolve_post: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                alert_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["AlertActionIn"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["CareAlertOut"];
+                };
+            };
+            /** @description `already_acknowledged` or `already_resolved`. */
+            409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["AlertErrorBody"];
                 };
             };
             /** @description Validation Error */

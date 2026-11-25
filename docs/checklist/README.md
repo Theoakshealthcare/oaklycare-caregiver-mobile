@@ -61,6 +61,10 @@ channel) lives in the backend repo: `docs/checklist/MASTER_CHECKLIST.md`. Update
 - [x] One `+234` phone input (booking contact, Edit Profile phone and emergency phone); one shared pinned-button spacing; chat composer above the Android keyboard; visit location read back, "Find this address" with Confirm / Edit and stale-clear; payment return link `oaklypatient://payment-complete`; chat push tap opens the chat; branch `fix/patient-field-gaps` ([SOP](../sop/2026-11-25-patient-field-gaps.md)); **iOS simulator for the phone input, chat photo and keyboard, and the return link; Android, the Find-this-address flow and the button spacing not seen**
 - [ ] Owner: re-test on the Android phone (keyboard, spacing under Make Payment, return from Paystack, a booking for a parent's address)
 
+## Care alerts, admin console page (slice 1c, 2026-11-25)
+- [x] "Care alerts" under Queues (`support.inbox`): list with status, severity and type filters, counts, acknowledge and resolve with an optional note, detail view (clinical detail only from the one-alert route, audited); branch `feature/care-alerts-console`, stacked on #75; backend `feature/care-alerts` stacked on backend #84 ([SOP](../sop/2026-11-25-care-alerts-console.md)). **Vitest, tsc and ESLint only; not run in a browser against the backend**
+- [ ] Open-count badge on the nav item; family screen and WhatsApp delivery stay parked (owner)
+
 ## Caregiver remaining parity with Figma: care plans, chat, vitals, bookings, account (2026-11-24)
 - [x] Care plan system: hub (teal header, tabs, search and filter, template and plan cards), details accordions in Figma order, goals, medications (full-page add), tasks (dropdowns), notes, create form, success pages
 - [x] Chat header, booking card, stamps, quick replies, composer; AI Notetaker "I'm Listening" with the orb and "Voice to text" (voice notes on); calling stays off
