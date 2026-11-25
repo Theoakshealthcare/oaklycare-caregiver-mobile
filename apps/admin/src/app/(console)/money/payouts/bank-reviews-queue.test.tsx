@@ -54,7 +54,7 @@ describe("BankReviewsQueue", () => {
     expect(calls[0]?.search).toContain("status=pending");
   });
 
-  it("approves with the reason and the last four digits of the account on that row", async () => {
+  it("approves with the reason and the review token of that row", async () => {
     const user = userEvent.setup();
     let decided = false;
     const calls = stubFetch({
@@ -75,14 +75,14 @@ describe("BankReviewsQueue", () => {
     await decide(user, "Approve account", "Confirmed with the caregiver by phone");
     await waitFor(() => expect(screen.queryByRole("dialog")).not.toBeInTheDocument());
     const post = calls.find((c) => c.key === APPROVE(PENDING.caregiver_id));
-    expect(post?.body).toEqual({ reason: "Confirmed with the caregiver by phone", account_last4: "0011" });
+    expect(post?.body).toEqual({ reason: "Confirmed with the caregiver by phone", review_token: PENDING.review_token });
     expect(await screen.findByRole("status")).toHaveTextContent("Account for Placeholder Tosin was approved");
     // The queue reloads: the decided row is gone and the other is untouched.
     await waitFor(() => expect(screen.queryByRole("row", { name: /Placeholder Tosin/ })).not.toBeInTheDocument());
     expect(screen.getByRole("row", { name: /Placeholder Ada/ })).toBeInTheDocument();
   });
 
-  it("rejects the second row with that row's own last four digits", async () => {
+  it("rejects the second row with that row's own review token", async () => {
     const user = userEvent.setup();
     const calls = stubFetch({
       [LIST]: () => listOf([PENDING, PENDING_FUNDED]),
@@ -96,7 +96,7 @@ describe("BankReviewsQueue", () => {
     await waitFor(() => expect(screen.queryByRole("dialog")).not.toBeInTheDocument());
     expect(calls.find((c) => c.key === REJECT(PENDING_FUNDED.caregiver_id))?.body).toEqual({
       reason: "The caregiver could not confirm this account",
-      account_last4: "0012",
+      review_token: PENDING_FUNDED.review_token,
     });
     expect(await screen.findByRole("status")).toHaveTextContent("was rejected");
     expect(calls.some((c) => c.key === APPROVE(PENDING_FUNDED.caregiver_id))).toBe(false);
@@ -116,7 +116,7 @@ describe("BankReviewsQueue", () => {
 
   it("on a 409 because the caregiver saved another account: closes the dialog, reloads the row, and says so", async () => {
     const user = userEvent.setup();
-    const changed = makeBankReview({ account_name: "A DIFFERENT HOLDER", account_number: "******4321" });
+    const changed = makeBankReview({ account_name: "A DIFFERENT HOLDER", account_number: "******4321", review_token: "0123456789abcdef0123456789abcdef" });
     let reloaded = false;
     const calls = stubFetch({
       [LIST]: () => listOf(reloaded ? [changed] : [PENDING]),
@@ -136,6 +136,14 @@ describe("BankReviewsQueue", () => {
     expect(calls.filter((c) => c.key === LIST).length).toBeGreaterThanOrEqual(2);
     // Nothing was decided, so no success notice.
     expect(screen.queryByRole("status")).not.toBeInTheDocument();
+    // Looking again and deciding sends the reloaded row's token, not the stale one.
+    await user.click(within(row).getByRole("button", { name: /Approve/ }));
+    await decide(user, "Approve account", "Looked again");
+    await waitFor(() => expect(calls.filter((c) => c.key === APPROVE(PENDING.caregiver_id))).toHaveLength(2));
+    expect(calls.filter((c) => c.key === APPROVE(PENDING.caregiver_id))[1]?.body).toEqual({
+      reason: "Looked again",
+      review_token: "0123456789abcdef0123456789abcdef",
+    });
   });
 
   it("on a 409 because someone already decided it: tells the reviewer and drops the row", async () => {

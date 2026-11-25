@@ -195,7 +195,7 @@ channel) lives in the backend repo: `docs/checklist/MASTER_CHECKLIST.md`. Update
 
 ## Admin console: payout account name reviews (Money > Payouts > Account reviews, 2026-11-25)
 - [x] Queue of payout accounts held because the holder name did not look like the profile name: profile name and the bank's name side by side, masked account, balance, submitted time; status filter (pending default, rejected, approved) and paging
-- [x] Approve / Reject with a required reason, sending `account_last4` from the row; shown only with `payouts.execute` and only on pending rows
+- [x] Approve / Reject with a required reason, sending the row's `review_token`; shown only with `payouts.execute` and only on pending rows
 - [x] A 409 (caregiver saved another account, or already decided) closes the dialog, reloads the queue and shows the server's message
 - [x] Vitest/RTL, typecheck and lint clean. Branch `feature/admin-bank-name-reviews`, see docs/sop/2026-11-25-admin-bank-name-reviews.md; needs backend `feature/bank-name-review` (migration `0030`) merged first
 - [ ] **Not verified in a browser or against a running backend**; pending-count badge in the nav; Playwright e2e

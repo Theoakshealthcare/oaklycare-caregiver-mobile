@@ -23,11 +23,8 @@ export const BANK_REVIEWS_KEY = ["payouts", "bank-reviews"] as const;
 export const isConflict = (e: unknown): e is Error & { status: number } =>
   e instanceof Error && (e as { status?: unknown }).status === 409;
 
-/**
- * The last four digits of the account the reviewer is looking at. The number arrives masked ("******0011"); the
- * backend refuses the decision when these are not the digits of the account it currently holds.
- */
-export const accountLast4 = (r: Pick<BankReview, "account_number">) => r.account_number.slice(-4);
+/** The last four digits of the masked number ("******0011"), for titles only. The decision itself carries `review_token`. */
+export const accountEnding = (r: Pick<BankReview, "account_number">) => r.account_number.slice(-4);
 
 export async function fetchBankReviews(params: { status: BankReviewStatus; offset: number }) {
   return unwrap(
@@ -41,7 +38,7 @@ export async function approveBankReview(review: BankReview, reason: string) {
   return unwrap(
     await getApi().POST("/api/v1/admin/payouts/bank-reviews/{caregiver_id}/approve", {
       params: { path: { caregiver_id: review.caregiver_id } },
-      body: { reason, account_last4: accountLast4(review) },
+      body: { reason, review_token: review.review_token },
     }),
   );
 }
@@ -50,7 +47,7 @@ export async function rejectBankReview(review: BankReview, reason: string) {
   return unwrap(
     await getApi().POST("/api/v1/admin/payouts/bank-reviews/{caregiver_id}/reject", {
       params: { path: { caregiver_id: review.caregiver_id } },
-      body: { reason, account_last4: accountLast4(review) },
+      body: { reason, review_token: review.review_token },
     }),
   );
 }

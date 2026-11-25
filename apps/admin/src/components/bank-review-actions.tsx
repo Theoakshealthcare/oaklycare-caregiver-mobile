@@ -8,7 +8,7 @@ import { ConfirmActionDialog } from "@/components/confirm-action-dialog";
 import { Button } from "@/components/ui/button";
 import {
   type BankReview,
-  accountLast4,
+  accountEnding,
   approveBankReview,
   isConflict,
   rejectBankReview,
@@ -43,9 +43,9 @@ function Summary({ review }: { review: BankReview }) {
 
 /**
  * Approve / Reject for one held account. Both need `payouts.execute` (Finance, Super Admin), so without it nothing is
- * rendered, not a disabled button. The decision carries the last four digits of the account this row shows: if the
- * caregiver has saved another account since the queue loaded the backend answers 409, and then nothing has been
- * decided. That, and a 409 for an account already decided, close the dialog, reload the queue, and tell the reviewer
+ * rendered, not a disabled button. The decision carries the row's `review_token`, which names the exact account (number, bank and
+ * holder name) the queue showed: if the caregiver has saved another account since the queue loaded, even one ending in
+ * the same four digits, the backend answers 409 and nothing has been decided. That, and a 409 for an account already decided, close the dialog, reload the queue, and tell the reviewer
  * with the server's own sentence, so a decision is never made on an account they have not seen.
  */
 export function BankReviewActions({
@@ -91,7 +91,7 @@ export function BankReviewActions({
         <ConfirmActionDialog
           open
           onOpenChange={close}
-          title={`Approve account ending ${accountLast4(review)} for ${who}?`}
+          title={`Approve account ending ${accountEnding(review)} for ${who}?`}
           sideEffects="Confirm the account belongs to this caregiver. Payouts to it resume in the next batch. Check the two names below before you approve."
           confirmLabel="Approve account"
           reasonLabel="Reason for approving (how you checked it is theirs)"
@@ -104,7 +104,7 @@ export function BankReviewActions({
         <ConfirmActionDialog
           open
           onOpenChange={close}
-          title={`Reject account ending ${accountLast4(review)} for ${who}?`}
+          title={`Reject account ending ${accountEnding(review)} for ${who}?`}
           sideEffects="No payout is made to this account and the caregiver has to save a different one. Their earnings stay in their balance."
           confirmLabel="Reject account"
           destructive

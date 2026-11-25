@@ -1,11 +1,11 @@
 import { describe, expect, it } from "vitest";
 
 import { ApiError } from "@/lib/api";
-import { accountLast4, isConflict } from "@/lib/bank-reviews";
+import { accountEnding, isConflict } from "@/lib/bank-reviews";
 
-describe("accountLast4", () => {
-  it("takes the last four digits of the masked number the reviewer sees", () => {
-    expect(accountLast4({ account_number: "******0011" })).toBe("0011");
+describe("accountEnding", () => {
+  it("takes the last four digits of the masked number, for titles", () => {
+    expect(accountEnding({ account_number: "******0011" })).toBe("0011");
   });
 });
 
