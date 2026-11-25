@@ -3059,7 +3059,7 @@ export interface paths {
         put?: never;
         /**
          * Approve Bank Review
-         * @description Confirm the account is the caregiver's: payouts to it resume. ``account_last4`` must be the account the reviewer saw.
+         * @description Confirm the account is the caregiver's: payouts to it resume. ``review_token`` must be the one the queue returned for the account the reviewer saw.
          */
         post: operations["approve_bank_review_api_v1_admin_payouts_bank_reviews__caregiver_id__approve_post"];
         delete?: never;
@@ -4443,14 +4443,14 @@ export interface components {
         };
         /**
          * BankReviewDecisionIn
-         * @description Finance's decision on a held account. ``account_last4`` is the account they looked at; if the caregiver saved another
-         *     one since, the decision is refused with 409.
+         * @description Finance's decision on a held account. ``review_token`` is the token the queue returned for the account they looked at; if the
+         *     caregiver changed the account since (number, bank or holder name), the decision is refused with 409.
          */
         BankReviewDecisionIn: {
             /** Reason */
             reason: string;
-            /** Account Last4 */
-            account_last4: string;
+            /** Review Token */
+            review_token: string;
         };
         /** BankReviewList */
         BankReviewList: {
@@ -4488,6 +4488,8 @@ export interface components {
             submitted_at: string;
             /** Decided At */
             decided_at?: string | null;
+            /** Review Token */
+            review_token: string;
         };
         /** BatchDetail */
         BatchDetail: {
