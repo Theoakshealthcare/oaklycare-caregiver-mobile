@@ -605,7 +605,8 @@ export interface paths {
         /**
          * Resolve Bank Account
          * @description Check an account number and bank and return the name the bank holds for it, so the caregiver can confirm it is
-         *     theirs before saving. Rate limited per caregiver.
+         *     theirs before saving. When the name does not look like the caregiver's profile name, ``needs_review`` is true and the name
+         *     comes back masked: the account can still be saved, but is not paid until Finance approves it. Rate limited per caregiver.
          */
         post: operations["resolve_bank_account_api_v1_caregiver_bank_account_resolve_post"];
         delete?: never;
@@ -627,7 +628,8 @@ export interface paths {
          * Update Bank Account
          * @description Save the payout account. The server resolves the account holder's name itself (a name sent by the client is never
          *     used) and registers the account with Paystack. Changing to a different account, or saving the first one while there is money in the wallet,
-         *     blocks payouts for 24 hours.
+         *     blocks payouts for 24 hours. A holder name that does not look like the profile name is saved with
+         *     ``name_review_status = "pending"``: no payout until Finance approves it.
          */
         put: operations["update_bank_account_api_v1_caregiver_bank_account_put"];
         post?: never;
@@ -3025,6 +3027,67 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/v1/admin/payouts/bank-reviews": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * List Bank Reviews
+         * @description Payout accounts whose holder name did not look like the caregiver's profile name, oldest first. Shows both names so a
+         *     person can decide; the account number is masked.
+         */
+        get: operations["list_bank_reviews_api_v1_admin_payouts_bank_reviews_get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/admin/payouts/bank-reviews/{caregiver_id}/approve": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Approve Bank Review
+         * @description Confirm the account is the caregiver's: payouts to it resume. ``review_token`` must be the one the queue returned for the account the reviewer saw.
+         */
+        post: operations["approve_bank_review_api_v1_admin_payouts_bank_reviews__caregiver_id__approve_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/admin/payouts/bank-reviews/{caregiver_id}/reject": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Reject Bank Review
+         * @description Refuse the account: no payout is made to it, and the caregiver must save a different one.
+         */
+        post: operations["reject_bank_review_api_v1_admin_payouts_bank_reviews__caregiver_id__reject_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/v1/admin/payouts/{payout_id}/cancel": {
         parameters: {
             query?: never;
@@ -4484,6 +4547,11 @@ export interface components {
             bank_code: string;
             /** Bank Name */
             bank_name: string;
+            /**
+             * Needs Review
+             * @default false
+             */
+            needs_review: boolean;
         };
         /** BankAccountResolveRequest */
         BankAccountResolveRequest: {
@@ -4498,6 +4566,56 @@ export interface components {
             name: string;
             /** Code */
             code: string;
+        };
+        /**
+         * BankReviewDecisionIn
+         * @description Finance's decision on a held account. ``review_token`` is the token the queue returned for the account they looked at; if the
+         *     caregiver changed the account since (number, bank or holder name), the decision is refused with 409.
+         */
+        BankReviewDecisionIn: {
+            /** Reason */
+            reason: string;
+            /** Review Token */
+            review_token: string;
+        };
+        /** BankReviewList */
+        BankReviewList: {
+            /** Items */
+            items: components["schemas"]["BankReviewOut"][];
+            /** Total */
+            total: number;
+        };
+        /** BankReviewOut */
+        BankReviewOut: {
+            /**
+             * Caregiver Id
+             * Format: uuid
+             */
+            caregiver_id: string;
+            /** Caregiver Name */
+            caregiver_name?: string | null;
+            /** Account Name */
+            account_name: string;
+            /** Bank Name */
+            bank_name: string;
+            /** Account Number */
+            account_number: string;
+            /**
+             * Status
+             * @enum {string}
+             */
+            status: "pending" | "approved" | "rejected";
+            /** Balance Kobo */
+            balance_kobo: number;
+            /**
+             * Submitted At
+             * Format: date-time
+             */
+            submitted_at: string;
+            /** Decided At */
+            decided_at?: string | null;
+            /** Review Token */
+            review_token: string;
         };
         /** BatchDetail */
         BatchDetail: {
@@ -6370,6 +6488,8 @@ export interface components {
             verified: boolean;
             /** Payouts Blocked Until */
             payouts_blocked_until?: string | null;
+            /** Name Review Status */
+            name_review_status?: ("pending" | "approved" | "rejected") | null;
             /**
              * Created At
              * Format: date-time
@@ -16657,6 +16777,109 @@ export interface operations {
                 };
                 content: {
                     "application/json": components["schemas"]["PayoutList"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    list_bank_reviews_api_v1_admin_payouts_bank_reviews_get: {
+        parameters: {
+            query?: {
+                status?: string;
+                limit?: number;
+                offset?: number;
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["BankReviewList"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    approve_bank_review_api_v1_admin_payouts_bank_reviews__caregiver_id__approve_post: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                caregiver_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["BankReviewDecisionIn"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["BankReviewOut"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    reject_bank_review_api_v1_admin_payouts_bank_reviews__caregiver_id__reject_post: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                caregiver_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["BankReviewDecisionIn"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["BankReviewOut"];
                 };
             };
             /** @description Validation Error */

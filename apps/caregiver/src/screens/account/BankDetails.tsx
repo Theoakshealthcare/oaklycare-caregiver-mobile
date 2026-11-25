@@ -1,7 +1,7 @@
 import React, { useState } from "react";
 import { Keyboard, Linking, View } from "react-native";
 
-import { isBankNameMismatch, messageForError } from "@/src/api/errors";
+import { messageForError } from "@/src/api/errors";
 import InfoRow from "@/src/components/account/InfoRow";
 import ScreenShell from "@/src/components/account/ScreenShell";
 import BankPicker from "@/src/components/account/BankPicker";
@@ -38,6 +38,9 @@ const Banner: React.FC<{ tone: "info" | "warning"; testID: string; children: str
 export const PAYMENT_UPDATED_TOAST = "Payment Details has been updated";
 
 function savedNotice(account: BankAccount): string {
+  if (account.name_review_status === "pending") {
+    return "Your bank account is saved. The name on it is different from your Oakly profile, so our team will check it before we pay into it.";
+  }
   const until = payoutsPausedUntil(account.payouts_blocked_until);
   return until
     ? `Your bank account is saved. For your security, payouts are paused for 24 hours ${PAUSE_REASON}, until ${until}.`
@@ -58,18 +61,12 @@ const BankForm: React.FC<{ hasAccount: boolean; onSaved: (account: BankAccount) 
   const [bankProblem, setBankProblem] = useState<string | undefined>();
   const [numberProblem, setNumberProblem] = useState<string | undefined>();
   const [failure, setFailure] = useState<string | null>(null);
-  // The account is not in the caregiver's own name: only support can change the name on the profile.
-  const [needsSupport, setNeedsSupport] = useState(false);
 
-  const fail = (error: unknown) => {
-    setFailure(messageForError(error, "bank"));
-    setNeedsSupport(isBankNameMismatch(error));
-  };
+  const fail = (error: unknown) => setFailure(messageForError(error, "bank"));
 
   const reset = () => {
     setResolved(null);
     setFailure(null);
-    setNeedsSupport(false);
   };
 
   const check = async () => {
@@ -142,22 +139,24 @@ const BankForm: React.FC<{ hasAccount: boolean; onSaved: (account: BankAccount) 
           {failure}
         </Text>
       ) : null}
-      {failure && needsSupport ? (
-        <Button
-          testID="bank-contact-support"
-          title="Contact support"
-          variant="ghost"
-          onPress={() => void Linking.openURL(supportUrl())}
-          style={{ marginBottom: 12 }}
-        />
-      ) : null}
 
       {resolved ? (
         <>
           <Text variant="small" color={theme.colors.textLight} style={{ marginTop: 12 }}>
             {`${resolved.bank_name} · ${resolved.account_number}`}
           </Text>
-          <Button title="Yes, this is my account" onPress={() => void confirm()} loading={save.isPending} style={{ marginTop: 16 }} />
+          {/* A different name is not a dead end: the account can be saved, and our team checks it before any payout. */}
+          {resolved.needs_review ? (
+            <InfoRow tone="warning" testID="bank-needs-review" style={{ marginTop: 12 }}>
+              {"This name doesn't look like the name on your Oakly profile. You can still save the account, but we'll only pay into it after our team has checked it."}
+            </InfoRow>
+          ) : null}
+          <Button
+            title={resolved.needs_review ? "Save for review" : "Yes, this is my account"}
+            onPress={() => void confirm()}
+            loading={save.isPending}
+            style={{ marginTop: 16 }}
+          />
           <Button title="No, change details" variant="ghost" onPress={reset} style={{ marginTop: 8 }} />
         </>
       ) : (
@@ -202,6 +201,25 @@ const BankDetails: React.FC = () => {
           <Banner tone="warning" testID="bank-resave">
             Please verify your bank account. Accounts saved before this update can&apos;t be paid until you save them again.
           </Banner>
+        ) : null}
+        {account.name_review_status === "pending" && !notice ? (
+          <Banner tone="warning" testID="bank-name-pending">
+            Our team is checking that this account is yours. We will pay into it as soon as it is confirmed.
+          </Banner>
+        ) : null}
+        {account.name_review_status === "rejected" ? (
+          <>
+            <Banner tone="warning" testID="bank-name-rejected">
+              We could not confirm that this account is yours, so we cannot pay into it. Save a different account, or contact support.
+            </Banner>
+            <Button
+              testID="bank-contact-support"
+              title="Contact support"
+              variant="ghost"
+              onPress={() => void Linking.openURL(supportUrl())}
+              style={{ marginBottom: 12 }}
+            />
+          </>
         ) : null}
         {paused && !notice ? (
           <Banner tone="warning" testID="bank-paused">{`Payouts are paused until ${paused} ${PAUSE_REASON}.`}</Banner>
